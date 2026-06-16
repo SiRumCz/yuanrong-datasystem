@@ -1,0 +1,10 @@
+{
+  "name": "context-parts-driver",
+  "private": true,
+  "type": "module",
+  "comment": "Vendored subset of nilenso/context-viewer @ abf784e — transcript->parts driver only.",
+  "dependencies": {
+    "tiktoken": "1.0.22",
+    "zod": "^4.1.12"
+  }
+}
