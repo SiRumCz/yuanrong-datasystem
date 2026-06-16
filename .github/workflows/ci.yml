@@ -1,10 +1,12 @@
 name: CI
 
-# Lightweight "look-alike" CI for the custody demo mirror of openeuler/yuanrong-datasystem.
-# These are real, self-contained checks (no external downloads, no heavy C++ build) that mirror
-# the SHAPE of the project's gitee CI (build / unit-test / style / static-analysis / secret-scan)
-# so a recreated PR shows a believable, green checks panel. They are ADVISORY (never fail the job):
-# the demo's point is that ordinary CI is green while custody is the gate/risk/plan layer on top.
+# Look-alike CI for the custody demo mirror of openeuler/yuanrong-datasystem.
+# Job names mirror the REAL openEuler gate checks seen on atomgit MRs
+# (check_code / check_package_license / check_sca / check_build x{x86_64,aarch64,openyuanrong}).
+# These are real, self-contained, lightweight checks (no heavy C++ build) and ADVISORY
+# (never fail the job ⇒ reliably green): the demo's point is that ordinary CI is green while
+# custody is the gate/risk/plan layer on top. (The real !1076 actually had a transient
+# check_code + aarch64 failure that cleared on /retest before merge.)
 
 on:
   pull_request:
@@ -18,153 +20,118 @@ permissions:
   contents: read
 
 jobs:
-  build-smoke:
-    name: build (smoke)
+  check_code:
+    name: check_code
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Validate Bazel/CMake build configuration for changed modules
+      - name: coding style + spec (clang-format + lint, advisory)
         run: |
           set -uo pipefail
-          base='${{ github.event.pull_request.base.sha }}'
-          mapfile -t CHANGED < <(git diff --name-only "$base" HEAD)
-          echo "::group::Changed files (${#CHANGED[@]})"; printf '%s\n' "${CHANGED[@]}"; echo "::endgroup::"
-          rc=0
-          for f in "${CHANGED[@]}"; do
-            case "$f" in
-              *BUILD.bazel|BUILD.bazel|*/BUILD|*.bzl|WORKSPACE|*CMakeLists.txt)
-                [ -f "$f" ] || continue
-                # balanced-paren / balanced-quote sanity (catches the common edit mistakes)
-                op=$(tr -cd '(' < "$f" | wc -c); cp=$(tr -cd ')' < "$f" | wc -c)
-                qt=$(tr -cd '"' < "$f" | wc -c)
-                [ "$op" -eq "$cp" ] || { echo "::warning file=$f::unbalanced parentheses ($op vs $cp)"; rc=1; }
-                [ $((qt % 2)) -eq 0 ] || echo "::warning file=$f::odd number of double-quotes"
-                echo "  parsed build file OK: $f"
-                ;;
-            esac
-          done
-          # confirm changed C++ sources are referenced by some BUILD.bazel in their module
-          for f in "${CHANGED[@]}"; do
-            case "$f" in
-              *.cpp|*.cc|*.h|*.hpp)
-                d=$(dirname "$f"); b=$(basename "$f")
-                if ls "$d"/BUILD.bazel "$d"/../BUILD.bazel >/dev/null 2>&1; then
-                  grep -rqs --include=BUILD.bazel "$b" "$d" "$d/.." 2>/dev/null \
-                    && echo "  referenced in BUILD: $f" \
-                    || echo "::notice file=$f::source not directly named in nearest BUILD.bazel (may be globbed)"
-                fi
-                ;;
-            esac
-          done
-          echo "build (smoke): configuration validated for ${#CHANGED[@]} changed file(s)."
-          exit 0
-
-  unit-tests:
-    name: unit-tests (changed modules)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Verify changed modules carry tests
-        run: |
-          set -uo pipefail
-          base='${{ github.event.pull_request.base.sha }}'
-          mapfile -t CHANGED < <(git diff --name-only "$base" HEAD)
-          tests=(); src=()
-          for f in "${CHANGED[@]}"; do
-            case "$f" in
-              *test*.cpp|*test*.cc|*_test.*|*Test*.java|*test_*.py) tests+=("$f");;
-              *.cpp|*.cc|*.java|*.py) src+=("$f");;
-            esac
-          done
-          echo "Changed source files: ${#src[@]} | changed test files: ${#tests[@]}"
-          if [ "${#tests[@]}" -gt 0 ]; then
-            echo "Test coverage present in this PR:"; printf '  - %s\n' "${tests[@]}"
-            for t in "${tests[@]}"; do [ -s "$t" ] || echo "::warning file=$t::test file is empty"; done
-          else
-            echo "::notice::no test files in diff (doc/config/build-only change?)"
-          fi
-          echo "unit-tests (changed modules): OK"
-          exit 0
-
-  clang-format:
-    name: code-style (clang-format)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: clang-format (advisory) on changed C/C++
-        run: |
-          set -uo pipefail
-          command -v clang-format >/dev/null || sudo apt-get update -qq && sudo apt-get install -y -qq clang-format >/dev/null 2>&1 || true
-          base='${{ github.event.pull_request.base.sha }}'
-          mapfile -t CHANGED < <(git diff --name-only "$base" HEAD | grep -Ei '\.(c|cc|cpp|cxx|h|hpp|hxx)$' || true)
-          if [ "${#CHANGED[@]}" -eq 0 ]; then echo "no C/C++ files changed"; exit 0; fi
-          issues=0
-          for f in "${CHANGED[@]}"; do
-            [ -f "$f" ] || continue
-            if clang-format --style=file "$f" | diff -q - "$f" >/dev/null 2>&1; then
-              echo "  formatted OK: $f"
-            else
-              echo "::notice file=$f::clang-format would reformat this file (advisory)"; issues=$((issues+1))
-            fi
-          done
-          echo "code-style: ${#CHANGED[@]} file(s) checked, $issues advisory note(s). (non-blocking)"
-          exit 0
-
-  static-analysis:
-    name: static-analysis (lint)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Lightweight lint of changed files
-        run: |
-          set -uo pipefail
+          command -v clang-format >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq clang-format >/dev/null 2>&1 || true; }
           base='${{ github.event.pull_request.base.sha }}'
           mapfile -t CHANGED < <(git diff --name-only "$base" HEAD)
           notes=0
           for f in "${CHANGED[@]}"; do
             [ -f "$f" ] || continue
             case "$f" in
+              *.c|*.cc|*.cpp|*.cxx|*.h|*.hpp|*.hxx)
+                if command -v clang-format >/dev/null && ! clang-format --style=file "$f" | diff -q - "$f" >/dev/null 2>&1; then
+                  echo "::notice file=$f::clang-format would reformat (advisory)"; notes=$((notes+1))
+                fi ;;
+            esac
+            case "$f" in
               *.cpp|*.cc|*.h|*.hpp|*.py|*.java)
-                if grep -nP '\t' "$f" >/dev/null 2>&1; then echo "::notice file=$f::contains tabs"; notes=$((notes+1)); fi
-                if grep -nE ' +$' "$f" >/dev/null 2>&1; then echo "::notice file=$f::trailing whitespace"; notes=$((notes+1)); fi
-                n=$(grep -cE 'TODO|FIXME|XXX' "$f" 2>/dev/null || echo 0); [ "$n" -gt 0 ] && echo "::notice file=$f::$n TODO/FIXME marker(s)"
-                head -5 "$f" | grep -qiE 'copyright|licensed under|SPDX' || { case "$f" in *.cpp|*.cc|*.h|*.hpp) echo "::notice file=$f::no license header in first 5 lines";; esac; }
+                grep -nP '\t' "$f" >/dev/null 2>&1 && { echo "::notice file=$f::contains tabs"; notes=$((notes+1)); }
+                grep -nE ' +$' "$f" >/dev/null 2>&1 && { echo "::notice file=$f::trailing whitespace"; notes=$((notes+1)); }
                 ;;
             esac
           done
-          echo "static-analysis (lint): ${#CHANGED[@]} file(s), $notes advisory note(s). (non-blocking)"
+          echo "check_code: ${#CHANGED[@]} changed file(s), $notes advisory note(s). (non-blocking)"
           exit 0
 
-  secret-scan:
-    name: secret-scan
+  check_package_license:
+    name: check_package_license
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Scan diff for obvious secrets
+      - name: license / SPDX header check (advisory)
         run: |
           set -uo pipefail
           base='${{ github.event.pull_request.base.sha }}'
-          # scan only added lines in the diff
+          mapfile -t CHANGED < <(git diff --name-only "$base" HEAD)
+          missing=0
+          for f in "${CHANGED[@]}"; do
+            [ -f "$f" ] || continue
+            case "$f" in
+              *.cpp|*.cc|*.h|*.hpp|*.py|*.java|*.go)
+                head -8 "$f" | grep -qiE 'copyright|licensed under|SPDX-License-Identifier' \
+                  || { echo "::notice file=$f::no license/SPDX header in first 8 lines"; missing=$((missing+1)); } ;;
+            esac
+          done
+          echo "check_package_license: ${#CHANGED[@]} file(s), $missing without a header. (non-blocking)"
+          exit 0
+
+  check_sca:
+    name: check_sca
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: software composition / secret scan (advisory)
+        run: |
+          set -uo pipefail
+          base='${{ github.event.pull_request.base.sha }}'
           added=$(git diff "$base" HEAD | grep -E '^\+' | grep -vE '^\+\+\+' || true)
           hits=0
           while IFS= read -r pat; do
             [ -z "$pat" ] && continue
-            if printf '%s\n' "$added" | grep -Eq "$pat"; then echo "::error::potential secret matching /$pat/"; hits=$((hits+1)); fi
+            printf '%s\n' "$added" | grep -Eq "$pat" && { echo "::error::potential secret matching /$pat/"; hits=$((hits+1)); }
           done <<'PATTERNS'
           -----BEGIN ([A-Z]+ )?PRIVATE KEY-----
           AKIA[0-9A-Z]{16}
           ghp_[0-9A-Za-z]{30,}
-          (password|passwd|secret|api[_-]?key|access[_-]?token)[\"' ]*[:=][\"' ]*[A-Za-z0-9/+_-]{12,}
+          (password|passwd|secret|api[_-]?key|access[_-]?token)["' ]*[:=]["' ]*[A-Za-z0-9/+_-]{12,}
           PATTERNS
-          if [ "$hits" -gt 0 ]; then echo "secret-scan: $hits potential secret(s) flagged (advisory)"; else echo "secret-scan: clean"; fi
+          [ "$hits" -gt 0 ] && echo "check_sca: $hits potential secret(s) flagged (advisory)" || echo "check_sca: clean"
+          exit 0
+
+  check_build:
+    name: check_build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [x86_64, aarch64, openyuanrong]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: build smoke (${{ matrix.target }})
+        run: |
+          set -uo pipefail
+          base='${{ github.event.pull_request.base.sha }}'
+          mapfile -t CHANGED < <(git diff --name-only "$base" HEAD)
+          echo "::group::Changed files (${#CHANGED[@]})"; printf '%s\n' "${CHANGED[@]}"; echo "::endgroup::"
+          # Bazel/CMake build-file sanity for changed modules
+          for f in "${CHANGED[@]}"; do
+            case "$f" in
+              *BUILD.bazel|BUILD.bazel|*/BUILD|*.bzl|WORKSPACE|*CMakeLists.txt)
+                [ -f "$f" ] || continue
+                op=$(tr -cd '(' < "$f" | wc -c); cp=$(tr -cd ')' < "$f" | wc -c)
+                [ "$op" -eq "$cp" ] || echo "::warning file=$f::unbalanced parentheses ($op vs $cp)"
+                echo "  build-file OK: $f" ;;
+            esac
+          done
+          # test presence for changed modules
+          tests=0
+          for f in "${CHANGED[@]}"; do
+            case "$f" in *test*.cpp|*test*.cc|*_test.*|*Test*.java|*test_*.py) tests=$((tests+1));; esac
+          done
+          echo "check_build (${{ matrix.target }}): build-file sanity OK, $tests test file(s) in diff. (smoke; non-blocking)"
           exit 0
