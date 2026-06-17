@@ -2,8 +2,9 @@
 on:
   workflow_dispatch:
     inputs:
-      pr_number: { description: "PR number", required: true }
-      repo:      { description: "owner/name (defaults to this repo)", required: false }
+      pr_number:   { description: "PR number", required: true }
+      repo:        { description: "owner/name (defaults to this repo)", required: false }
+      scripts_ref: { description: "custody ref to run analysis scripts from", required: false, default: "main" }
 permissions: { contents: read, pull-requests: read, issues: read }
 engine:
   id: codex
@@ -24,9 +25,16 @@ tools:
   bash: [ "node:*", "cat:*", "echo:*" ]
   edit:
 steps:
-  - name: Checkout (scripts live in this repo)
+  - name: Checkout custody analysis scripts (pinned)
     uses: actions/checkout@v4
-    with: { persist-credentials: false }
+    with:
+      repository: SiRumCz/custody
+      ref: ${{ github.event.inputs.scripts_ref || 'main' }}
+      token: ${{ secrets.CUSTODY_SCRIPTS_TOKEN }}
+      path: _custody
+      persist-credentials: false
+      sparse-checkout: |
+        app/backend/component/preflight/workflow
   - name: Prefetch + deterministic checks
     env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}", PR: "${{ github.event.inputs.pr_number }}", REPO: "${{ github.event.inputs.repo || github.repository }}" }
     run: |
@@ -40,12 +48,12 @@ steps:
           > /tmp/gh-aw/agent/pr.diff
       }
       HEAD_SHA=$(jq -r .headRefName /tmp/gh-aw/agent/pr.json) REPO="$REPO" \
-        node app/backend/component/preflight/workflow/scripts/deterministic-checks.js \
+        node _custody/app/backend/component/preflight/workflow/scripts/deterministic-checks.js \
         /tmp/gh-aw/agent/pr.json /tmp/gh-aw/agent/pr.diff /tmp/gh-aw/agent > /tmp/gh-aw/agent/deterministic.json
 post-steps:
   - name: Merge deterministic + AI → verdict.json
     if: always()
-    run: node app/backend/component/preflight/workflow/scripts/merge-verdict.js /tmp/gh-aw/agent/deterministic.json /tmp/gh-aw/agent/ai-results.jsonl /tmp/gh-aw/agent/pr.json > /tmp/gh-aw/verdict.json
+    run: node _custody/app/backend/component/preflight/workflow/scripts/merge-verdict.js /tmp/gh-aw/agent/deterministic.json /tmp/gh-aw/agent/ai-results.jsonl /tmp/gh-aw/agent/pr.json > /tmp/gh-aw/verdict.json
   - name: Upload gate result
     if: always()
     uses: actions/upload-artifact@v4
