@@ -25,6 +25,12 @@ tools:
   bash: [ "node:*", "cat:*", "echo:*" ]
   edit:
 steps:
+  # The target repo must be checked out into the workspace ROOT — gh-aw's agent job runs
+  # "Configure Git credentials" (git remote set-url in the root) before its own PR-branch checkout,
+  # so a root .git must already exist. (Do NOT remove this; the custody checkout below is ADDITIONAL.)
+  - name: Checkout (repo workspace for the gh-aw agent + git)
+    uses: actions/checkout@v4
+    with: { persist-credentials: false }
   - name: Checkout custody analysis scripts (pinned)
     uses: actions/checkout@v4
     with:
