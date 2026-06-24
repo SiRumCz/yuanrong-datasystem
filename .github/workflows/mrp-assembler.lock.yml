@@ -1,4 +1,4 @@
-# gh-aw-metadata: {"schema_version":"v4","frontmatter_hash":"c0e80098e8098039e18d210d52a51f63dc404c23b790dc8d4dde5456a6764f6f","body_hash":"c5aa093d804420ea02bc7b9068041e54edb8e147b32ef8f99a294057d6fa0837","compiler_version":"v0.77.5","strict":true,"agent_id":"codex","agent_model":"gpt-5.4"}
+# gh-aw-metadata: {"schema_version":"v4","frontmatter_hash":"887f86b94f197cd0d34c5fa5915ed2d86d581124d36fa6a134eadbb44accfa0e","body_hash":"1edd18bf9cef5d361691ed7f8a61693e0c4956dba810a759e7a0eb3a60bb82fd","compiler_version":"v0.77.5","strict":true,"agent_id":"codex","agent_model":"gpt-5.4"}
 # gh-aw-manifest: {"version":1,"secrets":["CODEX_API_KEY","CUSTODY_SCRIPTS_TOKEN","GH_AW_GITHUB_MCP_SERVER_TOKEN","GH_AW_GITHUB_TOKEN","GITHUB_TOKEN","OPENAI_API_KEY"],"actions":[{"repo":"actions/checkout","sha":"34e114876b0b11c390a56381ad16ebd13914f8d5","version":"v4"},{"repo":"actions/checkout","sha":"de0fac2e4500dabe0009e67214ff5f5447ce83dd","version":"v6.0.2"},{"repo":"actions/download-artifact","sha":"3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c","version":"v8.0.1"},{"repo":"actions/github-script","sha":"3a2844b7e9c422d3c10d287c895573f7108da1b3","version":"v9.0.0"},{"repo":"actions/setup-node","sha":"48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","version":"v6.4.0"},{"repo":"actions/upload-artifact","sha":"043fb46d1a93c77aae656e7c1c64a875d1fc6a0a","version":"v7.0.1"},{"repo":"actions/upload-artifact","sha":"ea165f8d65b6e75b540449e92b4886f43607fa02","version":"v4"},{"repo":"github/gh-aw-actions/setup","sha":"3ea13c02d765410340d533515cb31a7eef2baaf0","version":"v0.77.5"}],"containers":[{"image":"ghcr.io/github/gh-aw-firewall/agent:0.25.58"},{"image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.25.58"},{"image":"ghcr.io/github/gh-aw-firewall/squid:0.25.58"},{"image":"ghcr.io/github/gh-aw-mcpg:v0.3.22"},{"image":"ghcr.io/github/github-mcp-server:v1.1.0"},{"image":"node:lts-alpine","digest":"sha256:2bdb65ed1dab192432bc31c95f94155ca5ad7fc1392fb7eb7526ab682fa5bf14","pinned_image":"node:lts-alpine@sha256:2bdb65ed1dab192432bc31c95f94155ca5ad7fc1392fb7eb7526ab682fa5bf14"}]}
 #    ___                   _   _      
 #   / _ \                 | | (_)     
@@ -50,7 +50,7 @@
 #   - ghcr.io/github/github-mcp-server:v1.1.0
 #   - node:lts-alpine@sha256:2bdb65ed1dab192432bc31c95f94155ca5ad7fc1392fb7eb7526ab682fa5bf14
 
-name: "Guided Overview — one cohort partition (walkthrough + breaking-change risk)"
+name: "MRP Assembler — synthesize, do not re-review"
 on:
   workflow_dispatch:
     inputs:
@@ -67,7 +67,7 @@ on:
         required: false
       scripts_ref:
         default: main
-        description: custody ref to run analysis scripts from
+        description: custody ref for analysis scripts
         required: false
 
 permissions: {}
@@ -75,7 +75,7 @@ permissions: {}
 concurrency:
   group: "gh-aw-${{ github.workflow }}"
 
-run-name: "Guided Overview — one cohort partition (walkthrough + breaking-change risk)"
+run-name: "MRP Assembler — synthesize, do not re-review"
 
 jobs:
   activation:
@@ -102,8 +102,8 @@ jobs:
           destination: ${{ runner.temp }}/gh-aw/actions
           job-name: ${{ github.job }}
         env:
-          GH_AW_SETUP_WORKFLOW_NAME: "Guided Overview — one cohort partition (walkthrough + breaking-change risk)"
-          GH_AW_CURRENT_WORKFLOW_REF: ${{ github.repository }}/.github/workflows/guided-overview-with-risk.lock.yml@${{ github.ref }}
+          GH_AW_SETUP_WORKFLOW_NAME: "MRP Assembler — synthesize, do not re-review"
+          GH_AW_CURRENT_WORKFLOW_REF: ${{ github.repository }}/.github/workflows/mrp-assembler.lock.yml@${{ github.ref }}
           GH_AW_INFO_VERSION: "0.135.0"
           GH_AW_INFO_AWF_VERSION: "v0.25.58"
           GH_AW_INFO_ENGINE_ID: "codex"
@@ -116,7 +116,7 @@ jobs:
           GH_AW_INFO_VERSION: "0.135.0"
           GH_AW_INFO_AGENT_VERSION: "0.135.0"
           GH_AW_INFO_CLI_VERSION: "v0.77.5"
-          GH_AW_INFO_WORKFLOW_NAME: "Guided Overview — one cohort partition (walkthrough + breaking-change risk)"
+          GH_AW_INFO_WORKFLOW_NAME: "MRP Assembler — synthesize, do not re-review"
           GH_AW_INFO_EXPERIMENTAL: "false"
           GH_AW_INFO_SUPPORTS_TOOLS_ALLOWLIST: "true"
           GH_AW_INFO_STAGED: "true"
@@ -165,7 +165,7 @@ jobs:
         id: check-lock-file
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
-          GH_AW_WORKFLOW_FILE: "guided-overview-with-risk.lock.yml"
+          GH_AW_WORKFLOW_FILE: "mrp-assembler.lock.yml"
           GH_AW_CONTEXT_WORKFLOW_REF: "${{ github.workflow_ref }}"
         with:
           script: |
@@ -199,23 +199,23 @@ jobs:
         run: |
           bash "${RUNNER_TEMP}/gh-aw/actions/create_prompt_first.sh"
           {
-          cat << 'GH_AW_PROMPT_fcc5f7ee307978d6_EOF'
+          cat << 'GH_AW_PROMPT_acaf141b8ea444ab_EOF'
           <system>
-          GH_AW_PROMPT_fcc5f7ee307978d6_EOF
+          GH_AW_PROMPT_acaf141b8ea444ab_EOF
           cat "${RUNNER_TEMP}/gh-aw/prompts/xpia.md"
           cat "${RUNNER_TEMP}/gh-aw/prompts/temp_folder_prompt.md"
           cat "${RUNNER_TEMP}/gh-aw/prompts/markdown.md"
           cat "${RUNNER_TEMP}/gh-aw/prompts/safe_outputs_prompt.md"
-          cat << 'GH_AW_PROMPT_fcc5f7ee307978d6_EOF'
+          cat << 'GH_AW_PROMPT_acaf141b8ea444ab_EOF'
           <safe-output-tools>
           Tools: create_issue, missing_tool, missing_data, noop
-          GH_AW_PROMPT_fcc5f7ee307978d6_EOF
+          GH_AW_PROMPT_acaf141b8ea444ab_EOF
           cat "${RUNNER_TEMP}/gh-aw/prompts/safe_outputs_auto_create_issue.md"
-          cat << 'GH_AW_PROMPT_fcc5f7ee307978d6_EOF'
+          cat << 'GH_AW_PROMPT_acaf141b8ea444ab_EOF'
           </safe-output-tools>
-          GH_AW_PROMPT_fcc5f7ee307978d6_EOF
+          GH_AW_PROMPT_acaf141b8ea444ab_EOF
           cat "${RUNNER_TEMP}/gh-aw/prompts/mcp_cli_tools_prompt.md"
-          cat << 'GH_AW_PROMPT_fcc5f7ee307978d6_EOF'
+          cat << 'GH_AW_PROMPT_acaf141b8ea444ab_EOF'
           <github-context>
           The following GitHub context information is available for this workflow:
           {{#if github.actor}}
@@ -244,12 +244,12 @@ jobs:
           {{/if}}
           </github-context>
           
-          GH_AW_PROMPT_fcc5f7ee307978d6_EOF
+          GH_AW_PROMPT_acaf141b8ea444ab_EOF
           cat "${RUNNER_TEMP}/gh-aw/prompts/github_mcp_tools_with_safeoutputs_prompt.md"
-          cat << 'GH_AW_PROMPT_fcc5f7ee307978d6_EOF'
+          cat << 'GH_AW_PROMPT_acaf141b8ea444ab_EOF'
           </system>
-          {{#runtime-import .github/workflows/guided-overview-with-risk.md}}
-          GH_AW_PROMPT_fcc5f7ee307978d6_EOF
+          {{#runtime-import .github/workflows/mrp-assembler.md}}
+          GH_AW_PROMPT_acaf141b8ea444ab_EOF
           } > "$GH_AW_PROMPT"
       - name: Interpolate variables and render templates
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
@@ -330,6 +330,7 @@ jobs:
     needs: activation
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
       issues: read
       pull-requests: read
@@ -339,7 +340,7 @@ jobs:
       GH_AW_ASSETS_BRANCH: ""
       GH_AW_ASSETS_MAX_SIZE_KB: 0
       GH_AW_MCP_LOG_DIR: /tmp/gh-aw/mcp-logs/safeoutputs
-      GH_AW_WORKFLOW_ID_SANITIZED: guidedoverviewwithrisk
+      GH_AW_WORKFLOW_ID_SANITIZED: mrpassembler
     outputs:
       checkout_pr_success: ${{ steps.checkout-pr.outputs.checkout_pr_success || 'true' }}
       effective_tokens: ${{ steps.parse-mcp-gateway.outputs.effective_tokens }}
@@ -361,8 +362,8 @@ jobs:
           trace-id: ${{ needs.activation.outputs.setup-trace-id }}
           parent-span-id: ${{ needs.activation.outputs.setup-parent-span-id || needs.activation.outputs.setup-span-id }}
         env:
-          GH_AW_SETUP_WORKFLOW_NAME: "Guided Overview — one cohort partition (walkthrough + breaking-change risk)"
-          GH_AW_CURRENT_WORKFLOW_REF: ${{ github.repository }}/.github/workflows/guided-overview-with-risk.lock.yml@${{ github.ref }}
+          GH_AW_SETUP_WORKFLOW_NAME: "MRP Assembler — synthesize, do not re-review"
+          GH_AW_CURRENT_WORKFLOW_REF: ${{ github.repository }}/.github/workflows/mrp-assembler.lock.yml@${{ github.ref }}
           GH_AW_INFO_VERSION: "0.135.0"
           GH_AW_INFO_AWF_VERSION: "v0.25.58"
           GH_AW_INFO_ENGINE_ID: "codex"
@@ -392,16 +393,15 @@ jobs:
           ref: ${{ github.event.inputs.scripts_ref || 'main' }}
           repository: SiRumCz/custody
           sparse-checkout: |
-            app/backend/component/risk
+            app/backend/component/mrp/workflow
             app/backend/core
           token: ${{ secrets.CUSTODY_SCRIPTS_TOKEN }}
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR: ${{ github.event.inputs.pr_number }}
           REPO: ${{ github.event.inputs.repo || github.repository }}
-        name: Prefetch (stage the PR + context for the agent)
-        run: "set -euo pipefail\nmkdir -p /tmp/gh-aw/agent\ngh pr view \"$PR\" --repo \"$REPO\" --json number,title,author,body,files,baseRefName,headRefName,headRefOid > /tmp/gh-aw/agent/pr.json\ngh api \"repos/$REPO/pulls/$PR/files\" --paginate > /tmp/gh-aw/agent/pr-files.json\ngh pr diff \"$PR\" --repo \"$REPO\" > /tmp/gh-aw/agent/pr.diff || {\n  echo \"::warning::pr diff too large; assembling per-file patches (may be partial)\"\n  gh api \"repos/$REPO/pulls/$PR/files\" --paginate \\\n    --jq '.[] | \"diff --git a/\\(.filename) b/\\(.filename)\\n--- a/\\(.filename)\\n+++ b/\\(.filename)\\n\\(.patch // \"(patch omitted: too large)\")\\n\"' \\\n    > /tmp/gh-aw/agent/pr.diff\n}\nHEAD_SHA=$(node -e \"process.stdout.write(JSON.parse(require('fs').readFileSync('/tmp/gh-aw/agent/pr.json','utf8')).headRefOid||'')\")\nnode _custody/app/backend/component/risk/workflow/scripts/prefetch-context.js \"$REPO\" \"$PR\" \"$HEAD_SHA\" > /tmp/gh-aw/agent/context.json || echo \"{}\" > /tmp/gh-aw/agent/context.json\n"
+        name: Gather upstream artifacts + prefetch conversation
+        run: "set -euo pipefail\nmkdir -p /tmp/gh-aw/agent/inputs /tmp/gh-aw/agent/conv\nHEAD_SHA=$(gh pr view \"$PR\" --repo \"$REPO\" --json headRefOid -q .headRefOid)\nnode _custody/app/backend/component/mrp/workflow/scripts/gather.js \"$REPO\" \"$PR\" \"$HEAD_SHA\" /tmp/gh-aw/agent/inputs\nOWNER=${REPO%%/*}; NAME=${REPO##*/}\nfor p in $(gh api \"repos/$REPO/contents/$OWNER/$NAME/pr-$PR?ref=conversations\" --jq '.[].path' 2>/dev/null || true); do\n  case \"$p\" in *.jsonl) gh api \"repos/$REPO/contents/$p?ref=conversations\" --jq '.content' 2>/dev/null | base64 -d > \"/tmp/gh-aw/agent/conv/$(basename \"$p\")\" || true ;; esac\ndone\nls -la /tmp/gh-aw/agent/inputs\n"
 
       - name: Configure Git credentials
         env:
@@ -476,15 +476,15 @@ jobs:
           mkdir -p "${RUNNER_TEMP}/gh-aw/safeoutputs"
           mkdir -p /tmp/gh-aw/safeoutputs
           mkdir -p /tmp/gh-aw/mcp-logs/safeoutputs
-          cat > "${RUNNER_TEMP}/gh-aw/safeoutputs/config.json" << 'GH_AW_SAFE_OUTPUTS_CONFIG_9844f81b16d9521c_EOF'
-          {"create_issue":{"labels":["guided-overview-with-risk"],"max":1,"title_prefix":"[guided-overview-with-risk]"},"create_report_incomplete_issue":{},"missing_data":{},"missing_tool":{},"noop":{"max":1,"report-as-issue":"true"},"report_incomplete":{}}
-          GH_AW_SAFE_OUTPUTS_CONFIG_9844f81b16d9521c_EOF
+          cat > "${RUNNER_TEMP}/gh-aw/safeoutputs/config.json" << 'GH_AW_SAFE_OUTPUTS_CONFIG_2d4880395da809d7_EOF'
+          {"create_issue":{"labels":["mrp-assembler"],"max":1,"title_prefix":"[mrp-assembler]"},"create_report_incomplete_issue":{},"missing_data":{},"missing_tool":{},"noop":{"max":1,"report-as-issue":"true"},"report_incomplete":{}}
+          GH_AW_SAFE_OUTPUTS_CONFIG_2d4880395da809d7_EOF
       - name: Generate Safe Outputs Tools
         env:
           GH_AW_TOOLS_META_JSON: |
             {
               "description_suffixes": {
-                "create_issue": " CONSTRAINTS: Maximum 1 issue(s) can be created. Title will be prefixed with \"[guided-overview-with-risk]\". Labels [\"guided-overview-with-risk\"] will be automatically added."
+                "create_issue": " CONSTRAINTS: Maximum 1 issue(s) can be created. Title will be prefixed with \"[mrp-assembler]\". Labels [\"mrp-assembler\"] will be automatically added."
               },
               "repo_params": {},
               "dynamic_tools": []
@@ -685,7 +685,7 @@ jobs:
           DOCKER_SOCK_GID=$(stat -c '%g' "$DOCKER_SOCK_PATH" 2>/dev/null || echo '0')
           export MCP_GATEWAY_DOCKER_COMMAND='docker run -i --rm --network host --add-host host.docker.internal:127.0.0.1 --user '"${MCP_GATEWAY_UID}"':'"${MCP_GATEWAY_GID}"' --group-add '"${DOCKER_SOCK_GID}"' -v '"${DOCKER_SOCK_PATH}"':/var/run/docker.sock -e MCP_GATEWAY_PORT -e MCP_GATEWAY_DOMAIN -e MCP_GATEWAY_API_KEY -e MCP_GATEWAY_PAYLOAD_DIR -e MCP_GATEWAY_PAYLOAD_SIZE_THRESHOLD -e DOCKER_HOST=unix:///var/run/docker.sock -e DEBUG -e MCP_GATEWAY_LOG_DIR -e GH_AW_MCP_LOG_DIR -e GH_AW_SAFE_OUTPUTS -e GH_AW_SAFE_OUTPUTS_CONFIG_PATH -e GH_AW_SAFE_OUTPUTS_TOOLS_PATH -e GH_AW_ASSETS_BRANCH -e GH_AW_ASSETS_MAX_SIZE_KB -e GH_AW_ASSETS_ALLOWED_EXTS -e DEFAULT_BRANCH -e GITHUB_MCP_SERVER_TOKEN -e GITHUB_MCP_GUARD_MIN_INTEGRITY -e GITHUB_MCP_GUARD_REPOS -e GITHUB_REPOSITORY -e GITHUB_SERVER_URL -e GITHUB_SHA -e GITHUB_WORKSPACE -e GITHUB_TOKEN -e GITHUB_RUN_ID -e GITHUB_RUN_NUMBER -e GITHUB_RUN_ATTEMPT -e GITHUB_JOB -e GITHUB_ACTION -e GITHUB_EVENT_NAME -e GITHUB_EVENT_PATH -e GITHUB_ACTOR -e GITHUB_ACTOR_ID -e GITHUB_TRIGGERING_ACTOR -e GITHUB_WORKFLOW -e GITHUB_WORKFLOW_REF -e GITHUB_WORKFLOW_SHA -e GITHUB_REF -e GITHUB_REF_NAME -e GITHUB_REF_TYPE -e GITHUB_HEAD_REF -e GITHUB_BASE_REF -e GH_AW_SAFE_OUTPUTS_PORT -e GH_AW_SAFE_OUTPUTS_API_KEY -e CODEX_HOME -v /tmp/gh-aw/mcp-payloads:/tmp/gh-aw/mcp-payloads:rw -v /opt:/opt:ro -v /tmp:/tmp:rw -v '"${GITHUB_WORKSPACE}"':'"${GITHUB_WORKSPACE}"':rw ghcr.io/github/gh-aw-mcpg:v0.3.22'
           
-          cat > "${RUNNER_TEMP}/gh-aw/mcp-config/config.toml" << GH_AW_MCP_CONFIG_8c0c4c56360a92e9_EOF
+          cat > "${RUNNER_TEMP}/gh-aw/mcp-config/config.toml" << GH_AW_MCP_CONFIG_0db24a432e6a842a_EOF
           [history]
           persistence = "none"
           
@@ -694,7 +694,7 @@ jobs:
           include_only = ["^CODEX_API_KEY$", "^GH_AW_ASSETS_ALLOWED_EXTS$", "^GH_AW_ASSETS_BRANCH$", "^GH_AW_ASSETS_MAX_SIZE_KB$", "^GH_AW_SAFE_OUTPUTS$", "^GITHUB_PERSONAL_ACCESS_TOKEN$", "^GITHUB_REPOSITORY$", "^GITHUB_SERVER_URL$", "^HOME$", "^OPENAI_API_KEY$", "^PATH$"]
           
           [mcp_servers.github]
-          user_agent = "guided-overview-one-cohort-partition-walkthrough-breaking-change-risk"
+          user_agent = "mrp-assembler-synthesize-do-not-re-review"
           startup_timeout_sec = 120
           tool_timeout_sec = 60
           container = "ghcr.io/github/github-mcp-server:v1.1.0"
@@ -712,11 +712,11 @@ jobs:
           
           [mcp_servers.safeoutputs."guard-policies".write-sink]
           accept = ["*"]
-          GH_AW_MCP_CONFIG_8c0c4c56360a92e9_EOF
+          GH_AW_MCP_CONFIG_0db24a432e6a842a_EOF
           
           # Generate JSON config for MCP gateway
           GH_AW_NODE=$(which node 2>/dev/null || command -v node 2>/dev/null || echo node)
-          cat << GH_AW_MCP_CONFIG_8c0c4c56360a92e9_EOF | "$GH_AW_NODE" "${RUNNER_TEMP}/gh-aw/actions/start_mcp_gateway.cjs"
+          cat << GH_AW_MCP_CONFIG_0db24a432e6a842a_EOF | "$GH_AW_NODE" "${RUNNER_TEMP}/gh-aw/actions/start_mcp_gateway.cjs"
           {
             "mcpServers": {
               "github": {
@@ -756,11 +756,11 @@ jobs:
               "payloadDir": "${MCP_GATEWAY_PAYLOAD_DIR}"
             }
           }
-          GH_AW_MCP_CONFIG_8c0c4c56360a92e9_EOF
+          GH_AW_MCP_CONFIG_0db24a432e6a842a_EOF
           
           # Sync converter output to writable CODEX_HOME for Codex
           mkdir -p /tmp/gh-aw/mcp-config
-          cat > "/tmp/gh-aw/mcp-config/config.toml" << GH_AW_CODEX_SHELL_POLICY_de6267c8b4c3ae5f_EOF
+          cat > "/tmp/gh-aw/mcp-config/config.toml" << GH_AW_CODEX_SHELL_POLICY_aa56c0c51099852d_EOF
 
           model_provider = "openai-proxy"
 
@@ -772,7 +772,7 @@ jobs:
           [shell_environment_policy]
           inherit = "core"
           include_only = ["^CODEX_API_KEY$", "^GH_AW_ASSETS_ALLOWED_EXTS$", "^GH_AW_ASSETS_BRANCH$", "^GH_AW_ASSETS_MAX_SIZE_KB$", "^GH_AW_SAFE_OUTPUTS$", "^GITHUB_PERSONAL_ACCESS_TOKEN$", "^GITHUB_REPOSITORY$", "^GITHUB_SERVER_URL$", "^HOME$", "^OPENAI_API_KEY$", "^PATH$"]
-          GH_AW_CODEX_SHELL_POLICY_de6267c8b4c3ae5f_EOF
+          GH_AW_CODEX_SHELL_POLICY_aa56c0c51099852d_EOF
           awk '
             BEGIN { skip_openai_proxy = 0 }
             /^[[:space:]]*model_provider[[:space:]]*=/ { next }
@@ -978,14 +978,14 @@ jobs:
             echo '{"items":[]}' > /tmp/gh-aw/agent_output.json
           fi
       - if: always()
-        name: Assemble → overview.json
-        run: node _custody/app/backend/component/risk/workflow/scripts/assemble.js /tmp/gh-aw/agent/pr.json /tmp/gh-aw/agent/pr-files.json /tmp/gh-aw/agent/overview-findings.jsonl > /tmp/gh-aw/overview.json
+        name: Assemble → mrp.json
+        run: node _custody/app/backend/component/mrp/workflow/scripts/assemble-mrp.js /tmp/gh-aw/agent/inputs /tmp/gh-aw/agent/agent-out.json > /tmp/gh-aw/mrp.json
       - if: always()
-        name: Upload overview result
+        name: Upload MRP
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: overview-triage
-          path: /tmp/gh-aw/overview.json
+          name: merge-readiness-pack
+          path: /tmp/gh-aw/mrp.json
           retention-days: 7
 
       - name: Upload agent artifacts
@@ -1026,7 +1026,7 @@ jobs:
     runs-on: ubuntu-slim
     permissions: {}
     concurrency:
-      group: "gh-aw-conclusion-guided-overview-with-risk"
+      group: "gh-aw-conclusion-mrp-assembler"
       cancel-in-progress: false
       queue: max
     outputs:
@@ -1044,8 +1044,8 @@ jobs:
           trace-id: ${{ needs.activation.outputs.setup-trace-id }}
           parent-span-id: ${{ needs.activation.outputs.setup-parent-span-id || needs.activation.outputs.setup-span-id }}
         env:
-          GH_AW_SETUP_WORKFLOW_NAME: "Guided Overview — one cohort partition (walkthrough + breaking-change risk)"
-          GH_AW_CURRENT_WORKFLOW_REF: ${{ github.repository }}/.github/workflows/guided-overview-with-risk.lock.yml@${{ github.ref }}
+          GH_AW_SETUP_WORKFLOW_NAME: "MRP Assembler — synthesize, do not re-review"
+          GH_AW_CURRENT_WORKFLOW_REF: ${{ github.repository }}/.github/workflows/mrp-assembler.lock.yml@${{ github.ref }}
           GH_AW_INFO_VERSION: "0.135.0"
           GH_AW_INFO_AWF_VERSION: "v0.25.58"
           GH_AW_INFO_ENGINE_ID: "codex"
@@ -1069,8 +1069,8 @@ jobs:
         env:
           GH_AW_AGENT_OUTPUT: ${{ steps.setup-agent-output-env.outputs.GH_AW_AGENT_OUTPUT }}
           GH_AW_NOOP_MAX: "1"
-          GH_AW_WORKFLOW_NAME: "Guided Overview — one cohort partition (walkthrough + breaking-change risk)"
-          GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/guided-overview-with-risk.md"
+          GH_AW_WORKFLOW_NAME: "MRP Assembler — synthesize, do not re-review"
+          GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/mrp-assembler.md"
           GH_AW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           GH_AW_AGENT_CONCLUSION: ${{ needs.agent.result }}
           GH_AW_NOOP_REPORT_AS_ISSUE: "true"
@@ -1086,8 +1086,8 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           GH_AW_AGENT_OUTPUT: ${{ steps.setup-agent-output-env.outputs.GH_AW_AGENT_OUTPUT }}
-          GH_AW_WORKFLOW_NAME: "Guided Overview — one cohort partition (walkthrough + breaking-change risk)"
-          GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/guided-overview-with-risk.md"
+          GH_AW_WORKFLOW_NAME: "MRP Assembler — synthesize, do not re-review"
+          GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/mrp-assembler.md"
           GH_AW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           GH_AW_DETECTION_CONCLUSION: ${{ needs.detection.outputs.detection_conclusion }}
           GH_AW_DETECTION_REASON: ${{ needs.detection.outputs.detection_reason }}
@@ -1104,8 +1104,8 @@ jobs:
         env:
           GH_AW_AGENT_OUTPUT: ${{ steps.setup-agent-output-env.outputs.GH_AW_AGENT_OUTPUT }}
           GH_AW_MISSING_TOOL_CREATE_ISSUE: "true"
-          GH_AW_WORKFLOW_NAME: "Guided Overview — one cohort partition (walkthrough + breaking-change risk)"
-          GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/guided-overview-with-risk.md"
+          GH_AW_WORKFLOW_NAME: "MRP Assembler — synthesize, do not re-review"
+          GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/mrp-assembler.md"
         with:
           github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
@@ -1119,8 +1119,8 @@ jobs:
         env:
           GH_AW_AGENT_OUTPUT: ${{ steps.setup-agent-output-env.outputs.GH_AW_AGENT_OUTPUT }}
           GH_AW_REPORT_INCOMPLETE_CREATE_ISSUE: "true"
-          GH_AW_WORKFLOW_NAME: "Guided Overview — one cohort partition (walkthrough + breaking-change risk)"
-          GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/guided-overview-with-risk.md"
+          GH_AW_WORKFLOW_NAME: "MRP Assembler — synthesize, do not re-review"
+          GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/mrp-assembler.md"
         with:
           github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
@@ -1134,11 +1134,11 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           GH_AW_AGENT_OUTPUT: ${{ steps.setup-agent-output-env.outputs.GH_AW_AGENT_OUTPUT }}
-          GH_AW_WORKFLOW_NAME: "Guided Overview — one cohort partition (walkthrough + breaking-change risk)"
-          GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/guided-overview-with-risk.md"
+          GH_AW_WORKFLOW_NAME: "MRP Assembler — synthesize, do not re-review"
+          GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/mrp-assembler.md"
           GH_AW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           GH_AW_AGENT_CONCLUSION: ${{ needs.agent.result }}
-          GH_AW_WORKFLOW_ID: "guided-overview-with-risk"
+          GH_AW_WORKFLOW_ID: "mrp-assembler"
           GH_AW_ACTION_FAILURE_ISSUE_EXPIRES_HOURS: "168"
           GH_AW_ENGINE_ID: "codex"
           GH_AW_SECRET_VERIFICATION_RESULT: ${{ needs.activation.outputs.secret_verification_result }}
@@ -1185,8 +1185,8 @@ jobs:
           trace-id: ${{ needs.activation.outputs.setup-trace-id }}
           parent-span-id: ${{ needs.activation.outputs.setup-parent-span-id || needs.activation.outputs.setup-span-id }}
         env:
-          GH_AW_SETUP_WORKFLOW_NAME: "Guided Overview — one cohort partition (walkthrough + breaking-change risk)"
-          GH_AW_CURRENT_WORKFLOW_REF: ${{ github.repository }}/.github/workflows/guided-overview-with-risk.lock.yml@${{ github.ref }}
+          GH_AW_SETUP_WORKFLOW_NAME: "MRP Assembler — synthesize, do not re-review"
+          GH_AW_CURRENT_WORKFLOW_REF: ${{ github.repository }}/.github/workflows/mrp-assembler.lock.yml@${{ github.ref }}
           GH_AW_INFO_VERSION: "0.135.0"
           GH_AW_INFO_AWF_VERSION: "v0.25.58"
           GH_AW_INFO_ENGINE_ID: "codex"
@@ -1255,7 +1255,7 @@ jobs:
         if: always() && steps.detection_guard.outputs.run_detection == 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
-          WORKFLOW_NAME: "Guided Overview — one cohort partition (walkthrough + breaking-change risk)"
+          WORKFLOW_NAME: "MRP Assembler — synthesize, do not re-review"
           WORKFLOW_DESCRIPTION: "No description provided"
           HAS_PATCH: ${{ needs.agent.outputs.has_patch }}
         with:
@@ -1311,18 +1311,18 @@ jobs:
           DOCKER_SOCK_GID=$(stat -c '%g' "$DOCKER_SOCK_PATH" 2>/dev/null || echo '0')
           export MCP_GATEWAY_DOCKER_COMMAND='docker run -i --rm --network host --add-host host.docker.internal:127.0.0.1 --user '"${MCP_GATEWAY_UID}"':'"${MCP_GATEWAY_GID}"' --group-add '"${DOCKER_SOCK_GID}"' -v '"${DOCKER_SOCK_PATH}"':/var/run/docker.sock -e MCP_GATEWAY_PORT -e MCP_GATEWAY_DOMAIN -e MCP_GATEWAY_API_KEY -e MCP_GATEWAY_PAYLOAD_DIR -e MCP_GATEWAY_PAYLOAD_SIZE_THRESHOLD -e DOCKER_HOST=unix:///var/run/docker.sock -e DEBUG -e MCP_GATEWAY_LOG_DIR -e GH_AW_MCP_LOG_DIR -e GH_AW_SAFE_OUTPUTS -e GH_AW_SAFE_OUTPUTS_CONFIG_PATH -e GH_AW_SAFE_OUTPUTS_TOOLS_PATH -e GH_AW_ASSETS_BRANCH -e GH_AW_ASSETS_MAX_SIZE_KB -e GH_AW_ASSETS_ALLOWED_EXTS -e DEFAULT_BRANCH -e GITHUB_MCP_SERVER_TOKEN -e GITHUB_MCP_GUARD_MIN_INTEGRITY -e GITHUB_MCP_GUARD_REPOS -e GITHUB_REPOSITORY -e GITHUB_SERVER_URL -e GITHUB_SHA -e GITHUB_WORKSPACE -e GITHUB_TOKEN -e GITHUB_RUN_ID -e GITHUB_RUN_NUMBER -e GITHUB_RUN_ATTEMPT -e GITHUB_JOB -e GITHUB_ACTION -e GITHUB_EVENT_NAME -e GITHUB_EVENT_PATH -e GITHUB_ACTOR -e GITHUB_ACTOR_ID -e GITHUB_TRIGGERING_ACTOR -e GITHUB_WORKFLOW -e GITHUB_WORKFLOW_REF -e GITHUB_WORKFLOW_SHA -e GITHUB_REF -e GITHUB_REF_NAME -e GITHUB_REF_TYPE -e GITHUB_HEAD_REF -e GITHUB_BASE_REF -e CODEX_HOME -v /tmp/gh-aw/mcp-payloads:/tmp/gh-aw/mcp-payloads:rw -v /opt:/opt:ro -v /tmp:/tmp:rw -v '"${GITHUB_WORKSPACE}"':'"${GITHUB_WORKSPACE}"':rw ghcr.io/github/gh-aw-mcpg:v0.3.22'
           
-          cat > "${RUNNER_TEMP}/gh-aw/mcp-config/config.toml" << GH_AW_MCP_CONFIG_86a3eb3fead66121_EOF
+          cat > "${RUNNER_TEMP}/gh-aw/mcp-config/config.toml" << GH_AW_MCP_CONFIG_78427204ada38563_EOF
           [history]
           persistence = "none"
           
           [shell_environment_policy]
           inherit = "core"
           include_only = ["^CODEX_API_KEY$", "^HOME$", "^OPENAI_API_KEY$", "^PATH$"]
-          GH_AW_MCP_CONFIG_86a3eb3fead66121_EOF
+          GH_AW_MCP_CONFIG_78427204ada38563_EOF
           
           # Generate JSON config for MCP gateway
           GH_AW_NODE=$(which node 2>/dev/null || command -v node 2>/dev/null || echo node)
-          cat << GH_AW_MCP_CONFIG_8d69caa38bef7772_EOF | "$GH_AW_NODE" "${RUNNER_TEMP}/gh-aw/actions/start_mcp_gateway.cjs"
+          cat << GH_AW_MCP_CONFIG_9d2ad5f2045b79a1_EOF | "$GH_AW_NODE" "${RUNNER_TEMP}/gh-aw/actions/start_mcp_gateway.cjs"
           {
             "mcpServers": {
             },
@@ -1333,11 +1333,11 @@ jobs:
               "payloadDir": "${MCP_GATEWAY_PAYLOAD_DIR}"
             }
           }
-          GH_AW_MCP_CONFIG_8d69caa38bef7772_EOF
+          GH_AW_MCP_CONFIG_9d2ad5f2045b79a1_EOF
           
           # Sync converter output to writable CODEX_HOME for Codex
           mkdir -p /tmp/gh-aw/mcp-config
-          cat > "/tmp/gh-aw/mcp-config/config.toml" << GH_AW_CODEX_SHELL_POLICY_ae40d64db478bda4_EOF
+          cat > "/tmp/gh-aw/mcp-config/config.toml" << GH_AW_CODEX_SHELL_POLICY_f233fce0d0ecb7eb_EOF
           model_provider = "openai-proxy"
           [model_providers.openai-proxy]
           name = "OpenAI AWF proxy"
@@ -1347,7 +1347,7 @@ jobs:
           [shell_environment_policy]
           inherit = "core"
           include_only = ["^CODEX_API_KEY$", "^HOME$", "^OPENAI_API_KEY$", "^PATH$"]
-          GH_AW_CODEX_SHELL_POLICY_ae40d64db478bda4_EOF
+          GH_AW_CODEX_SHELL_POLICY_f233fce0d0ecb7eb_EOF
           awk '
             BEGIN { skip_openai_proxy = 0 }
             /^[[:space:]]*model_provider[[:space:]]*=/ { next }
@@ -1455,16 +1455,16 @@ jobs:
     permissions: {}
     timeout-minutes: 15
     env:
-      GH_AW_CALLER_WORKFLOW_ID: "${{ github.repository }}/guided-overview-with-risk"
+      GH_AW_CALLER_WORKFLOW_ID: "${{ github.repository }}/mrp-assembler"
       GH_AW_DETECTION_CONCLUSION: ${{ needs.detection.outputs.detection_conclusion }}
       GH_AW_DETECTION_REASON: ${{ needs.detection.outputs.detection_reason }}
       GH_AW_EFFECTIVE_TOKENS: ${{ needs.agent.outputs.effective_tokens }}
       GH_AW_ENGINE_ID: "codex"
       GH_AW_ENGINE_MODEL: "gpt-5.5"
       GH_AW_SAFE_OUTPUTS_STAGED: "true"
-      GH_AW_WORKFLOW_ID: "guided-overview-with-risk"
-      GH_AW_WORKFLOW_NAME: "Guided Overview — one cohort partition (walkthrough + breaking-change risk)"
-      GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/guided-overview-with-risk.md"
+      GH_AW_WORKFLOW_ID: "mrp-assembler"
+      GH_AW_WORKFLOW_NAME: "MRP Assembler — synthesize, do not re-review"
+      GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/mrp-assembler.md"
     outputs:
       code_push_failure_count: ${{ steps.process_safe_outputs.outputs.code_push_failure_count }}
       code_push_failure_errors: ${{ steps.process_safe_outputs.outputs.code_push_failure_errors }}
@@ -1484,8 +1484,8 @@ jobs:
           trace-id: ${{ needs.activation.outputs.setup-trace-id }}
           parent-span-id: ${{ needs.activation.outputs.setup-parent-span-id || needs.activation.outputs.setup-span-id }}
         env:
-          GH_AW_SETUP_WORKFLOW_NAME: "Guided Overview — one cohort partition (walkthrough + breaking-change risk)"
-          GH_AW_CURRENT_WORKFLOW_REF: ${{ github.repository }}/.github/workflows/guided-overview-with-risk.lock.yml@${{ github.ref }}
+          GH_AW_SETUP_WORKFLOW_NAME: "MRP Assembler — synthesize, do not re-review"
+          GH_AW_CURRENT_WORKFLOW_REF: ${{ github.repository }}/.github/workflows/mrp-assembler.lock.yml@${{ github.ref }}
           GH_AW_INFO_VERSION: "0.135.0"
           GH_AW_INFO_AWF_VERSION: "v0.25.58"
           GH_AW_INFO_ENGINE_ID: "codex"
@@ -1521,7 +1521,7 @@ jobs:
           GH_AW_ALLOWED_DOMAINS: "172.30.0.1,api.openai.com,api.snapcraft.io,archive.ubuntu.com,arcyleung-ubuntu.tailb940e6.ts.net,azure.archive.ubuntu.com,chatgpt.com,crl.geotrust.com,crl.globalsign.com,crl.identrust.com,crl.sectigo.com,crl.thawte.com,crl.usertrust.com,crl.verisign.com,crl3.digicert.com,crl4.digicert.com,crls.ssl.com,host.docker.internal,json-schema.org,json.schemastore.org,keyserver.ubuntu.com,ocsp.digicert.com,ocsp.geotrust.com,ocsp.globalsign.com,ocsp.identrust.com,ocsp.sectigo.com,ocsp.ssl.com,ocsp.thawte.com,ocsp.usertrust.com,ocsp.verisign.com,openai.com,packagecloud.io,packages.cloud.google.com,packages.microsoft.com,ppa.launchpad.net,s.symcb.com,s.symcd.com,security.ubuntu.com,ts-crl.ws.symantec.com,ts-ocsp.ws.symantec.com,www.googleapis.com"
           GITHUB_SERVER_URL: ${{ github.server_url }}
           GITHUB_API_URL: ${{ github.api_url }}
-          GH_AW_SAFE_OUTPUTS_HANDLER_CONFIG: "{\"create_issue\":{\"labels\":[\"guided-overview-with-risk\"],\"max\":1,\"title_prefix\":\"[guided-overview-with-risk]\"},\"create_report_incomplete_issue\":{},\"missing_data\":{},\"missing_tool\":{},\"noop\":{\"max\":1,\"report-as-issue\":\"true\"},\"report_incomplete\":{}}"
+          GH_AW_SAFE_OUTPUTS_HANDLER_CONFIG: "{\"create_issue\":{\"labels\":[\"mrp-assembler\"],\"max\":1,\"title_prefix\":\"[mrp-assembler]\"},\"create_report_incomplete_issue\":{},\"missing_data\":{},\"missing_tool\":{},\"noop\":{\"max\":1,\"report-as-issue\":\"true\"},\"report_incomplete\":{}}"
           GH_AW_SAFE_OUTPUTS_STAGED: "true"
         with:
           github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
