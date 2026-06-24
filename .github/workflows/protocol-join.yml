@@ -1,0 +1,55 @@
+name: Protocol Join
+run-name: "join · ${{ github.event.client_payload.instance }}"
+
+on:
+  repository_dispatch:
+    types: [protocol-join]
+
+permissions:
+  contents: read
+
+# Serialize all join evaluations for one (instance, path) pair so nested joins at different
+# fanout paths don't serialize against each other or the top join.
+concurrency:
+  group: join-${{ github.event.client_payload.instance }}-${{ github.event.client_payload.path }}
+  cancel-in-progress: false
+
+jobs:
+  join:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      issues: write
+      pull-requests: write   # join.py PATCHes the PR's shared status comment (final headline); a PR comment needs pull-requests:write
+    steps:
+      - uses: actions/checkout@v5
+      - id: head
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INSTANCE: ${{ github.event.client_payload.instance }}
+        run: |
+          PR="${INSTANCE#pr-}"
+          SHA=$(gh pr view "$PR" --repo "${{ github.repository }}" --json headRefOid --jq .headRefOid)
+          echo "pr=$PR" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+      - name: Evaluate join
+        env:
+          STATE_REMOTE: https://x-access-token:${{ secrets.POC_DISPATCH_TOKEN }}@github.com/${{ github.repository }}.git
+          # The unified join.py DISPATCHES protocol-continue (advance the enclosing
+          # sequence cursor to .next) and protocol-join (bubble a nested failure) — a
+          # repository_dispatch that triggers a workflow, which the default GITHUB_TOKEN
+          # cannot do. It needs the dispatch-capable PAT (held already via STATE_REMOTE).
+          GH_TOKEN: ${{ secrets.POC_DISPATCH_TOKEN }}
+          PUBLISH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR: ${{ steps.head.outputs.pr }}
+          PR_HEAD_SHA: ${{ steps.head.outputs.sha }}
+          NODE_PATH: ${{ github.event.client_payload.path }}
+          # client_payload is untrusted at the workflow boundary — pass via env, never
+          # interpolate into the run: block (CLAUDE.md security rule).
+          DISPATCH_PROTOCOL: ${{ github.event.client_payload.protocol }}
+          INSTANCE: ${{ github.event.client_payload.instance }}
+        run: |
+          PROTO=".github/agent-factory/protocols/$DISPATCH_PROTOCOL/protocol.json"
+          .github/agent-factory/engine/join.py /tmp/state "$INSTANCE" "$PROTO"

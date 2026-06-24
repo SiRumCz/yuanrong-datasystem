@@ -1,0 +1,458 @@
+name: Agentic Engine
+# Reusable, protocol-agnostic engine. A per-protocol trigger shim declares the
+# real `on:` triggers and calls this workflow with the protocol.json path.
+#
+# run-name + concurrency are owned by the CALLER (the shim), not here: a
+# workflow_call workflow cannot reliably reference `inputs` in workflow-level
+# run-name/concurrency (it causes a startup_failure), and the run's identity +
+# serialization are properly the triggering workflow's concern. The shim sets a
+# concurrency group keyed by instance+branch so each fan-out branch's
+# protocol-continue serializes independently.
+
+on:
+  workflow_call:
+    inputs:
+      protocol:
+        description: "Path to the protocol.json (e.g. .github/agent-factory/protocols/code-review/protocol.json)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  # ── Zone 1: engine-pre. Holds the state PAT; never runs agent code. ──
+  plan:
+    if: >
+      github.event_name == 'repository_dispatch' ||
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request != null)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      checks: write
+    outputs:
+      pr: ${{ steps.ctx.outputs.pr }}
+      head_sha: ${{ steps.head.outputs.sha }}
+      action: ${{ steps.plan.outputs.action }}
+      iteration: ${{ steps.plan.outputs.iteration }}
+      feedback: ${{ steps.plan.outputs.feedback }}
+      sabotage: ${{ steps.sabotage.outputs.sabotage }}
+      instance: ${{ steps.ctx.outputs.instance }}
+      command: ${{ steps.ctx.outputs.command }}
+      legs: ${{ steps.plan.outputs.legs }}
+      inputs_json: ${{ steps.plan.outputs.inputs_json }}
+      override_actor: ${{ steps.ctx.outputs.override_actor }}
+      override_reason: ${{ steps.ctx.outputs.override_reason }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: ctx
+        env:
+          PROTO: ${{ inputs.protocol }}
+          DISPATCH_INSTANCE: ${{ github.event.client_payload.instance }}
+          DISPATCH_PATH: ${{ github.event.client_payload.path }}
+          DISPATCH_TYPE: ${{ github.event.action }}
+          PR_EVENT_ACTION: ${{ github.event.action }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENTER_LOGIN: ${{ github.event.comment.user.login }}
+          GH_TOKEN: ${{ secrets.POC_DISPATCH_TOKEN }}
+        run: |
+          # Derive (instance, command, node_path). Agent-derived strings
+          # (payload fields, comment body) are read via env, never interpolated.
+          # Entry events (pull_request/issue_comment) map through the protocol's
+          # `triggers` block; internal repository_dispatch types are generic.
+          NODE_PATH=""
+          CMD=""
+          case "${{ github.event_name }}" in
+            repository_dispatch)
+              INSTANCE="$DISPATCH_INSTANCE"
+              [ -n "$INSTANCE" ] || { echo "[ctx] repository_dispatch with empty instance" >&2; exit 1; }
+              PR="${INSTANCE#pr-}"
+              case "$DISPATCH_TYPE" in
+                protocol-continue) CMD="continue"; NODE_PATH="$DISPATCH_PATH" ;;
+                *) echo "[ctx] unknown repository_dispatch type: $DISPATCH_TYPE" >&2; exit 1 ;;
+              esac ;;
+            pull_request)
+              PR="${{ github.event.pull_request.number }}"
+              INSTANCE="pr-$PR"
+              CMD=$(python3 .github/agent-factory/engine/lib.py match-trigger "$PROTO" pull_request "$PR_EVENT_ACTION" "") ;;
+            issue_comment)
+              PR="${{ github.event.issue.number }}"
+              INSTANCE="pr-$PR"
+              CMD=$(python3 .github/agent-factory/engine/lib.py match-trigger "$PROTO" issue_comment "" "$COMMENT_BODY")
+              if [ "$CMD" = "override" ]; then
+                # Authorize from TRUSTED fields only (login from the event, repo
+                # permission from the API) — never from the comment body. The body
+                # is used only to match the prefix and carry an optional reason.
+                PERM=$(gh api "repos/${{ github.repository }}/collaborators/$COMMENTER_LOGIN/permission" \
+                  --jq '.permission' 2>/dev/null || echo none)
+                if [ "$PERM" = "write" ] || [ "$PERM" = "admin" ]; then
+                  REASON="${COMMENT_BODY#/override}"   # strip the command prefix
+                  REASON="${REASON# }"                 # strip one leading space
+                  echo "override_actor=$COMMENTER_LOGIN" >> "$GITHUB_OUTPUT"
+                  DELIM="ovr_$(openssl rand -hex 16)"
+                  { echo "override_reason<<$DELIM"; printf '%s\n' "$REASON"; echo "$DELIM"; } >> "$GITHUB_OUTPUT"
+                else
+                  gh api "repos/${{ github.repository }}/issues/$PR/comments" \
+                    -f "body=@$COMMENTER_LOGIN /override requires write access to this repository." >/dev/null 2>&1 || true
+                  CMD=""   # not authorized → the engine no-ops (plan/dispatch skip on empty command)
+                fi
+              fi
+              if [ "$CMD" = "resolve-gate" ]; then
+                # Decision derived from the matched prefix (mutually exclusive; no
+                # prefix is a prefix of another). Identity from TRUSTED event fields.
+                case "$COMMENT_BODY" in
+                  /approve*)         GATE_DECISION=approve;         PREFIX=/approve ;;
+                  /request-changes*) GATE_DECISION=request-changes; PREFIX=/request-changes ;;
+                  /reject*)          GATE_DECISION=reject;          PREFIX=/reject ;;
+                  *)                 GATE_DECISION="";              PREFIX="" ;;
+                esac
+                PERM=$(gh api "repos/${{ github.repository }}/collaborators/$COMMENTER_LOGIN/permission" \
+                  --jq '.permission' 2>/dev/null || echo none)
+                if [ "$PERM" = "write" ] || [ "$PERM" = "admin" ]; then
+                  REASON="${COMMENT_BODY#$PREFIX}"   # strip the matched prefix
+                  REASON="${REASON# }"               # strip one leading space
+                  echo "gate_decision=$GATE_DECISION" >> "$GITHUB_OUTPUT"
+                  echo "gate_actor=$COMMENTER_LOGIN" >> "$GITHUB_OUTPUT"
+                  echo "gate_pr_author=${{ github.event.issue.user.login }}" >> "$GITHUB_OUTPUT"
+                  DELIM="gate_$(openssl rand -hex 16)"
+                  { echo "gate_reason<<$DELIM"; printf '%s\n' "$REASON"; echo "$DELIM"; } >> "$GITHUB_OUTPUT"
+                else
+                  gh api "repos/${{ github.repository }}/issues/$PR/comments" \
+                    -f "body=@$COMMENTER_LOGIN resolving this gate requires write access to this repository." >/dev/null 2>&1 || true
+                  CMD=""   # not authorized → engine no-ops
+                fi
+              fi
+              if [ "$CMD" = "answer" ]; then
+                # /answer drives the pipeline forward (gate → next sub-state), so
+                # require write access (same posture as resolve-gate). Body is
+                # untrusted and passed to next.py via env, never interpolated.
+                PERM=$(gh api "repos/${{ github.repository }}/collaborators/$COMMENTER_LOGIN/permission" \
+                  --jq '.permission' 2>/dev/null || echo none)
+                if [ "$PERM" = "write" ] || [ "$PERM" = "admin" ]; then
+                  echo "answer_actor=$COMMENTER_LOGIN" >> "$GITHUB_OUTPUT"
+                  DELIM="ans_$(openssl rand -hex 16)"
+                  { echo "answer_body<<$DELIM"; printf '%s\n' "$COMMENT_BODY"; echo "$DELIM"; } >> "$GITHUB_OUTPUT"
+                else
+                  gh api "repos/${{ github.repository }}/issues/$PR/comments" \
+                    -f "body=@$COMMENTER_LOGIN answering requires write access to this repository." >/dev/null 2>&1 || true
+                  CMD=""
+                fi
+              fi
+              ;;
+          esac
+          echo "pr=$PR" >> "$GITHUB_OUTPUT"
+          echo "instance=$INSTANCE" >> "$GITHUB_OUTPUT"
+          echo "command=$CMD" >> "$GITHUB_OUTPUT"
+          echo "node_path=$NODE_PATH" >> "$GITHUB_OUTPUT"
+      - id: head
+        if: steps.ctx.outputs.command != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ steps.ctx.outputs.pr }}
+        run: |
+          SHA=$(gh pr view "$PR" --repo "${{ github.repository }}" --json headRefOid --jq .headRefOid)
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+      - id: plan
+        if: steps.ctx.outputs.command != ''
+        env:
+          STATE_REMOTE: https://x-access-token:${{ secrets.POC_DISPATCH_TOKEN }}@github.com/${{ github.repository }}.git
+          # next.py's do_answer fires a repository_dispatch (protocol-continue) to
+          # advance a gated sub-pipeline to its next sub-state. That needs the
+          # dispatch-capable PAT (the default GITHUB_TOKEN cannot trigger
+          # workflows). The plan job already holds this PAT via STATE_REMOTE, so
+          # this grants no new privilege.
+          GH_TOKEN: ${{ secrets.POC_DISPATCH_TOKEN }}
+          PUBLISH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          HEAD_SHA: ${{ steps.head.outputs.sha }}
+          PROTO: ${{ inputs.protocol }}
+          NODE_PATH: ${{ steps.ctx.outputs.node_path }}
+          OVERRIDE_ACTOR: ${{ steps.ctx.outputs.override_actor }}
+          OVERRIDE_REASON: ${{ steps.ctx.outputs.override_reason }}
+          GATE_DECISION: ${{ steps.ctx.outputs.gate_decision }}
+          GATE_ACTOR: ${{ steps.ctx.outputs.gate_actor }}
+          GATE_REASON: ${{ steps.ctx.outputs.gate_reason }}
+          GATE_PR_AUTHOR: ${{ steps.ctx.outputs.gate_pr_author }}
+          ANSWER_BODY: ${{ steps.ctx.outputs.answer_body }}
+          ANSWER_ACTOR: ${{ steps.ctx.outputs.answer_actor }}
+        run: |
+          # next.py reads NODE_PATH from env (the dot-joined tree path of the leg
+          # being continued). Empty NODE_PATH → a fresh start (start/reset command).
+          .github/agent-factory/engine/next.py /tmp/state "${{ steps.ctx.outputs.instance }}" \
+            "$PROTO" "${{ steps.ctx.outputs.command }}" "$HEAD_SHA" > /tmp/action.json
+          cat /tmp/action.json
+          ACTION=$(jq -r .action /tmp/action.json)
+          echo "action=$ACTION" >> "$GITHUB_OUTPUT"
+          echo "iteration=$(jq -r .iteration /tmp/action.json)" >> "$GITHUB_OUTPUT"
+          { echo "feedback<<GH_EOF"; jq -r .feedback /tmp/action.json; echo "GH_EOF"; } >> "$GITHUB_OUTPUT"
+          # Legs (matrix axis — NODE_PATH coordinate, replaces legacy branch/substate):
+          #   run-fanout  → legs[] from action (each carries {path, workflow})
+          #   run-agent   → one-element [{path, workflow}] from the action
+          #   halt/other  → []  (downstream jobs skip)
+          if [ "$ACTION" = "run-fanout" ]; then
+            LEGS=$(jq -c '.legs' /tmp/action.json)
+          elif [ "$ACTION" = "run-agent" ]; then
+            LEGS=$(jq -c '[{path: .path, workflow: .workflow}]' /tmp/action.json)
+          else
+            LEGS='[]'
+          fi
+          echo "legs=$LEGS" >> "$GITHUB_OUTPUT"
+          # Inline this leg's resolved inputs (if the action declares any) so the
+          # agent reads them from aw_context (.inputs). action.inputs[].path are
+          # absolute paths inside the state checkout (/tmp/state). "{}" if none.
+          INPUTS_JSON=$(python3 -c '
+          import json
+          try:
+              a = json.load(open("/tmp/action.json"))
+          except Exception:
+              a = {}
+          out = {}
+          for i in (a.get("inputs") or []):
+              try:
+                  out[i["as"]] = json.load(open(i["path"]))
+              except Exception:
+                  out[i["as"]] = None
+          print(json.dumps(out))
+          ')
+          echo "inputs_json=$INPUTS_JSON" >> "$GITHUB_OUTPUT"
+      - id: sabotage
+        if: steps.ctx.outputs.command != ''
+        env:
+          GH_TOKEN: ${{ secrets.POC_DISPATCH_TOKEN }}
+        run: |
+          HAS=$(gh api "repos/${{ github.repository }}/issues/${{ steps.ctx.outputs.pr }}/labels" \
+            --jq 'any(.[]; .name == "poc:sabotage")' 2>/dev/null || echo false)
+          if [ "$HAS" = "true" ]; then
+            echo "sabotage=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "sabotage=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Mark pipeline in progress (aggregate check run)
+        if: steps.plan.outputs.legs != '[]' && steps.plan.outputs.legs != ''
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PUBLISH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ steps.head.outputs.sha }}
+          ITER: ${{ steps.plan.outputs.iteration }}
+        run: |
+          # The aggregate check-run name is the PROTOCOL ID (generic). It stays
+          # in_progress until join.py (fan-out) or advance.py (agent phase / no
+          # next phase) completes it.
+          PID=$(jq -r .name "${{ inputs.protocol }}")
+          python3 .github/agent-factory/engine/lib.py set-check-run "$PID" "$SHA" in_progress "" "Pipeline in progress" "Running (iteration $ITER); merge is gated until the protocol completes."
+      - name: Ensure shared status comment
+        # Fire for a fan-out dispatch AND for an agent dispatch: a multi-phase
+        # protocol whose first phase is an agent (e.g. preflight) needs the
+        # protocol-level comment + audit link created the moment it starts.
+        # ensure-status-comment is a no-op for a single-agent protocol.
+        if: steps.plan.outputs.action == 'run-fanout' || steps.plan.outputs.action == 'run-agent'
+        env:
+          STATE_REMOTE: https://x-access-token:${{ secrets.POC_DISPATCH_TOKEN }}@github.com/${{ github.repository }}.git
+          PUBLISH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR: ${{ steps.ctx.outputs.pr }}
+          INSTANCE: ${{ steps.ctx.outputs.instance }}
+        run: |
+          PID=$(jq -r .name "${{ inputs.protocol }}")
+          python3 .github/agent-factory/engine/lib.py ensure-status-comment \
+            /tmp/state "$PID" "$INSTANCE" "${{ inputs.protocol }}" "$PR"
+
+  # ── Zone 2: the sandboxed agents, one matrix leg per branch/sentinel. ──
+  dispatch:
+    needs: plan
+    if: ${{ needs.plan.outputs.legs != '[]' && needs.plan.outputs.legs != '' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        leg: ${{ fromJSON(needs.plan.outputs.legs) }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: wait
+        env:
+          GH_TOKEN: ${{ secrets.POC_DISPATCH_TOKEN }}
+          PR: ${{ needs.plan.outputs.pr }}
+          ITERATION: ${{ needs.plan.outputs.iteration }}
+          FEEDBACK: ${{ needs.plan.outputs.feedback }}
+          SABOTAGE: ${{ needs.plan.outputs.sabotage }}
+          REPO: ${{ github.repository }}
+          PROTO: ${{ inputs.protocol }}
+          NODE_PATH: ${{ matrix.leg.path }}
+          LEG_WORKFLOW: ${{ matrix.leg.workflow }}
+          INPUTS_JSON: ${{ needs.plan.outputs.inputs_json }}
+        run: |
+          # Correlation id: unique per dispatch (run id + attempt + leg path).
+          # The leg token is derived from the dot-path (dots → dashes for readability).
+          LEGTOK=$(printf '%s' "$NODE_PATH" | tr '.' '-')
+          [ -n "$LEGTOK" ] || LEGTOK="agent"
+          CID="${{ github.run_id }}-${{ github.run_attempt }}-${LEGTOK}"
+          INPUTS="$INPUTS_JSON"; [ -n "$INPUTS" ] || INPUTS='{}'
+          CTX=$(jq -nc \
+            --arg pr "$PR" --arg iteration "$ITERATION" --arg feedback "$FEEDBACK" \
+            --argjson sabotage "$SABOTAGE" --arg cid "$CID" \
+            --argjson inputs "$INPUTS" \
+            '{pr: $pr, iteration: $iteration, feedback: $feedback, sabotage: $sabotage, cid: $cid, inputs: $inputs}')
+          # Workflow comes from the matrix leg (next.py emits it in legs[]); read
+          # via env var (never interpolated) to keep the security invariant.
+          NAME="$LEG_WORKFLOW"
+          [ -n "$NAME" ] || { echo "no agent workflow in matrix leg for NODE_PATH='$NODE_PATH'" >&2; exit 1; }
+          WF="$NAME.lock.yml"
+          mkdir -p /tmp/meta
+          T0=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          gh workflow run "$WF" --repo "$REPO" -f aw_context="$CTX"
+          RID=""
+          for i in $(seq 1 24); do
+            sleep 5
+            RUNS=$(gh run list --repo "$REPO" --workflow "$WF" --event workflow_dispatch \
+              --created ">=$T0" --json databaseId,displayTitle)
+            RID=$(python3 .github/agent-factory/engine/lib.py match-run-by-cid "$RUNS" "$CID")
+            [ -n "$RID" ] && break
+          done
+          [ -n "$RID" ] || { echo "no agent run matched cid:[$CID] for $WF" >&2; exit 1; }
+          printf '%s' "$RID" > /tmp/meta/run_id
+          if gh run watch "$RID" --repo "$REPO" --exit-status; then
+            printf '%s' "true" > /tmp/meta/agent_ok
+          else
+            printf '%s' "false" > /tmp/meta/agent_ok
+          fi
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: runmeta-${{ matrix.leg.path }}
+          path: /tmp/meta
+
+  # ── Zone 3: checks. No secrets beyond the default read token. ──
+  checks:
+    needs: [plan, dispatch]
+    if: always() && needs.plan.outputs.legs != '[]' && needs.plan.outputs.legs != '' && needs.dispatch.result != 'skipped'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        leg: ${{ fromJSON(needs.plan.outputs.legs) }}
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download run meta
+        uses: actions/download-artifact@v7
+        with:
+          name: runmeta-${{ matrix.leg.path }}
+          path: /tmp/meta
+      - id: meta
+        run: |
+          RID=$(cat /tmp/meta/run_id 2>/dev/null || echo "")
+          OK=$(cat /tmp/meta/agent_ok 2>/dev/null || echo "")
+          echo "rid=$RID" >> "$GITHUB_OUTPUT"
+          echo "ok=$OK" >> "$GITHUB_OUTPUT"
+      - name: Download evidence artifact
+        run: |
+          mkdir -p /tmp/agent
+          if [ -n "${{ steps.meta.outputs.rid }}" ]; then
+            gh run download "${{ steps.meta.outputs.rid }}" \
+              --repo "${{ github.repository }}" -n evidence -D /tmp/agent || echo "no evidence artifact"
+          fi
+      - name: Fetch independent ground truth
+        run: |
+          gh pr diff "${{ needs.plan.outputs.pr }}" --repo "${{ github.repository }}" > /tmp/diff.txt
+          gh pr diff "${{ needs.plan.outputs.pr }}" --repo "${{ github.repository }}" --name-only > /tmp/files.txt
+      - name: Run checks
+        env:
+          RID: ${{ steps.meta.outputs.rid }}
+          OK: ${{ steps.meta.outputs.ok }}
+          NODE_PATH: ${{ matrix.leg.path }}
+          PROTO: ${{ inputs.protocol }}
+        run: |
+          # run-checks.py resolves the check LIST + node-scoped params from the
+          # protocol given NODE_PATH. NODE_PATH is the dot-joined tree path of the
+          # leg (e.g. "review.grumpy"); run-checks.py reads it from env.
+          EV=/tmp/agent/evidence.json
+          if [ ! -f "$EV" ]; then
+            echo "WARNING: no evidence artifact (agent run $RID, ok=$OK); checks will report it" >&2
+            echo '{}' > "$EV"
+          fi
+          # NODE is derived from NODE_PATH (the full dot-path passed as the state-id
+          # positional arg; run-checks.py reads NODE_PATH env to navigate the tree).
+          NODE="$NODE_PATH"
+          # Make the PR description + title available to checks (env, never
+          # interpolated into this run: block). Fetched from GitHub by this
+          # trusted job — not from agent output. Multiline body stays in a shell
+          # var; run-checks.py forwards the job env to each check.
+          PR_BODY="$(gh pr view "${{ needs.plan.outputs.pr }}" --repo "${{ github.repository }}" --json body --jq '.body' 2>/dev/null || true)"
+          PR_TITLE="$(gh pr view "${{ needs.plan.outputs.pr }}" --repo "${{ github.repository }}" --json title --jq '.title' 2>/dev/null || true)"
+          export PR_BODY PR_TITLE
+          VERDICTS=$(.github/agent-factory/engine/run-checks.py \
+            "$PROTO" "$NODE" "$EV" /tmp/diff.txt /tmp/files.txt)
+          jq . <<<"$VERDICTS"
+          mkdir -p /tmp/verdicts
+          printf '%s' "$VERDICTS" > /tmp/verdicts/verdicts.json
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: verdicts-${{ matrix.leg.path }}
+          path: /tmp/verdicts
+
+  # ── Zone 4: engine-post. Reads check verdicts only; sole writer of state. ──
+  advance:
+    needs: [plan, dispatch, checks]
+    if: always() && needs.plan.outputs.legs != '[]' && needs.plan.outputs.legs != '' && needs.dispatch.result != 'skipped' && (needs.checks.result == 'success' || needs.checks.result == 'failure')
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        leg: ${{ fromJSON(needs.plan.outputs.legs) }}
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      actions: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download run meta
+        uses: actions/download-artifact@v7
+        with:
+          name: runmeta-${{ matrix.leg.path }}
+          path: /tmp/meta
+      - name: Download verdicts
+        uses: actions/download-artifact@v7
+        with:
+          name: verdicts-${{ matrix.leg.path }}
+          path: /tmp/verdicts
+      - name: Re-download evidence (for publication only)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p /tmp/agent
+          RID=$(cat /tmp/meta/run_id 2>/dev/null || echo "")
+          if [ -n "$RID" ]; then
+            gh run download "$RID" --repo "${{ github.repository }}" -n evidence -D /tmp/agent || true
+          fi
+          [ -f /tmp/agent/evidence.json ] || echo '{"files":[]}' > /tmp/agent/evidence.json
+      - name: Advance
+        env:
+          STATE_REMOTE: https://x-access-token:${{ secrets.POC_DISPATCH_TOKEN }}@github.com/${{ github.repository }}.git
+          GH_TOKEN: ${{ secrets.POC_DISPATCH_TOKEN }}
+          PUBLISH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR: ${{ needs.plan.outputs.pr }}
+          PR_HEAD_SHA: ${{ needs.plan.outputs.head_sha }}
+          NODE_PATH: ${{ matrix.leg.path }}
+          PROTO: ${{ inputs.protocol }}
+        run: |
+          export AGENT_RUN_ID=$(cat /tmp/meta/run_id 2>/dev/null || echo "")
+          VERDICTS=$(cat /tmp/verdicts/verdicts.json 2>/dev/null || echo "")
+          if [ -z "$VERDICTS" ]; then
+            VERDICTS='{"results":[{"check":"checks-job","pass":false,"feedback":"checks job did not complete; treating as failed iteration"}]}'
+          fi
+          printf '%s' "$VERDICTS" > /tmp/verdicts.json
+          jq . /tmp/verdicts.json
+          .github/agent-factory/engine/advance.py /tmp/state "${{ needs.plan.outputs.instance }}" \
+            "$PROTO" /tmp/verdicts.json /tmp/agent/evidence.json

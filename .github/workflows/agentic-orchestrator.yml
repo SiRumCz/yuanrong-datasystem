@@ -1,0 +1,79 @@
+name: Agentic Orchestrator
+# Engine-owned, protocol-agnostic router. Declares the UNION of all protocols'
+# entry triggers (a reusable workflow_call workflow cannot declare `on:` itself),
+# runs a read-only `route` job to pick the matching protocol, then calls the
+# generic engine. run-name + concurrency live HERE (the caller), github.event-based,
+# never `inputs` (which would startup_failure a workflow_call workflow).
+run-name: "agentic · ${{ github.event.client_payload.instance || format('pr-{0}', github.event.issue.number || github.event.pull_request.number) }} @ ${{ github.event.client_payload.path || 'entry' }}"
+
+on:
+  # No protocol auto-triggers on pull_request anymore — code-review is /review-only
+  # and recover-mental-model-stub is /recover-only — so PR open/sync does nothing.
+  # Re-add a `pull_request:` block here (and the protocol's trigger) to restore it.
+  issue_comment:
+    types: [created]
+  repository_dispatch:
+    types: [protocol-continue]   # (Stage 4a: the old advance type was retired); protocol-join owned by protocol-join.yml
+
+# The calling job's permissions are the CEILING for the reusable engine. Grant the
+# UNION the engine's jobs need; the engine's per-job permissions scope down within it.
+# (State writes use POC_DISPATCH_TOKEN, not GITHUB_TOKEN, so contents stays read.)
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  checks: write
+  actions: read
+
+concurrency:
+  # Static prefix + instance + path. Protocol is unknown at concurrency-eval
+  # time, so all protocols share this namespace (fine for one-pipeline-per-repo).
+  # path is the NODE_PATH coordinate (e.g. "review.grumpy"); empty for entry events.
+  group: agentic-${{ github.event.client_payload.instance || format('pr-{0}', github.event.issue.number || github.event.pull_request.number) }}-${{ github.event.client_payload.path }}
+  cancel-in-progress: false
+
+jobs:
+  route:
+    # Read-only. Picks the protocol path (entry events) or passes through the
+    # dispatch protocol; decides skip. Holds NO state PAT.
+    if: >
+      github.event_name == 'repository_dispatch' ||
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request != null)
+    runs-on: ubuntu-latest
+    outputs:
+      protocol: ${{ steps.r.outputs.protocol }}
+      skip: ${{ steps.r.outputs.skip }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: r
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_EVENT_ACTION: ${{ github.event.action }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          DISPATCH_PROTOCOL: ${{ github.event.client_payload.protocol }}
+          IS_PR_COMMENT: ${{ github.event.issue.pull_request != null }}
+        run: |
+          # Agent-derived strings (COMMENT_BODY, DISPATCH_PROTOCOL) are read via env
+          # and passed as quoted shell vars, NEVER interpolated into this run: block.
+          # lib.py route prints `protocol=`/`skip=` to stdout and exits non-zero only
+          # on a genuine error (incl. an ambiguous multi-protocol match -> red job).
+          python3 .github/agent-factory/engine/lib.py route \
+            .github/agent-factory/protocols \
+            "$EVENT_NAME" "$PR_EVENT_ACTION" "$COMMENT_BODY" \
+            "$DISPATCH_PROTOCOL" "$IS_PR_COMMENT" \
+            >> "$GITHUB_OUTPUT"
+
+  engine:
+    needs: route
+    if: ${{ needs.route.outputs.skip != 'true' }}
+    uses: ./.github/workflows/agentic-engine.yml
+    with:
+      protocol: ${{ needs.route.outputs.protocol }}
+    secrets: inherit
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      checks: write
+      actions: read
