@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "preflight adherence evidence",
+  "type": "object",
+  "required": ["checks", "examined"],
+  "properties": {
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "status"],
+        "properties": {
+          "id": { "type": "string", "enum": ["spec-adherence", "plan-adherence"] },
+          "status": { "type": "string", "enum": ["pass", "fail", "warn"] },
+          "summary": { "type": "string" },
+          "evidence": { "type": "array" },
+          "remediation": { "type": "string" }
+        }
+      }
+    },
+    "examined": { "type": "array", "items": { "type": "string" } }
+  }
+}

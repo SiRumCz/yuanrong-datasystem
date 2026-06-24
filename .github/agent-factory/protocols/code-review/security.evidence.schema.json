@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Security review evidence",
+  "type": "object",
+  "required": ["files"],
+  "properties": {
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "verdicts"],
+        "properties": {
+          "path": { "type": "string" },
+          "verdicts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["category", "verdict"],
+              "properties": {
+                "category": { "enum": ["security"] },
+                "verdict": { "enum": ["issues-found", "none-found"] },
+                "findings": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["existing_code", "comment", "side", "line"],
+                    "properties": {
+                      "existing_code": { "type": "string", "minLength": 1 },
+                      "comment": { "type": "string", "minLength": 1 },
+                      "side": { "enum": ["RIGHT", "LEFT"] },
+                      "line": { "type": "integer", "minimum": 1 },
+                      "start_line": { "type": "integer", "minimum": 1 }
+                    }
+                  }
+                },
+                "examined": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+              },
+              "allOf": [
+                { "if": { "properties": { "verdict": { "const": "issues-found" } } },
+                  "then": { "required": ["findings"], "properties": { "findings": { "minItems": 1 } } } },
+                { "if": { "properties": { "verdict": { "const": "none-found" } } },
+                  "then": { "required": ["examined"], "properties": { "examined": { "minItems": 1 } } } }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

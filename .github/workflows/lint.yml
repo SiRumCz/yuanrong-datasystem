@@ -1,0 +1,25 @@
+name: Lint workflows
+on:
+  push:
+    paths: [".github/workflows/**"]
+  pull_request:
+    paths: [".github/workflows/**"]
+permissions:
+  contents: read
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run actionlint
+        # This gate catches GitHub Actions workflow mistakes (the YAML-level errors
+        # live-debugging used to catch). actionlint also runs shellcheck on run:
+        # blocks; we cap shellcheck at error severity (SHELLCHECK_OPTS) so the gate
+        # is not red on pre-existing style/info/warning nits (SC2129/SC2295/SC2034)
+        # in the legacy run: blocks — only genuine shell errors fail the build.
+        env:
+          SHELLCHECK_OPTS: "--severity=error"
+        run: |
+          bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          ./actionlint -color agentic-engine.yml agentic-orchestrator.yml protocol-join.yml lint.yml
+        working-directory: .github/workflows

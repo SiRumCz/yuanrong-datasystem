@@ -1,0 +1,33 @@
+{
+  "name": "code-review",
+  "version": "0.1.0",
+  "_note": "MIGRATION WIP (target-repo copy): trimmed to preflight-only for the first live test. spec/plan-present are advisory (yuanrong PRs carry no spec/plan convention yet). Restore review->join->approval (see workflows_backup + the engine repo's code-review template) once preflight is proven on Codex.",
+  "triggers": [
+    { "on": "issue_comment", "comment_prefix": "/review", "command": "start" },
+    { "on": "issue_comment", "comment_prefix": "/override", "command": "override" }
+  ],
+  "states": [
+    {
+      "id": "preflight",
+      "kind": "agent",
+      "label": "pre-flight gate",
+      "workflow": "preflight-agent",
+      "evidence": "preflight.evidence.schema.json",
+      "max_iterations": 2,
+      "params": { "ai_checks": ["spec-adherence", "plan-adherence"] },
+      "checks": [
+        { "run": "preflight-schema-valid",  "on_fail": "iterate"  },
+        { "run": "adherence-coverage",      "on_fail": "iterate"  },
+        { "run": "traces-exist-in-diff",    "on_fail": "iterate"  },
+        { "run": "spec-present",            "on_fail": "advisory" },
+        { "run": "plan-present",            "on_fail": "advisory" },
+        { "run": "docs-updated-with-code",  "on_fail": "advisory" },
+        { "run": "tests-updated-with-code", "on_fail": "advisory" }
+      ],
+      "conclude": "conclude-preflight",
+      "publish": "publish-verdict",
+      "on_blocked": "halt",
+      "next": "done"
+    }
+  ]
+}
