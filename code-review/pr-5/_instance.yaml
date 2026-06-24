@@ -3,4 +3,4 @@ instance: pr-5
 head_sha: e82b7c664250715c98a13d4c876b320449dbaa23
 phase: preflight
 joined: false
-phase_label: pre-flight gate
+phase_label: "\u2705 done"
