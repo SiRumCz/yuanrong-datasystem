@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "mrp merge-readiness pack (synthesis) evidence",
+  "type": "object",
+  "required": ["rationale", "critique_ledger", "routed_questions", "acceptance"],
+  "properties": {
+    "rationale": {
+      "type": "object",
+      "required": ["summary", "keyPoints"],
+      "properties": {
+        "summary": { "type": "string" },
+        "keyPoints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["point", "source"],
+            "properties": {
+              "point": { "type": "string" },
+              "source": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "critique_ledger": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["dimension", "severity", "title"],
+        "properties": {
+          "dimension": { "type": "string" },
+          "path": { "type": ["string", "null"] },
+          "line": { "type": ["integer", "null"] },
+          "severity": { "type": "string" },
+          "title": { "type": "string" },
+          "rationale": { "type": "string" }
+        }
+      }
+    },
+    "routed_questions": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "acceptance": {
+      "type": "object",
+      "required": ["recommendation", "reasons"],
+      "properties": {
+        "recommendation": { "type": "string", "enum": ["accept", "hold"] },
+        "reasons": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

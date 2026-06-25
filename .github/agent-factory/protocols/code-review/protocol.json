@@ -1,7 +1,7 @@
 {
   "name": "code-review",
-  "version": "0.1.0",
-  "_note": "MIGRATION WIP (target-repo copy): trimmed to preflight-only for the first live test. spec/plan-present are advisory (yuanrong PRs carry no spec/plan convention yet). Restore review->join->approval (see workflows_backup + the engine repo's code-review template) once preflight is proven on Codex.",
+  "version": "0.2.0",
+  "_note": "MIGRATION WIP (basic, coverage-first): the full custody pipeline as one engine protocol. preflight (kept basic) -> overview(+risk) -> review fanout(5 dims) -> join -> triage -> fix -> context -> mrp -> done. New phases use the generic `evidence-present` form check (params.require) and are ADVISORY so the chain reliably drives to done; deterministic risk/MRP scoring, finding anchoring, and /fix write-actions are simplified for v1 (improve per-phase later). Agent workflows live in .github/workflows/.",
   "triggers": [
     { "on": "issue_comment", "comment_prefix": "/review", "command": "start" },
     { "on": "issue_comment", "comment_prefix": "/override", "command": "override" }
@@ -27,6 +27,83 @@
       "conclude": "conclude-preflight",
       "publish": "publish-verdict",
       "on_blocked": "halt",
+      "next": "overview"
+    },
+    {
+      "id": "overview",
+      "kind": "agent",
+      "label": "guided overview + risk",
+      "workflow": "overview-agent",
+      "evidence": "overview.evidence.schema.json",
+      "max_iterations": 2,
+      "params": { "require": ["cohorts", "summary", "risk_band"] },
+      "checks": [ { "run": "evidence-present", "on_fail": "advisory" } ],
+      "next": "review"
+    },
+    {
+      "id": "review",
+      "kind": "fanout",
+      "label": "multi-dimension review",
+      "branches": [
+        { "id": "correctness",     "workflow": "review-agent", "evidence": "review.evidence.schema.json", "max_iterations": 2, "params": { "dimension": "correctness",     "require": ["dimension", "verdict", "findings"] }, "checks": [ { "run": "evidence-present", "on_fail": "advisory" } ] },
+        { "id": "test",            "workflow": "review-agent", "evidence": "review.evidence.schema.json", "max_iterations": 2, "params": { "dimension": "test",            "require": ["dimension", "verdict", "findings"] }, "checks": [ { "run": "evidence-present", "on_fail": "advisory" } ] },
+        { "id": "performance",     "workflow": "review-agent", "evidence": "review.evidence.schema.json", "max_iterations": 2, "params": { "dimension": "performance",     "require": ["dimension", "verdict", "findings"] }, "checks": [ { "run": "evidence-present", "on_fail": "advisory" } ] },
+        { "id": "security",        "workflow": "review-agent", "evidence": "review.evidence.schema.json", "max_iterations": 2, "params": { "dimension": "security",        "require": ["dimension", "verdict", "findings"] }, "checks": [ { "run": "evidence-present", "on_fail": "advisory" } ] },
+        { "id": "maintainability", "workflow": "review-agent", "evidence": "review.evidence.schema.json", "max_iterations": 2, "params": { "dimension": "maintainability", "require": ["dimension", "verdict", "findings"] }, "checks": [ { "run": "evidence-present", "on_fail": "advisory" } ] }
+      ],
+      "next": "join-review"
+    },
+    { "id": "join-review", "kind": "join", "of": "review", "next": "triage" },
+    {
+      "id": "triage",
+      "kind": "agent",
+      "label": "review triage (cluster & rank)",
+      "workflow": "triage-agent",
+      "evidence": "triage.evidence.schema.json",
+      "max_iterations": 2,
+      "inputs": [
+        { "from": "correctness",     "as": "correctness" },
+        { "from": "test",            "as": "test" },
+        { "from": "performance",     "as": "performance" },
+        { "from": "security",        "as": "security" },
+        { "from": "maintainability", "as": "maintainability" }
+      ],
+      "params": { "require": ["clusters", "summary"] },
+      "checks": [ { "run": "evidence-present", "on_fail": "advisory" } ],
+      "next": "fix"
+    },
+    {
+      "id": "fix",
+      "kind": "agent",
+      "label": "propose remediations (suggest)",
+      "workflow": "fix-agent",
+      "evidence": "fix.evidence.schema.json",
+      "max_iterations": 2,
+      "inputs": [ { "from": "triage", "as": "triage" } ],
+      "params": { "require": ["fixes", "mode"] },
+      "checks": [ { "run": "evidence-present", "on_fail": "advisory" } ],
+      "next": "context"
+    },
+    {
+      "id": "context",
+      "kind": "agent",
+      "label": "conversation phase capture",
+      "workflow": "context-agent",
+      "evidence": "context.evidence.schema.json",
+      "max_iterations": 2,
+      "params": { "require": ["phases", "transcript_present"] },
+      "checks": [ { "run": "evidence-present", "on_fail": "advisory" } ],
+      "next": "mrp"
+    },
+    {
+      "id": "mrp",
+      "kind": "agent",
+      "label": "merge-readiness pack (synthesis)",
+      "workflow": "mrp-agent",
+      "evidence": "mrp.evidence.schema.json",
+      "max_iterations": 2,
+      "params": { "require": ["rationale", "critique_ledger", "routed_questions", "acceptance"] },
+      "checks": [ { "run": "evidence-present", "on_fail": "advisory" } ],
       "next": "done"
     }
   ]
