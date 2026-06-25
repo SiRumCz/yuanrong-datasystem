@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "context 7-phase classification evidence",
+  "type": "object",
+  "required": ["phases", "transcript_present"],
+  "properties": {
+    "transcript_present": { "type": "boolean" },
+    "phases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["phase"],
+        "properties": {
+          "phase": {
+            "type": "string",
+            "enum": ["UNDERSTAND", "EXPLORE", "ANALYZE", "PLAN", "IMPLEMENT", "VERIFY", "COMPLETE"]
+          },
+          "message_count": { "type": "integer", "minimum": 0 },
+          "token_count": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "summary": { "type": "string" }
+  }
+}
