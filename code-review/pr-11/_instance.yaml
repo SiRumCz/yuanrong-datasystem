@@ -1,7 +1,7 @@
 protocol: code-review
 instance: pr-11
 head_sha: 64b058282f7fd0bc9b2bfa7a9a07ad3c09a4e01a
-phase: fix
+phase: post-fix
 joined: true
-phase_label: propose remediations (suggest)
+phase_label: "context capture \u2225 mental-model update"
 status_comment_id: 4812723956
