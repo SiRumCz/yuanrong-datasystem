@@ -243,13 +243,14 @@ def advance_node(ctx, process):
                           path=lib.state_path(proto, parent + [nxt_sub]))
             lib.cas_push(dir_, f"{instance}: branch {branch} {substate} done → gate {nxt_sub} open")
             return
-        # Otherwise: an agent sub-state → seed + dispatch (Plan 1 behaviour).
-        nsf = lib.state_file(dir_, pid, instance,
-                             path=lib.state_path(proto, parent + [nxt_sub]))
-        lib.dump_yaml(nsf, {
-            "protocol": pid, "instance": instance, "state": life_state,
-            "iteration": 1, "gates": {}, "head_sha": sha, "history": [],
-        })
+        # Otherwise: an agent sub-state. Advance the cursor (done above) and
+        # dispatch a path-continue; the continue's enter_node SEEDS the sub-state
+        # file. We deliberately do NOT pre-seed it here — pre-seeding makes the
+        # follow-on continue's cas_push an empty commit (identical content), which
+        # aborts an agent→agent sub-pipeline transition. Mirrors do_answer's
+        # gate→next-substate handling in next.py (which also leaves seeding to the
+        # continue). The cursor sub_state change (above) is what this cas_push
+        # commits.
         lib.cas_push(dir_, f"{instance}: branch {branch} {substate} done → {nxt_sub}")
         gh_api(
             f"repos/{github_repository}/dispatches",
