@@ -1,7 +1,7 @@
 protocol: code-review
 instance: pr-13
 head_sha: 75f76188657f0dcfbcf2963c9a26299d2cfe9e6a
-phase: review
-joined: false
-phase_label: multi-dimension review
+phase: triage
+joined: true
+phase_label: review triage (cluster & rank)
 status_comment_id: 4813804640
