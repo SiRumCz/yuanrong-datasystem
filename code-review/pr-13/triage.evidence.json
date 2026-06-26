@@ -1,0 +1,46 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "Missing regression test for empty KillTimer timeout callback",
+      "dimension": [
+        "test"
+      ],
+      "severity": "medium",
+      "paths": [
+        "tests/st/kill_timer.h"
+      ],
+      "member_findings": [
+        {
+          "dimension": "test",
+          "path": "tests/st/kill_timer.h",
+          "line": 49,
+          "severity": "medium",
+          "category": "test",
+          "title": "Missing regression test for empty KillTimer timeout callback",
+          "impact": "This bug fix changes the timeout path for the default-constructed empty callback, but the diff adds no test that would fail on the old code. A future refactor could remove the guard and reintroduce std::bad_function_call termination before the intended abort without CI catching it.",
+          "fix": "Add a focused death test for KillTimer constructed without a callback and a very short timeout, asserting the process reaches the intended abort path rather than throwing std::bad_function_call; keep or add a non-empty-callback death test to cover callback invocation before abort."
+        }
+      ],
+      "rank": 1
+    }
+  ],
+  "summary": {
+    "present": [
+      "correctness",
+      "test",
+      "performance",
+      "security",
+      "maintainability"
+    ],
+    "missing": [],
+    "clusters": 1,
+    "total_findings": 1,
+    "by_severity": {
+      "medium": 1
+    },
+    "by_dimension": {
+      "test": 1
+    }
+  }
+}
