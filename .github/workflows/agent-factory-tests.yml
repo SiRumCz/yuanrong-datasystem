@@ -1,0 +1,66 @@
+name: Agent-Factory Tests
+
+# Runs the agent-factory engine + code-review protocol unit suites (the
+# deterministic Python checks/conclude/publish/engine logic + the JS context
+# scripts). These are pure, hermetic tests — no network, no agent, no gateway.
+# Gated to agent-factory paths so it only runs when that code changes.
+on:
+  push:
+    paths:
+      - ".github/agent-factory/**"
+      - ".github/workflows/agent-factory-tests.yml"
+  pull_request:
+    paths:
+      - ".github/agent-factory/**"
+      - ".github/workflows/agent-factory-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  protocol-tests:
+    name: protocol + engine unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PyYAML (the engine's only runtime dep)
+        run: pip install --quiet pyyaml
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run protocol + engine unit suites
+        working-directory: .github/agent-factory/protocols/code-review/tests
+        # No `set -e`: run EVERY suite and aggregate, so one failure never hides
+        # the rest. Each suite is a standalone runnable that exits non-zero on
+        # failure (Python: test_*.py / *.test.py; JS: *.test.js via node --test).
+        run: |
+          set -uo pipefail
+          rc=0
+          shopt -s nullglob
+          for t in test_*.py *.test.py; do
+            echo "::group::python ${t}"
+            if python3 "${t}"; then
+              echo "PASS ${t}"
+            else
+              echo "::error file=${t}::python suite failed"
+              rc=1
+            fi
+            echo "::endgroup::"
+          done
+          for t in *.test.js; do
+            echo "::group::node ${t}"
+            if node --test "${t}"; then
+              echo "PASS ${t}"
+            else
+              echo "::error file=${t}::node suite failed"
+              rc=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "${rc}"

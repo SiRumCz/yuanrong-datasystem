@@ -388,6 +388,16 @@ jobs:
           PR_BODY="$(gh pr view "${{ needs.plan.outputs.pr }}" --repo "${{ github.repository }}" --json body --jq '.body' 2>/dev/null || true)"
           PR_TITLE="$(gh pr view "${{ needs.plan.outputs.pr }}" --repo "${{ github.repository }}" --json title --jq '.title' 2>/dev/null || true)"
           export PR_BODY PR_TITLE
+          # Review activity for the advisory local-review-evidence preflight check
+          # (custody parity). Best-effort, fetched by this trusted job (checks hold no
+          # creds); the conversation-transcript signal is read from changed-files by the
+          # check and the Reviewed-by trailer from PR_BODY. Preflight leg only — the
+          # only leg that runs that check.
+          PR_REVIEW_JSON='{}'
+          if [ "$NODE_PATH" = "preflight" ]; then
+            PR_REVIEW_JSON="$(.github/agent-factory/engine/prefetch-review.py "${{ github.repository }}" "${{ needs.plan.outputs.pr }}" || echo '{}')"
+          fi
+          export PR_REVIEW_JSON
           VERDICTS=$(.github/agent-factory/engine/run-checks.py \
             "$PROTO" "$NODE" "$EV" /tmp/diff.txt /tmp/files.txt)
           jq . <<<"$VERDICTS"

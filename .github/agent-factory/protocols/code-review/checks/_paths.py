@@ -9,10 +9,13 @@ _TEST = re.compile(r"(\.|_)(test|spec)\.[a-z0-9]+$", re.I)
 _TEST_DIR = re.compile(r"(^|/)(tests?|__tests__|spec)/", re.I)
 _EXT = re.compile(r"\.[a-z0-9]+$", re.I)
 
-# Spec/plan artifact paths. Precise to avoid the bare spec/ test-dir collision:
-# docs/specs, docs/superpowers/specs, top-level specs/, and SPEC/REQUIREMENTS.md.
-_SPEC = re.compile(r"(^|/)docs/(superpowers/)?specs/|(^|/)(SPEC|REQUIREMENTS)\.md$|^specs/", re.I)
-_PLAN = re.compile(r"(^|/)docs/(superpowers/)?plans?/|(^|/)PLAN\.md$|^plans?/", re.I)
+# Spec/plan artifact paths — mirrors custody locate.js classifyArtifactPaths: any
+# `specs?/` or `plans?/` segment (nested + singular), plus the docs/ arms and
+# SPEC/REQUIREMENTS/PLAN.md. A singular `spec/` segment also matches is_test's
+# test-dir arm; that overlap is benign — is_spec_path and is_test answer different
+# questions (artifact association vs test coherence) and are used by different checks.
+_SPEC = re.compile(r"(^|/)docs/(superpowers/)?specs/|(^|/)(SPEC|REQUIREMENTS)\.md$|(^|/)specs?/", re.I)
+_PLAN = re.compile(r"(^|/)docs/(superpowers/)?plans?/|(^|/)PLAN\.md$|(^|/)plans?/", re.I)
 
 
 def is_doc(p):  return bool(_DOC.search(p) or _DOC_DIR.search(p))

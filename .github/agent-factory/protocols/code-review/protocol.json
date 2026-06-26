@@ -1,10 +1,11 @@
 {
   "name": "code-review",
-  "version": "0.1.0",
-  "_note": "MIGRATION WIP (target-repo copy): trimmed to preflight-only for the first live test. spec/plan-present are advisory (yuanrong PRs carry no spec/plan convention yet). Restore review->join->approval (see workflows_backup + the engine repo's code-review template) once preflight is proven on Codex.",
+  "version": "0.2.0",
+  "_note": "The full custody pipeline plus the mental-model gates, wired as engine phases: preflight -> mm-compliance(blocking) -> overview(+risk) -> review fanout(5 dims) -> join -> triage -> fix -> post-fix fanout[context || mm-updater->mm-gate] -> join -> mrp -> done. Each phase pairs the generic `evidence-present` form check with a deterministic per-phase gate: preflight (adherence + conclude-preflight/publish-verdict, blocking on missing/non-adherent spec/plan), overview (schema + cohort-partition + a deterministic `conclude-overview` risk scorer porting score.js/diffusion.js that owns the authoritative band and halts only on a garbled/unknown run; the agent's risk_band is an advisory hint), mm-compliance (a BLOCKING gate node: conclude-mm-compliance halts on verdict:diverges via on_blocked:halt until /override), the 5 review dims (schema + findings-anchored + publish-review; the fanout's params.status_note flags request-changes legs in the status header), triage (schema + conclude-triage), fix (schema + conclude-fix). The post-fix fanout runs context (schema-valid only, advisory — a fanout leg runs NO conclude hook, so conclude-context.py is unused here) in PARALLEL with mm-updater (evidence-present + mm-questions-present; a gh-aw create-pull-request safe-output opens an [mm] PR when mm_changed, the mm-gate then holds for a human /mm-answer, else the empty gate auto-skips); the join waits for both before mrp (schema + conclude-mrp + a deterministic acceptance_plan: engine inputs[] deliver prior-phase evidence, per-cohort bands are re-derived via the shared _risk_score, and the custody-shaped pack is emitted as the merge-readiness-pack artifact). Remaining v1 simplifications to improve per-phase later: /fix is suggest-only (no push/PR/comment write-actions), and review findings are not yet posted as inline PR comments. Agent workflows live in .github/workflows/.",
   "triggers": [
     { "on": "issue_comment", "comment_prefix": "/review", "command": "start" },
-    { "on": "issue_comment", "comment_prefix": "/override", "command": "override" }
+    { "on": "issue_comment", "comment_prefix": "/override", "command": "override" },
+    { "on": "issue_comment", "comment_prefix": "/mm-answer", "command": "answer" }
   ],
   "states": [
     {
@@ -22,11 +23,165 @@
         { "run": "spec-present",            "on_fail": "advisory" },
         { "run": "plan-present",            "on_fail": "advisory" },
         { "run": "docs-updated-with-code",  "on_fail": "advisory" },
-        { "run": "tests-updated-with-code", "on_fail": "advisory" }
+        { "run": "tests-updated-with-code", "on_fail": "advisory" },
+        { "run": "local-review-evidence",   "on_fail": "advisory" }
       ],
       "conclude": "conclude-preflight",
       "publish": "publish-verdict",
       "on_blocked": "halt",
+      "next": "mm-compliance"
+    },
+    {
+      "id": "mm-compliance",
+      "kind": "agent",
+      "label": "mental-model compliance gate",
+      "workflow": "mm-compliance-gate",
+      "evidence": "mm-compliance.evidence.schema.json",
+      "max_iterations": 2,
+      "params": { "require": ["verdict"] },
+      "checks": [
+        { "run": "evidence-present", "on_fail": "iterate" }
+      ],
+      "conclude": "conclude-mm-compliance",
+      "on_blocked": "halt",
+      "next": "overview"
+    },
+    {
+      "id": "overview",
+      "kind": "agent",
+      "label": "guided overview + risk",
+      "workflow": "overview-agent",
+      "evidence": "overview.evidence.schema.json",
+      "max_iterations": 2,
+      "params": { "require": ["cohorts", "summary"], "non_empty": ["cohorts", "summary"] },
+      "checks": [
+        { "run": "evidence-present",         "on_fail": "iterate" },
+        { "run": "overview-schema-valid",     "on_fail": "iterate" },
+        { "run": "cohort-partition-complete", "on_fail": "iterate" }
+      ],
+      "conclude": "conclude-overview",
+      "on_blocked": "halt",
+      "next": "review"
+    },
+    {
+      "id": "review",
+      "kind": "fanout",
+      "label": "multi-dimension review",
+      "params": { "status_note": { "verdict_field": "verdict", "flag_verdicts": ["REQUEST_CHANGES"], "severity_field": "severity", "flag_severities": ["critical", "high"], "label": "request-changes" } },
+      "branches": [
+        { "id": "correctness",     "workflow": "review-correctness-agent", "evidence": "review.evidence.schema.json", "max_iterations": 2, "params": { "dimension": "correctness",     "require": ["dimension", "verdict", "findings"], "non_empty": ["dimension", "verdict"] }, "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "review-schema-valid", "on_fail": "iterate" }, { "run": "review-findings-anchored", "on_fail": "iterate" } ], "publish": "publish-review" },
+        { "id": "test",            "workflow": "review-test-agent", "evidence": "review.evidence.schema.json", "max_iterations": 2, "params": { "dimension": "test",            "require": ["dimension", "verdict", "findings"], "non_empty": ["dimension", "verdict"] }, "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "review-schema-valid", "on_fail": "iterate" }, { "run": "review-findings-anchored", "on_fail": "iterate" } ], "publish": "publish-review" },
+        { "id": "performance",     "workflow": "review-performance-agent", "evidence": "review.evidence.schema.json", "max_iterations": 2, "params": { "dimension": "performance",     "require": ["dimension", "verdict", "findings"], "non_empty": ["dimension", "verdict"] }, "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "review-schema-valid", "on_fail": "iterate" }, { "run": "review-findings-anchored", "on_fail": "iterate" } ], "publish": "publish-review" },
+        { "id": "security",        "workflow": "review-security-agent", "evidence": "review.evidence.schema.json", "max_iterations": 2, "params": { "dimension": "security",        "require": ["dimension", "verdict", "findings"], "non_empty": ["dimension", "verdict"] }, "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "review-schema-valid", "on_fail": "iterate" }, { "run": "review-findings-anchored", "on_fail": "iterate" } ], "publish": "publish-review" },
+        { "id": "maintainability", "workflow": "review-maintainability-agent", "evidence": "review.evidence.schema.json", "max_iterations": 2, "params": { "dimension": "maintainability", "require": ["dimension", "verdict", "findings"], "non_empty": ["dimension", "verdict"] }, "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "review-schema-valid", "on_fail": "iterate" }, { "run": "review-findings-anchored", "on_fail": "iterate" } ], "publish": "publish-review" }
+      ],
+      "next": "join-review"
+    },
+    { "id": "join-review", "kind": "join", "of": "review", "next": "triage" },
+    {
+      "id": "triage",
+      "kind": "agent",
+      "label": "review triage (cluster & rank)",
+      "workflow": "triage-agent",
+      "evidence": "triage.evidence.schema.json",
+      "max_iterations": 2,
+      "inputs": [
+        { "from": "correctness",     "as": "correctness" },
+        { "from": "test",            "as": "test" },
+        { "from": "performance",     "as": "performance" },
+        { "from": "security",        "as": "security" },
+        { "from": "maintainability", "as": "maintainability" }
+      ],
+      "params": { "require": ["clusters", "summary"] },
+      "checks": [
+        { "run": "evidence-present", "on_fail": "iterate" },
+        { "run": "triage-schema-valid", "on_fail": "iterate" }
+      ],
+      "conclude": "conclude-triage",
+      "next": "fix"
+    },
+    {
+      "id": "fix",
+      "kind": "agent",
+      "label": "propose remediations (suggest)",
+      "workflow": "fix-agent",
+      "evidence": "fix.evidence.schema.json",
+      "max_iterations": 2,
+      "inputs": [ { "from": "triage", "as": "triage" } ],
+      "params": { "require": ["fixes", "mode"] },
+      "checks": [
+        { "run": "evidence-present", "on_fail": "iterate" },
+        { "run": "fix-schema-valid", "on_fail": "iterate" }
+      ],
+      "conclude": "conclude-fix",
+      "next": "post-fix"
+    },
+    {
+      "id": "post-fix",
+      "kind": "fanout",
+      "label": "context capture ∥ mental-model update",
+      "branches": [
+        {
+          "id": "context",
+          "workflow": "context-agent",
+          "evidence": "context.evidence.schema.json",
+          "max_iterations": 2,
+          "params": { "require": ["phases", "transcript_present"] },
+          "checks": [
+            { "run": "evidence-present", "on_fail": "advisory" },
+            { "run": "context-schema-valid", "on_fail": "advisory" }
+          ]
+        },
+        {
+          "id": "mm",
+          "states": [
+            {
+              "id": "mm-updater",
+              "kind": "agent",
+              "label": "mental-model updater",
+              "workflow": "mm-updater",
+              "evidence": "mm-updater.evidence.schema.json",
+              "max_iterations": 2,
+              "params": { "require": ["mm_changed", "rationale"] },
+              "checks": [
+                { "run": "evidence-present", "on_fail": "iterate" },
+                { "run": "mm-questions-present", "on_fail": "iterate" }
+              ]
+            },
+            {
+              "id": "mm-gate",
+              "kind": "gate",
+              "label": "decide on the mental-model PR",
+              "questions_from": "mm-updater",
+              "checks": [
+                { "run": "answers-coverage", "on_fail": "iterate" }
+              ]
+            }
+          ]
+        }
+      ],
+      "next": "join-post-fix"
+    },
+    { "id": "join-post-fix", "kind": "join", "of": "post-fix", "next": "mrp" },
+    {
+      "id": "mrp",
+      "kind": "agent",
+      "label": "merge-readiness pack (synthesis)",
+      "workflow": "mrp-agent",
+      "evidence": "mrp.evidence.schema.json",
+      "max_iterations": 2,
+      "inputs": [
+        { "from": "preflight", "as": "preflight" },
+        { "from": "overview",  "as": "overview" },
+        { "from": "triage",    "as": "triage" },
+        { "from": "context",   "as": "context" }
+      ],
+      "params": { "require": ["rationale", "critique_ledger", "routed_questions", "acceptance", "acceptance_plan"] },
+      "checks": [
+        { "run": "evidence-present", "on_fail": "advisory" },
+        { "run": "mrp-schema-valid", "on_fail": "advisory" }
+      ],
+      "conclude": "conclude-mrp",
       "next": "done"
     }
   ]

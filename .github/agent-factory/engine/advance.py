@@ -15,6 +15,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import typing
 
 # Import shared library from the same directory as this script.
@@ -207,6 +208,7 @@ def advance_node(ctx, process):
             # multi-phase protocols produce the correct filename (e.g.
             # review.B.clarify.yaml, not the legacy single-phase B.clarify.yaml).
             questions = []
+            questions_known = False  # source evidence carried an EXPLICIT `questions` list
             qfrom = (_paths.node_at_path(proto, parent + [nxt_sub]) or {}).get("questions_from")
             if qfrom:
                 qpath = lib.output_artifact_path(dir_, pid, instance,
@@ -214,9 +216,28 @@ def advance_node(ctx, process):
                                                  kind="evidence")
                 if os.path.isfile(qpath):
                     try:
-                        questions = json.load(open(qpath)).get("questions", []) or []
+                        raw = json.load(open(qpath)).get("questions", None)
                     except (json.JSONDecodeError, ValueError):
-                        questions = []
+                        raw = None
+                    if isinstance(raw, list):
+                        questions, questions_known = raw, True
+            if qfrom and questions_known and not questions:
+                # Auto-complete an empty DATA gate ONLY when the source agent deliberately
+                # surfaced an EXPLICIT empty `questions` list — advance past it as if
+                # resolved (→ gate.next, or leg-terminal → join). A missing / null / garbled
+                # `questions` is an agent malfunction, not a decision to skip a HUMAN gate, so
+                # fall through to open_gate (fail-closed: hold for a human) instead of silently
+                # advancing. (The cursor sub_state was already set to the gate above.)
+                gate_path = parent + [nxt_sub]
+                gsf = lib.state_file(dir_, pid, instance,
+                                     path=lib.state_path(proto, gate_path))
+                lib.dump_yaml(gsf, {"protocol": pid, "instance": instance,
+                                    "state": "done", "head_sha": sha,
+                                    "gates": {"state": "auto-resolved", "history": []}})
+                advance_node(dataclasses.replace(
+                    ctx, substate=nxt_sub, tree_path=gate_path,
+                    cr_name=pid + "/" + "/".join(gate_path[1:])), "done")
+                return
             lib.open_gate(dir_, pid, instance, proto_path, nxt_sub, sha, pr,
                           questions=questions,
                           path=lib.state_path(proto, parent + [nxt_sub]))
@@ -313,10 +334,12 @@ def run_publish_hook(proto_path, proto, branch, agent_state, evid, instance, pid
     return {"conclusion": "neutral", "summary": "publish hook returned no verdict"}
 
 
-def run_conclude_hook(proto_path, proto, state_id, evid, instance, blocking):
+def run_conclude_hook(proto_path, proto, state_id, evid, instance, blocking,
+                      dir_=None, tree_path=None):
     """Resolve+run the optional `conclude` hook for an agent state. Returns
     {conclusion,summary,blocked} or None if the state declares none. Trusted
-    (zone 4). Receives BLOCKING via env."""
+    (zone 4). Receives BLOCKING via env and, for states with declared inputs,
+    CONCLUDE_INPUTS_DIR with those inputs materialized as <as>.json."""
     state = lib.state_by_id(proto, state_id)
     action = (state or {}).get("conclude") or None
     if not action:
@@ -329,15 +352,40 @@ def run_conclude_hook(proto_path, proto, state_id, evid, instance, blocking):
         return {"conclusion": "neutral", "summary": "conclude hook unresolved", "blocked": False}
     env = dict(os.environ)
     env["BLOCKING"] = "1" if blocking else "0"
-    result = subprocess.run([path, evid, instance], text=True,
-                            stdout=subprocess.PIPE, env=env)
+    workdir = None
+    declared = lib.state_inputs(proto, state_id)
+    if dir_ is not None and declared:
+        fo = lib._fanout_state(proto)
+        phase = fo["id"] if (fo and lib.is_multiphase(proto)) else None
+        consuming_branch = tree_path[-2] if tree_path and len(tree_path) >= 2 else None
+        resolved = lib.resolve_inputs(
+            proto,
+            dir_,
+            lib.protocol_id(proto_path),
+            instance,
+            consuming_branch=consuming_branch,
+            consuming_phase=phase,
+            inputs=declared,
+            consuming_path=tree_path,
+        )
+        workdir = tempfile.mkdtemp(prefix="conclude-inputs-")
+        lib.materialize_inputs(resolved, workdir)
+        env["CONCLUDE_INPUTS_DIR"] = os.path.join(workdir, "inputs")
     try:
-        parsed = json.loads(result.stdout.strip())
-        if isinstance(parsed, dict) and "blocked" in parsed:
-            return parsed
-    except (json.JSONDecodeError, ValueError):
-        pass
-    return {"conclusion": "neutral", "summary": "conclude hook returned no verdict", "blocked": False}
+        result = subprocess.run([path, evid, instance], text=True,
+                                stdout=subprocess.PIPE, env=env)
+        try:
+            parsed = json.loads(result.stdout.strip())
+            if isinstance(parsed, dict) and "blocked" in parsed:
+                return parsed
+        except (json.JSONDecodeError, ValueError):
+            pass
+        return {"conclusion": "neutral", "summary": "conclude hook returned no verdict", "blocked": False}
+    finally:
+        # Materialized inputs are only needed for the hook subprocess above; remove the
+        # temp dir so repeated conclude calls (triage/fix/mrp) don't leak it per run.
+        if workdir:
+            shutil.rmtree(workdir, ignore_errors=True)
 
 
 def render_status_body(sf, headline, pid, instance, max_iter, github_repository):
@@ -563,7 +611,9 @@ def main():
         if (_paths.is_root_child(proto, tree_path)
                 and _paths.node_kind(proto, tree_path) == "agent"):
             _this_state = lib.state_by_id(proto, agent_state)
-            _conclude = run_conclude_hook(proto_path, proto, agent_state, evid, instance, blocking)
+            _conclude = run_conclude_hook(
+                proto_path, proto, agent_state, evid, instance, blocking,
+                dir_=dir_, tree_path=tree_path)
             hook = run_publish_hook(proto_path, proto, branch, agent_state, evid, instance, pid)
             if _conclude is not None:
                 concl = _conclude.get("conclusion", "neutral")

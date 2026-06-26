@@ -21,5 +21,31 @@ jobs:
           SHELLCHECK_OPTS: "--severity=error"
         run: |
           bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
-          ./actionlint -color agentic-engine.yml agentic-orchestrator.yml protocol-join.yml lint.yml
+          ./actionlint -color agentic-engine.yml agentic-orchestrator.yml protocol-join.yml lint.yml agent-factory-tests.yml
         working-directory: .github/workflows
+
+  lock-drift:
+    # Catch a *-agent.md edited without recompiling its .lock.yml. gh-aw also
+    # validates the lock hash at runtime (every dispatch fails on a diverged
+    # source), but that only fires on the next /review; this shifts the check
+    # left to PR time. Scoped to the codex *-agent workflows, compiled with
+    # gh-aw v0.77.5 (.github/aw/actions-lock.json). The mm-* gates are compiled
+    # with a different gh-aw version (v0.80.9) and carry a post-compile lock
+    # patch (fork-checkout skip), so a v0.77.5 recompile cannot reproduce them —
+    # they rely on gh-aw's runtime hash guard and are excluded here.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install gh-aw CLI (pinned to the repo's compiler version)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh extension install github/gh-aw --pin v0.77.5
+      - name: Recompile agent workflows and assert no lock drift
+        run: |
+          for md in .github/workflows/*-agent.md; do gh aw compile "$md"; done
+          if ! git diff --exit-code -- '.github/workflows/*-agent.lock.yml'; then
+            echo "::error::Stale gh-aw lock(s): a *-agent.md changed without recompiling. Run 'gh aw compile' locally and commit the regenerated .lock.yml file(s)."
+            exit 1
+          fi

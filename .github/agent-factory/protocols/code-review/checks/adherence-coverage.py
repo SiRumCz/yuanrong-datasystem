@@ -1,18 +1,24 @@
 #!/usr/bin/env python3
-"""Check: the agent judged exactly the adherence checks that the PR's committed
-artifacts call for — spec file in diff ⇒ spec-adherence judged once; plan file ⇒
-plan-adherence; absent ⇒ that check must NOT appear (it was correctly scoped out).
-Expected set is derived from changed-files (NOT from agent output), so zone 3 stays
-independent. Usage: adherence-coverage.py <evidence.json> <diff.txt> <changed-files.txt>"""
+"""Check: the agent judged exactly the adherence checks that the PR's associated
+artifacts call for — a spec associated with the PR ⇒ spec-adherence judged once;
+a plan associated ⇒ plan-adherence; not associated ⇒ that check must NOT appear
+(it was correctly scoped out). "Associated" mirrors the preflight-agent prefetch
+scoping via the shared _locate locator (a changed spec/plan file, a body section,
+or — spec only — the PR description as the claim), NOT changed-files alone, so a
+description-sourced spec is judged AND covered. Expected set is derived from the
+PR body + changed-files (NOT from agent output), so the check stays independent
+of what the agent reported.
+Usage: adherence-coverage.py <evidence.json> <diff.txt> <changed-files.txt>; reads PR_BODY env."""
 import json
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import _locate  # noqa: E402
 import _paths  # noqa: E402
 
-# Which ai_check id maps to which artifact presence.
-ARTIFACT_OF = {"spec-adherence": _paths.is_spec_path, "plan-adherence": _paths.is_plan_path}
+# Which ai_check id maps to which artifact kind for the shared locator.
+ARTIFACT_KIND = {"spec-adherence": "spec", "plan-adherence": "plan"}
 
 
 def main():
@@ -25,11 +31,12 @@ def main():
                           "feedback": "no ai_checks in CHECK_PARAMS (engine must pass params.ai_checks)"}))
         return
 
+    body = os.environ.get("PR_BODY", "") or ""
     files = _paths.read_changed_files(sys.argv[3] if len(sys.argv) > 3 else "")
     expected = set()
     for cid in ai_checks:
-        matcher = ARTIFACT_OF.get(cid)
-        if matcher and any(matcher(f) for f in files):
+        kind = ARTIFACT_KIND.get(cid)
+        if kind and _locate.locate(kind, body, files)["found"]:
             expected.add(cid)
 
     try:

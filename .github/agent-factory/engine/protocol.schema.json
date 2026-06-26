@@ -1,0 +1,272 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/agent-factory/engine/protocol.schema.json",
+  "title": "Agentic protocol",
+  "description": "Schema for a protocol.json — the data declaration the generic engine interprets. Authoring/editor aid: it is intentionally STRICTER than the engine (which ignores unknown keys) so it catches typos. See docs/PROTOCOL-DSL.md for the field reference.",
+  "type": "object",
+  "required": ["name", "states"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "_note": {
+      "type": "string",
+      "description": "Free-text annotation ignored by the engine (JSON has no comments). Allowed on any object in a protocol."
+    },
+    "name": {
+      "type": "string",
+      "description": "Protocol id. Becomes the state-path prefix <name>/<instance-key>.yaml. Unique per protocols directory."
+    },
+    "version": {
+      "type": "string",
+      "description": "Protocol version (informational; not enforced by the engine)."
+    },
+    "min_engine_version": {
+      "type": "string",
+      "description": "Lowest engine version this protocol requires. The dist installer refuses to install onto an older engine."
+    },
+    "max_depth": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Static nesting-depth cap for the protocol tree (default 5). The engine rejects a protocol whose deepest leaf path exceeds this."
+    },
+    "phase_labels": {
+      "type": "object",
+      "description": "Optional overrides for the PR labels of terminal/structural phases (e.g. setup, done, failed, blocked).",
+      "additionalProperties": { "type": "string" }
+    },
+    "triggers": {
+      "type": "array",
+      "description": "Event -> command entry points. The router scans every protocol's triggers to select one at runtime.",
+      "items": { "$ref": "#/definitions/trigger" }
+    },
+    "states": {
+      "type": "array",
+      "description": "The protocol's top-level sequence of nodes (the root is a sequence).",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/node" }
+    }
+  },
+  "definitions": {
+    "trigger": {
+      "type": "object",
+      "required": ["on", "command"],
+      "additionalProperties": false,
+      "properties": {
+        "_note": { "type": "string", "description": "Free-text annotation; ignored by the engine." },
+        "on": {
+          "type": "string",
+          "description": "GitHub event name, e.g. issue_comment or pull_request."
+        },
+        "comment_prefix": {
+          "type": "string",
+          "description": "For issue_comment: match comments starting with this prefix (e.g. /review). Also names the command's reply prefix (e.g. /answer)."
+        },
+        "actions": {
+          "type": "array",
+          "description": "For pull_request: only fire on these actions (e.g. [\"opened\"]). Empty/omitted matches any.",
+          "items": { "type": "string" }
+        },
+        "command": {
+          "type": "string",
+          "description": "Protocol command this event invokes.",
+          "enum": ["start", "reset", "override", "resolve-gate", "answer"]
+        }
+      }
+    },
+    "check": {
+      "type": "object",
+      "required": ["run"],
+      "additionalProperties": false,
+      "description": "A deterministic check over the agent's evidence. ABI: <check> <evidence.json> <diff.txt> <changed-files.txt> -> one JSON {check,pass,feedback}, always exit 0.",
+      "properties": {
+        "_note": { "type": "string", "description": "Free-text annotation; ignored by the engine." },
+        "run": {
+          "type": "string",
+          "description": "Check id. Resolved to checks/<run> or checks/<run>.* in the protocol dir (extension-agnostic) unless 'exec' is given."
+        },
+        "exec": {
+          "type": "string",
+          "description": "Explicit path (relative to the protocol dir) to the check executable, overriding the checks/<run> lookup."
+        },
+        "on_fail": {
+          "type": "string",
+          "description": "Severity when this check fails. iterate (default) drives the retry loop; block stops the conclusion without iterating; advisory is recorded only.",
+          "enum": ["iterate", "block", "advisory"]
+        }
+      }
+    },
+    "input": {
+      "type": "object",
+      "required": ["from", "as"],
+      "additionalProperties": false,
+      "description": "Materialize an earlier node's evidence (or a gate's answers) as inputs/<as>.json for this node's agent.",
+      "properties": {
+        "_note": { "type": "string", "description": "Free-text annotation; ignored by the engine." },
+        "from": {
+          "type": "string",
+          "description": "Source node id (a sibling sub-state, a fanout branch, or a phase)."
+        },
+        "as": {
+          "type": "string",
+          "description": "Alias — the basename under inputs/ the source is materialized as."
+        }
+      }
+    },
+    "node": {
+      "type": "object",
+      "required": ["id", "kind"],
+      "additionalProperties": false,
+      "description": "One node in a sequence. The fields you may set depend on 'kind'.",
+      "properties": {
+        "_note": {
+          "type": "string",
+          "description": "Free-text annotation; ignored by the engine."
+        },
+        "id": {
+          "type": "string",
+          "description": "Node id, unique within its enclosing sequence."
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["agent", "fanout", "join", "gate", "merge"]
+        },
+        "label": {
+          "type": "string",
+          "description": "Human-readable label for the PR status comment / phase label (defaults to a humanized id)."
+        },
+        "next": {
+          "type": "string",
+          "description": "Id of the sibling node to enter after this one completes. Omit on a terminal node; the terminals 'done' and 'failed' are implicit and need not be declared."
+        },
+        "workflow": {
+          "type": "string",
+          "description": "agent: the gh-aw agent workflow basename the engine dispatches."
+        },
+        "evidence": {
+          "type": "string",
+          "description": "agent: the *.evidence.schema.json filename (in the protocol dir) the agent must satisfy."
+        },
+        "max_iterations": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "agent: max iterate-with-feedback rounds before the node is marked failed (default 3)."
+        },
+        "params": {
+          "type": "object",
+          "description": "agent: node-scoped config forwarded to checks via the CHECK_PARAMS env var (e.g. the rubric categories)."
+        },
+        "checks": {
+          "type": "array",
+          "description": "agent/gate: deterministic checks run over the evidence.",
+          "items": { "$ref": "#/definitions/check" }
+        },
+        "conclude": {
+          "type": "string",
+          "description": "agent: a trusted (zone 4) post-checks hook that may return blocked=true."
+        },
+        "publish": {
+          "type": "string",
+          "description": "agent: a trusted (zone 4) hook that publishes the verdict after checks pass."
+        },
+        "on_blocked": {
+          "type": "string",
+          "description": "agent: behavior when 'conclude' returns blocked=true. 'halt' stops the pipeline (overridable via /override).",
+          "enum": ["halt"]
+        },
+        "inputs": {
+          "type": "array",
+          "description": "agent/gate/merge: earlier nodes' outputs to materialize for this node.",
+          "items": { "$ref": "#/definitions/input" }
+        },
+        "branches": {
+          "type": "array",
+          "description": "fanout: the parallel legs.",
+          "items": { "$ref": "#/definitions/branch" }
+        },
+        "of": {
+          "type": "string",
+          "description": "join: the id of the sibling fanout this join is an AND-barrier for."
+        },
+        "questions_from": {
+          "type": "string",
+          "description": "gate: makes this a DATA gate — names a sibling node whose evidence carries the questions to ask (answered via the command's /answer prefix). Omit for a human-APPROVAL gate."
+        },
+        "approve_excludes_author": {
+          "type": "boolean",
+          "description": "gate (approval): if true, the PR author cannot approve their own gate."
+        },
+        "hook": {
+          "type": "string",
+          "description": "merge: the trusted (zone 4) reduce hook that combines the joined legs' inputs."
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "agent" } } },
+          "then": { "required": ["workflow"] }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "fanout" } } },
+          "then": { "required": ["branches", "next"] }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "join" } } },
+          "then": { "required": ["of"] }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "merge" } } },
+          "then": { "required": ["hook", "inputs"] }
+        }
+      ]
+    },
+    "branch": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "description": "A fanout leg. Either a FLAT leg (has 'workflow') or a SUB-PIPELINE leg (has its own 'states'). A branch has no 'kind'.",
+      "properties": {
+        "_note": {
+          "type": "string",
+          "description": "Free-text annotation; ignored by the engine."
+        },
+        "id": {
+          "type": "string",
+          "description": "Leg id, unique within the fanout."
+        },
+        "label": { "type": "string" },
+        "workflow": {
+          "type": "string",
+          "description": "Flat leg: the agent workflow basename."
+        },
+        "evidence": { "type": "string" },
+        "max_iterations": { "type": "integer", "minimum": 1 },
+        "params": { "type": "object" },
+        "checks": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/check" }
+        },
+        "publish": { "type": "string" },
+        "inputs": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/input" }
+        },
+        "states": {
+          "type": "array",
+          "description": "Sub-pipeline leg: a nested sequence of nodes.",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/node" }
+        }
+      },
+      "oneOf": [
+        {
+          "required": ["workflow"],
+          "not": { "required": ["states"] }
+        },
+        {
+          "required": ["states"],
+          "not": { "required": ["workflow"] }
+        }
+      ]
+    }
+  }
+}

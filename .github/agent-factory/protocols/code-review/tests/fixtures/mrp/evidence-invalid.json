@@ -1,0 +1,8 @@
+{
+  "rationale": { "summary": "ok", "keyPoints": [] },
+  "critique_ledger": [],
+  "routed_questions": {},
+  "acceptance": { "recommendation": "maybe", "reasons": [] },
+  "acceptance_plan": { "per_cohort": [{ "cohort": "x", "band": "Huge", "rung": "L9" }], "staged_rungs": [] },
+  "meta": {}
+}

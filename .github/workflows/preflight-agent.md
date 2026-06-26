@@ -32,40 +32,43 @@ steps:
   # "Configure Git credentials" before its own checkout, so a root .git must exist.
   - uses: actions/checkout@v5
     with: { persist-credentials: false }
-  - name: Prefetch PR + scope adherence checks (changed-files only)
+  - name: Prefetch PR + scope adherence checks (diff + PR body)
     env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}", PR: "${{ fromJSON(github.event.inputs.aw_context || '{}').pr }}", REPO: "${{ github.repository }}" }
     run: |
       set -euo pipefail
       mkdir -p /tmp/gh-aw/agent
       gh pr view "$PR" --repo "$REPO" --json number,title,body,files,headRefOid > /tmp/gh-aw/agent/pr.json
       gh pr diff "$PR" --repo "$REPO" > /tmp/gh-aw/agent/pr.diff || true
-      # Scope which adherence checks to judge: only those whose artifact FILE is in the PR diff.
-      # Read the artifact text from the committed file so the agent can judge against it.
+      # Scope which adherence checks to judge: those whose artifact is ASSOCIATED with
+      # the PR — a changed spec/plan file, a body section, or (spec only) the PR
+      # description as the claim. Uses the SAME shared _locate locator as the
+      # deterministic adherence-coverage check, so the agent's scope and the coverage
+      # gate agree. Read the artifact text (committed file, else the body slice) so the
+      # agent can judge against it.
       python3 - "$REPO" <<'PY'
-      import json, os, subprocess, sys, re
+      import base64, json, os, subprocess, sys
+      sys.path.insert(0, os.path.join(os.environ.get('GITHUB_WORKSPACE', '.'),
+                                      '.github/agent-factory/protocols/code-review/checks'))
+      import _locate
       repo = sys.argv[1]
       pr = json.load(open('/tmp/gh-aw/agent/pr.json'))
       head = pr.get('headRefOid') or ''
-      # `gh pr view --json files` returns objects keyed `path`; include all changed
-      # files so the agent's scope matches the checks' `gh pr diff --name-only`.
+      body = pr.get('body') or ''
+      # `gh pr view --json files` returns objects keyed `path`.
       files = [f['path'] for f in pr.get('files', [])]
-      SPEC = re.compile(r'(^|/)docs/(superpowers/)?specs/|(^|/)(SPEC|REQUIREMENTS)\.md$|^specs/', re.I)
-      PLAN = re.compile(r'(^|/)docs/(superpowers/)?plans?/|(^|/)PLAN\.md$|^plans?/', re.I)
-      def read(path):
-          out = subprocess.run(['gh','api',f'repos/{repo}/contents/{path}?ref={head}','--jq','.content'],
+      def read_file(path):
+          out = subprocess.run(['gh', 'api', f'repos/{repo}/contents/{path}?ref={head}', '--jq', '.content'],
                                capture_output=True, text=True)
-          if out.returncode != 0 or not out.stdout.strip(): return ''
-          import base64
-          try: return base64.b64decode(out.stdout.strip()).decode('utf-8')[:12000]
-          except Exception: return ''
+          if out.returncode != 0 or not out.stdout.strip(): return None
+          try: return base64.b64decode(out.stdout.strip()).decode('utf-8')
+          except Exception: return None
       ai = []
-      spec_hit = next((f for f in files if SPEC.search(f)), None)
-      plan_hit = next((f for f in files if PLAN.search(f)), None)
-      open('/tmp/gh-aw/agent/spec.txt','w').write(read(spec_hit) if spec_hit else '')
-      open('/tmp/gh-aw/agent/plan.txt','w').write(read(plan_hit) if plan_hit else '')
-      if spec_hit: ai.append('spec-adherence')
-      if plan_hit: ai.append('plan-adherence')
-      open('/tmp/gh-aw/agent/ai-checks.json','w').write(json.dumps(ai))
+      for cid, kind in (('spec-adherence', 'spec'), ('plan-adherence', 'plan')):
+          r = _locate.locate(kind, body, files)
+          text = _locate.artifact_text(kind, body, r['changed_hits'], read_file) if r['found'] else ''
+          open(f'/tmp/gh-aw/agent/{kind}.txt', 'w').write(text)
+          if r['found']: ai.append(cid)
+      open('/tmp/gh-aw/agent/ai-checks.json', 'w').write(json.dumps(ai))
       PY
   - name: Materialize task context
     env:
