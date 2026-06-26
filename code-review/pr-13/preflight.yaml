@@ -1,7 +1,19 @@
 protocol: code-review
 instance: pr-13
-state: preflight
+state: done
 iteration: 1
 gates: {}
 head_sha: 75f76188657f0dcfbcf2963c9a26299d2cfe9e6a
-history: []
+history:
+- iteration: 1
+  agent_run_id: '28268460716'
+  checks:
+    schema-valid: pass
+    adherence-coverage: pass
+    traces-exist-in-diff: pass
+    spec-present: pass
+    plan-present: pass
+    docs-updated-with-code: pass
+    tests-updated-with-code: pass
+    local-review-evidence: fail
+  feedback: ''
