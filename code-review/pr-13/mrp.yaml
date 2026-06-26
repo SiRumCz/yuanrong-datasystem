@@ -1,7 +1,13 @@
 protocol: code-review
 instance: pr-13
-state: mrp
+state: done
 iteration: 1
 gates: {}
 head_sha: 75f76188657f0dcfbcf2963c9a26299d2cfe9e6a
-history: []
+history:
+- iteration: 1
+  agent_run_id: '28269952077'
+  checks:
+    evidence-present: pass
+    mrp-schema-valid: pass
+  feedback: ''
