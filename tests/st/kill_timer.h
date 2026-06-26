@@ -45,7 +45,12 @@ public:
             }
             if (!finished) {
                 LOG(INFO) << "Time Out, Need to Kill";
-                func();
+                // `func` is default-constructed to an empty std::function when the
+                // caller omits it; invoking an empty target throws std::bad_function_call
+                // (terminating before the intended abort()). Only call it when set.
+                if (func) {
+                    func();
+                }
                 abort();
             }
         });
