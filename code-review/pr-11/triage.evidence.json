@@ -1,0 +1,46 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "Missing regression coverage for newline-terminated CLI errors",
+      "dimension": [
+        "test"
+      ],
+      "severity": "medium",
+      "paths": [
+        "tests/st/hashring_parser.cpp"
+      ],
+      "member_findings": [
+        {
+          "dimension": "test",
+          "path": "tests/st/hashring_parser.cpp",
+          "line": 57,
+          "severity": "medium",
+          "category": "test",
+          "title": "Missing regression coverage for newline-terminated CLI errors",
+          "impact": "This PR fixes the observable stderr contract for hashring_parser error paths, but no test would fail if the std::endl additions were removed again. The open-file, parse, encode, and exception diagnostics could regress back to concatenating with the next message or shell prompt without CI catching it.",
+          "fix": "Add a focused test for the hashring_parser helper binary that invokes at least one failing path such as a missing input file and asserts stderr ends with a newline; include representative parse/encode failure coverage if the harness can construct invalid inputs cheaply."
+        }
+      ],
+      "rank": 1
+    }
+  ],
+  "summary": {
+    "present": [
+      "correctness",
+      "test",
+      "performance",
+      "security",
+      "maintainability"
+    ],
+    "missing": [],
+    "clusters": 1,
+    "total_findings": 1,
+    "by_severity": {
+      "medium": 1
+    },
+    "by_dimension": {
+      "test": 1
+    }
+  }
+}
