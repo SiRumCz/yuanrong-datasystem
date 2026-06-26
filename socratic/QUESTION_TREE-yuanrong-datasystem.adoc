@@ -1,0 +1,612 @@
+= Question Tree — yuanrong-datasystem
+:doctype: book
+
+// Socratic Code-Theory Recovery, Phase 1.
+// Bounded context: the entire yuanrong-datasystem repository, treated as one
+// context (openYuanrong DataSystem — a distributed multi-level cache).
+// Fixed second level (Q1.1–Q5.5) is emitted in full; depth below it is
+// adaptive and code-driven. Every [ANSWERED] leaf cites file:line evidence
+// relative to the repository root. Every [OPEN] leaf names a Category and an
+// Ask role.
+
+== Q1: What problem does this bounded context solve, and for whom?
+
+=== Q1.1: Product identity — what is this bounded context?
+[ANSWERED]
+Evidence: README_EN.md:34, README_EN.md:36-45, VERSION:1
+openYuanrong DataSystem is a distributed caching system that pools HBM/DRAM/SSD
+across a compute cluster to build a near-compute multi-level cache, exposing
+object, KV, stream, and heterogeneous-(NPU)-object semantics. It is the data
+system repository of the three-repository openYuanrong project; current version
+is 0.8.2 (VERSION:1).
+
+=== Q1.2: Who are the primary users?
+==== Q1.2.1: What software actors call the system?
+[ANSWERED]
+Evidence: include/datasystem/kv_client.h:76, include/datasystem/object_client.h:53, include/datasystem/stream_client.h:42, include/datasystem/hetero_client.h:45, python/yr/datasystem/ds_client.py:26
+The direct users are application processes that link an SDK: C++ via the
+KVClient/ObjectClient/StreamClient/HeteroClient headers, and Python via DsClient
+which aggregates those clients. Java and Go SDKs exist (java/, go/).
+
+==== Q1.2.2: What human/operator role deploys and runs it?
+[OPEN]
+Category: business-context
+Ask role: Product Owner, Operations
+Code shows an operator-facing CLI (dscli) and K8s charts, but does not state
+who the intended operators are (platform/SRE team vs. application teams self-
+serving) or what scenarios are in-scope vs. out-of-scope for them.
+
+=== Q1.3: Through what channels is the system consumed?
+[ANSWERED]
+Evidence: include/datasystem/*.h (C++ SDK), python/yr/datasystem/__init__.py:15-45 (Python SDK), java/pom.xml (Java SDK), go/go.mod (Go SDK), setup.py:269-272 (dscli + dsbench CLIs)
+Five channels: C++ SDK (headers), Python SDK (pybind11), Java SDK (JNI), Go SDK
+(cgo), and the dscli/dsbench command-line tools registered as console_scripts.
+SDK↔worker transport is shared memory; worker↔worker is TCP/RDMA.
+
+=== Q1.4: Why was this bounded context built — what problem does it solve?
+[OPEN]
+Category: business-context
+Ask role: Product Owner, Domain Expert
+README_EN.md:49-53 lists target scenarios (LLM KVCache, M→N elasticity, RL
+parameter rearrangement, checkpoint save/load, microservice state) but the code
+shows mechanism, not motivation. Which scenario is the primary design driver,
+and what existing pain (e.g. slow HBM↔DRAM swap, redundant cross-node copies)
+justified building a new system rather than reusing an existing cache?
+
+=== Q1.5: What are the success metrics?
+==== Q1.5.1: What does the system instrument as benchmarkable?
+[ANSWERED]
+Evidence: dsbench/src/ (kv_bench.h), setup.py:271 (dsbench entrypoint), tests/benchmark/hetero_h2d_d2h_benchmark.py, tests/benchmark/kv_set_exist_get_steady.py, tests/perf/zmq/
+The repo ships a benchmark harness (dsbench) and perf scripts measuring KV
+steady-state throughput, hetero H2D/D2H performance, and ZMQ transport perf —
+the dimensions the team treats as performance-relevant.
+==== Q1.5.2: What numeric success targets must be met?
+[OPEN]
+Category: quality-goals
+Ask role: Product Owner, Architect
+Benchmark tooling exists but no target thresholds (latency SLO, throughput
+floor, hit-rate goal) are encoded anywhere in code. The pass/fail bar for
+"successful" is team knowledge.
+
+=== Q1.6: Which user/scenario segment has priority?
+[OPEN]
+Category: business-context
+Ask role: Product Owner
+The five applicable scenarios (README_EN.md:49-53) are listed without ranking.
+The code supports all of object/KV/stream/hetero equally; it does not reveal
+which segment (LLM inference vs. training checkpoint vs. microservice state) is
+the lead market that should win design trade-offs.
+
+== Q2: What is the specification of this bounded context?
+
+=== Q2.1: Who are the actors?
+[ANSWERED]
+Evidence: include/datasystem/kv_client.h:76, include/datasystem/object_client.h:53, include/datasystem/stream_client.h:42, include/datasystem/hetero_client.h:45, src/datasystem/worker/worker.h:45, src/datasystem/master/master_service_impl.h:38, src/datasystem/common/kvstore/etcd/etcd_store.h:66
+Primary actor: an SDK-embedded application process (KV/Object/Stream/Hetero
+client). Secondary system actors: the worker process (data plane), the master
+(coordination/heartbeat), peer workers (TCP/RDMA), and ETCD (external cluster
+metadata/health backend).
+
+=== Q2.2: Use-case catalog
+==== Q2.2.PUC.KvPutGet: KV set/get/delete a value
+===== Q2.2.PUC.KvPutGet.Trigger
+[ANSWERED]
+Evidence: include/datasystem/kv_client.h:133 (Set), kv_client.h:258 (Get), kv_client.h:354 (Del)
+An application calls KVClient::Set(key,val,param) to store a value, Get(key,val)
+to read it, Del(key) to remove it; MSet/MGet (kv_client.h:216, :312) batch them.
+===== Q2.2.PUC.KvPutGet.MainSuccess
+[ANSWERED]
+Evidence: include/datasystem/kv_client.h:133, kv_client.h:427 (Exist), kv_client.h:441 (Expire)
+Value is written to shared memory (zero-copy), optionally with TTL via Expire;
+Exist checks presence. For ExistenceOpt::NX, an existing key returns K_OK and is
+left unchanged (kv_client.h:130-133).
+===== Q2.2.PUC.KvPutGet.Durability
+[ANSWERED]
+Evidence: include/datasystem/object/object_enum.h:30-35 (WriteMode), src/datasystem/common/l2cache/persistence_api.h:32-100
+Durability is governed by WriteMode: NONE_L2_CACHE (cache only), WRITE_THROUGH
+(sync to L2), WRITE_BACK (async to L2), plus evictable variants; persistence is
+performed through PersistenceApi::Save/Get/Delete.
+
+==== Q2.2.PUC.ObjectRefCounted: Create/publish/get a reference-counted object
+===== Q2.2.PUC.ObjectRefCounted.MainSuccess
+[ANSWERED]
+Evidence: include/datasystem/object_client.h:84 (GIncreaseRef), object_client.h:130 (Create), include/datasystem/object/buffer.h:67 (MemoryCopy), buffer.h:79 (Publish), object_client.h:158 (Get), object_client.h:99 (GDecreaseRef)
+Client increments global ref, Create returns a shared-memory Buffer,
+MemoryCopy writes data, Publish/Seal makes it immutable and visible, Get returns
+buffers; the object lives while global ref > 0 and is reclaimable at 0.
+===== Q2.2.PUC.ObjectRefCounted.RefCounting
+[ANSWERED]
+Evidence: include/datasystem/object_client.h:84, object_client.h:99, object_client.h:117 (QueryGlobalRefNum)
+Lifecycle is reference-counted across the cluster via GIncreaseRef/GDecreaseRef
+with QueryGlobalRefNum to inspect the current count.
+
+==== Q2.2.PUC.StreamPubSub: Produce/consume stream elements
+===== Q2.2.PUC.StreamPubSub.MainSuccess
+[ANSWERED]
+Evidence: include/datasystem/stream_client.h:80 (CreateProducer), include/datasystem/stream/producer.h:59 (Send), include/datasystem/stream_client.h:97 (Subscribe), include/datasystem/stream/consumer.h:59 (Receive), consumer.h:89 (Ack)
+A producer is created on a named stream and Sends elements; a consumer
+Subscribes, Receives up to expectNum elements within a timeout, and Acks them.
+DeleteStream (stream_client.h:117) tears the stream down.
+
+==== Q2.2.PUC.HeteroNpu: Move data between NPU device memory and host
+===== Q2.2.PUC.HeteroNpu.MainSuccess
+[ANSWERED]
+Evidence: include/datasystem/hetero_client.h:72 (MGetH2D), hetero_client.h:83 (MSetD2H), hetero_client.h:153 (DevMGet), hetero_client.h:165 (DevMSet), hetero_client.h:182 (DevDelete)
+Hetero client abstracts NPU HBM as keyed objects: MSetD2H/MGetH2D move between
+host and device, DevMSet/DevMGet move device-to-device (direct inter-card), and
+DevDelete removes device objects.
+
+==== Q2.2.cat: Is the use-case catalog complete and correctly leveled?
+[OPEN]
+Category: business-context
+Ask role: Product Owner, Domain Expert
+The four interface families above are derivable from headers, but their relative
+importance and any user-goal-level journeys spanning multiple interfaces (e.g.
+"train → checkpoint to KV → reload into HBM via hetero") are not encoded in code.
+
+=== Q2.3: Per-interface system specifications (worker RPC surface)
+==== Q2.3.SUC.ObjectPosix: Client↔worker object RPC contract
+[ANSWERED]
+Evidence: src/datasystem/protos/object_posix.proto:45 (CreateReqPb), object_posix.proto:98 (PublishReqPb), src/datasystem/worker/object_cache/worker_oc_service_impl.h:87-100
+The WorkerOC POSIX service defines Create/Publish/Get/Delete request messages;
+WorkerOCServiceImpl implements Put/Get/Delete, migration, and async operations.
+==== Q2.3.SUC.WorkerWorkerOC: Worker↔worker object RPC contract
+[ANSWERED]
+Evidence: src/datasystem/protos/worker_object.proto:193 (WorkerWorkerOCService), worker_object.proto:196 (GetObjectRemote), worker_object.proto:202 (MigrateData), worker_object.proto:206 (BatchGetObjectRemote)
+Peer workers exchange objects via GetObjectRemote/BatchGetObjectRemote and move
+data during scale events via MigrateData.
+==== Q2.3.SUC.MasterWorkerOC: Master↔worker object metadata RPC contract
+[ANSWERED]
+Evidence: src/datasystem/protos/worker_object.proto:399 (MasterWorkerOCService), src/datasystem/worker/object_cache/master_worker_oc_service_impl.h:63 (UpdateNotification), master_worker_oc_service_impl.h:71 (DeleteNotification)
+The master pushes metadata Update/Delete notifications to workers via
+MasterWorkerOCService.
+==== Q2.3.SUC.StreamPosix: Client↔worker stream RPC contract
+[ANSWERED]
+Evidence: src/datasystem/protos/stream_posix.proto:55 (CreateProducerReqPb), stream_posix.proto:97 (SubscribeReqPb), stream_posix.proto:125 (GetDataPageReqPb)
+The stream POSIX service defines CreateProducer/Subscribe/GetDataPage as the
+producer/consumer wire contract.
+==== Q2.3.SUC.ClientRegistration: SDK↔worker bootstrap/shared-memory contract
+[ANSWERED]
+Evidence: src/datasystem/protos/share_memory.proto:170-176 (WorkerService: GetClientFd, RegisterClient, Heartbeat, DisconnectClient, GetSocketPath), share_memory.proto:44-116 (RegisterClientRspPb shm_id/mmap_size/offset)
+WorkerService negotiates the shared-memory channel: register client, exchange
+shm id/size/offset, heartbeat, and disconnect.
+==== Q2.3.errors: Are error/timeout responses fully specified per RPC?
+[OPEN]
+Category: design-rationale
+Ask role: Developer, Architect
+Status codes exist (include/datasystem/utils/status.h:28-109) but the
+per-RPC mapping of failure modes (which codes each RPC can return, retry
+semantics) is implicit across handlers rather than declared in the proto
+contract; intended client behavior on each code is team knowledge.
+
+=== Q2.4: Data / entity model
+==== Q2.4.1: How is object metadata represented?
+[ANSWERED]
+Evidence: src/datasystem/protos/worker_object.proto:338 (ObjectMetaPb: object_key, data_size, version, life_state, config, ttl_second, primary_address), src/datasystem/master/object_cache/oc_metadata_manager.h:93 (struct ObjectMeta with locations, multiSetState)
+Object metadata is ObjectMetaPb (key, size, version, lifecycle state, write/
+consistency config, TTL, primary address); the master wraps it in ObjectMeta
+adding worker locations and multi-set state.
+==== Q2.4.2: How is a data payload represented to the client?
+[ANSWERED]
+Evidence: include/datasystem/object/buffer.h:48 (class Buffer), buffer.h:67 (MemoryCopy), buffer.h:79 (Publish), buffer.h:86 (Seal), buffer.h:93 (WLatch), buffer.h:101 (RLatch)
+Payloads are exposed as a Buffer over shared memory (or malloc), with copy,
+publish/seal, and read/write latch operations for zero-copy access.
+==== Q2.4.3: How is a stream element represented?
+[ANSWERED]
+Evidence: include/datasystem/stream/element.h (class Element), src/datasystem/worker/stream_cache/buffer_pool.h:40-75 (StreamProducerKey, buffer pool)
+A stream's unit is Element; the worker manages per-producer buffer pools.
+==== Q2.4.4: How is cluster topology / placement state represented?
+[ANSWERED]
+Evidence: src/datasystem/protos/hash_ring.proto, src/datasystem/worker/hash_ring/hash_ring.h:51-96
+Placement state is a consistent hash ring of token slots, serialized via
+hash_ring.proto and managed by HashRing.
+
+=== Q2.5: Acceptance criteria
+==== Q2.5.1: What KV behavior is asserted by tests?
+[ANSWERED]
+Evidence: tests/st/client/kv_cache/kv_cache_existence_opt_test.cpp:72 (TestNXSet), kv_cache_existence_opt_test.cpp:82 (TestNXSetAndDel)
+KV NX (conditional-set) semantics and the set/delete/re-set cycle are covered by
+system tests.
+==== Q2.5.2: What object behavior is asserted by tests?
+[ANSWERED]
+Evidence: tests/st/client/object_cache/object_client_big_buffer_test.cpp:47 (TestPutAndLocalGetBigData), object_client_big_buffer_test.cpp:77 (TestPutAndRemoteGetBigData)
+Local and remote get of large objects through Create/GIncreaseRef/MemoryCopy/
+Seal/Get are asserted, including two-client remote fetch.
+==== Q2.5.3: What stream behavior is asserted by tests?
+[ANSWERED]
+Evidence: tests/st/client/stream_cache/stream_client_scale_test.cpp:86 (CheckCount), stream_client_scale_test.cpp:91-97 (QueryGlobalProducersNum/QueryGlobalConsumersNum)
+Producer/consumer counts under scaling are asserted via the global query APIs.
+==== Q2.5.4: What hetero/device behavior is asserted by tests?
+[ANSWERED]
+Evidence: tests/st/device/dev_object_hetero_test.cpp:64, dev_object_hetero_test.cpp:78-79 (device init)
+Device object operations are exercised in dev_object_hetero_test (requires NPU
+device setup).
+==== Q2.5.acc: What are the acceptance thresholds (not just behaviors)?
+[OPEN]
+Category: quality-goals
+Ask role: Product Owner, Developer
+Tests assert functional correctness but not non-functional acceptance bars
+(max latency, min throughput, recovery-time objective). Those thresholds are
+not in the test code.
+
+=== Q2.6: Cross-cutting business rules
+==== Q2.6.1: What persistence/reliability strategies are selectable?
+[ANSWERED]
+Evidence: include/datasystem/object/object_enum.h:30-35 (WriteMode enum: NONE/WRITE_THROUGH/WRITE_BACK + evictable variants)
+Reliability is a per-object WriteMode choice between cache-only, synchronous
+write-through, and asynchronous write-back (with evictable variants).
+==== Q2.6.2: What consistency models are offered?
+[ANSWERED]
+Evidence: include/datasystem/object/object_enum.h:38-41 (ConsistencyType: PRAM=0, CAUSAL=1)
+Two consistency models are selectable: PRAM and Causal.
+==== Q2.6.3: What lifecycle rules govern data?
+[ANSWERED]
+Evidence: include/datasystem/kv_client.h:52 (ttlSecond, 0=no expiry), include/datasystem/object_client.h:84/99 (global ref counting), src/datasystem/worker/object_cache/worker_oc_eviction_manager.h:70 (LRU eviction/spill)
+Data is governed by TTL (KV), global reference counting (object), and LRU
+eviction/spill at the worker.
+==== Q2.6.4: What is the intended semantics when WriteMode=NONE and a worker crashes?
+[OPEN]
+Category: business-context
+Ask role: Domain Expert, Architect
+status.h:88 defines K_BUFFER_DEPRECATED ("buffer invalidated after worker
+crash"), so the code clearly expects data loss in cache-only mode — but whether
+that is the contractually correct behavior for each scenario, and what the
+caller is expected to do, is not stated in code.
+
+== Q3: What is the architecture of this bounded context?
+
+=== Q3.1: Introduction and goals
+[OPEN]
+Category: quality-goals
+Ask role: Architect, Product Owner
+The README lists capabilities (performance, reliability strategies, HA), but the
+top 3–5 *driving* architecture quality goals and their ranking are not declared
+anywhere in code or config. Needed to fill Q4.9 and the Q3.9 ADR trade-offs.
+
+=== Q3.2: Architecture constraints
+==== Q3.2.1: Technical constraints
+===== Q3.2.1.lang: Language/runtime standard
+[ANSWERED]
+Evidence: .bazelrc:1 (--cxxopt=-std=c++17), CMakeLists.txt:29 (CMAKE_CXX_STANDARD 17), setup.py:259 (python_requires '>=3.9'), WORKSPACE:47-75 (python 3.9–3.13 toolchains)
+Core is C++17 (dual Bazel/CMake build); Python bindings target 3.9–3.13.
+===== Q3.2.1.deps: Mandated frameworks/libraries
+[ANSWERED]
+Evidence: bazel/ds_deps.bzl:78-92 (gRPC 1.68.2), ds_deps.bzl (protobuf 28.3), ds_deps.bzl:320-336 (brpc 1.15.0), ds_deps.bzl (rocksdb 7.10.2), ds_deps.bzl (pybind11 2.13.6), ds_deps.bzl:67-76 (BoringSSL), ds_deps.bzl:158-169 (jemalloc 5.3.0), ds_deps.bzl:145-156 (libzmq 4.3.5), ds_deps.bzl:127-143 (oneTBB 2020.3)
+Mandated stack: brpc/gRPC + protobuf for RPC, RocksDB for metadata, pybind11 for
+Python, BoringSSL for TLS, jemalloc allocator, libzmq, oneTBB.
+===== Q3.2.1.platform: Platform/accelerator constraints
+[ANSWERED]
+Evidence: build.sh:39-73 (-X Ascend/NPU/GPU/all, -A UCX/RDMA, -M URMA toggles), README_EN.md:98-100 (Python 3.9-3.11, Linux glibc 2.34+, x86-64 for pip)
+Standard target is Linux x86-64; heterogeneous paths (Ascend NPU / CUDA GPU) and
+RDMA/URMA transports are opt-in build flags.
+==== Q3.2.2: Organizational / process constraints
+===== Q3.2.2.workflow: Engineering process mandated for changes
+[ANSWERED]
+Evidence: CLAUDE.md:4-8, CLAUDE.md:22-24, CLAUDE.md:39-43, AGENTS.md:28-47
+All changes must be treated as infrastructure engineering: hot-path changes
+require latency/contention/allocation analysis; stateful changes require
+persistence/crash-consistency/failover analysis; self-verification is required
+before completion.
+===== Q3.2.2.release: Branching / release / review process
+[OPEN]
+Category: stakeholder-context
+Ask role: Operations, Developer
+.skills/ contains PR-creation automation and the project hosts on AtomGit/GitCode,
+but the human review policy, branching model, and release cadence/versioning
+rules are not captured in-repo.
+==== Q3.2.3: Conventional constraints
+[ANSWERED]
+Evidence: .clang-format:2-3 (Google base), .clang-format:21 (ColumnLimit 120), .clang-format:44 (IndentWidth 4), .clang-tidy:1-13 (bugprone/performance/readability/concurrency-mt-unsafe), src/datasystem/worker/worker_main.cpp:1-15 (Apache+Huawei license header)
+Code style is Google-based, 120-col, 4-space indent, clang-tidy enforced
+(incl. concurrency-mt-unsafe); every source file carries the Apache-2.0 + Huawei
+copyright header. Flags use the DS_DEFINE_* macro family.
+
+=== Q3.3: System scope and context
+==== Q3.3.1: ETCD (external metadata/health backend)
+[ANSWERED]
+Evidence: src/datasystem/common/kvstore/etcd/etcd_store.h:29-41 (grpc + etcd rpc stubs), etcd_store.h:79-91 (EtcdStore ctor: address, certs, DNS override), README_EN.md:68 (ETCD for node discovery/health)
+The system depends on ETCD for cluster node discovery, health detection, lease
+keep-alive, and metadata, accessed via a gRPC EtcdStore client.
+==== Q3.3.2: SDK↔worker shared-memory boundary
+[ANSWERED]
+Evidence: src/datasystem/protos/share_memory.proto:44-116, src/datasystem/common/shared_memory/allocator.h:49-64
+The SDK and worker share an mmap arena negotiated over share_memory.proto for
+zero-copy data exchange.
+==== Q3.3.3: Worker↔worker and NPU transport boundaries
+[ANSWERED]
+Evidence: src/datasystem/common/rpc/brpc_client_stream_writer_reader.h:42-76 (brpc streaming), src/datasystem/common/rdma/rdma_util.h:186-210 (URMA fill for H2D), README_EN.md:81 (TCP now; RDMA/UB coming)
+Workers exchange data over brpc TCP streams (RDMA/UB planned); NPU HBM transfers
+use URMA/RDMA direct inter-card paths.
+
+=== Q3.4: Solution strategy
+[ANSWERED]
+Evidence: src/datasystem/common/rpc/rpc_server.h:29-31/55-100 (brpc::Server wrapper), src/datasystem/protos/share_memory.proto:17 (proto3, arenas), src/datasystem/common/shared_memory/allocator.h:50-64 (mmap arenas), src/datasystem/common/rdma/rdma_util.h:140-156 (RDMA/URMA segments)
+Strategy: brpc+protobuf control/data RPC, mmap shared memory for SDK↔worker
+zero-copy, RDMA/URMA for high-bandwidth NPU transfer, RocksDB for metadata, and a
+consistent hash ring for placement.
+
+=== Q3.5: Building block view
+==== Q3.5.1: common — shared infrastructure
+[ANSWERED]
+Evidence: src/datasystem/common/kvstore/etcd/etcd_store.h:66, src/datasystem/common/rpc/rpc_server.h:55-100, src/datasystem/common/metrics/metrics.h:30-80, src/datasystem/common/log/log_manager.h:34-80, src/datasystem/common/shared_memory/allocator.h:39-64, src/datasystem/common/rdma/rdma_util.h
+RPC server/client, ETCD kvstore, metrics, logging, shared-memory allocator, and
+RDMA/URMA utilities shared by all higher layers.
+==== Q3.5.2: client — SDK runtime
+[ANSWERED]
+Evidence: src/datasystem/client/client_worker_common_api.h:66-100, src/datasystem/client/mmap_manager.h, src/datasystem/client/object_cache/client_worker_api/iclient_worker_api.h:77 (ShmUnitInfo)
+Client-side worker API: shared-memory registration, heartbeat, credential
+management, and per-interface (object/kv/stream/hetero) client implementations.
+==== Q3.5.3: worker — data-plane runtime
+===== Q3.5.3.1: Worker lifecycle root
+[ANSWERED]
+Evidence: src/datasystem/worker/worker.h:45-115 (Worker singleton: InitAndRun, InitEmbeddedWorker, Stop)
+Worker is the singleton owning startup/shutdown for the node's data services.
+===== Q3.5.3.2: cluster_manager
+[ANSWERED]
+Evidence: src/datasystem/worker/cluster_manager/cluster_manager.h:74-120, cluster_manager.h:112-120 (Init contacts etcd)
+Watches ETCD for topology changes, tracks node state, and orchestrates failover.
+===== Q3.5.3.3: hash_ring
+[ANSWERED]
+Evidence: src/datasystem/worker/hash_ring/hash_ring.h:51-96 (InitWithEtcd/InitWithoutEtcd, InspectAndProcessPeriodically)
+Consistent-hash placement; loads tokens from ETCD (or RocksDB fallback) and adds
+tokens as the cluster scales.
+===== Q3.5.3.4: client_manager
+[ANSWERED]
+Evidence: src/datasystem/worker/client_manager/client_manager.h:48-72 (TbbClientInfoTable, socket fd + heartbeat tracking)
+Tracks connected SDK clients, their sockets, and heartbeat/liveness state.
+===== Q3.5.3.5: object_cache service
+[ANSWERED]
+Evidence: src/datasystem/worker/object_cache/worker_oc_service_impl.h:87-100, src/datasystem/worker/object_cache/worker_oc_eviction_manager.h:70
+Serves object Put/Get/Delete, migration, async ops, and LRU eviction/spill.
+===== Q3.5.3.6: stream_cache service
+[ANSWERED]
+Evidence: src/datasystem/worker/stream_cache/buffer_pool.h:40-75
+Manages producer/consumer buffer pools and stream paging.
+==== Q3.5.4: master — coordination
+[ANSWERED]
+Evidence: src/datasystem/master/master_service_impl.h:38-73 (heartbeat RPC + cluster-manager integration), src/datasystem/master/object_cache/oc_metadata_manager.h:93
+Lightweight coordination side: aggregates heartbeats and owns object metadata
+routing; no data plane.
+==== Q3.5.5: server — service assembly
+[ANSWERED]
+Evidence: src/datasystem/server/common_server.h:41-143 (Init/Start/Shutdown, client registration, shm queue allocation)
+CommonServer is the shared base that registers RPC services and binds the socket
+for worker/master executables.
+==== Q3.5.6: protos — wire contracts
+[ANSWERED]
+Evidence: src/datasystem/protos/share_memory.proto:1-176, src/datasystem/protos/worker_object.proto, src/datasystem/protos/stream_posix.proto, src/datasystem/protos/hash_ring.proto
+Protobuf service/message contracts for client↔worker, worker↔worker, master↔
+worker, and hash-ring serialization.
+==== Q3.5.7: language bindings (pybind/jni/c)
+[ANSWERED]
+Evidence: src/datasystem/pybind_api/pybind_register.h:37-86, src/datasystem/java_api/jni_util.h:1-80, src/datasystem/c_api/kv_client_c_wrapper.h:33-62
+pybind11 (Python), JNI (Java), and C-wrapper (Go bridge) adapters over the C++
+client.
+
+=== Q3.6: Runtime view
+==== Q3.6.1: Worker process entry and boot
+[ANSWERED]
+Evidence: src/datasystem/worker/worker_main.cpp:27-35 (int main → Worker::InitAndRun), src/datasystem/worker/worker.h:60-66, src/datasystem/server/common_server.h:54-66 (Init→Start)
+main() calls Worker::GetInstance()->InitAndRun(argc,argv), which parses config,
+brings up CommonServer (registers services, binds socket), and blocks on signal.
+==== Q3.6.2: Cluster join at startup
+[ANSWERED]
+Evidence: src/datasystem/worker/cluster_manager/cluster_manager.h:112-120, src/datasystem/worker/hash_ring/hash_ring.h:65-72
+On boot the worker contacts ETCD to establish a lease and initial topology, then
+initializes its hash-ring tokens.
+==== Q3.6.3: What is the steady-state read/write data path timing model?
+[OPEN]
+Category: design-rationale
+Ask role: Architect, Developer
+The components on the hot path are visible (shm → worker → peer/L2), but the
+intended sequencing/back-pressure model (when a Get blocks, fans out to peers,
+or falls through to L2) is distributed across handlers and not documented as a
+single runtime scenario.
+
+=== Q3.7: Deployment view
+[ANSWERED]
+Evidence: cli/start.py:29-50, cli/up.py, cli/stop.py, cli/generate_helm_chart.py:23-82, k8s/helm_chart/datasystem/Chart.yaml:1-7, k8s/helm_chart/datasystem/templates/worker_daemonset.yaml, k8s/helm_chart/datasystem/templates/configmap.yaml
+Two deployment modes: process (dscli start/up/stop with worker_address +
+etcd_address) and Kubernetes (Helm chart deploying a per-node worker DaemonSet
+with ConfigMap/Secret/PVC). ETCD must be deployed separately.
+
+=== Q3.8: Crosscutting concepts
+==== Q3.8.1: Persistence / L2 cache
+[ANSWERED]
+Evidence: src/datasystem/common/l2cache/persistence_api.h:32-100, src/datasystem/common/l2cache/slot_client/ (slot organization)
+Secondary storage uses a slot-organized persistence API honoring the WriteMode.
+==== Q3.8.2: Logging
+[ANSWERED]
+Evidence: src/datasystem/common/log/log_manager.h:40-80 (rolling, compression, rotation)
+Log rolling, compression, and rotation managed by LogManager.
+==== Q3.8.3: Metrics
+[ANSWERED]
+Evidence: src/datasystem/common/metrics/metrics.h:30-80 (Counter/Gauge/Histogram, Tick, PrintSummary)
+Counter/Gauge/Histogram metrics with periodic export.
+==== Q3.8.4: Shared-memory management
+[ANSWERED]
+Evidence: src/datasystem/common/shared_memory/allocator.h:50-64, src/datasystem/common/shared_memory/arena.h
+mmap arena allocation with pre-populate/scaling/decay; arena bump allocation.
+==== Q3.8.5: Placement / hash ring
+[ANSWERED]
+Evidence: src/datasystem/worker/hash_ring/hash_ring.h:51-96, src/datasystem/protos/hash_ring.proto
+Consistent hash ring (ETCD or RocksDB backed) provides minimal-reshuffle
+placement and online scaling.
+
+=== Q3.9: Architecture decisions
+==== Q3.9.MasterWorkerSplit.Decision
+[ANSWERED]
+Evidence: src/datasystem/master/master_service_impl.h:38-73, src/datasystem/worker/worker.h:45-115, docs/source_zh_cn/design_document/cluster_management.md:1-52
+A master/worker split is in place: master coordinates metadata/heartbeat, workers
+own the data plane.
+==== Q3.9.MasterWorkerSplit.Rationale
+[OPEN]
+Category: design-rationale
+Ask role: Architect
+The split is visible in code, but not why a separate coordination role was chosen
+over a fully peer-to-peer design, nor the consistency/availability trade-off it
+was meant to buy.
+==== Q3.9.EtcdVsMetastore.Decision
+[ANSWERED]
+Evidence: docs/source_zh_cn/design_document/cluster_management.md:7-52 (ETCD-based vs built-in Metastore; Worker 0 hosts Metastore), src/datasystem/worker/hash_ring/hash_ring.h:65-72 (etcd vs non-etcd init)
+Cluster management supports two interchangeable backends: external ETCD or a
+built-in Metastore run on Worker 0.
+==== Q3.9.EtcdVsMetastore.Rationale
+[OPEN]
+Category: design-rationale
+Ask role: Architect
+Code offers both backends but does not record when each should be chosen, or
+whether Metastore-on-Worker-0 is a supported production posture or a
+test/single-node convenience.
+==== Q3.9.HashRingPlacement.PughMatrix
+[OPEN]
+Category: design-rationale
+Ask role: Architect
+Consistent hashing is implemented (hash_ring.h), but the alternatives considered
+(e.g. range partitioning, directory-based placement) and the scoring against the
+quality goals are team knowledge.
+
+=== Q3.10: Quality requirements (measurable scenarios in code)
+==== Q3.10.1: Liveness/timeout scenario
+[ANSWERED]
+Evidence: src/datasystem/worker/object_cache/worker_oc_server.cpp:164 (liveness_probe_timeout_s=150), src/datasystem/common/flag/common_gflag_define.cpp:114 (node_timeout_s=60), common_gflag_define.cpp:98 (node_dead_timeout_s=300), src/datasystem/common/kvstore/etcd/etcd_store.h:49 (MIN_RPC_TIMEOUT_MS=5000)
+Failure detection is bounded by concrete flag defaults: node lost at 60s, dead at
+300s, liveness probe 150s, ETCD RPC floor 5s.
+==== Q3.10.2: Throughput-control scenario
+[ANSWERED]
+Evidence: src/datasystem/common/l2cache/.../async_send_manager.cpp:45 (l2_cache_async_write_rate_limit_mb=200), src/datasystem/worker/object_cache/worker_oc_service_impl.cpp:128 (data_migrate_rate_limit_mb=40), src/datasystem/common/flag/common_gflag_define.cpp:100 (payload_nocopy_threshold=100MB)
+Background work is rate-limited (L2 async write 200 MB/s, migration 40 MB/s) and
+payloads ≥100 MB take a zero-copy path.
+
+=== Q3.11: Risks and technical debt (architecture-level)
+[ANSWERED]
+Evidence: README_EN.md:81 (worker↔worker TCP only, RDMA/UB pending), docs/source_zh_cn/design_document/cluster_management.md:46 (Metastore on Worker 0), src/datasystem/worker/authenticate.h:18-28 (experimental multi-tenancy, "do NOT use in production")
+Known architectural risks: inter-worker transport is TCP-only today; Metastore
+mode concentrates metadata on Worker 0; multi-tenancy auth is explicitly
+pre-production. (Deeper risk decomposition under Q5.)
+
+=== Q3.12: Glossary
+[ANSWERED]
+Evidence: .repo_context/glossary.md:1-29
+A repo-local glossary defines DsClient, worker, master, Metastore, ETCD, hash
+ring, object/KV/stream cache, hetero, and common-infra.
+
+== Q4: What quality goals drive the design?
+
+=== Q4.1: Functional suitability
+[ANSWERED]
+Evidence: src/datasystem/common/flag/flags.h:122-375 (validators), src/datasystem/worker/object_cache/worker_oc_server.cpp:135-139 (flag validators), tests/st/ (behavioral system tests)
+Correctness is enforced by registered flag validators and a UT/ST behavioral
+test suite over the KV/object/stream/hetero contracts.
+
+=== Q4.2: Performance efficiency
+[ANSWERED]
+Evidence: src/datasystem/common/flag/common_gflag_define.cpp:100 (payload_nocopy_threshold=100MB), common_gflag_define.cpp:55 (urma_poll_size=8), common_gflag_define.cpp:56 (urma_max_write_size_mb=4), src/datasystem/server/common_server.cpp:29 (rpc_thread_num=16), src/datasystem/worker/object_cache/worker_oc_service_impl.cpp:116 (oc_thread_num=32)
+Performance is engineered through zero-copy shared memory, a 100 MB no-copy
+threshold, RDMA/URMA fast paths, and tuned thread pools (RPC 16, OC 32, SC 128).
+
+=== Q4.3: Compatibility
+[ANSWERED]
+Evidence: src/datasystem/pybind_api/, src/datasystem/java_api/jni_util.h, src/datasystem/c_api/kv_client_c_wrapper.h:33-62, bazel/ds_deps.bzl (gRPC 1.68.2 / protobuf 28.3)
+Multi-language compatibility via pybind11/JNI/C wrappers over a single C++ core;
+wire compatibility via pinned protobuf/gRPC versions.
+
+=== Q4.4: Usability
+[ANSWERED]
+Evidence: setup.py:269-272 (dscli/dsbench), cli/command.py:115 (subcommand dispatch: start/stop/up/down/generate_config/generate_helm_chart)
+Operability is provided by the dscli tool (deploy/config/helm/log subcommands)
+and dsbench.
+
+=== Q4.5: Reliability
+[ANSWERED]
+Evidence: src/datasystem/common/kvstore/etcd/etcd_store.h:145-153 (keep-alive failure handling, lease reconnect), src/datasystem/worker/cluster_manager/worker_health_check.h (periodic health probes), include/datasystem/object/object_enum.h:30-35 (write-through/write-back persistence)
+Reliability mechanisms: ETCD lease keep-alive with reconnect, periodic node
+health checks, failover via cluster_manager, and selectable persistence modes.
+
+=== Q4.6: Security
+==== Q4.6.1: What security mechanisms exist in code?
+[ANSWERED]
+Evidence: src/datasystem/worker/object_cache/worker_oc_server.cpp:127-131 (system/tenant AK/SK flags), src/datasystem/worker/tenant_auth_manager.cpp:38-39/56-70 (iam_kit: none|yuanrong_iam), worker_oc_server.cpp:168 (sc_encrypt_secret_key), bazel/ds_deps.bzl:67-76 (BoringSSL/TLS)
+Security mechanisms: AK/SK authentication (system + tenant), optional YuanRong
+IAM token verification, optional stream-cache encryption, and BoringSSL TLS.
+==== Q4.6.2: What is the security target / threat model?
+[OPEN]
+Category: quality-goals
+Ask role: Architect, Operations
+Mechanisms exist but defaults are permissive (authorization_enable defaults
+false, worker_service_impl.cpp:72; skip_authenticate exists, authenticate.cpp:23)
+and shared memory is unencrypted. The intended threat model, mandatory-vs-
+optional posture, and any compliance scope are not in code.
+
+=== Q4.7: Maintainability
+[ANSWERED]
+Evidence: tests/CMakeLists.txt (ut/st/perf/common), .clang-tidy:1-13, .repo_context/ (curated module context)
+Maintainability is supported by a layered module structure, a four-tier test
+tree, clang-tidy enforcement, and a curated .repo_context/ knowledge layer.
+
+=== Q4.8: Portability
+[ANSWERED]
+Evidence: build.sh:39-73 (Ascend/GPU/RDMA/URMA build toggles), README_EN.md:98-100 (Linux glibc 2.34+, x86-64), k8s/helm_chart/ (containerized deployment)
+Portability across accelerators (NPU/GPU) and transports is build-flag gated;
+runtime target is Linux x86-64, deployable as a container.
+
+=== Q4.9: Which quality characteristic has priority?
+[OPEN]
+Category: quality-goals
+Ask role: Architect, Product Owner
+The repository instructions name "performance, concurrency safety, memory
+safety, recovery correctness, operational availability" as requirements
+(AGENTS.md:3-8) but do not rank them. A definitive top characteristic (likely
+performance vs. reliability) is needed to resolve design trade-offs and the
+Q3.9 ADRs.
+
+== Q5: What risks and technical debt exist?
+
+=== Q5.1: Technical debt
+==== Q5.1.1: What explicit debt markers exist in code?
+[ANSWERED]
+Evidence: src/datasystem/common/util/version.h:33/37 (GIT_HASH/GIT_BRANCH "FIXME" placeholders), src/datasystem/worker/authenticate.cpp:23 ("hack to skip authenticate"), src/datasystem/worker/authenticate.h:18-28 (experimental multi-tenancy, "do NOT use in production", planned v2.0)
+Explicit debt: build-stamp FIXME placeholders, a skip_authenticate "hack" flag,
+and an experimental, non-production multi-tenancy module targeted for v2.0.
+==== Q5.1.2: Where is technical debt formally tracked?
+[OPEN]
+Category: future-direction
+Ask role: Developer, Architect
+In-code markers are sparse; there is no TODO backlog, ADR "superseded" record, or
+deprecated package indicating where debt is tracked. The authoritative debt
+register (issue tracker / wiki) is outside the repo.
+
+=== Q5.2: Security risks
+[ANSWERED]
+Evidence: src/datasystem/worker/authenticate.cpp:23 (skip_authenticate bypass), src/datasystem/worker/worker_service_impl.cpp:72 (authorization_enable default false), src/datasystem/worker/client_manager/client_info.h:48 (shared memory permitted, no in-memory encryption)
+Security risks visible in code: an auth-bypass flag, authorization disabled by
+default, and an unencrypted shared-memory trust boundary between SDK and worker.
+(Target/acceptability is Q4.6.2.)
+
+=== Q5.3: Operational risks
+[ANSWERED]
+Evidence: docs/source_zh_cn/design_document/cluster_management.md:46 (Worker 0 hosts Metastore), README_EN.md:74 (ETCD must be deployed), README_EN.md:41 (enable_data_replication is NOT a reliability mechanism)
+Operational risks: Metastore mode makes Worker 0 a coordination SPOF, the whole
+system hard-depends on an external ETCD, and hot-replica replication explicitly
+does not guarantee data reliability/availability.
+
+=== Q5.4: Dependency / supply-chain risks
+[ANSWERED]
+Evidence: bazel/ds_deps.bzl:1-37 (external http_archive deps: gRPC 1.68.2, protobuf 28.3, brpc, rocksdb, BoringSSL, jemalloc 5.3.0, libzmq 4.3.5, oneTBB 2020.3, nlohmann/json 3.11.3), Third_Party_Open_Source_Software_Notice:1-57
+The build fetches ~12 pinned third-party libraries over HTTP from upstream
+sources (no vendored copies for core deps); some are patched. Supply-chain trust
+rests on those pins and patches.
+
+=== Q5.5: Scaling / performance risks
+[ANSWERED]
+Evidence: README_EN.md:81 (inter-worker TCP only, RDMA/UB pending), src/datasystem/worker/hash_ring/hash_ring.h:75 (centralized InspectAndProcessPeriodically token generation), src/datasystem/worker/object_cache/worker_oc_service_impl.cpp:128 (migration rate-limited to 40 MB/s)
+Scaling risks: inter-worker data movement is TCP-bound until RDMA lands; hash-ring
+token generation is centrally inspected; and rebalancing migration is rate-limited
+(40 MB/s), bounding how fast the cluster can re-shard.
+==== Q5.5.target: What are the scaling limits and targets?
+[OPEN]
+Category: quality-goals
+Ask role: Architect, Operations
+Code shows rate limits and a centralized ring inspector but not the supported
+cluster size, object-count ceiling, or rebalancing-time objective. The scaling
+envelope is team knowledge.

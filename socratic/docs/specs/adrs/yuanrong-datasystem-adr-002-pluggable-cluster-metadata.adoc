@@ -1,0 +1,55 @@
+= ADR-002: Pluggable cluster-metadata backend — external ETCD or built-in Metastore
+:doctype: article
+
+== Status
+
+Accepted (in code). Production-tier blessing of Metastore *deferred* — team policy.
+
+== Context
+
+Cluster management supports two interchangeable metadata backends: external ETCD,
+or a built-in, ETCD-compatible Metastore run on Worker 0 as the head node with
+others connecting via `metastore_address`
+[docs/source_zh_cn/design_document/cluster_management.md:7-52,
+src/datasystem/worker/hash_ring/hash_ring.h:65-72]. The hash ring initializes from
+either backend [src/datasystem/worker/hash_ring/hash_ring.h:65-72].
+
+== Decision
+
+Offer both backends and select per deployment: ETCD when one already runs ETCD,
+when multiple datasystem clusters share one metadata center, when cross-datacenter
+HA is needed, or when metadata must be decoupled for independent ops (the
+production-HA posture); Metastore for quick deployment, resource-constrained
+environments, and simplified ops (team answer)
+[docs/source_zh_cn/design_document/cluster_management.md:13-51].
+
+== Consequences
+
+* (+) Operators can trade operational simplicity (Metastore) against mature HA
+  (ETCD) without code changes (team answer).
+* (−) Metastore concentrates metadata on Worker 0, a documented coordination SPOF
+  with no documented automatic failover — `metastore_head_node` is set manually
+  (team answer) [docs/source_zh_cn/design_document/cluster_management.md:46].
+* Reading: Metastore-on-Worker-0 is a supported mode but not an HA posture; use
+  ETCD for HA/production-critical metadata (team answer). Whether the team formally
+  blesses Metastore for any production tier is *deferred*.
+
+== Pugh Matrix
+
+Baseline: ETCD-only. Scale −1 / 0 / +1.
+
+[cols="3,1,1", options="header"]
+|===
+| Criterion | ETCD-only (baseline) | + built-in Metastore option (chosen)
+| Performance efficiency        | 0 | 0
+| Availability / elasticity     | 0 | 0
+| Reliability / recovery        | 0 | -1   // Metastore mode adds a Worker-0 SPOF
+| Concurrency & memory safety   | 0 | 0
+| Security                      | 0 | 0
+| Operability (deployment ease) | 0 | +1   // fewer components for small clusters
+| *Total*                       | *0* | *0*
+|===
+
+The option is net-neutral on the quality goals but expands the operating envelope:
+HA users keep ETCD; small/constrained deployments gain a lower-footprint path (team
+answer).

@@ -1,0 +1,14 @@
+instance:    yuanrong-datasystem
+source_repo: /home/radin/socratic-runs/repos/yuanrong-datasystem
+git_head:    b996dbc2
+extracted:   2026-06-26 00:31:46Z
+files:
+  - docs/arc42/arc42-yuanrong-datasystem.adoc
+  - docs/specs/adrs/yuanrong-datasystem-adr-001-master-worker-split.adoc
+  - docs/specs/adrs/yuanrong-datasystem-adr-002-pluggable-cluster-metadata.adoc
+  - docs/specs/adrs/yuanrong-datasystem-adr-003-consistent-hash-ring-placement.adoc
+  - docs/specs/adrs/yuanrong-datasystem-adr-004-performance-first-optional-reliability.adoc
+  - docs/specs/prd-yuanrong-datasystem.adoc
+  - docs/specs/use-cases-yuanrong-datasystem.adoc
+  - OPEN_QUESTIONS-yuanrong-datasystem.adoc
+  - QUESTION_TREE-yuanrong-datasystem.adoc

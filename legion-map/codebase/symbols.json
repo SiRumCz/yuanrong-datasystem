@@ -1,0 +1,75 @@
+{
+  "metadata": {
+    "map_schema_version": "2.0",
+    "generated_at": "2026-06-25T19:24:15Z",
+    "analyzed_commit": "1beb03ebaab0602adce1a19f4847e14836862be9",
+    "source_file_count": 1698,
+    "source_fingerprint": "sha256:21379d10e442c7391d0693daca357564dee8a9631c559572dbd6bb218a886874",
+    "source_fingerprint_kind": "sha256 of sorted path|size rows over code + build manifests",
+    "scope": "project-root",
+    "project": "yuanrong-datasystem",
+    "version": "0.8.2"
+  },
+  "entry_points": [
+    {"name": "worker_main", "path": "src/datasystem/worker/worker_main.cpp", "kind": "daemon", "summary": "Worker runtime daemon entry point", "related_chunks": ["map:worker-main:001"]},
+    {"name": "dsbench", "path": "dsbench/src/main.cpp", "kind": "binary", "summary": "Benchmark/perf harness binary", "related_chunks": ["map:build-system:001"]},
+    {"name": "cli", "path": "cli/start.py", "kind": "cli", "summary": "Deployment/ops CLI (start/stop/up/down/config/helm)", "related_chunks": ["map:cli-deploy:001"]},
+    {"name": "datasystem.h", "path": "include/datasystem/datasystem.h", "kind": "library-api", "summary": "Public C++ SDK umbrella header", "related_chunks": ["map:client-sdk:001"]},
+    {"name": "ds_client", "path": "python/yr/datasystem/ds_client.py", "kind": "library-api", "summary": "Python SDK entry", "related_chunks": ["map:python-sdk:001"]}
+  ],
+  "routes": [],
+  "apis": [
+    {"name": "worker_object service", "path": "src/datasystem/protos/worker_object.proto", "kind": "rpc", "summary": "Client↔worker object cache RPCs", "related_chunks": ["map:protos:001","map:worker-oc-get:001"]},
+    {"name": "worker_stream service", "path": "src/datasystem/protos/worker_stream.proto", "kind": "rpc", "summary": "Client↔worker stream cache RPCs", "related_chunks": ["map:protos:001","map:stream-cache:001"]},
+    {"name": "master_object service", "path": "src/datasystem/protos/master_object.proto", "kind": "rpc", "summary": "Worker↔master object metadata RPCs", "related_chunks": ["map:protos:001","map:master-oc-metadata:001"]},
+    {"name": "master_stream service", "path": "src/datasystem/protos/master_stream.proto", "kind": "rpc", "summary": "Worker↔master stream metadata RPCs", "related_chunks": ["map:protos:001"]},
+    {"name": "master_heartbeat service", "path": "src/datasystem/protos/master_heartbeat.proto", "kind": "rpc", "summary": "Liveness/membership heartbeat", "related_chunks": ["map:protos:001"]},
+    {"name": "hash_ring service", "path": "src/datasystem/protos/hash_ring.proto", "kind": "rpc", "summary": "Hash-ring topology coordination", "related_chunks": ["map:hash-ring:001"]},
+    {"name": "slot_recovery service", "path": "src/datasystem/protos/slot_recovery.proto", "kind": "rpc", "summary": "Distributed-disk slot replay/recovery", "related_chunks": ["map:slot-recovery:001"]},
+    {"name": "C++/Python/Java/Go SDK", "path": "include/datasystem", "kind": "library-api", "summary": "KVClient/ObjectClient/StreamClient/HeteroClient surface", "related_chunks": ["map:client-sdk:001","map:python-sdk:001"]}
+  ],
+  "modules": [
+    {"name": "common", "path": "src/datasystem/common", "kind": "module", "summary": "Shared infra: rpc, kvstore, log, metrics, shared_memory, rdma, l2cache, device, util (573 files, highest fan-in)", "related_chunks": ["map:common-infra:001","map:rpc:001","map:logging:001","map:metrics:001"]},
+    {"name": "worker", "path": "src/datasystem/worker", "kind": "module", "summary": "Worker runtime: object/stream cache services, cluster manager, hash ring, client manager (213 files)", "related_chunks": ["map:worker-oc-get:001","map:worker-oc-server:001","map:cluster-manager:001","map:hash-ring:001"]},
+    {"name": "master", "path": "src/datasystem/master", "kind": "module", "summary": "Coordinator: object/stream metadata, replication, node/worker/resource managers (86 files)", "related_chunks": ["map:master-oc-metadata:001"]},
+    {"name": "client", "path": "src/datasystem/client", "kind": "module", "summary": "C++ client SDK impls: object/stream/kv/hetero, mmap, service discovery, router (87 files)", "related_chunks": ["map:client-object-impl:001","map:client-sdk:001"]},
+    {"name": "object_cache", "path": "src/datasystem/worker/object_cache", "kind": "module", "summary": "Worker object cache engine: get/put, batch get, eviction, spill, slot recovery (110 files)", "related_chunks": ["map:worker-oc-get:001","map:slot-recovery:001"]},
+    {"name": "stream_cache", "path": "src/datasystem/worker/stream_cache", "kind": "module", "summary": "Streaming producer/consumer data path", "related_chunks": ["map:stream-cache:001"]},
+    {"name": "l2cache", "path": "src/datasystem/common/l2cache", "kind": "module", "summary": "L2/secondary storage: backend selection, PersistenceApi, slot_client (55 files)", "related_chunks": ["map:l2cache:001","map:slot-recovery:001"]},
+    {"name": "kvstore", "path": "src/datasystem/common/kvstore", "kind": "module", "summary": "ETCD + Metastore + RocksDB metadata backends (44 files)", "related_chunks": ["map:etcd-metastore:001"]},
+    {"name": "rdma", "path": "src/datasystem/common/rdma", "kind": "module", "summary": "RDMA/URMA zero-copy transport (33 files)", "related_chunks": ["map:rdma-transport:001"]},
+    {"name": "transfer_engine", "path": "transfer_engine", "kind": "module", "summary": "Hetero/NPU P2P transfer subsystem (181 files)", "related_chunks": ["map:transfer-engine:001"]},
+    {"name": "protos", "path": "src/datasystem/protos", "kind": "module", "summary": "Protobuf RPC contracts (20 protos, 29 services)", "related_chunks": ["map:protos:001"]}
+  ],
+  "tests": [
+    {"name": "tests/ut", "path": "tests/ut", "kind": "test", "summary": "Unit/component tests (167 files)", "related_chunks": ["map:tests:001"]},
+    {"name": "tests/st", "path": "tests/st", "kind": "test", "summary": "System tests for worker/master/client interactions (212 files)", "related_chunks": ["map:tests:001"]},
+    {"name": "tests/perf", "path": "tests/perf", "kind": "test", "summary": "Performance/perf-logging tests (14 files)", "related_chunks": ["map:tests:001"]},
+    {"name": "tests/common", "path": "tests/common", "kind": "test", "summary": "Shared test utilities (15 files)", "related_chunks": ["map:tests:001"]},
+    {"name": "tests/kvtest", "path": "tests/kvtest", "kind": "test", "summary": "KV cache test harness (77 files)", "related_chunks": ["map:tests:001"]}
+  ],
+  "config": [
+    {"name": "gflags", "path": "src/datasystem/common/flags", "kind": "config", "summary": "216 DEFINE_* runtime flags; worker_flags.cpp", "related_chunks": ["map:common-infra:001"]},
+    {"name": "build (CMake)", "path": "CMakeLists.txt", "kind": "config", "summary": "Primary CMake build; cmake/*.cmake, build.sh", "related_chunks": ["map:build-system:001"]},
+    {"name": "build (Bazel)", "path": "WORKSPACE", "kind": "config", "summary": "Bazel build; BUILD.bazel, bazel/*.bzl", "related_chunks": ["map:build-system:001"]},
+    {"name": "deploy", "path": "k8s", "kind": "config", "summary": "Docker + Helm + Kubernetes deployment; k8s_deployment, cli generators", "related_chunks": ["map:cli-deploy:001"]},
+    {"name": "CI", "path": ".github/workflows", "kind": "config", "summary": "Lint + build CI; .gitee/ci_build.sh; agentic workflows", "related_chunks": []}
+  ],
+  "dependencies": [
+    {"name": "third_party (vendored)", "path": "third_party", "kind": "dependency", "summary": "Vendored C/C++ deps (181 files); pinned via bazel/ds_deps.bzl, grpc_deps.bzl, cmake/dependency.cmake", "related_chunks": ["map:build-system:001"]},
+    {"name": "etcd protos", "path": "third_party/protos/etcd", "kind": "dependency", "summary": "ETCD API protobufs for metadata backend", "related_chunks": ["map:etcd-metastore:001"]}
+  ],
+  "ownership": [
+    {"name": "Common infra", "path": "src/datasystem/common", "kind": "area", "summary": "Shared library; highest fan-in; consumed by all roles", "related_chunks": ["map:common-infra:001"]},
+    {"name": "Worker runtime", "path": "src/datasystem/worker", "kind": "area", "summary": "Data/cache services + cluster coordination", "related_chunks": ["map:worker-oc-get:001"]},
+    {"name": "Master coordinator", "path": "src/datasystem/master", "kind": "area", "summary": "Metadata + replication", "related_chunks": ["map:master-oc-metadata:001"]},
+    {"name": "Client/SDK", "path": "src/datasystem/client", "kind": "area", "summary": "C++ client + language bindings", "related_chunks": ["map:client-sdk:001"]}
+  ],
+  "risk_areas": [
+    {"name": "oc_metadata_manager.cpp", "path": "src/datasystem/master/object_cache/oc_metadata_manager.cpp", "kind": "risk", "summary": "4819 lines, 24 changes/90d; metadata-coordination, recovery-critical", "risk": "high", "related_chunks": ["map:master-oc-metadata:001"]},
+    {"name": "object_client_impl.cpp", "path": "src/datasystem/client/object_cache/object_client_impl.cpp", "kind": "risk", "summary": "4132 lines, 45 changes/90d (top hotspot); foreground request path", "risk": "high", "related_chunks": ["map:client-object-impl:001"]},
+    {"name": "worker_oc_service_get_impl.cpp", "path": "src/datasystem/worker/object_cache/service/worker_oc_service_get_impl.cpp", "kind": "risk", "summary": "3147 lines, 38 changes/90d; hot get path", "risk": "high", "related_chunks": ["map:worker-oc-get:001"]},
+    {"name": "urma_manager.cpp", "path": "src/datasystem/common/rdma/urma_manager.cpp", "kind": "risk", "summary": "36 changes/90d; data-movement path (buffer lifetime, backpressure)", "risk": "high", "related_chunks": ["map:rdma-transport:001"]},
+    {"name": "slot_recovery_manager.cpp", "path": "src/datasystem/worker/object_cache/slot_recovery/slot_recovery_manager.cpp", "kind": "risk", "summary": "18 changes/90d; crash-consistency, replay/compaction idempotency", "risk": "medium", "related_chunks": ["map:slot-recovery:001"]}
+  ]
+}

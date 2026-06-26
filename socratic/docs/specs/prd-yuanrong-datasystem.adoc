@@ -1,0 +1,155 @@
+= Product Requirements Document — openYuanrong DataSystem
+:doctype: book
+:toc: left
+
+// Synthesized in Phase 2 of Socratic Code-Theory Recovery from the answered
+// Question Tree (Q1 branch) and team answers in OPEN_QUESTIONS. Code-derived
+// claims cite [file:line] verbatim. Team-supplied facts are marked (team
+// answer). Deferred items remain explicit gaps and must not be treated as
+// resolved.
+
+== 1. Problem Statement
+
+openYuanrong DataSystem is a distributed caching system that pools HBM/DRAM/SSD
+resources across a compute cluster to build a near-compute multi-level cache,
+exposing object, KV, stream, and heterogeneous-(NPU)-object semantics
+[README_EN.md:34, README_EN.md:36-45]. It is the data-system repository of the
+three-repository openYuanrong project; the current version is 0.8.2 [VERSION:1].
+
+The motivating problem is AI-workload data movement (team answer). An off-the-shelf
+cache (Redis/memcached) does not solve two pains the system targets: (1) redundant
+cross-node copies and message-broker overhead, removed via shared-memory pages,
+active push, and zero-copy; and (2) heterogeneous NPU/HBM data movement, where
+object semantics hide D2D/H2D/D2H transfers and provide HBM-backed objects over a
+multi-level HBM→DDR→SSD cache (team answer). The lead workload that drove the
+design is LLM-inference KV-cache (HBM spill and reuse), with RL train↔infer
+parameter rearrangement as the second driver (team answer); checkpoint save/load
+and microservice state are secondary applications of the same mechanism (team
+answer).
+
+== 2. Target Users
+
+=== 2.1 Direct consumers (application teams)
+
+Applications consume the system through one of five SDK/CLI channels: a C++ SDK
+[include/datasystem/kv_client.h:76, include/datasystem/object_client.h:53,
+include/datasystem/stream_client.h:42, include/datasystem/hetero_client.h:45], a
+Python SDK whose DsClient aggregates the per-interface clients
+[python/yr/datasystem/ds_client.py:26, python/yr/datasystem/__init__.py:15-45], a
+Java SDK [java/pom.xml], a Go SDK [go/go.mod], and the dscli/dsbench command-line
+tools [setup.py:269-272]. Application teams link the SDK and connect to the local
+node's worker; they do not run workers (team answer).
+
+=== 2.2 Operators (platform / infrastructure team)
+
+The intended operating model is a platform/SRE-team posture rather than
+application-team self-service (team answer). Deployment is a privileged,
+cluster-wide infra task (multi-node trust, a separately deployed ETCD, shared
+NFS/SFS Turbo/OBS for L2 reliability, huge pages, NPU driver mounts), and the
+worker runs as a per-node DaemonSet
+[k8s/helm_chart/datasystem/templates/worker_daemonset.yaml] (team answer).
+In-scope for the operator: cluster bring-up/scale, ETCD-or-Metastore choice, the
+L2 backend, security flags, metrics, and capacity tuning; out-of-scope (app-team
+owned): WriteMode/consistency choice, key/object lifecycle, retry/idempotency
+(team answer). The org-specific split of duties (who owns ETCD, on-call boundary)
+is *deferred* to site policy.
+
+== 3. Goals
+
+The proposed driving quality goals, in ranked order, are (team answer — to be
+ratified by Architect/Product Owner):
+
+1. *Performance efficiency* — the reason the system exists; wins most trade-offs.
+2. *Operational availability / elasticity* — online scale-up/down, failover, M→N
+   elasticity ("cluster-as-one-machine").
+3. *Reliability / recovery correctness* — selectable per-object, opt-in.
+4. *Concurrency & memory safety* — a repository-level engineering requirement
+   [AGENTS.md:3-8].
+5. *Security* — present but permissive-by-default / pre-production for
+   multi-tenancy, ranked lowest today.
+
+The conflict between performance and reliability is resolved by design: the
+default WriteMode is cache-only (fastest, lossy on crash) and callers opt into
+durability per object [include/datasystem/object/object_enum.h:30-35] (team
+answer).
+
+== 4. Success Criteria
+
+No service-level objective is encoded in the repository. The public record
+provides only outcome figures, not committed floors: distributed KV-cache > 1×
+overall improvement, RL parameter sync reduced from minutes to seconds, and vLLM
+multi-machine PD-separation long-sequence inference TTFT −20% (team answer).
+Operational guardrails that exist as flag defaults — and serve as proxies, not
+SLOs — include slow-log thresholds (~2 ms process, ~5 ms RPC) and a client
+request timeout of ~20 ms (team answer).
+
+The system instruments benchmarkable dimensions through a benchmark harness and
+perf scripts: KV steady-state throughput, hetero H2D/D2H performance, and ZMQ
+transport perf [dsbench/src/, setup.py:271,
+tests/benchmark/hetero_h2d_d2h_benchmark.py,
+tests/benchmark/kv_set_exist_get_steady.py, tests/perf/zmq/].
+
+*Deferred / explicit gap:* the formal pass/fail bars — P99 latency SLO, QPS
+floor, KV-cache hit-rate goal — are not public and must be supplied per scenario
+before they can be treated as acceptance criteria.
+
+== 5. Scope and Priority
+
+=== 5.1 In scope (capabilities present in code)
+
+* Four interface families: KV, object (reference-counted), stream (pub/sub), and
+  heterogeneous NPU objects [include/datasystem/kv_client.h:76,
+  include/datasystem/object_client.h:53, include/datasystem/stream_client.h:42,
+  include/datasystem/hetero_client.h:45].
+* Selectable persistence (WriteMode: none / write-through / write-back, with
+  evictable variants) [include/datasystem/object/object_enum.h:30-35] and two
+  consistency models (PRAM, Causal)
+  [include/datasystem/object/object_enum.h:38-41].
+* Lifecycle management via TTL, global reference counting, and LRU
+  eviction/spill [include/datasystem/kv_client.h:52,
+  include/datasystem/object_client.h:84, include/datasystem/object_client.h:99,
+  src/datasystem/worker/object_cache/worker_oc_eviction_manager.h:70].
+* Cluster management with two interchangeable metadata backends (ETCD or built-in
+  Metastore) and consistent-hash placement
+  [docs/source_zh_cn/design_document/cluster_management.md:7-52,
+  src/datasystem/worker/hash_ring/hash_ring.h:51-96].
+* Process and Kubernetes deployment [cli/start.py:29-50,
+  cli/generate_helm_chart.py:23-82, k8s/helm_chart/datasystem/Chart.yaml:1-7].
+
+=== 5.2 Segment priority
+
+Public positioning ranks AI first; within AI, LLM-inference KV-cache and RL
+training parameter rearrangement are the two segments that demonstrably drove the
+design (team answer). Recommendation: when AI-inference KV-cache needs conflict
+with microservice-state needs, AI inference wins design trade-offs (team answer).
+*Deferred:* ratification of this ranking is a Product Owner call.
+
+== 6. Constraints
+
+* *Language/runtime:* C++17 core with a dual Bazel/CMake build [.bazelrc:1,
+  CMakeLists.txt:29]; Python bindings target 3.9–3.13 [setup.py:259,
+  WORKSPACE:47-75].
+* *Mandated stack:* brpc 1.15.0 / gRPC 1.68.2 + protobuf 28.3, RocksDB 7.10.2,
+  pybind11 2.13.6, BoringSSL, jemalloc 5.3.0, libzmq 4.3.5, oneTBB 2020.3
+  [bazel/ds_deps.bzl:78-92, bazel/ds_deps.bzl:320-336, bazel/ds_deps.bzl:67-76].
+* *Platform:* standard target Linux x86-64 [README_EN.md:98-100]; heterogeneous
+  (Ascend NPU / CUDA GPU) and RDMA/URMA transport paths are opt-in build flags
+  [build.sh:39-73].
+* *Engineering process:* all changes are treated as infrastructure engineering;
+  hot-path and stateful changes require explicit latency/contention and
+  persistence/failover analysis [CLAUDE.md:4-8, CLAUDE.md:39-43, AGENTS.md:28-47].
+
+== 7. Open Questions (must be resolved before they are relied upon)
+
+* *Numeric success targets / acceptance thresholds* — no latency SLO, throughput
+  floor, hit-rate goal, or recovery-time objective is encoded (deferred to Product
+  Owner + Developer).
+* *Quality-goal ranking* — the proposed ranking and the "performance #1, opt-in
+  reliability" resolution await Architect/Product Owner ratification.
+* *Scaling envelope* — supported max node count, object-count ceiling, and a
+  rebalancing-time objective are not public (deferred to Architect/Operations).
+* *Security threat model* — there is no SECURITY.md or stated threat model; the
+  supported trust boundary and compliance scope are deferred to Architect/
+  Operations.
+* *Operator ownership boundary* and the *branching/release/review process* are not
+  captured in-repo (deferred to Operations/Developer).

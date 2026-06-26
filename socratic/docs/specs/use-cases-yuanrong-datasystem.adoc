@@ -1,0 +1,265 @@
+= Specification — openYuanrong DataSystem
+:doctype: book
+:toc: left
+
+// Phase 2 synthesis from the Q2 branch of the answered Question Tree plus team
+// answers. Code-derived claims cite [file:line] verbatim; team-supplied facts
+// are marked (team answer); deferred items remain explicit gaps.
+
+== 1. Actors
+
+* *Application process (primary actor)* — links a KV, Object, Stream, or Hetero
+  client and drives all data operations
+  [include/datasystem/kv_client.h:76, include/datasystem/object_client.h:53,
+  include/datasystem/stream_client.h:42, include/datasystem/hetero_client.h:45].
+* *Worker* — the per-node data-plane process serving cache operations
+  [src/datasystem/worker/worker.h:45].
+* *Master* — coordination side: heartbeat aggregation and object-metadata routing,
+  with no data plane [src/datasystem/master/master_service_impl.h:38].
+* *Peer worker* — exchanges objects and migrates data over TCP/RDMA
+  [src/datasystem/protos/worker_object.proto:193].
+* *ETCD* — external cluster metadata, node discovery, and health backend
+  [src/datasystem/common/kvstore/etcd/etcd_store.h:66].
+
+== 2. Persona Use Cases (Cockburn, User-Goal level)
+
+=== 2.1 UC-1: Cache and retrieve a key-value pair
+
+* *Primary Actor:* Application process (KV client).
+* *Trigger:* the application calls `KVClient::Set(key, val, param)` to store a
+  value and `Get`/`Del` to read or remove it [include/datasystem/kv_client.h:133,
+  include/datasystem/kv_client.h:258, include/datasystem/kv_client.h:354].
+* *Stakeholders & Interests:* the application wants low-latency, optionally durable
+  storage; the operator wants bounded memory use.
+* *Preconditions:* the client is connected to a local worker
+  [src/datasystem/protos/share_memory.proto:170-176].
+* *Main Success Scenario:*
+  1. The value is written to shared memory (zero-copy)
+     [include/datasystem/kv_client.h:133].
+  2. Optionally a TTL is applied via `Expire`
+     [include/datasystem/kv_client.h:441]; `Exist` checks presence
+     [include/datasystem/kv_client.h:427].
+  3. Batch variants `MSet`/`MGet` operate on multiple keys
+     [include/datasystem/kv_client.h:216, include/datasystem/kv_client.h:312].
+* *Extensions:* for `ExistenceOpt::NX`, an existing key returns `K_OK` and is left
+  unchanged [include/datasystem/kv_client.h:130-133].
+* *Postconditions:* durability follows the chosen WriteMode — cache-only, sync
+  write-through, or async write-back
+  [include/datasystem/object/object_enum.h:30-35,
+  src/datasystem/common/l2cache/persistence_api.h:32-100].
+* *Business Rules:* TTL of 0 means no expiration
+  [include/datasystem/kv_client.h:52].
+
+=== 2.2 UC-2: Publish and consume a reference-counted object
+
+* *Primary Actor:* Application process (Object client).
+* *Trigger:* the application increments the global reference and creates an object
+  [include/datasystem/object_client.h:84,
+  include/datasystem/object_client.h:130].
+* *Preconditions:* the client is connected to a worker.
+* *Main Success Scenario:*
+  1. `GIncreaseRef` raises the cluster-wide reference count
+     [include/datasystem/object_client.h:84].
+  2. `Create` returns a shared-memory `Buffer`; `MemoryCopy` writes the payload
+     [include/datasystem/object_client.h:130, include/datasystem/object/buffer.h:67].
+  3. `Publish`/`Seal` makes the object immutable and visible
+     [include/datasystem/object/buffer.h:79, include/datasystem/object/buffer.h:86].
+  4. `Get` returns buffers for the object [include/datasystem/object_client.h:158].
+  5. `GDecreaseRef` lowers the reference; the object is reclaimable at zero
+     [include/datasystem/object_client.h:99].
+* *Postconditions:* the object lives while its global reference count is greater
+  than zero; `QueryGlobalRefNum` inspects it
+  [include/datasystem/object_client.h:117].
+* *Business Rules:* lifecycle is reference-counted across the cluster
+  [include/datasystem/object_client.h:84, include/datasystem/object_client.h:99].
+
+=== 2.3 UC-3: Produce and consume a stream
+
+* *Primary Actor:* Application process (Stream client).
+* *Trigger:* `CreateProducer` on a named stream
+  [include/datasystem/stream_client.h:80].
+* *Main Success Scenario:*
+  1. The producer `Send`s elements [include/datasystem/stream/producer.h:59].
+  2. A consumer `Subscribe`s [include/datasystem/stream_client.h:97].
+  3. The consumer `Receive`s up to `expectNum` elements within a timeout
+     [include/datasystem/stream/consumer.h:59].
+  4. The consumer `Ack`s consumed elements
+     [include/datasystem/stream/consumer.h:89].
+* *Postconditions:* `DeleteStream` tears the stream down
+  [include/datasystem/stream_client.h:117].
+
+=== 2.4 UC-4: Move data between NPU device memory and host
+
+* *Primary Actor:* Application process (Hetero client).
+* *Trigger:* `MSetD2H`/`MGetH2D` to move host↔device, `DevMSet`/`DevMGet` to move
+  device↔device [include/datasystem/hetero_client.h:72,
+  include/datasystem/hetero_client.h:83, include/datasystem/hetero_client.h:153,
+  include/datasystem/hetero_client.h:165].
+* *Main Success Scenario:* NPU HBM is abstracted as keyed objects; transfers use
+  direct inter-card paths; `DevDelete` removes device objects
+  [include/datasystem/hetero_client.h:182].
+
+=== 2.5 Multi-interface user-goal journeys (proposed; team answer)
+
+The four families above are the complete, correctly-leveled *system-interface*
+catalog (team answer). The following cross-interface journeys are implied by the
+public material and proposed for elevation to user-goal use cases (team answer);
+the exact production journeys are *deferred* to the Domain Expert:
+
+* *LLM inference KV-cache spill* — engine writes overflow KV cache → multi-level
+  HBM→DDR→SSD → reload to raise hit rate / cut recompute, hetero H2D into HBM.
+* *RL train↔infer parameter rearrangement* — training writes parameters →
+  fast cross-instance sync (object/hetero D2D/H2D) → inference loads in seconds.
+* *Checkpoint save/load* — training checkpoint → durable WriteMode + L2 → reload.
+* *Stream data-flow* — producer→consumer shared-memory paging replacing a broker.
+
+== 3. System Use Cases (per technical interface)
+
+=== 3.1 Client↔worker object RPC (object POSIX service)
+
+* *Input + validation:* `Create`/`Publish`/`Get`/`Delete` request messages
+  [src/datasystem/protos/object_posix.proto:45,
+  src/datasystem/protos/object_posix.proto:98].
+* *Processing:* `WorkerOCServiceImpl` implements Put/Get/Delete, migration, and
+  async operations
+  [src/datasystem/worker/object_cache/worker_oc_service_impl.h:87-100].
+* *Output + status codes:* results are reported through the status enum
+  [include/datasystem/utils/status.h:28-109].
+* *Error responses:* the per-RPC mapping of returnable codes and retry semantics
+  is not declared in the proto contract; one documented contract is that a
+  synchronous write-through `Set` hitting a request-timeout during distributed-disk
+  failover takeover means "the slot is recovering, not that the write succeeded —
+  retry under timeout rules or rely on upper-layer idempotency" (team answer);
+  `K_BUFFER_DEPRECATED` [include/datasystem/utils/status.h:88] is a non-retryable
+  "regenerate the data" condition (team answer). A complete per-RPC error matrix
+  is *deferred* and must be authored from the handlers.
+
+=== 3.2 Worker↔worker object RPC
+
+* *Processing:* `GetObjectRemote`/`BatchGetObjectRemote` fetch objects from peers;
+  `MigrateData` moves data during scale events
+  [src/datasystem/protos/worker_object.proto:196,
+  src/datasystem/protos/worker_object.proto:202,
+  src/datasystem/protos/worker_object.proto:206].
+
+=== 3.3 Master↔worker metadata RPC
+
+* *Processing:* the master pushes `UpdateNotification`/`DeleteNotification` to
+  workers [src/datasystem/protos/worker_object.proto:399,
+  src/datasystem/worker/object_cache/master_worker_oc_service_impl.h:63,
+  src/datasystem/worker/object_cache/master_worker_oc_service_impl.h:71].
+
+=== 3.4 Client↔worker stream RPC
+
+* *Input:* `CreateProducer`/`Subscribe`/`GetDataPage` request messages form the
+  producer/consumer wire contract [src/datasystem/protos/stream_posix.proto:55,
+  src/datasystem/protos/stream_posix.proto:97,
+  src/datasystem/protos/stream_posix.proto:125].
+
+=== 3.5 SDK↔worker bootstrap and shared-memory channel
+
+* *Processing:* `WorkerService` negotiates the shared-memory channel — register
+  client, exchange shm id/size/offset, heartbeat, disconnect
+  [src/datasystem/protos/share_memory.proto:170-176,
+  src/datasystem/protos/share_memory.proto:44-116].
+
+=== 3.6 dscli command-line interface
+
+* *Input:* subcommands `start`/`stop`/`up`/`down`/`generate_config`/
+  `generate_helm_chart` dispatched by the CLI
+  [cli/command.py:115, setup.py:269-272].
+* *Processing:* `dscli start` brings up a worker bound to `--worker_address` and
+  `--etcd_address` [cli/start.py:29-50].
+
+== 4. Supplementary Specifications
+
+=== 4.1 Entity model
+
+* *Object metadata* — `ObjectMetaPb` (object_key, data_size, version, life_state,
+  config, ttl_second, primary_address)
+  [src/datasystem/protos/worker_object.proto:338]; the master wraps it in
+  `ObjectMeta` with worker locations and multi-set state
+  [src/datasystem/master/object_cache/oc_metadata_manager.h:93].
+* *Payload buffer* — `Buffer` over shared memory (or malloc) with copy,
+  publish/seal, and read/write latch operations
+  [include/datasystem/object/buffer.h:48, include/datasystem/object/buffer.h:67,
+  include/datasystem/object/buffer.h:79, include/datasystem/object/buffer.h:86,
+  include/datasystem/object/buffer.h:93, include/datasystem/object/buffer.h:101].
+* *Stream element* — `Element`, with per-producer buffer pools at the worker
+  [include/datasystem/stream/element.h,
+  src/datasystem/worker/stream_cache/buffer_pool.h:40-75].
+* *Topology / placement state* — a consistent hash ring of token slots, serialized
+  via protobuf [src/datasystem/protos/hash_ring.proto,
+  src/datasystem/worker/hash_ring/hash_ring.h:51-96].
+
+=== 4.2 State and lifecycle rules
+
+* *Persistence (WriteMode):* `NONE_L2_CACHE`, `WRITE_THROUGH_L2_CACHE` (sync),
+  `WRITE_BACK_L2_CACHE` (async), plus evictable variants
+  [include/datasystem/object/object_enum.h:30-35].
+* *Consistency:* `PRAM` and `CAUSAL`
+  [include/datasystem/object/object_enum.h:38-41].
+* *Lifecycle:* TTL (KV), global reference counting (object), LRU eviction/spill at
+  the worker [include/datasystem/kv_client.h:52,
+  include/datasystem/object_client.h:84, include/datasystem/object_client.h:99,
+  src/datasystem/worker/object_cache/worker_oc_eviction_manager.h:70].
+* *Crash semantics:* in cache-only mode (`NONE_L2_CACHE`/`NONE_L2_CACHE_EVICT`)
+  data on a crashed worker is lost by design and outstanding buffers are
+  invalidated as `K_BUFFER_DEPRECATED`; reconstructible data should be
+  recomputed/re-Put, while data that must survive requires a reliability WriteMode
+  plus a configured L2 backend, noting write-back has a pre-flush loss window
+  (team answer) [include/datasystem/utils/status.h:88,
+  include/datasystem/object/object_enum.h:30-35].
+
+=== 4.3 Interface contracts (transport)
+
+* SDK↔worker: shared memory (zero-copy)
+  [src/datasystem/protos/share_memory.proto:44-116].
+* Worker↔worker: brpc TCP streams; RDMA/UB is planned
+  [src/datasystem/common/rpc/brpc_client_stream_writer_reader.h:42-76] (team
+  answer: RDMA/UB pending).
+* NPU: URMA/RDMA direct inter-card transfer
+  [src/datasystem/common/rdma/rdma_util.h:186-210].
+
+=== 4.4 Validation rules
+
+Correctness is enforced by registered flag validators
+[src/datasystem/common/flag/flags.h:122-375,
+src/datasystem/worker/object_cache/worker_oc_server.cpp:135-139].
+
+== 5. Acceptance Criteria (Gherkin)
+
+Behaviors are asserted by the system-test suite; non-functional thresholds are
+*deferred* (see PRD §4).
+
+[source,gherkin]
+----
+Feature: KV conditional set (NX)
+  Scenario: NX set leaves an existing key unchanged
+    Given a key already exists in the cache
+    When the client calls Set with ExistenceOpt::NX
+    Then the call returns K_OK and the existing value is unchanged
+  # tests/st/client/kv_cache/kv_cache_existence_opt_test.cpp:72
+
+Feature: Object publish and remote get
+  Scenario: A second client reads a published large object remotely
+    Given client A creates, copies, and seals a large object
+    And client A increases the global reference
+    When client B gets the object key
+    Then client B receives data identical to what client A wrote
+  # tests/st/client/object_cache/object_client_big_buffer_test.cpp:77
+
+Feature: Stream producer/consumer counts under scaling
+  Scenario: Global producer and consumer counts are queryable
+    Given producers and consumers are attached to a stream
+    When the client queries global producer/consumer counts
+    Then the returned counts match the attached producers and consumers
+  # tests/st/client/stream_cache/stream_client_scale_test.cpp:86
+
+Feature: Heterogeneous device object operations
+  Scenario: Device object set/get on an NPU
+    Given an NPU device is initialized
+    When the client performs device object operations
+    Then the operations succeed against device memory
+  # tests/st/device/dev_object_hetero_test.cpp:64
+----

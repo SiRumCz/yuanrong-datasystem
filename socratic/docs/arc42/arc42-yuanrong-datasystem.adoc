@@ -1,0 +1,258 @@
+= Architecture (arc42) — openYuanrong DataSystem
+:doctype: book
+:toc: left
+
+// Phase 2 synthesis from the Q3 branch of the answered Question Tree (and Q4 for
+// Chapter 10) plus team answers. Code-derived claims cite [file:line] verbatim;
+// team facts are marked (team answer); deferred items remain explicit gaps.
+
+== 1. Introduction and Goals
+
+openYuanrong DataSystem is a distributed, near-compute multi-level cache pooling
+HBM/DRAM/SSD across a cluster, exposing object, KV, stream, and heterogeneous-NPU
+semantics [README_EN.md:34, README_EN.md:36-45].
+
+The proposed driving quality goals, ranked (team answer — Architect/Product Owner
+to ratify): (1) performance efficiency, (2) operational availability/elasticity,
+(3) opt-in reliability, (4) concurrency & memory safety [AGENTS.md:3-8], and
+(5) security (permissive-by-default today). The single top characteristic is
+proposed as performance, with reliability layered in as a per-object opt-in rather
+than traded away (team answer). The ranking remains *deferred* for ratification.
+
+== 2. Architecture Constraints
+
+=== 2.1 Technical constraints
+
+* C++17 core, dual Bazel/CMake build [.bazelrc:1, CMakeLists.txt:29]; Python
+  bindings 3.9–3.13 [setup.py:259, WORKSPACE:47-75].
+* Mandated stack: brpc 1.15.0 / gRPC 1.68.2 + protobuf 28.3, RocksDB 7.10.2,
+  pybind11 2.13.6, BoringSSL, jemalloc 5.3.0, libzmq 4.3.5, oneTBB 2020.3
+  [bazel/ds_deps.bzl:78-92, bazel/ds_deps.bzl:320-336, bazel/ds_deps.bzl:67-76].
+* Standard target Linux x86-64 [README_EN.md:98-100]; Ascend NPU / CUDA GPU and
+  RDMA/URMA are opt-in build flags [build.sh:39-73].
+
+=== 2.2 Organizational / process constraints
+
+All changes are treated as infrastructure engineering: hot-path changes require
+latency/contention/allocation analysis; stateful changes require persistence/
+crash-consistency/failover analysis; self-verification is required before
+completion [CLAUDE.md:4-8, CLAUDE.md:22-24, CLAUDE.md:39-43, AGENTS.md:28-47].
+The branching model, review-gate policy, and release cadence are not captured
+in-repo; the project is Apache-2.0 in the OpenAtom openEuler community and ships
+versioned releases (team answer), but the formal process is *deferred* to
+Operations/Developer.
+
+=== 2.3 Conventional constraints
+
+Google-based code style, 120-column limit, 4-space indent, clang-tidy enforced
+(including concurrency-mt-unsafe), and an Apache-2.0 + Huawei copyright header on
+every source file [.clang-format:2-3, .clang-format:21, .clang-format:44,
+.clang-tidy:1-13, src/datasystem/worker/worker_main.cpp:1-15]. Flags use the
+`DS_DEFINE_*` macro family.
+
+== 3. System Scope and Context
+
+* *ETCD* — external metadata, node discovery, health detection, and lease
+  keep-alive, accessed via a gRPC `EtcdStore`
+  [src/datasystem/common/kvstore/etcd/etcd_store.h:29-41,
+  src/datasystem/common/kvstore/etcd/etcd_store.h:79-91, README_EN.md:68].
+* *SDK↔worker* — an mmap shared-memory arena negotiated over protobuf for
+  zero-copy exchange [src/datasystem/protos/share_memory.proto:44-116,
+  src/datasystem/common/shared_memory/allocator.h:49-64].
+* *Worker↔worker and NPU* — brpc TCP streams (RDMA/UB planned) and URMA/RDMA
+  direct inter-card NPU transfer
+  [src/datasystem/common/rpc/brpc_client_stream_writer_reader.h:42-76,
+  src/datasystem/common/rdma/rdma_util.h:186-210, README_EN.md:81].
+
+== 4. Solution Strategy
+
+brpc+protobuf for control/data RPC, mmap shared memory for SDK↔worker zero-copy,
+RDMA/URMA for high-bandwidth NPU transfer, RocksDB for metadata, and a consistent
+hash ring for placement [src/datasystem/common/rpc/rpc_server.h:29-31,
+src/datasystem/common/rpc/rpc_server.h:55-100,
+src/datasystem/protos/share_memory.proto:17,
+src/datasystem/common/shared_memory/allocator.h:50-64,
+src/datasystem/common/rdma/rdma_util.h:140-156].
+
+== 5. Building Block View
+
+* *common* — RPC server/client, ETCD kvstore, metrics, logging, shared-memory
+  allocator, RDMA/URMA utilities
+  [src/datasystem/common/kvstore/etcd/etcd_store.h:66,
+  src/datasystem/common/rpc/rpc_server.h:55-100,
+  src/datasystem/common/metrics/metrics.h:30-80,
+  src/datasystem/common/log/log_manager.h:34-80,
+  src/datasystem/common/shared_memory/allocator.h:39-64,
+  src/datasystem/common/rdma/rdma_util.h].
+* *client* — SDK worker API: shared-memory registration, heartbeat, credential
+  management, per-interface implementations
+  [src/datasystem/client/client_worker_common_api.h:66-100,
+  src/datasystem/client/mmap_manager.h,
+  src/datasystem/client/object_cache/client_worker_api/iclient_worker_api.h:77].
+* *worker* — data-plane runtime: lifecycle root
+  [src/datasystem/worker/worker.h:45-115], cluster_manager (watches ETCD, tracks
+  node state, orchestrates failover)
+  [src/datasystem/worker/cluster_manager/cluster_manager.h:74-120], hash_ring
+  (consistent placement, ETCD/RocksDB-backed)
+  [src/datasystem/worker/hash_ring/hash_ring.h:51-96], client_manager (tracks
+  clients, sockets, heartbeat)
+  [src/datasystem/worker/client_manager/client_manager.h:48-72], object_cache
+  service (Put/Get/Delete, migration, eviction)
+  [src/datasystem/worker/object_cache/worker_oc_service_impl.h:87-100,
+  src/datasystem/worker/object_cache/worker_oc_eviction_manager.h:70], and
+  stream_cache service [src/datasystem/worker/stream_cache/buffer_pool.h:40-75].
+* *master* — lightweight coordination (heartbeat aggregation, object-metadata
+  routing), no data plane [src/datasystem/master/master_service_impl.h:38-73,
+  src/datasystem/master/object_cache/oc_metadata_manager.h:93].
+* *server* — `CommonServer` registers RPC services and binds the socket for
+  worker/master executables
+  [src/datasystem/server/common_server.h:41-143].
+* *protos* — protobuf service/message contracts
+  [src/datasystem/protos/share_memory.proto:1-176,
+  src/datasystem/protos/worker_object.proto,
+  src/datasystem/protos/stream_posix.proto,
+  src/datasystem/protos/hash_ring.proto].
+* *language bindings* — pybind11 (Python), JNI (Java), C wrapper (Go bridge)
+  [src/datasystem/pybind_api/pybind_register.h:37-86,
+  src/datasystem/java_api/jni_util.h:1-80,
+  src/datasystem/c_api/kv_client_c_wrapper.h:33-62].
+
+== 6. Runtime View
+
+=== 6.1 Worker boot
+
+`main()` calls `Worker::GetInstance()->InitAndRun(argc, argv)`, which parses
+config, brings up `CommonServer` (registers services, binds socket), and blocks on
+signal [src/datasystem/worker/worker_main.cpp:27-35,
+src/datasystem/worker/worker.h:60-66,
+src/datasystem/server/common_server.h:54-66].
+
+=== 6.2 Cluster join
+
+On boot the worker contacts ETCD to establish a lease and initial topology, then
+initializes its hash-ring tokens
+[src/datasystem/worker/cluster_manager/cluster_manager.h:112-120,
+src/datasystem/worker/hash_ring/hash_ring.h:65-72].
+
+=== 6.3 Steady-state read/write data path (proposed; team answer)
+
+A read tries local shared memory first (zero-copy, no RPC); on a miss the worker
+resolves the primary location via hash-ring metadata and pulls from the peer via
+`GetObjectRemote`/`BatchGetObjectRemote`, then localizes the object so the next
+read is again local; if configured, a spilled/persisted object is served from L2
+via `PersistenceApi` (team answer)
+[src/datasystem/protos/worker_object.proto:196-206,
+src/datasystem/common/l2cache/persistence_api.h:32-100]. There is no hard
+admission control on the read hot path; flow is shaped by fixed thread pools,
+background rate limits, the 100 MB no-copy threshold, and bounded async queues
+(team answer). Writes follow the WriteMode: shm write, then sync (write-through)
+or async-queued, rate-limited (write-back) to L2 (team answer). *Deferred:* a
+single authoritative sequence diagram with exact block/timeout points is not
+published.
+
+== 7. Deployment View
+
+Two modes: process (dscli start/up/stop with `--worker_address` and
+`--etcd_address`) and Kubernetes (a Helm chart deploying a per-node worker
+DaemonSet with ConfigMap/Secret/PVC). ETCD is deployed separately
+[cli/start.py:29-50, cli/up.py, cli/stop.py, cli/generate_helm_chart.py:23-82,
+k8s/helm_chart/datasystem/Chart.yaml:1-7,
+k8s/helm_chart/datasystem/templates/worker_daemonset.yaml,
+k8s/helm_chart/datasystem/templates/configmap.yaml].
+
+== 8. Crosscutting Concepts
+
+* *Persistence / L2* — slot-organized persistence API honoring the WriteMode
+  [src/datasystem/common/l2cache/persistence_api.h:32-100,
+  src/datasystem/common/l2cache/slot_client/].
+* *Logging* — rolling, compression, rotation
+  [src/datasystem/common/log/log_manager.h:40-80].
+* *Metrics* — Counter/Gauge/Histogram with periodic export
+  [src/datasystem/common/metrics/metrics.h:30-80].
+* *Shared-memory management* — mmap arenas with pre-populate/scaling/decay and
+  bump allocation [src/datasystem/common/shared_memory/allocator.h:50-64,
+  src/datasystem/common/shared_memory/arena.h].
+* *Placement / hash ring* — consistent hashing (ETCD or RocksDB backed) for
+  minimal-reshuffle placement and online scaling
+  [src/datasystem/worker/hash_ring/hash_ring.h:51-96,
+  src/datasystem/protos/hash_ring.proto].
+
+== 9. Architecture Decisions
+
+The significant decisions are recorded as ADRs (see `docs/specs/adrs/`): the
+master/worker split, the pluggable ETCD-vs-Metastore metadata backend, consistent
+hash-ring placement, and the performance-first / opt-in-reliability WriteMode
+model [src/datasystem/master/master_service_impl.h:38-73,
+src/datasystem/worker/worker.h:45-115,
+docs/source_zh_cn/design_document/cluster_management.md:7-52,
+src/datasystem/worker/hash_ring/hash_ring.h:51-96,
+include/datasystem/object/object_enum.h:30-35].
+
+== 10. Quality Requirements
+
+=== 10.1 Quality scenarios derived from code
+
+* *Failure detection (availability)* — bounded by flag defaults: a node is marked
+  lost at 60 s, dead at 300 s; the liveness probe is 150 s; the ETCD RPC floor is
+  5 s [src/datasystem/common/flag/common_gflag_define.cpp:114,
+  src/datasystem/common/flag/common_gflag_define.cpp:98,
+  src/datasystem/worker/object_cache/worker_oc_server.cpp:164,
+  src/datasystem/common/kvstore/etcd/etcd_store.h:49].
+* *Throughput control (performance)* — background work is rate-limited (L2 async
+  write 200 MB/s, migration 40 MB/s) and payloads ≥ 100 MB take a zero-copy path
+  [src/datasystem/worker/object_cache/worker_oc_service_impl.cpp:128,
+  src/datasystem/common/flag/common_gflag_define.cpp:100]. Hot-path thread pools
+  are tuned (RPC 16, OC 32, SC 128)
+  [src/datasystem/server/common_server.cpp:29,
+  src/datasystem/worker/object_cache/worker_oc_service_impl.cpp:116].
+* *Reliability* — ETCD lease keep-alive with reconnect, periodic node health
+  checks, and selectable persistence modes
+  [src/datasystem/common/kvstore/etcd/etcd_store.h:145-153,
+  src/datasystem/worker/cluster_manager/worker_health_check.h,
+  include/datasystem/object/object_enum.h:30-35].
+* *Security* — AK/SK authentication (system + tenant), optional YuanRong IAM
+  verification, optional stream-cache encryption, BoringSSL TLS
+  [src/datasystem/worker/object_cache/worker_oc_server.cpp:127-131,
+  src/datasystem/worker/tenant_auth_manager.cpp:38-39,
+  src/datasystem/worker/object_cache/worker_oc_server.cpp:168,
+  bazel/ds_deps.bzl:67-76].
+* *Maintainability* — layered modules, a four-tier test tree (ut/st/perf/common),
+  clang-tidy enforcement, and a curated `.repo_context/` layer
+  [tests/CMakeLists.txt, .clang-tidy:1-13].
+
+=== 10.2 Quality-goal priority
+
+Proposed top characteristic: performance, with reliability provided opt-in per
+object rather than traded away (team answer). The full ranking is *deferred* for
+Architect/Product Owner ratification. Numeric SLOs (P99 latency, QPS floor,
+hit-rate, recovery-time objective) are *not encoded* and are *deferred*.
+
+== 11. Risks and Technical Debt
+
+* *Explicit code debt* — build-stamp FIXME placeholders, a `skip_authenticate`
+  "hack" flag, and an experimental non-production multi-tenancy module targeted
+  for v2.0 [src/datasystem/common/util/version.h:33,
+  src/datasystem/common/util/version.h:37,
+  src/datasystem/worker/authenticate.cpp:23,
+  src/datasystem/worker/authenticate.h:18-28].
+* *Security risk* — auth disabled by default and an unencrypted SDK↔worker
+  shared-memory boundary; the implied posture is a trusted cluster/network (team
+  answer) [src/datasystem/worker/worker_service_impl.cpp:72,
+  src/datasystem/worker/client_manager/client_info.h:48].
+* *Operational risk* — Metastore mode makes Worker 0 a coordination SPOF with no
+  documented automatic failover (team answer); a hard ETCD dependency; hot-replica
+  replication is explicitly not a reliability mechanism
+  [docs/source_zh_cn/design_document/cluster_management.md:46, README_EN.md:74,
+  README_EN.md:41].
+* *Scaling risk* — inter-worker transport is TCP-only until RDMA lands; ring token
+  generation is centrally inspected; rebalancing migration is rate-limited
+  (40 MB/s) [README_EN.md:81, src/datasystem/worker/hash_ring/hash_ring.h:75,
+  src/datasystem/worker/object_cache/worker_oc_service_impl.cpp:128].
+* *Debt tracking* — there is no in-repo debt register; the authoritative tracker is
+  the hosting forge's issue tracker (team answer), *deferred* for confirmation.
+
+== 12. Glossary
+
+A repo-local glossary defines DsClient, worker, master, Metastore, ETCD, hash
+ring, object/KV/stream cache, hetero, and common-infra
+[.repo_context/glossary.md:1-29].

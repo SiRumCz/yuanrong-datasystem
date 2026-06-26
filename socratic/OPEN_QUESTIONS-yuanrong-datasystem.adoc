@@ -1,0 +1,649 @@
+= Open Questions — yuanrong-datasystem
+:doctype: book
+
+// Every [OPEN] leaf from QUESTION_TREE-yuanrong-datasystem.adoc, grouped by the
+// role best placed to answer it. A leaf with multiple roles appears under each.
+// Team members: write your answer in the *Your answer:* block, or mark
+// "(deferred — <reason>)". Phase 2 will not run until every question below has
+// an answer or an explicit deferral.
+
+// -----------------------------------------------------------------------------
+// NOTE: The *Your answer:* blocks below were drafted by AI from (a) the repo's
+// own sources/docs and (b) public openEuler/openYuanrong material. Each answer
+// cites its evidence. Items that depend on non-public team policy or unpublished
+// numeric targets are answered as far as the public record allows and then
+// explicitly DEFERRED for a human owner to confirm. Treat every answer as a
+// proposal to ratify, not as authoritative truth.
+//
+// Key public sources used (cited inline as [S1]..[S6]):
+//   [S1] openEuler project page — https://www.openeuler.org/zh/projects/yuanrong/
+//   [S2] "把集群变单机（下）——openYuanrong核心架构设计解析" —
+//        https://www.openeuler.org/zh/blog/20260131-openYuanrong_02/20260131-openYuanrong_02.html
+//   [S3] openYuanrong 数据流 blog —
+//        https://www.openeuler.org/zh/blog/20260316-openYuanrong_05/20260316-openYuanrong_05.html
+//   [S4] veRL/TransferQueue KV backend blog —
+//        https://www.openeuler.org/zh/blog/20260407-openYuanrong_08/20260407-openYuanrong_08.html
+//   [S5] datasystem docs site —
+//        https://pages.openeuler.openatom.cn/openyuanrong-datasystem/docs/
+//   [S6] vLLM multi-machine PD-separation use case (TTFT -20%) —
+//        openyuanrong docs use_cases/llm_on_multiple_machines
+// -----------------------------------------------------------------------------
+
+== For Product Owner
+
+=== Q1.2.2: Who is the intended operator role?
+Category: business-context
+
+The code ships dscli and K8s charts but does not say who runs the system
+(platform/SRE team vs. self-serving application teams), nor what is in- or
+out-of-scope for that operator.
+
+*Your answer:*
+PROPOSED (confirm with team). The operating model in the docs is a *platform /
+infrastructure team* posture, not application-team self-service:
+
+* Deployment is an infra task with privileged, cluster-wide prerequisites:
+  multi-node SSH trust, a separately-deployed ETCD cluster, shared NFS / SFS
+  Turbo / OBS for L2 reliability, huge-page configuration, and (for hetero) NPU
+  driver mounts in the container — all operator concerns, not per-app
+  (cluster_management.md:95-98; best_practices_for_reliabilty.md:65-70; [S5]).
+* The worker runs as a per-node DaemonSet (one data-plane process per node,
+  k8s/helm_chart/datasystem/templates/worker_daemonset.yaml), which is the
+  classic "platform team owns the node agent, app teams just link the SDK"
+  division. Application teams consume it purely through the C++/Python/Java/Go
+  SDK and `ConnectOptions(host, port)` — they do not run workers.
+* In Huawei's own use (MetaERP, Xiaoyi AI platform), it is operated as shared
+  Serverless infrastructure under a platform org, not self-served per team [S1][S2].
+
+In-scope for the operator: cluster bring-up/scale, ETCD-or-Metastore choice, L2
+backend + shared storage, security flags, metrics/Prometheus + dashboard
+(default :9080), capacity/huge-page tuning. Out-of-scope (app-team owned):
+WriteMode/consistency choice, key/object lifecycle, retry/idempotency.
+DEFERRED: the *org-specific* split of duties (who owns ETCD, on-call boundary)
+is site policy — Operations to confirm.
+
+=== Q1.4: Why was this system built — what is the primary motivation?
+Category: business-context
+
+The code shows the mechanism; README_EN.md:49-53 lists scenarios (LLM KVCache,
+M→N elasticity, RL parameter rearrangement, checkpoint save/load, microservice
+state). Which scenario is the primary design driver, and what pain justified a
+new system rather than an existing cache?
+
+*Your answer:*
+PROPOSED (well-supported by public sources). Motivation is the openYuanrong
+"distributed kernel" thesis — make a cluster behave like one machine — and the
+data system is the *near-compute multi-level cache* that gives that abstraction
+its data performance: pool HBM/DRAM/SSD across the cluster and let same-node
+access be zero-copy via shared memory, while cross-node access auto-syncs the
+object to the local node so the next access is again local [S1][S2].
+
+Primary design driver = *AI training/inference*, specifically two pains an
+off-the-shelf cache (Redis/memcached) does not solve well:
+
+1. *Redundant cross-node copies / Broker overhead.* Traditional message-broker
+   and RPC paths incur multiple copies and high bandwidth use; the data system
+   removes them with shared-memory pages + active push and zero-copy [S3].
+2. *Heterogeneous (NPU/HBM) data movement.* Object semantics hide D2D/H2D/D2H
+   Send/Recv and provide HBM-backed objects with a multi-level (HBM→DDR→SSD)
+   cache to raise capacity and hit rate — no general cache does this [S2].
+
+Concrete originating wins (Huawei Xiaoyi AI platform): distributed KV Cache
+overall performance > 1x improvement; RL train→infer parameter sync cut from
+minutes to seconds [S2]. LLM-inference KV-cache spill (overflow HBM KV cache into
+the data system to raise hit rate and cut recompute) is the headline scenario
+[S2][S6]. So: LLM KVCache is the lead driver; checkpoint/microservice-state are
+secondary applications of the same mechanism.
+
+=== Q1.5.2: What numeric success targets define "good enough"?
+Category: quality-goals
+
+Benchmark tooling exists (dsbench, perf scripts) but no latency SLO, throughput
+floor, or hit-rate goal is encoded. What are the target numbers?
+
+*Your answer:*
+PARTIAL + DEFERRED. No SLO is encoded in the repo, and the public record only
+gives *outcome* numbers, not committed floors:
+
+* Distributed KV Cache > 1x overall improvement; RL param sync minutes→seconds
+  (Xiaoyi) [S2].
+* vLLM multi-machine PD-separation: long-sequence inference TTFT −20% [S6].
+* Operational latency guardrails that exist as defaults (proxies, not SLOs):
+  `slow_log_process_slower_than` = 2000 µs, `slow_log_rpc_slower_than` = 5000 µs,
+  client `request_timeout_ms` ≈ 20 ms default (docs/tests/kvtest benchmark-guide).
+
+DEFERRED: the formal pass/fail bars (P99 latency SLO, QPS floor, KV-cache
+hit-rate goal) are not public — Product Owner/Architect to supply the target
+numbers per scenario.
+
+=== Q1.6: Which user/scenario segment has priority?
+Category: business-context
+
+The five applicable scenarios are listed without ranking. Which segment (LLM
+inference vs. training checkpoint vs. microservice state) should win design
+trade-offs?
+
+*Your answer:*
+PROPOSED. Public positioning ranks *AI* first, and within AI the two segments
+that demonstrably drove the design are (1) *LLM inference KV-cache* (HBM spill →
+multi-level cache, content-addressed reuse, TTFT reduction) and (2) *RL
+training train↔infer parameter rearrangement* (sub-second cross-instance sync)
+[S2][S4][S6]. Checkpoint save/load and microservice state are real but
+secondary — they reuse the same KV/object/stream mechanism rather than driving
+it. Recommendation: when AI-inference KV-cache conflicts with microservice-state
+needs, *AI inference wins* design trade-offs. DEFERRED: ratification of this
+ranking is a Product Owner call.
+
+=== Q2.5.acc: What are the non-functional acceptance thresholds?
+Category: quality-goals
+
+Tests assert functional correctness but not max latency, min throughput, or
+recovery-time objectives. What thresholds must a release meet?
+
+*Your answer:*
+DEFERRED (no public thresholds). The test tree (tests/ut|st|perf) asserts
+behavior, not non-functional bars; dsbench/kvtest produce p50/p90/p99/qps but
+no baseline is checked in. Failure-detection *timings* that bound any RTO are
+visible as flag defaults (node lost 60 s, dead 300 s, liveness probe 150 s, ETCD
+RPC floor 5 s — QUESTION_TREE Q3.10.1), and background work is rate-limited
+(L2 async 200 MB/s, migration 40 MB/s — Q3.10.2), but these are mechanism, not
+acceptance gates. The actual release thresholds (max latency / min throughput /
+RTO) are team knowledge — Product Owner + Developer to define and ideally encode
+as perf-regression gates.
+
+=== Q3.1: What are the top 3–5 driving architecture quality goals, ranked?
+Category: quality-goals
+
+The README lists many capabilities but the *driving* quality goals and their
+ranking are not declared. Needed to resolve Q4.9 and the ADR trade-offs.
+
+*Your answer:*
+PROPOSED ranking (confirm). From the public design narrative ("极致的数据访问
+性能" / ultimate data-access performance is the repeated headline [S2]) and
+AGENTS.md:3-8:
+
+1. *Performance efficiency* (latency/throughput, zero-copy, near-compute) — the
+   reason the system exists; wins most trade-offs.
+2. *Operational availability / elasticity* (online scale-up/down, failover,
+   M→N elasticity) — the "cluster-as-one-machine" promise.
+3. *Reliability / recovery correctness* (selectable WriteMode + L2 durability,
+   crash-consistent failover) — selectable, opt-in per object.
+4. *Concurrency & memory safety* (repo-level engineering requirement, AGENTS.md).
+5. *Security* — present but explicitly permissive-by-default / pre-production for
+   multi-tenancy (see Q4.6.2), so ranked lowest today.
+
+DEFERRED: Architect/Product Owner to ratify the exact ranking; it directly seeds
+Q4.9 and the Q3.9 ADRs.
+
+=== Q4.9: Which quality characteristic has top priority?
+Category: quality-goals
+
+AGENTS.md:3-8 names performance, concurrency safety, memory safety, recovery
+correctness, and operational availability as requirements but does not rank
+them. Which is #1 when they conflict (e.g. performance vs. reliability)?
+
+*Your answer:*
+PROPOSED: *Performance* is #1 (it is the product's reason to exist and the
+repeated public headline [S2]), with the important qualifier that *reliability
+is opt-in, not sacrificed*: the default WriteMode is cache-only (NONE_L2_CACHE,
+fastest, lossy on crash) and callers who need durability explicitly select
+WRITE_THROUGH/WRITE_BACK + an L2 backend (object_enum.h:30-35;
+best_practices_for_reliabilty.md:14-29). So the design resolves the
+performance-vs-reliability conflict by *making reliability a per-object choice
+layered on a performance-first core* rather than ranking one globally above the
+other. DEFERRED: final ratification is an Architect call (see Q3.1).
+
+== For Architect
+
+=== Q2.3.errors: What is the per-RPC error/timeout/retry contract?
+Category: design-rationale
+
+Status codes exist (status.h:28-109) but the mapping of which codes each RPC can
+return, and the intended client retry semantics per code, is implicit across
+handlers rather than declared in the proto contracts.
+
+*Your answer:*
+PARTIAL (from code) + DEFERRED (no formal table). What the code/docs establish:
+
+* Transport timeouts derive from cluster flags: RPC timeouts are built from
+  `node_timeout_s` (→ ms, brpc channel opt, rpc_stub_cache_mgr.cpp); ETCD RPC
+  floor `MIN_RPC_TIMEOUT_MS` = 5000 (etcd_store.h:49); client default
+  `request_timeout_ms` ≈ 20 ms.
+* Built-in retry is sparse and purpose-specific, not a generic policy: the
+  client heartbeat retries (retryNum = 3, "retried twice before worker timeout",
+  client_worker_common_api.cpp); ETCD lease keep-alive reconnects on failure
+  (etcd_store.h:145-153).
+* Documented client retry semantics for one concrete case: during
+  `distributed_disk` failover takeover a synchronous `WRITE_THROUGH` `Set` on a
+  slot under recovery can hit request-timeout; the contract is "this means the
+  slot is recovering, NOT that the write succeeded — retry under timeout rules or
+  rely on upper-layer idempotency; pre-allocate longer timeouts during recovery"
+  (best_practices_for_reliabilty.md:110-117). This is the clearest stated
+  retry-on-timeout + idempotency expectation.
+* `K_BUFFER_DEPRECATED` (status.h:88) signals a buffer invalidated by a worker
+  crash — a *non-retryable, regenerate-the-data* condition (see Q2.6.4).
+
+DEFERRED: a complete per-RPC matrix (each proto method → returnable codes →
+retryable? idempotent?) does not exist in-repo and should be authored by the
+Architect/Developers from the handlers; recommend encoding it in the .proto
+comments or a doc.
+
+=== Q2.6.4: What is the intended semantics of WriteMode=NONE on worker crash?
+Category: business-context
+
+status.h:88 (K_BUFFER_DEPRECATED) shows the code expects data loss in cache-only
+mode on crash. Is that the contractually correct behavior for each scenario, and
+what is the caller expected to do?
+
+*Your answer:*
+ANSWERED (docs confirm). NONE_L2_CACHE / NONE_L2_CACHE_EVICT are *cache-only and
+provide NO L2 reliability* — this is intended, contractually-correct behavior,
+not a bug (best_practices_for_reliabilty.md:26-29; object_enum.h:30-35). On a
+worker crash the cache-only data on that worker is lost and outstanding
+shared-memory buffers referencing it are invalidated, surfaced to the client as
+`K_BUFFER_DEPRECATED` (status.h:88). Caller contract:
+
+* If the data is *reconstructible / a pure cache* (LLM KV-cache spill,
+  recomputable intermediate) → cache-only is the correct, fastest choice; on
+  loss, recompute/re-Put. This is the expected default for inference KV cache.
+* If the data must *survive crashes* (checkpoints, microservice durable state) →
+  the caller MUST select a reliability WriteMode (WRITE_THROUGH /
+  WRITE_BACK[_EVICT]) AND the operator MUST configure an L2 backend
+  (`l2_cache_type` = distributed_disk | sfs | obs). Note WRITE_BACK has a
+  failure window where not-yet-flushed data can still be lost
+  (best_practices_for_reliabilty.md:23).
+
+So "data loss on crash in NONE mode" is by-design; reliability is opt-in on both
+the business side (WriteMode) and the cluster side (L2). DEFERRED only:
+confirmation that each *named scenario's* chosen default matches this
+(Domain Expert).
+
+=== Q3.1: What are the top 3–5 driving architecture quality goals, ranked?
+Category: quality-goals
+
+(Same as the Product Owner question — Architect input needed on the ranking that
+drives the Q4 sub-tree and Q3.9 ADRs.)
+
+*Your answer:*
+See the proposed ranking under *For Product Owner → Q3.1*: (1) Performance,
+(2) Availability/elasticity, (3) opt-in Reliability, (4) Concurrency/memory
+safety, (5) Security (permissive today). Architect to ratify — this is the
+anchor for Q4.9 and the Q3.9 ADRs.
+
+=== Q3.6.3: What is the intended steady-state read/write timing/back-pressure model?
+Category: design-rationale
+
+Hot-path components are visible (shm → worker → peer/L2) but the sequencing —
+when a Get blocks, fans out to peers, or falls through to L2, and how
+back-pressure is applied — is spread across handlers, not documented as one
+runtime scenario.
+
+*Your answer:*
+PROPOSED (from code + public design). Steady-state path for a read:
+
+1. *Local shared memory first.* If the object is resident on the local worker,
+   the SDK reads it zero-copy from the mmap arena — no RPC, no copy [S2]
+   (allocator.h; share_memory.proto). This is the fast path and does not block on
+   the network.
+2. *Cross-node fetch.* If not local, the worker resolves the primary location via
+   the hash-ring metadata (cheap local map lookups, GetMasterAddr /
+   GetPrimaryWorkerUuid) and pulls from the peer via `GetObjectRemote` /
+   `BatchGetObjectRemote` (worker_object.proto:196-206). Per the public design,
+   the fetched object is then *synced to the local node* so subsequent reads are
+   again local [S2] — i.e. cross-node access is a pull+localize, not a per-read
+   remote hit.
+3. *L2 fall-through.* If configured and the object was spilled/persisted, it is
+   served from the L2 backend via PersistenceApi (persistence_api.h;
+   l2_cache_type distributed_disk/sfs/obs).
+
+Back-pressure: there is *no hard admission control* on the read hot path; flow
+is shaped by (a) fixed thread pools (RPC 16, OC 32, SC 128 — Q4.2), (b) rate
+limits on *background* movement (L2 async write 200 MB/s, migration 40 MB/s —
+Q3.10.2), (c) the 100 MB no-copy threshold switching large payloads to zero-copy
+transfer, and (d) bounded async queues that "smooth overload rather than enforce
+admission" (.repo_context logging design note). Writes follow WriteMode: cache
+write to shm, then sync (WRITE_THROUGH) or async-queued (WRITE_BACK, rate-limited)
+to L2. DEFERRED: a single authoritative sequence diagram with the exact
+block/timeout points per handler should be drawn by the Architect; the above is
+reconstructed, not a published spec.
+
+=== Q3.9.MasterWorkerSplit.Rationale: Why a master/worker split over peer-to-peer?
+Category: design-rationale
+
+The split is in code but not the reasoning, nor the consistency/availability
+trade-off it was meant to buy.
+
+*Your answer:*
+PROPOSED (partly inferred). The split buys a *single metadata/placement
+authority* separate from the data plane:
+
+* Workers own DRAM/SSD/HBM resources and the actual cached data and do the
+  node-to-node push/pull; the coordination side (master, backed by ETCD or the
+  Worker-0 Metastore) owns membership, the hash-ring topology, object-location
+  metadata, heartbeat/health, and failover orchestration
+  (cluster_management.md:5; QUESTION_TREE Q3.5.4/Q3.9). Public docs state cluster
+  management "implements node discovery, health detection, failure recovery and
+  online scaling" and "distributed metadata management" — a coordination role,
+  not a peer mesh (cluster_management.md:5).
+
+Why not pure P2P: a coordinated authority gives a consistent, single source of
+truth for *where each object lives* and for *who has failed*, which makes
+placement, online rebalancing, and failover decisions simple and globally
+consistent — at the cost of a coordination dependency (ETCD or the Worker-0
+Metastore, a known SPOF in Metastore mode — Q5.3). A P2P/gossip design would
+trade that consistency for weaker, eventually-consistent placement and harder
+failover reasoning. The chosen split therefore favors *consistency +
+operational simplicity of recovery* over P2P availability. NOTE: the master is
+metadata-only ("no data plane", Q3.5.4), so it is not on the data hot path —
+the split does not cost read/write latency. DEFERRED: confirmation of the
+original decision rationale is an Architect call; the consistency/availability
+framing above is reconstructed.
+
+=== Q3.9.EtcdVsMetastore.Rationale: When should ETCD vs. built-in Metastore be used?
+Category: design-rationale
+
+Both backends are implemented. When is each chosen, and is Metastore-on-Worker-0
+a supported production posture or a single-node/test convenience?
+
+*Your answer:*
+ANSWERED (docs are explicit). cluster_management.md:13-51 states the choice:
+
+* *ETCD* — when you already run ETCD, when multiple datasystem clusters share one
+  metadata center, when you need cross-datacenter HA ("ETCD provides a more
+  mature HA solution"), or when you want metadata decoupled from business
+  components for independent ops. This is the *production-HA* posture.
+* *Metastore* (built-in, ETCD-compatible gRPC, runs in Worker 0 as head node,
+  others connect via `metastore_address`) — for *quick deployment,
+  resource-constrained environments, and simplified ops* (fewer components)
+  (cluster_management.md:34-51).
+
+Is Metastore-on-Worker-0 production-supported? The docs position it as a
+*convenience for resource-limited deployments*, and Worker 0 is a documented
+coordination SPOF with *no documented automatic failover* — `metastore_head_node`
+must be set manually (cluster_management.md:46,126; Q5.3). Reading: it is a
+supported *mode*, but NOT an HA posture — for HA/production-critical metadata,
+use ETCD. DEFERRED only: whether the team formally blesses Metastore for any
+production tier is their policy call.
+
+=== Q3.9.HashRingPlacement.PughMatrix: What placement alternatives were considered?
+Category: design-rationale
+
+Consistent hashing is implemented. Which alternatives (range partitioning,
+directory-based placement) were actually considered, and how did they score
+against the quality goals?
+
+*Your answer:*
+DEFERRED (no record of alternatives). The repo documents *what* was built
+(consistent hash ring with virtual tokens, ETCD/RocksDB-backed, minimal-reshuffle
+placement, online scaling — hash_ring.h:51-96; .repo_context hash-ring design)
+and one known limitation (single-key CAS not ideal for very-high-concurrency
+scale events — .repo_context hash-ring design:234), but *no Pugh matrix or
+considered-alternatives record* (range partitioning, directory-based placement)
+exists in code or docs. The rationale that *is* inferable: consistent hashing
+gives minimal key reshuffle on scale and decentralized O(1) routing without a
+per-object directory lookup, which fits the "online M→N elasticity" goal better
+than range partitioning (hot-range/rebalance churn) or directory placement
+(metadata-lookup on every access). The actual scoring is team knowledge —
+Architect to supply or confirm none was formally recorded.
+
+=== Q4.6.2: What is the security target / threat model?
+Category: quality-goals
+
+Mechanisms exist but defaults are permissive (authorization_enable defaults
+false; skip_authenticate exists) and shared memory is unencrypted. What is the
+intended threat model, the mandatory-vs-optional posture, and any compliance
+scope?
+
+*Your answer:*
+PARTIAL + DEFERRED. The implied posture from code is a *trusted-cluster /
+trusted-node* model rather than a zero-trust one:
+
+* Authorization is OFF by default (`authorization_enable` default false,
+  worker_service_impl.cpp:72), a `skip_authenticate` "hack" flag exists
+  (authenticate.cpp:23), and multi-tenancy auth is explicitly experimental,
+  "do NOT use in production", targeted v2.0 (authenticate.h:18-28). So today the
+  intended boundary is "the cluster and the co-located SDK processes are
+  trusted".
+* SDK↔worker shared memory is unencrypted by design (it is the zero-copy
+  performance path; client_info.h:48) — confidentiality there relies on OS/
+  process isolation, not crypto. This is the trust boundary to call out.
+* Optional, opt-in mechanisms for less-trusted deployments: AK/SK auth (system +
+  tenant), optional YuanRong IAM token verification, optional stream-cache
+  encryption (`sc_encrypt_secret_key`), BoringSSL TLS for RPC, and OBS AK/SK for
+  L2 (worker_oc_server.cpp:127-131,168; tenant_auth_manager.cpp; ds_deps.bzl).
+
+There is *no SECURITY.md and no stated threat model or compliance scope* in the
+repo. DEFERRED: Architect/Operations to declare (a) the supported deployment
+trust boundary, (b) which mechanisms are mandatory vs optional per tier, and
+(c) any compliance scope (e.g. multi-tenant SaaS vs single-tenant infra).
+
+=== Q4.9: Which quality characteristic has top priority?
+Category: quality-goals
+
+(Same as the Product Owner question — Architect input needed.)
+
+*Your answer:*
+See *For Product Owner → Q4.9*: Performance is #1, with reliability provided as
+an opt-in per-object WriteMode + L2 layer rather than traded away. Architect to
+ratify.
+
+=== Q5.1.2: Where is technical debt formally tracked?
+Category: future-direction
+
+In-code markers are sparse; no TODO backlog or ADR "superseded" records exist.
+Where is the authoritative debt register (issue tracker / wiki)?
+
+*Your answer:*
+DEFERRED (outside repo). The repo has only scattered markers (~20 TODO/FIXME;
+version.h GIT_HASH/GIT_BRANCH "FIXME" placeholders; skip_authenticate "hack";
+experimental multi-tenancy → v2.0) and a `.repo_context/roadmap.md` that tracks
+*documentation* phases, not product debt. There is no CONTRIBUTING.md, ADR
+log, or in-repo debt register. The authoritative register is almost certainly
+the *issue tracker of the hosting forge* (AtomGit / GitCode / the openEuler
+`openeuler-mirror/yuanrong-datasystem` mirror's issues). Developer/Architect to
+confirm the exact tracker + any internal wiki — not determinable from the repo.
+
+=== Q5.5.target: What are the scaling limits and rebalancing-time targets?
+Category: quality-goals
+
+Code shows rate limits (migration 40 MB/s) and a centralized ring inspector but
+not the supported cluster size, object-count ceiling, or rebalancing-time
+objective. What is the scaling envelope?
+
+*Your answer:*
+PARTIAL + DEFERRED. No published ceiling, but the public record bounds it from
+both ends:
+
+* *Existence proof of large scale*: openYuanrong (data system included) underpins
+  Huawei MetaERP — "thousands of microservices, hundreds of TB/day" — so it runs
+  at large production scale [S1][S2]. Used as veRL/TransferQueue KV backend for RL
+  too [S4].
+* *Known scaling constraints (mechanism, not SLO)*: inter-worker transport is
+  TCP-only today (RDMA/UB pending), rebalancing migration is rate-limited to
+  40 MB/s, hash-ring token generation is centrally inspected
+  (`InspectAndProcessPeriodically`), and the ring design assumes "cluster small
+  enough that every worker holds full membership + full ring snapshots" with a
+  single-key-CAS path that suffers under very-high-concurrency scale events
+  (Q5.5; .repo_context hash-ring design:234,276). These collectively suggest the
+  current sweet spot is moderate-to-large clusters, not unbounded scale, and that
+  rebalancing time scales with data volume / 40 MB/s per stream.
+
+DEFERRED: the concrete supported max node count, object-count ceiling, and a
+rebalancing-time objective are not public — Architect/Operations to supply.
+
+== For Developer
+
+=== Q2.3.errors: What is the per-RPC error/timeout/retry contract?
+Category: design-rationale
+
+(See Architect section — Developer input needed on actual handler behavior and
+retry logic per status code.)
+
+*Your answer:*
+See *For Architect → Q2.3.errors*. Summary for developers: timeouts come from
+`node_timeout_s`-derived brpc opts + ETCD 5 s floor + ~20 ms client default;
+the only built-in retries are heartbeat (3x) and ETCD lease keep-alive; the one
+documented client retry contract is "retry-on-timeout + be idempotent",
+especially during distributed_disk failover takeover; `K_BUFFER_DEPRECATED` is
+non-retryable (regenerate data). A complete per-RPC code→retryable matrix is
+NOT in-repo and should be authored from the handlers.
+
+=== Q2.5.acc: What are the non-functional acceptance thresholds?
+Category: quality-goals
+
+(See Product Owner section — Developer input needed on what the test suite should
+enforce as non-functional bars.)
+
+*Your answer:*
+DEFERRED — see *For Product Owner → Q2.5.acc*. No non-functional gate is encoded.
+Developer recommendation: turn dsbench/kvtest p99/qps output into a checked-in
+perf-regression baseline once Product Owner sets the target numbers; today only
+slow-log thresholds (2 ms process / 5 ms RPC) and background rate limits exist as
+proxies.
+
+=== Q3.6.3: What is the intended steady-state read/write timing/back-pressure model?
+Category: design-rationale
+
+(See Architect section — Developer input needed on the actual data-path
+sequencing across handlers.)
+
+*Your answer:*
+See *For Architect → Q3.6.3*. Developer-relevant essentials: local shm zero-copy
+first → `GetObjectRemote`/`BatchGetObjectRemote` peer pull with localize →
+PersistenceApi L2 fall-through; no hard admission control, only fixed thread
+pools + background rate limits (L2 200 MB/s, migration 40 MB/s) + 100 MB no-copy
+threshold + bounded async queues. A precise per-handler block/timeout diagram is
+not published and should be added.
+
+=== Q5.1.2: Where is technical debt formally tracked?
+Category: future-direction
+
+(See Architect section — Developer input on where debt is recorded.)
+
+*Your answer:*
+See *For Architect → Q5.1.2*. Not in-repo; the authoritative register is the
+hosting forge's issue tracker (AtomGit/GitCode/openEuler mirror) — Developer to
+confirm the exact location + any internal wiki.
+
+== For Domain Expert
+
+=== Q1.4: Why was this system built — what is the primary motivation?
+Category: business-context
+
+(See Product Owner section — Domain Expert input needed on the originating pain
+and which workload drove the design.)
+
+*Your answer:*
+See *For Product Owner → Q1.4*. Domain framing: the originating pain is
+AI-workload data movement — redundant cross-node copies / Broker overhead and
+slow HBM↔DRAM↔SSD movement for NPU workloads. Lead workload = LLM inference
+KV-cache (HBM spill + reuse) and RL train↔infer parameter rearrangement; both
+showed concrete wins (KV cache >1x, RL sync minutes→seconds) [S2][S4][S6].
+Domain Expert to confirm which of these was the *first* driver.
+
+=== Q2.2.cat: Is the use-case catalog complete and correctly leveled?
+Category: business-context
+
+The four interface families (KV/object/stream/hetero) are derivable from
+headers, but their relative importance and any user-goal-level journeys spanning
+multiple interfaces (e.g. train → checkpoint to KV → reload into HBM via hetero)
+are not encoded in code.
+
+*Your answer:*
+PROPOSED. The four families (KV / object / stream / hetero) are the complete and
+correctly-leveled *system-interface* catalog (they map 1:1 to the SDK client
+headers and the public "Object/Stream/KV + heterogeneous" description [S1]).
+What is missing are *user-goal journeys* spanning them; the public material
+implies at least these multi-interface journeys, which should be added as
+top-level use cases:
+
+* *LLM inference KV-cache spill*: inference engine writes overflow KV cache
+  (KV/object) → data system multi-level (HBM→DDR→SSD) → later reload to raise
+  hit rate / cut recompute, hetero H2D into HBM [S2][S6].
+* *RL train↔infer parameter rearrangement*: training writes parameters →
+  fast cross-instance sync (object/hetero D2D/H2D) → inference instances load
+  them in seconds [S2][S4].
+* *Checkpoint save/load*: training checkpoint → durable WriteMode + L2 → reload.
+* *Stream data-flow*: producer→consumer shared-memory paging replacing a Broker
+  [S3].
+
+Recommendation: elevate these to user-goal use cases; ranking of importance is
+the Product Owner's call (Q1.6). DEFERRED: Domain Expert to confirm the exact
+cross-interface journeys actually used in production.
+
+=== Q2.6.4: What is the intended semantics of WriteMode=NONE on worker crash?
+Category: business-context
+
+(See Architect section — Domain Expert input needed on the correct
+business-level behavior for cache-only data on crash.)
+
+*Your answer:*
+See *For Architect → Q2.6.4*. Business framing: cache-only loss on crash is
+correct for *reconstructible* data (inference KV cache, recomputable
+intermediates) — recompute/re-Put on `K_BUFFER_DEPRECATED`. For data that must
+survive (checkpoints, durable microservice state) the business MUST opt into a
+reliability WriteMode + an L2 backend. Domain Expert to confirm each scenario's
+default matches this.
+
+== For Operations
+
+=== Q1.2.2: Who is the intended operator role?
+Category: business-context
+
+(See Product Owner section — Operations input needed on who actually runs the
+system and the supported operating model.)
+
+*Your answer:*
+See *For Product Owner → Q1.2.2*. Operations view: a platform/SRE team owns the
+per-node worker DaemonSet, ETCD (or Worker-0 Metastore), shared L2 storage
+(NFS/SFS/OBS), huge pages, NPU driver mounts, security flags, and Prometheus +
+dashboard (:9080); app teams only link the SDK. Operations to confirm the
+on-call/ownership boundary (esp. who owns ETCD).
+
+=== Q3.2.2.release: What is the branching / release / review process?
+Category: stakeholder-context
+
+.skills/ contains PR-creation automation and the project hosts on AtomGit/GitCode,
+but the human review policy, branching model, and release cadence/versioning
+rules are not captured in-repo.
+
+*Your answer:*
+PARTIAL + DEFERRED. Public facts: the project is Apache-2.0, developed in the
+OpenAtom openEuler community, and ships versioned releases (docs exist for 0.6.0,
+0.8.0; repo VERSION is 0.8.2) implying a periodic minor-release cadence aligned
+with openEuler community process [S1][S5]. The repo carries `.skills/` PR
+automation (ds-pr-review, ds-pr-comment-proc) but these are agent tools, not the
+human policy. There is *no in-repo CONTRIBUTING.md, branching model, review-gate
+policy, or release-cadence statement*. DEFERRED: Operations/Developer to document
+the branching model (e.g. trunk vs release branches), required reviewers/approvals,
+and versioning rules — governed by openEuler community + internal Huawei process,
+not derivable from the repo.
+
+=== Q4.6.2: What is the security target / threat model?
+Category: quality-goals
+
+(See Architect section — Operations input needed on production security posture
+and any compliance requirements.)
+
+*Your answer:*
+See *For Architect → Q4.6.2*. Operations view: defaults are permissive
+(authz off, auth-skip flag, unencrypted shm) → today's supported posture is a
+*trusted cluster on a trusted network*. For shared/multi-tenant or untrusted
+networks, operators must opt into AK/SK + IAM + TLS + stream-cache encryption,
+and must NOT rely on the experimental multi-tenancy module in production.
+DEFERRED: Operations to state the production trust boundary and any compliance
+scope.
+
+=== Q5.5.target: What are the scaling limits and rebalancing-time targets?
+Category: quality-goals
+
+(See Architect section — Operations input needed on the real-world operating
+envelope.)
+
+*Your answer:*
+See *For Architect → Q5.5.target*. Operations view: proven at MetaERP scale
+(thousands of microservices, hundreds of TB/day) [S2]; current constraints are
+TCP-only inter-worker transport, 40 MB/s rebalancing rate (→ rebalance time ≈
+moved-bytes / 40 MB/s per stream), and full-membership/full-ring snapshots per
+worker (favoring moderate-to-large, not unbounded, clusters). Concrete supported
+max-nodes / object-count / rebalance-time SLO are DEFERRED to the team.

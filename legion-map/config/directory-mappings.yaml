@@ -1,0 +1,104 @@
+generated: "2026-06-25"
+source: "CODEBASE.md"
+version: "1.0"
+
+# Project root mappings (single-package, role-layered C++ project)
+mappings:
+  services:
+    paths:
+      - "src/datasystem/worker"
+      - "src/datasystem/master"
+      - "src/datasystem/common/rpc"
+    priority: 5
+    pattern: "**/*_service_impl.{cpp,h}"
+    description: "RPC service implementations (worker/master/common)"
+  common:
+    paths:
+      - "src/datasystem/common"
+    priority: 5
+    pattern: "src/datasystem/common/**"
+    description: "Shared infrastructure: rpc, kvstore, log, metrics, shared_memory, rdma, l2cache, device, util"
+  contracts:
+    paths:
+      - "src/datasystem/protos"
+    priority: 10
+    pattern: "**/*.proto"
+    description: "Protobuf RPC service and message contracts"
+  public_headers:
+    paths:
+      - "include/datasystem"
+    priority: 10
+    pattern: "include/datasystem/**/*.h"
+    description: "Public C++ SDK headers"
+  bindings:
+    paths:
+      - "src/datasystem/pybind_api"
+      - "src/datasystem/java_api"
+      - "src/datasystem/c_api"
+      - "python/yr/datasystem"
+      - "java/src"
+      - "go"
+    priority: 5
+    pattern: "**/*"
+    description: "Language SDK bindings (Python/Java/Go) over the C++ core"
+  tests:
+    paths:
+      - "tests/ut"
+      - "tests/st"
+      - "tests/perf"
+      - "tests/common"
+      - "tests/kvtest"
+    priority: 10
+    pattern: "tests/**/*_test.cpp"
+    description: "GoogleTest suites by tier (unit/system/perf/common)"
+  config:
+    paths:
+      - "src/datasystem/common/flags"
+      - "cli"
+    priority: 5
+    pattern: "**/*flags*.{cpp,h}"
+    description: "gflags runtime config and deploy config generators"
+  build:
+    paths:
+      - "cmake"
+      - "bazel"
+    priority: 5
+    pattern: "**/*.{cmake,bzl,bazel}"
+    description: "Dual CMake + Bazel build configuration"
+  deploy:
+    paths:
+      - "k8s"
+      - "k8s_deployment"
+      - "cli"
+    priority: 5
+    pattern: "**/*"
+    description: "Docker/Helm/Kubernetes deployment and ops CLI"
+  docs:
+    paths:
+      - ".repo_context"
+      - "docs"
+    priority: 10
+    pattern: "**/*.{md,rst}"
+    description: "Curated module docs/playbooks (.repo_context) and source docs (docs/)"
+  transfer_engine:
+    paths:
+      - "transfer_engine"
+    priority: 5
+    pattern: "transfer_engine/**"
+    description: "Hetero/NPU P2P transfer subsystem"
+
+# Validation rules for path enforcement
+rules:
+  strictness: warn
+  exceptions: []
+
+autoUpdate:
+  enabled: true
+  mode: "prompt"
+  threshold:
+    newDirectoryFiles: 3
+    newCategoryFiles: 10
+    categoryChangePercent: 20
+  backup:
+    enabled: true
+    keepCount: 5

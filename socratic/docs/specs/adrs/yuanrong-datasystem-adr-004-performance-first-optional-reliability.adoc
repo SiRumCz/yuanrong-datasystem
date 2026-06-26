@@ -1,0 +1,55 @@
+= ADR-004: Performance-first core with opt-in per-object reliability (WriteMode)
+:doctype: article
+
+== Status
+
+Accepted (in code). Quality-goal ranking *deferred* — Architect/Product Owner to
+ratify.
+
+== Context
+
+Performance is the product's stated reason to exist, while several scenarios
+(checkpoints, durable microservice state) need crash survival. Durability is a
+per-object choice via WriteMode — `NONE_L2_CACHE` (default, fastest, lossy on
+crash), `WRITE_THROUGH_L2_CACHE` (sync), `WRITE_BACK_L2_CACHE` (async), plus
+evictable variants [include/datasystem/object/object_enum.h:30-35] — implemented
+through a slot-organized persistence API
+[src/datasystem/common/l2cache/persistence_api.h:32-100]. In cache-only mode,
+crash data loss is by design and surfaces as `K_BUFFER_DEPRECATED`
+[include/datasystem/utils/status.h:88] (team answer).
+
+== Decision
+
+Keep a performance-first, cache-only default and let callers opt into durability
+per object (WriteMode) plus an operator-configured L2 backend, rather than
+enforcing global durability or global cache-only semantics (team answer).
+
+== Consequences
+
+* (+) The performance-vs-reliability conflict is resolved by layering reliability
+  on a performance-first core rather than ranking one globally above the other
+  (team answer).
+* (−) Correct use requires discipline on two sides: the business selects a
+  reliability WriteMode and the operator configures an L2 backend
+  (`l2_cache_type` = distributed_disk | sfs | obs); write-back additionally has a
+  pre-flush loss window (team answer).
+* (−) The cache-only default means reconstructible data is fine but durable data is
+  silently lossy if the caller does not opt in (team answer).
+
+== Pugh Matrix
+
+Baseline: global synchronous durability (always write-through). Scale −1 / 0 / +1.
+
+[cols="3,1,1,1", options="header"]
+|===
+| Criterion | Always-durable (baseline) | Always cache-only | Opt-in WriteMode (chosen)
+| Performance efficiency      | -1 // sync L2 on every write | +1 | +1
+| Availability / elasticity   | 0                            | 0  | 0
+| Reliability / recovery      | +1                           | -1 | 0  // available when opted in
+| Concurrency & memory safety | 0                            | 0  | 0
+| Security                    | 0                            | 0  | 0
+| *Total*                     | *0*                          | *0* | *+1*
+|===
+
+Opt-in WriteMode keeps the performance ceiling of cache-only while making
+durability reachable on demand (team answer).

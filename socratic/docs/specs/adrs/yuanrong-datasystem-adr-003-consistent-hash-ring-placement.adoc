@@ -1,0 +1,49 @@
+= ADR-003: Consistent hash-ring placement
+:doctype: article
+
+== Status
+
+Accepted (in code). Considered-alternatives record *deferred* — none found in repo.
+
+== Context
+
+Object placement uses a consistent hash ring of virtual token slots, backed by ETCD
+or RocksDB, providing minimal-reshuffle placement and online scaling
+[src/datasystem/worker/hash_ring/hash_ring.h:51-96,
+src/datasystem/protos/hash_ring.proto]. Token generation is centrally inspected and
+processed periodically [src/datasystem/worker/hash_ring/hash_ring.h:75].
+
+== Decision
+
+Use consistent hashing for placement rather than range partitioning or
+directory-based placement (team answer).
+
+== Consequences
+
+* (+) Minimal key reshuffle on scale events and decentralized O(1) routing without
+  a per-object directory lookup, fitting the online M→N elasticity goal (team
+  answer).
+* (−) A known limitation: single-key CAS on the ring is not ideal for very-high-
+  concurrency scale events (team answer); the design assumes clusters small enough
+  that every worker holds full membership and full ring snapshots (team answer).
+* No Pugh matrix or considered-alternatives record exists in code or docs; the
+  scoring below is reconstructed from the inferable rationale (team answer) and the
+  actual decision record is *deferred* to the Architect.
+
+== Pugh Matrix
+
+Baseline: range partitioning. Scale −1 / 0 / +1.
+
+[cols="3,1,1,1", options="header"]
+|===
+| Criterion | Range partitioning (baseline) | Directory-based placement | Consistent hash ring (chosen)
+| Performance efficiency      | 0 | -1  // metadata lookup per access | +1
+| Availability / elasticity   | 0 | 0                                  | +1  // minimal reshuffle on scale
+| Reliability / recovery      | 0 | 0                                  | 0
+| Concurrency & memory safety | 0 | 0                                  | -1  // single-key CAS under high concurrency
+| Security                    | 0 | 0                                  | 0
+| *Total*                     | *0* | *-1*                             | *+1*
+|===
+
+Consistent hashing scores best for the elasticity-first goal; the concurrency
+penalty on scale events is the acknowledged trade-off (team answer).

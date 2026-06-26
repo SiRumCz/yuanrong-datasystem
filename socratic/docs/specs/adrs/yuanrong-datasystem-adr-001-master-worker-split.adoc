@@ -1,0 +1,55 @@
+= ADR-001: Separate metadata/coordination master from the data-plane worker
+:doctype: article
+
+// Phase 2 synthesis (Nygard format). Code evidence cited as [file:line];
+// team-supplied rationale marked (team answer); deferred items kept explicit.
+
+== Status
+
+Accepted (in code). Original rationale *deferred* — Architect to confirm.
+
+== Context
+
+The system separates a coordination side (master) from the data-plane side
+(worker). The master aggregates heartbeats and owns object-metadata routing with
+no data plane [src/datasystem/master/master_service_impl.h:38-73,
+src/datasystem/master/object_cache/oc_metadata_manager.h:93]; the worker owns
+DRAM/SSD/HBM resources, cached data, and node-to-node push/pull
+[src/datasystem/worker/worker.h:45-115]. Public docs describe cluster management
+as node discovery, health detection, failure recovery, online scaling, and
+distributed metadata management [docs/source_zh_cn/design_document/cluster_management.md:1-52].
+
+== Decision
+
+Keep a single metadata/placement authority (master, backed by ETCD or the Worker-0
+Metastore) distinct from the data plane, rather than a fully peer-to-peer/gossip
+design (team answer).
+
+== Consequences
+
+* (+) A consistent, single source of truth for object location and node liveness,
+  which simplifies placement, online rebalancing, and failover reasoning (team
+  answer).
+* (+) The master is metadata-only and off the data hot path, so the split costs no
+  read/write latency (team answer) [src/datasystem/master/master_service_impl.h:38-73].
+* (−) Introduces a coordination dependency (ETCD or the Worker-0 Metastore, a known
+  SPOF in Metastore mode — see ADR-002) (team answer).
+
+== Pugh Matrix
+
+Baseline: peer-to-peer / gossip placement. Criteria are the proposed quality goals
+(team answer); scale −1 / 0 / +1.
+
+[cols="3,1,1", options="header"]
+|===
+| Criterion | Peer-to-peer (baseline) | Master/Worker split (chosen)
+| Performance efficiency        | 0 | 0
+| Availability / elasticity     | 0 | +1
+| Reliability / recovery        | 0 | +1
+| Concurrency & memory safety   | 0 | 0
+| Security                      | 0 | 0
+| *Total*                       | *0* | *+2*
+|===
+
+The split favors consistency and operational simplicity of recovery over P2P
+availability (team answer).
