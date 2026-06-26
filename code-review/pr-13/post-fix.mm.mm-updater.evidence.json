@@ -1,0 +1,1 @@
+{"mm_changed": false, "questions": [], "rationale": "PR #13 only guards an optional callback in the system-test KillTimer helper before abort; it does not alter production architecture, flows, or documented conventions."}
