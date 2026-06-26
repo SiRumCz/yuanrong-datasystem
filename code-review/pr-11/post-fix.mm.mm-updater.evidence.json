@@ -1,0 +1,1 @@
+{"mm_changed": false, "questions": [], "rationale": "No MM change: PR #11 only newline-terminates stderr diagnostics in tests/st/hashring_parser.cpp and does not alter architecture, documented flows, or repository conventions."}

@@ -1,0 +1,7 @@
+protocol: code-review
+instance: pr-11
+state: done
+head_sha: 64b058282f7fd0bc9b2bfa7a9a07ad3c09a4e01a
+gates:
+  state: auto-resolved
+  history: []
