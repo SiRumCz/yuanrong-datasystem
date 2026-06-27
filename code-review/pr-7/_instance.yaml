@@ -1,7 +1,7 @@
 protocol: code-review
 instance: pr-7
 head_sha: a52b6f8823295a7e131d0755bbf24a61914c4a72
-phase: preflight
+phase: mm-compliance
 joined: false
-phase_label: pre-flight gate
+phase_label: mental-model compliance gate
 status_comment_id: 4814560107
