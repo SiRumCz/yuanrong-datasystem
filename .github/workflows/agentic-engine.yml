@@ -165,7 +165,13 @@ jobs:
           # workflows). The plan job already holds this PAT via STATE_REMOTE, so
           # this grants no new privilege.
           GH_TOKEN: ${{ secrets.POC_DISPATCH_TOKEN }}
-          PUBLISH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # PUBLISH_TOKEN is the write-capable PAT (not the default GITHUB_TOKEN)
+          # because the `combine` merge runs HERE (next.py continue → merge hook),
+          # and recover-mental-model's push-mental-model hook needs `contents:write`
+          # to force-push the orphan `_mental_model` branch + `actions:read` to
+          # download each leg's mm-tree artifact by run_id. The job already holds
+          # this PAT via STATE_REMOTE/GH_TOKEN, so this grants no new privilege.
+          PUBLISH_TOKEN: ${{ secrets.POC_DISPATCH_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           HEAD_SHA: ${{ steps.head.outputs.sha }}
           PROTO: ${{ inputs.protocol }}
