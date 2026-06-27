@@ -1,0 +1,60 @@
+= ADR-005: Client-side URMA data-plane failover
+:doctype: article
+
+== Status
+
+Accepted (in PR #7). Original threshold and backoff rationale *deferred* --
+Architect to confirm.
+
+== Context
+
+The existing failover model records cluster liveness and worker switch behavior
+around worker unavailability, scale-down, ETCD-backed topology, and heartbeat
+health. PR #7 adds a second client-visible failure mode: the worker can remain
+alive and usable while the URMA data plane between a client and that worker is
+persistently unhealthy. The new `URMA_DATA_PLANE_FAILURE` switch reason makes
+that condition explicit [src/datasystem/client/listen_worker.h:50].
+
+The client now records URMA Set/Publish write results and Get-side URMA response
+outcomes, including TCP fallback payloads and `K_URMA_ERROR`, into a per-worker
+success-rate tracker [src/datasystem/client/object_cache/client_worker_api/client_worker_base_api.cpp:297,
+src/datasystem/client/object_cache/client_worker_api/client_worker_remote_api.cpp:473]. A settled window is evaluated
+against hot-updatable gflags for success-rate ratio and minimum sample count
+[src/datasystem/common/util/gflag/common_gflag_define.cpp:69,
+src/datasystem/common/util/gflag/flags.h:194].
+
+== Decision
+
+Treat persistent client-side URMA data-plane failure as an availability signal
+that can trigger an asynchronous worker switch, even when the current worker is
+still alive. The trigger is request-driven: each client-worker API instance owns
+an `UrmaSuccessRateTracker`, settles windows using `client_dead_timeout_ms`, and
+submits a switch only when a full window has enough samples and its success rate
+is strictly below the configured threshold
+[src/datasystem/client/client_worker_common_api.cpp:646,
+src/datasystem/client/urma_success_rate_tracker.cpp:31].
+
+Keep the current worker usable during this switch path. `URMA_DATA_PLANE_FAILURE`
+uses the same `keepCurrentWorker` behavior as voluntary scale-down, so foreground
+requests can continue through TCP fallback while the client tries to move to a
+healthier worker [src/datasystem/client/object_cache/object_client_impl.cpp:730].
+Switch submission is asynchronous and stale callbacks are ignored if the reporting
+worker API is no longer current [src/datasystem/client/object_cache/object_client_impl.cpp:402].
+
+== Consequences
+
+* (+) Availability improves for partial transport failures: a live worker with a
+  bad client URMA fast path no longer pins the client indefinitely; the client can
+  move after enough failed URMA samples.
+* (+) Business continuity is preserved during failover because the current worker
+  remains eligible and TCP fallback can keep requests succeeding while the async
+  switch is attempted.
+* (+) The decision preserves the performance-first model by using URMA when
+  healthy and switching only after a configurable, sample-gated window instead of
+  demoting the fast path after a single failure.
+* (-) Client failover reasoning now has two distinct health sources: cluster
+  worker liveness and per-client URMA data-plane health. Operators must understand
+  the new `urma_failover_success_rate_ratio` and `urma_failover_min_sample_count`
+  knobs when diagnosing switch behavior.
+* (-) Threshold, sample-count, and backoff defaults are mechanism-level choices in
+  PR #7; their product-level SLO rationale remains deferred.
