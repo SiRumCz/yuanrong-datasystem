@@ -1,0 +1,15 @@
+{
+  "dimension": "performance",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": "src/datasystem/client/urma_success_rate_tracker.cpp",
+      "line": 38,
+      "severity": "medium",
+      "category": "performance",
+      "title": "Disabled URMA failover still resets atomics on every hot-path sample",
+      "impact": "When `urma_failover_success_rate_ratio` is set to 0.0 to disable failover, every URMA Set/Get result still enters `RecordUrmaResult` and calls `ResetWindow()`, issuing several atomic stores per foreground request after the caller has already taken a timestamp. In high-throughput clients this defeats the expected low-overhead disabled mode and adds unnecessary cache-line traffic on the request path.",
+      "fix": "Make the disabled state a cheap fast path: avoid per-request resets after the state is already clear, or gate tracking before taking the timestamp/calling `RecordUrmaResult`; clear the window once when the config transitions to disabled instead of resetting on every sample."
+    }
+  ]
+}
