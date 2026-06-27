@@ -8,7 +8,7 @@ run-name: "agentic · ${{ github.event.client_payload.instance || format('pr-{0}
 
 on:
   # No protocol auto-triggers on pull_request anymore — code-review is /review-only
-  # and recover-mental-model-stub is /recover-only — so PR open/sync does nothing.
+  # and recover-mental-model is /recover-only — so PR open/sync does nothing.
   # Re-add a `pull_request:` block here (and the protocol's trigger) to restore it.
   issue_comment:
     types: [created]
