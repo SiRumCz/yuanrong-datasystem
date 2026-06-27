@@ -1,0 +1,24 @@
+{
+  "dimension": "maintainability",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": ".conversations/7b1e9a4c-2d3f-4a8b-9c1e-0a2b3c4d5e6f.jsonl",
+      "line": 1,
+      "severity": "medium",
+      "category": "maintainability",
+      "title": "Generated conversation transcript is checked into the repo",
+      "impact": "This hidden JSONL file is not product code, tests, or durable documentation, but it records an AI work session with partial code sketches and tool transcripts. Future readers and repository searches can treat it as source-backed context even though it can drift from the real implementation, adding misleading maintenance noise.",
+      "fix": "Remove the .conversations artifact from the PR and, if this directory is produced by tooling, add it to the appropriate ignore rules instead of versioning session transcripts."
+    },
+    {
+      "path": "src/datasystem/client/urma_success_rate_tracker.h",
+      "line": 76,
+      "severity": "low",
+      "category": "maintainability",
+      "title": "Test-only accessor is exposed on the production tracker interface",
+      "impact": "GetCurrentSampleCountForTest() is declared in the production header without any test guard, so a helper whose name says it is for tests becomes part of the normal class surface. That makes the tracker API noisier and invites future production code to depend on state that was only intended for assertions.",
+      "fix": "Hide the accessor behind the repository's test-only compile guard, replace it with a friend/test fixture approach, or remove it and assert the behavior through the existing public state transitions."
+    }
+  ]
+}
