@@ -1,0 +1,87 @@
+= ADR-005: Unified random log sampling for request, access, and diagnostic logs
+:doctype: article
+
+== Status
+
+Proposed by PR #14; accepted when the originating implementation is merged.
+
+== Context
+
+The logging subsystem previously exposed `log_rate_limit` and a `LogRateLimiter`
+under the spdlog layer. PR #14 removes that rate limiter from the logging build
+and runtime wiring, and replaces it with a process-wide `LogSampler`
+[src/datasystem/common/log/logging.cpp:89, src/datasystem/common/log/spdlog/BUILD.bazel:8,
+src/datasystem/common/log/spdlog/log_rate_limiter.cpp:1].
+
+The new sampler is not a line-oriented or first-N limiter. It defines separate
+sample-rate dimensions for complete request logs, access logs, and request
+diagnostics, represented as immutable hot-path snapshots and integer ppm/threshold
+rates [src/datasystem/common/log/log_sampler.h:45,
+src/datasystem/common/log/log_sampler.h:64,
+src/datasystem/common/log/log_sampler.h:69]. The LOG/PLOG macro layer checks the
+sampler before constructing the log stream, while preserving FATAL logging
+[src/datasystem/common/log/log.h:92, src/datasystem/common/log/log.h:103].
+
+Access logging also moves behind typed facades whose setters and deferred field
+providers no-op when the access record has already sampled out, so expensive
+field materialization can be skipped [src/datasystem/common/log/access_recorder.h:165,
+src/datasystem/common/log/access_recorder.h:235,
+src/datasystem/common/log/access_recorder.cpp:344].
+
+== Decision
+
+Use a unified random `LogSampler` as the logging-volume control point for
+request, access, and diagnostic logs.
+
+The sampler uses:
+
+* `request_sample_rate` for one complete request-log decision per request trace.
+* `access_sample_rate` for supplemental external API / client access logs.
+* `diagnostic_sample_rate` for supplemental request-context ERROR, WARNING, and
+  PLOG diagnostics when the request is not sampled in.
+
+Request sampled-in decisions force related diagnostics and access records to
+emit; request sampled-out decisions directly drop only ordinary request INFO/VLOG.
+FATAL/CHECK and background logs bypass the sampler. Workers own the effective
+sampling configuration, initialize it at logging startup, and propagate structured
+ppm configuration to clients rather than relying on independent client-side
+policy [src/datasystem/common/log/logging.cpp:158,
+src/datasystem/common/log/log_sampler.cpp:139,
+src/datasystem/common/log/log_sampler.cpp:243,
+src/datasystem/common/log/log_sampler_proto.cpp:21].
+
+== Consequences
+
+* (+) Logging control aligns with the repository's performance-first posture:
+  sampled-out runtime logs and access records can avoid stream construction,
+  request-parameter formatting, deferred providers, and exporter writes.
+* (+) Random hash-threshold decisions avoid the startup/window bias of first-N
+  limiting and give request-level consistency across client/worker boundaries
+  through propagated request sample state.
+* (+) Diagnostics are not simply suppressed by request rejection: sampled-in
+  requests remain complete, while non-sampled-in requests still have an explicit
+  diagnostic supplement path.
+* (−) Operators must reason about expected statistical retention, not exact QPS
+  caps. Access retention may exceed `access_sample_rate` because request sampled-in
+  traces force access emission.
+* (−) The old `log_rate_limit` knob is removed rather than compatibility-mapped,
+  so deployments must migrate to the three sample-rate flags.
+
+== Pugh Matrix
+
+Baseline: first-N request log rate limiting. Scale −1 / 0 / +1.
+
+[cols="3,1,1,1", options="header"]
+|===
+| Criterion | First-N request limiter (baseline) | Independent per-log sampling | Unified request/access/diagnostic sampler (chosen)
+| Performance efficiency      | 0  | 0  | +1
+| Availability / elasticity   | 0  | 0  | 0
+| Reliability / recovery      | 0  | 0  | 0
+| Concurrency & memory safety | 0  | 0  | 0
+| Operability                 | 0  | -1 | +1
+| Diagnostic usefulness       | -1 | 0  | +1
+| *Total*                     | *-1* | *-1* | *+3*
+|===
+
+The chosen design favors low hot-path cost and coherent request-level diagnostics
+over exact volume caps.
