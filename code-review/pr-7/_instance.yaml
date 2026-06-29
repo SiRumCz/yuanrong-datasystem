@@ -1,7 +1,7 @@
 protocol: code-review
 instance: pr-7
 head_sha: a52b6f8823295a7e131d0755bbf24a61914c4a72
-phase: post-fix
-joined: false
-phase_label: "context capture \u2225 mental-model update"
+phase: mrp
+joined: true
+phase_label: merge-readiness pack (synthesis)
 status_comment_id: 4814560107
