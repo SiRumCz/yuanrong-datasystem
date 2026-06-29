@@ -1,0 +1,24 @@
+{
+  "dimension": "performance",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": "src/datasystem/common/log/access_recorder.cpp",
+      "line": 994,
+      "severity": "medium",
+      "category": "performance",
+      "title": "Avoid materializing a second request-message string for every access log",
+      "impact": "LogPerformance now calls FormatAccessReqMsg(type, reqMsg) and streams the returned std::string. That helper builds a separate ostringstream for sampled request/access logs, and for REQUEST_OUT or unsampled cases it returns reqMsg by value, so hot access/request-out logging copies the whole formatted request payload before the outer logStream copies/appends it again. Large reqMsg values such as ShortDebugString() pay this extra allocation/copy on every emitted record.",
+      "fix": "Keep the previous append-style API: pass the destination std::ostringstream into FormatAccessReqMsg/AppendReqMsgWithSampleMark and write directly into the existing logStream, returning void or a string_view-only fast path instead of a new std::string."
+    },
+    {
+      "path": "src/datasystem/common/log/access_recorder.cpp",
+      "line": 238,
+      "severity": "medium",
+      "category": "performance",
+      "title": "Do not copy protobuf key lists before truncating access-log output",
+      "impact": "The PROTO_REF path reserves protoRef->size(), copies every protobuf string into a std::vector, then calls objectKeysToString(keys). For batched worker/object operations this adds O(n) string allocations and a second pass even though the formatter caps output around LOG_TOTAL_KEYS_SIZE_LIMIT/LOG_OBJECT_KEY_SIZE_LIMIT and can stop early.",
+      "fix": "Call the new objectKeysToString(const google::protobuf::RepeatedPtrField<std::string>&) overload directly from the PROTO_REF case, or make FillObjectKey iterate the protobuf field with the same early-exit truncation logic."
+    }
+  ]
+}
