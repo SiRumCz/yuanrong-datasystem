@@ -1,0 +1,24 @@
+{
+  "dimension": "maintainability",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": "src/datasystem/common/log/log_sampler_proto.cpp",
+      "line": 53,
+      "severity": "medium",
+      "category": "maintainability",
+      "title": "Sampler snapshot publication is duplicated across config sources",
+      "impact": "The proto path manually rebuilds SampleRate objects, allocates a LogSamplerSnapshot, exchanges it, tracks the old snapshot, and updates samplerEnabled, while the flags path has separate publication logic. The next sampling field or lifecycle rule has to be updated in multiple places, making config-source drift likely.",
+      "fix": "Move ppm-to-SampleRate construction and snapshot publication into one helper, for example PublishSnapshotFromPpm(reqPpm, accPpm, diagPpm), and call it from both UpdateConfigFromProto and the flags-derived path."
+    },
+    {
+      "path": "src/datasystem/common/log/access_recorder.cpp",
+      "line": 282,
+      "severity": "medium",
+      "category": "maintainability",
+      "title": "Access recorder facade repeats field plumbing across many setters",
+      "impact": "The new facade adds dozens of near-identical setters, each repeating the sampling guard, state assignment, and return pattern, plus separate Fill and Record plumbing for each field. Future access-log fields will require synchronized edits across the header state structs, setter declarations, setter bodies, fill logic, and record assembly, which is easy to miss.",
+      "fix": "Factor the common guarded-assignment pattern into small helpers or a table-driven field descriptor so adding a field has one obvious implementation path and the object, stream, and request-out facades share the repeated mechanics."
+    }
+  ]
+}
