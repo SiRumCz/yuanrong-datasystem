@@ -1,0 +1,15 @@
+{
+  "dimension": "test",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "src/datasystem/worker/worker_service_impl.cpp",
+      "line": 370,
+      "severity": "medium",
+      "category": "test",
+      "title": "Heartbeat config refresh path lacks a regression test",
+      "impact": "The PR adds LogSampleConfigPb to heartbeat responses, and clients also apply heartbeat-delivered configs, but the new coverage only verifies proto parsing and initial register delivery. If a worker sampling policy changes after a client is already connected, a regression in heartbeat population or client application would leave the client on stale sampling rates without any test failing.",
+      "fix": "Add an end-to-end or component test that connects a client, changes the worker sampler config after registration, sends or waits for a heartbeat, and asserts the client LogSampler snapshot changes to the new request/access/diagnostic ppm values while invalid heartbeat configs retain the previous-good snapshot."
+    }
+  ]
+}
