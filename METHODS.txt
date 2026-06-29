@@ -1,3 +1,4 @@
 vibed-codeset
 socratic
+ubiquitous-language
 legion-map
