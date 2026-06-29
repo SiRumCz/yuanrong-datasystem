@@ -1,0 +1,93 @@
+= ADR-005: Unified random log sampling for request, access, and diagnostic logs
+:doctype: article
+
+== Status
+
+Accepted (in PR #14). Operational tuning policy beyond the three rates is
+*deferred* to Operations.
+
+== Context
+
+High-volume deployments need to reduce log volume without adding hot-path
+contention or losing all diagnostic signal for sampled-out requests. The previous
+`log_rate_limit` first-N limiter is removed from logging startup and replaced by
+three double gflags: `request_sample_rate`, `access_sample_rate`, and
+`diagnostic_sample_rate` [src/datasystem/common/log/logging.cpp:89]. The new
+`LogSampler` owns explicit/effective sample-rate configuration, ppm thresholds,
+an immutable hot-path snapshot, and separate request, diagnostic, and access
+sample kinds [src/datasystem/common/log/log_sampler.h:44,
+src/datasystem/common/log/log_sampler.h:52,
+src/datasystem/common/log/log_sampler.h:62].
+
+The implementation must preserve the system's performance-first posture: access
+logs can be dropped before recorder names, clocks, request parameters, formatting,
+and exporter writes are constructed, with `REQUEST_OUT` access records excluded
+from access sampling [src/datasystem/common/log/log_sampler.cpp:301,
+src/datasystem/common/log/access_recorder.cpp:96]. Request sampling decisions are
+propagated through RPC metadata as request-level complete-log decisions, where
+rejection drops request INFO/VLOG but does not directly drop diagnostic or access
+supplement sampling [src/datasystem/protos/meta_zmq.proto:32]. Worker register
+and heartbeat responses now carry a structured `LogSampleConfigPb` instead of the
+old integer limit [src/datasystem/protos/share_memory.proto:24,
+src/datasystem/protos/share_memory.proto:92,
+src/datasystem/protos/share_memory.proto:134].
+
+== Decision
+
+Use a process-local `LogSampler` as the single log-volume-control mechanism for
+request, access, and request-diagnostic logs. Sampling is ratio-based and random:
+user-facing rates are normalized to ppm and precomputed thresholds, then hot paths
+make fixed integer decisions from the request trace hash, log kind, per-thread
+sequence, and process salt [src/datasystem/common/log/log_sampler.cpp:26,
+src/datasystem/common/log/log_sampler.cpp:60,
+src/datasystem/common/log/log_sampler.cpp:287].
+
+Keep complete request-log consistency at request-trace granularity. A sampled-in
+request keeps request INFO/VLOG and forces request diagnostics and client/API
+access logs to emit; a rejected request directly drops only ordinary request
+INFO/VLOG, while ERROR/WARNING/PLOG and access logs use their supplemental rates
+[src/datasystem/common/log/log_sampler.cpp:196,
+src/datasystem/common/log/log_sampler.cpp:244,
+src/datasystem/common/log/log_sampler.cpp:301].
+
+Make the worker the sampling-config authority. Worker startup parses the three
+local gflags into `LogSampleUserConfig`; register and heartbeat responses publish
+the effective structured config to clients through `LogSampleConfigPb`
+[src/datasystem/common/log/logging.cpp:158,
+src/datasystem/worker/worker_service_impl.cpp:352,
+src/datasystem/worker/worker_service_impl.cpp:370].
+
+== Consequences
+
+* (+) Log volume can be reduced independently for complete request logs, client/API
+  access logs, and request diagnostic supplement logs, without reintroducing
+  first-N bias.
+* (+) The default all-`1.0` configuration remains pass-through, so deployments
+  that do not opt in keep previous full-retention behavior.
+* (+) Access-log sampling can avoid expensive field materialization and formatting
+  on sampled-out records, matching the performance-first quality goal.
+* (+) Request-sampled traces remain coherent across client/worker hops because the
+  request-level decision is propagated in RPC metadata.
+* (-) The replacement is not backwards-compatible with `log_rate_limit`; operators
+  must migrate to the three ratio parameters.
+* (-) Diagnostic and access output is statistical, not an exact per-second cap; any
+  deployment requiring hard caps still needs downstream log-volume enforcement.
+
+== Pugh Matrix
+
+Baseline: first-N request-trace limiter. Scale -1 / 0 / +1.
+
+[cols="3,1,1,1", options="header"]
+|===
+| Criterion | First-N limiter (baseline) | Exact global cap | Unified random sampler (chosen)
+| Performance efficiency      | 0  | -1 // counters/time/coordination on hot paths | +1
+| Operational availability    | 0  | 0                                      | 0
+| Reliability / diagnostics   | -1 // rejected traces lose diagnostics | 0 | +1
+| Concurrency & memory safety | 0  | -1 // shared state pressure             | +1
+| Security                    | 0  | 0                                      | 0
+| Operability                 | -1 // one coarse knob                   | 0 | +1
+| *Total*                     | *-2* | *-2*                                 | *+4*
+|===
+
+The chosen design favors low hot-path overhead and diagnostic preservation over
+exact log-rate caps.
