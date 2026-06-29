@@ -1,0 +1,15 @@
+{
+  "dimension": "correctness",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "src/datasystem/protos/share_memory.proto",
+      "line": 95,
+      "severity": "high",
+      "category": "correctness",
+      "title": "Reuses an existing protobuf field number for a different wire type",
+      "impact": "RegisterClientRspPb field 24 was previously an int32 log_rate_limit and is now a LogSampleConfigPb message. During mixed-version client/worker deployments, protobuf readers see the known field with the wrong wire type and drop it as unknown, so the worker sampling policy is silently not applied to clients.",
+      "fix": "Do not reuse field 24. Reserve the old log_rate_limit tag and add log_sample_config on a new tag, then update the sender/receiver and tests to use the new field number."
+    }
+  ]
+}
