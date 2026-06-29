@@ -1,0 +1,12 @@
+protocol: code-review
+instance: pr-14
+state: mm-gate
+head_sha: 75c00e6f356b9bebe424309423c37af04e0dbc91
+gates:
+  state: open
+  history: []
+  questions:
+  - id: mm-pr
+    text: "An [mm] PR with a proposed mental-model update was opened for this PR \u2014\
+      \ review and decide on it (merge or close), then comment /mm-answer mm-pr: <decided>\
+      \ to continue."
