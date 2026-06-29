@@ -1,0 +1,64 @@
+= ADR-005: Use unified random log sampling instead of first-N request log limiting
+:doctype: article
+
+== Status
+
+Accepted (in PR #14).
+
+== Context
+
+The previous logging control exposed `log_rate_limit`, a first-N-per-window
+request-log limiter under the spdlog implementation. PR #14 removes that flag
+and the `LogRateLimiter` implementation, replacing startup synchronization with
+`Logging::InitLogSampler()` [src/datasystem/common/log/logging.cpp:89,
+src/datasystem/common/log/logging.cpp:158,
+src/datasystem/common/log/spdlog/log_rate_limiter.cpp:1]. The replacement
+introduces three worker-side decimal coefficients: `request_sample_rate`,
+`access_sample_rate`, and `diagnostic_sample_rate`
+[src/datasystem/common/log/logging.cpp:89].
+
+The change also moves access/performance logging behind lazy facades. Call sites
+construct `AccessRecorder::Object`, `AccessRecorder::Stream`, or
+`AccessRecorder::RequestOut` and populate fields only when the recorder remains
+eligible to emit, allowing sampled-out access logs to skip request parameter
+formatting and payload work [src/datasystem/common/log/access_recorder.h:77,
+src/datasystem/c_api/object_client_c_wrapper.cpp:116].
+
+== Decision
+
+Use one process-local `LogSampler` as the logging volume-control mechanism for
+request, access, and diagnostic logs. Sampling is ratio-based random
+hash-threshold sampling, not a per-second first-N quota. The sampler owns
+immutable hot-path snapshots, precomputed ppm/threshold rates, a process salt,
+and explicit hot-path entry points for runtime logs and access records
+[src/datasystem/common/log/log_sampler.h:33,
+src/datasystem/common/log/log_sampler.h:77].
+
+Worker effective configuration is authoritative. Workers parse and validate the
+three user-facing rates, then propagate normalized `LogSampleConfigPb` to clients
+through register/heartbeat responses; clients apply the structured protobuf
+rather than independently reading local environment or CLI sampling policy
+[src/datasystem/common/log/log_sampler_proto.cpp:24,
+src/datasystem/protos/share_memory.proto:44].
+
+Request sampling is trace-level: a sampled-in request keeps complete request
+logs and forces related access/diagnostic retention. Requests not sampled in may
+still retain access or diagnostic events through their independent supplement
+rates. FATAL/CHECK and background logs are outside ordinary dropping semantics
+[src/datasystem/common/log/log_sampler.h:93,
+src/datasystem/common/log/spdlog/log_message_impl.cpp:129].
+
+== Consequences
+
+* (+) Sampling behavior is statistically fairer than first-N window admission and
+  avoids bias toward early requests in each second.
+* (+) Operators can tune complete request traces, access logs, and diagnostic
+  supplements independently while preserving complete evidence for sampled-in
+  requests.
+* (+) Hot paths can drop sampled-out access/runtime logs before expensive field
+  materialization, string formatting, elapsed-time work, or exporter writes.
+* (+) Worker-to-client propagation gives one effective sampling policy across a
+  request path.
+* (-) The removed `log_rate_limit` integer cap is not compatibility-mapped to
+  the new rates; deployments must migrate to the three coefficient flags.
+* (-) Ratio sampling does not provide an exact per-second log-volume ceiling.

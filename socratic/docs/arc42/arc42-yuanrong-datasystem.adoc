@@ -165,8 +165,9 @@ k8s/helm_chart/datasystem/templates/configmap.yaml].
 * *Persistence / L2* — slot-organized persistence API honoring the WriteMode
   [src/datasystem/common/l2cache/persistence_api.h:32-100,
   src/datasystem/common/l2cache/slot_client/].
-* *Logging* — rolling, compression, rotation
-  [src/datasystem/common/log/log_manager.h:40-80].
+* *Logging* — rolling, compression, rotation, and unified random sampling for
+  request/access/diagnostic logs [src/datasystem/common/log/log_manager.h:40-80,
+  src/datasystem/common/log/log_sampler.h:77].
 * *Metrics* — Counter/Gauge/Histogram with periodic export
   [src/datasystem/common/metrics/metrics.h:30-80].
 * *Shared-memory management* — mmap arenas with pre-populate/scaling/decay and
@@ -181,12 +182,14 @@ k8s/helm_chart/datasystem/templates/configmap.yaml].
 
 The significant decisions are recorded as ADRs (see `docs/specs/adrs/`): the
 master/worker split, the pluggable ETCD-vs-Metastore metadata backend, consistent
-hash-ring placement, and the performance-first / opt-in-reliability WriteMode
-model [src/datasystem/master/master_service_impl.h:38-73,
+hash-ring placement, the performance-first / opt-in-reliability WriteMode model,
+and unified random log sampling for request/access/diagnostic log volume control
+[src/datasystem/master/master_service_impl.h:38-73,
 src/datasystem/worker/worker.h:45-115,
 docs/source_zh_cn/design_document/cluster_management.md:7-52,
 src/datasystem/worker/hash_ring/hash_ring.h:51-96,
-include/datasystem/object/object_enum.h:30-35].
+include/datasystem/object/object_enum.h:30-35,
+src/datasystem/common/log/log_sampler.h:77].
 
 == 10. Quality Requirements
 
