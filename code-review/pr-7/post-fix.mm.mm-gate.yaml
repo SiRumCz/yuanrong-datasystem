@@ -3,8 +3,11 @@ instance: pr-7
 state: mm-gate
 head_sha: a52b6f8823295a7e131d0755bbf24a61914c4a72
 gates:
-  state: open
-  history: []
+  state: answered
+  history:
+  - actor: haoxianghz
+    answers:
+    - mm-pr
   questions:
   - id: mm-pr
     text: "An [mm] PR with a proposed mental-model update was opened for this PR \u2014\
