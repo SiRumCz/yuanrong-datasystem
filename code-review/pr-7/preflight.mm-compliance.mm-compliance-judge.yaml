@@ -1,6 +1,6 @@
 protocol: code-review
 instance: pr-7
-state: preflight
+state: done
 iteration: 2
 gates: {}
 head_sha: a52b6f8823295a7e131d0755bbf24a61914c4a72
@@ -10,3 +10,8 @@ history:
   checks:
     judge-coverage: fail
   feedback: judge evidence needs a `gather` object
+- iteration: 2
+  agent_run_id: '28466446343'
+  checks:
+    judge-coverage: pass
+  feedback: ''
