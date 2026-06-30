@@ -1,0 +1,15 @@
+{
+  "dimension": "performance",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": "src/datasystem/client/object_cache/client_worker_api/client_worker_remote_api.cpp",
+      "line": 481,
+      "severity": "low",
+      "category": "performance",
+      "title": "Avoid a second payload_info scan on URMA Get",
+      "impact": "Every successful remote URMA Get with payload metadata now calls HasUrmaTcpFallbackPayload, which linearly scans rsp.payload_info just before FillUrmaBuffer scans the same repeated field again. For batch Get/MGet with many small objects this adds avoidable protobuf traversal on a request-critical path even when no TCP fallback occurred.",
+      "fix": "Fold fallback detection into the existing FillUrmaBuffer payload_info loop, or have FillUrmaBuffer return whether any part_index entries were already present, then record the URMA result from that value without a separate pre-pass."
+    }
+  ]
+}
