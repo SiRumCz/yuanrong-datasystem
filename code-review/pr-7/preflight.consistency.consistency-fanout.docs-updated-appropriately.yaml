@@ -1,6 +1,6 @@
 protocol: code-review
 instance: pr-7
-state: consistency-fanout
+state: failed
 sub_state: docs-updated-appropriately-judge
 iteration: 1
 gates: {}
