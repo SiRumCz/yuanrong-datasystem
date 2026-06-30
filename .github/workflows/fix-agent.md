@@ -56,7 +56,7 @@ post-steps:
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
 timeout-minutes: 10
-source: golivax/agentic-protocol-poc/.github/workflows/fix-agent.md@162cbffdb441cab734f43b360c04375645823e6d
+source: golivax/agentic-protocol-poc/.github/workflows/fix-agent.md@d5c2a9b785787620f1ee181debb6ebec64edb925
 ---
 
 # Fix Agent — propose remediations (suggest mode)

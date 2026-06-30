@@ -19,6 +19,15 @@
           "id": "adherence",
           "states": [
             {
+              "id": "adherence-intro",
+              "kind": "agent",
+              "workflow": "adherence-intro-agent",
+              "evidence": "cluster-intro.evidence.schema.json",
+              "max_iterations": 2,
+              "params": { "require": ["examined"] },
+              "checks": [ { "run": "evidence-present", "on_fail": "iterate" } ]
+            },
+            {
               "id": "adherence-fanout",
               "kind": "fanout",
               "next": "join-adherence",
@@ -153,6 +162,15 @@
         {
           "id": "consistency",
           "states": [
+            {
+              "id": "consistency-intro",
+              "kind": "agent",
+              "workflow": "consistency-intro-agent",
+              "evidence": "cluster-intro.evidence.schema.json",
+              "max_iterations": 2,
+              "params": { "require": ["examined"] },
+              "checks": [ { "run": "evidence-present", "on_fail": "iterate" } ]
+            },
             {
               "id": "consistency-fanout",
               "kind": "fanout",

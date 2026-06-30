@@ -63,7 +63,7 @@ post-steps:
       name: evidence
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
-source: golivax/agentic-protocol-poc/.github/workflows/mm-updater.md@162cbffdb441cab734f43b360c04375645823e6d
+source: golivax/agentic-protocol-poc/.github/workflows/mm-updater.md@d5c2a9b785787620f1ee181debb6ebec64edb925
 ---
 
 # Mental-Model Updater
