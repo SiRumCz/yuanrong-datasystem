@@ -40,21 +40,11 @@ def _issue_problems(body):
     return [_diff.norm(m.group(1)) for m in _PROBLEM.finditer(body or "") if m.group(1).strip()]
 
 
-def main():
-    try:
-        with open(sys.argv[1] if len(sys.argv) > 1 else "") as fh:
-            ev = json.load(fh)
-        if not isinstance(ev, dict):
-            raise ValueError("not an object")
-    except (OSError, ValueError) as exc:
-        _emit(False, f"evidence unreadable / not JSON: {exc}")
-        return
-
-    body = os.environ.get("PR_BODY", "") or ""
-    repo = os.environ.get("GITHUB_REPOSITORY", "")
-    ref = _artifact_fetch.head_sha(os.environ.get("PR", "")) or "HEAD"
+def evaluate(ev, diff_text, changed_files, *, body, repo, pr):
+    """Return (ok: bool, feedback: str). Core logic extracted for reuse by judge-coverage."""
     import _paths  # noqa: E402
-    files = _paths.read_changed_files(sys.argv[3] if len(sys.argv) > 3 else "")
+    ref = _artifact_fetch.head_sha(pr) or "HEAD"
+    files = changed_files
 
     # --- independent scope recompute ---
     issue_no = _locate.detect_issue_link(body)        # NEW _locate helper (int|None)
@@ -66,9 +56,8 @@ def main():
     a_link = bool(scope.get("issue_linked"))
     a_spec = bool(scope.get("spec_present"))
     if (a_link, a_spec) != (issue_linked, spec_present):
-        _emit(False, f"scope disagreement: agent={{'issue_linked':{a_link},'spec_present':{a_spec}}} "
-                     f"recompute={{'issue_linked':{issue_linked},'spec_present':{spec_present}}}")
-        return
+        return (False, f"scope disagreement: agent={{'issue_linked':{a_link},'spec_present':{a_spec}}} "
+                       f"recompute={{'issue_linked':{issue_linked},'spec_present':{spec_present}}}")
 
     verdict = ev.get("verdict")
     matrix = ev.get("matrix")
@@ -76,26 +65,22 @@ def main():
     # --- verified N/A: no linked issue + n/a + empty matrix ---
     if not issue_linked:
         if verdict == "n/a" and not matrix:
-            _emit(True, "verified N/A (no linked issue; empty matrix).")
+            return (True, "verified N/A (no linked issue; empty matrix).")
         else:
-            _emit(False, "no linked issue but verdict is not n/a with empty matrix")
-        return
+            return (False, "no linked issue but verdict is not n/a with empty matrix")
 
     # --- FAIL-CLOSED issue fetch ---
     issue = _artifact_fetch.fetch_issue(repo, issue_no)
     if not issue["ok"]:
-        _emit(False, f"issue fetch failed for #{issue_no} (cannot verify coverage)")
-        return
+        return (False, f"issue fetch failed for #{issue_no} (cannot verify coverage)")
     problems = _issue_problems(issue["body"])
 
     spec_text = _artifact_fetch.fetch_file_text(repo, spec_loc["changed_hits"][0], ref) if spec_loc["changed_hits"] else ""
     if spec_present and spec_text is None:
-        _emit(False, "spec fetch failed (cannot verify spec quotes)")
-        return
+        return (False, "spec fetch failed (cannot verify spec quotes)")
 
     if not isinstance(matrix, list):
-        _emit(False, "matrix must be an array")
-        return
+        return (False, "matrix must be an array")
 
     cell_problems = {_diff.norm(c.get("problem", "")) for c in matrix if isinstance(c, dict)}
     missing = [p for p in problems if p not in cell_problems]
@@ -119,9 +104,28 @@ def main():
         bad.append(f"verdict {verdict!r} inconsistent with cells (expected {expected!r})")
 
     if bad:
-        _emit(False, "; ".join(bad[:6]))
+        return (False, "; ".join(bad[:6]))
     else:
-        _emit(True, f"issue coverage complete & consistent ({expected}).")
+        return (True, f"issue coverage complete & consistent ({expected}).")
+
+
+def main():
+    try:
+        with open(sys.argv[1] if len(sys.argv) > 1 else "") as fh:
+            ev = json.load(fh)
+        if not isinstance(ev, dict):
+            raise ValueError("not an object")
+    except (OSError, ValueError) as exc:
+        _emit(False, f"evidence unreadable / not JSON: {exc}")
+        return
+    body = os.environ.get("PR_BODY", "") or ""
+    repo = os.environ.get("GITHUB_REPOSITORY", "")
+    pr = os.environ.get("PR", "")
+    diff_text = open(sys.argv[2]).read() if len(sys.argv) > 2 else ""
+    import _paths  # noqa: E402
+    files = _paths.read_changed_files(sys.argv[3] if len(sys.argv) > 3 else "")
+    ok, fb = evaluate(ev, diff_text, files, body=body, repo=repo, pr=pr)
+    _emit(ok, fb)
 
 
 if __name__ == "__main__":

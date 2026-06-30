@@ -77,7 +77,7 @@ post-steps:
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
 timeout-minutes: 10
-source: golivax/agentic-protocol-poc/.github/workflows/context-agent.md@3926567781439fbebc7b6dd69f855702749f30fc
+source: golivax/agentic-protocol-poc/.github/workflows/context-agent.md@162cbffdb441cab734f43b360c04375645823e6d
 ---
 
 # Context Composition - 7-phase transcript classification

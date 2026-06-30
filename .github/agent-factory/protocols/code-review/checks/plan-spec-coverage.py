@@ -30,20 +30,10 @@ def _verbatim(quote, text):
     return _diff.norm(str(quote)) in _diff.norm(text or "")
 
 
-def main():
-    try:
-        with open(sys.argv[1] if len(sys.argv) > 1 else "") as fh:
-            ev = json.load(fh)
-        if not isinstance(ev, dict):
-            raise ValueError("not an object")
-    except (OSError, ValueError) as exc:
-        _emit(False, f"evidence unreadable / not JSON: {exc}")
-        return
-
-    body = os.environ.get("PR_BODY", "") or ""
-    repo = os.environ.get("GITHUB_REPOSITORY", "")
-    ref = _artifact_fetch.head_sha(os.environ.get("PR", "")) or "HEAD"
-    files = _paths.read_changed_files(sys.argv[3] if len(sys.argv) > 3 else "")
+def evaluate(ev, diff_text, changed_files, *, body, repo, pr):
+    """Return (ok: bool, feedback: str). Core logic extracted for reuse by judge-coverage."""
+    ref = _artifact_fetch.head_sha(pr) or "HEAD"
+    files = changed_files
 
     # --- independent scope recompute (committed-artifact only; no PR-desc fallback) ---
     spec_loc = _locate.locate("spec", body, files)
@@ -57,25 +47,22 @@ def main():
     a_spec = bool(scope.get("spec_present"))
     a_plan = bool(scope.get("plan_present"))
     if (a_code, a_spec, a_plan) != (code_changed, spec_present, plan_present):
-        _emit(False, f"scope disagreement: agent={{'code':{a_code},'spec':{a_spec},'plan':{a_plan}}} "
-                     f"recompute={{'code':{code_changed},'spec':{spec_present},'plan':{plan_present}}}")
-        return
+        return (False, f"scope disagreement: agent={{'code':{a_code},'spec':{a_spec},'plan':{a_plan}}} "
+                       f"recompute={{'code':{code_changed},'spec':{spec_present},'plan':{plan_present}}}")
 
     verdict = ev.get("verdict")
     s2p = ev.get("spec_to_plan")
     p2s = ev.get("plan_to_spec")
 
     if not isinstance(s2p, list) or not isinstance(p2s, list):
-        _emit(False, "spec_to_plan and plan_to_spec must both be arrays")
-        return
+        return (False, "spec_to_plan and plan_to_spec must both be arrays")
 
     # --- verified N/A: out of scope (no code) + n/a + empty matrices ---
     if not code_changed:
         if verdict == "n/a" and not s2p and not p2s:
-            _emit(True, "verified N/A (no code change; empty matrices).")
+            return (True, "verified N/A (no code change; empty matrices).")
         else:
-            _emit(False, "no code change but verdict is not n/a with empty matrices")
-        return
+            return (False, "no code change but verdict is not n/a with empty matrices")
 
     # --- code changed but the spec and/or plan artifact is absent: there is
     #     nothing to map, so empty matrices are the correct form. The block
@@ -85,25 +72,21 @@ def main():
     #     would make the leg un-passable on any PR without a committed spec/plan. ---
     if not spec_present or not plan_present:
         if not s2p and not p2s:
-            _emit(True, f"verified absence (spec_present={spec_present}, "
-                        f"plan_present={plan_present}); empty matrices.")
+            return (True, f"verified absence (spec_present={spec_present}, "
+                          f"plan_present={plan_present}); empty matrices.")
         else:
-            _emit(False, "spec/plan absent but spec_to_plan/plan_to_spec must be empty")
-        return
+            return (False, "spec/plan absent but spec_to_plan/plan_to_spec must be empty")
 
     # --- genuinely in-scope (code + spec + plan all present): matrices required ---
     if not s2p or not p2s:
-        _emit(False, "in-scope leg must have non-empty spec_to_plan and plan_to_spec")
-        return
+        return (False, "in-scope leg must have non-empty spec_to_plan and plan_to_spec")
 
     spec_text = _artifact_fetch.fetch_file_text(repo, spec_loc["changed_hits"][0], ref) if spec_loc["changed_hits"] else ""
     plan_text = _artifact_fetch.fetch_file_text(repo, plan_loc["changed_hits"][0], ref) if plan_loc["changed_hits"] else ""
     if spec_present and spec_text is None:
-        _emit(False, "spec fetch failed (cannot verify quotes)")
-        return
+        return (False, "spec fetch failed (cannot verify quotes)")
     if plan_present and plan_text is None:
-        _emit(False, "plan fetch failed (cannot verify quotes)")
-        return
+        return (False, "plan fetch failed (cannot verify quotes)")
 
     bad = []
     has_missing = False
@@ -138,9 +121,27 @@ def main():
         bad.append(f"verdict {verdict!r} inconsistent with cells (expected {expected!r})")
 
     if bad:
-        _emit(False, "; ".join(bad[:6]))
+        return (False, "; ".join(bad[:6]))
     else:
-        _emit(True, f"matrix complete & consistent ({expected}).")
+        return (True, f"matrix complete & consistent ({expected}).")
+
+
+def main():
+    try:
+        with open(sys.argv[1] if len(sys.argv) > 1 else "") as fh:
+            ev = json.load(fh)
+        if not isinstance(ev, dict):
+            raise ValueError("not an object")
+    except (OSError, ValueError) as exc:
+        _emit(False, f"evidence unreadable / not JSON: {exc}")
+        return
+    body = os.environ.get("PR_BODY", "") or ""
+    repo = os.environ.get("GITHUB_REPOSITORY", "")
+    pr = os.environ.get("PR", "")
+    diff_text = open(sys.argv[2]).read() if len(sys.argv) > 2 else ""
+    files = _paths.read_changed_files(sys.argv[3] if len(sys.argv) > 3 else "")
+    ok, fb = evaluate(ev, diff_text, files, body=body, repo=repo, pr=pr)
+    _emit(ok, fb)
 
 
 if __name__ == "__main__":

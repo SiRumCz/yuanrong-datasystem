@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["leg", "gather", "graded_findings", "verdict", "examined"],
+  "properties": {
+    "leg": {"type": "string", "minLength": 1},
+    "gather": {"type": "object", "description": "verbatim copy of the leg's gather evidence"},
+    "graded_findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ref", "severity", "rationale"],
+        "properties": {
+          "ref": {"type": "string", "minLength": 1},
+          "severity": {"enum": ["blocking", "advisory", "noise"]},
+          "rationale": {"type": "string"}
+        }
+      }
+    },
+    "verdict": {"enum": ["block", "warn", "clear", "n/a"]},
+    "examined": {"type": "array", "items": {"type": "string"}}
+  }
+}

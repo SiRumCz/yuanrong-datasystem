@@ -71,3 +71,9 @@ def evaluate(name, evidence, changed_files, *, is_kind, kind_label, applicable_w
     if bad:
         return out(False, "; ".join(bad[:6]))
     return out(True, f"{kind_label} coherence form valid ({expected}).")
+
+
+def finding_refs(evidence):
+    """The list of item paths the judge must grade (one severity per item)."""
+    items = evidence.get("items") if isinstance(evidence, dict) else None
+    return [it["path"] for it in (items or []) if isinstance(it, dict) and it.get("path")]
