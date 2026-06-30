@@ -65,6 +65,10 @@ def main():
     s2p = ev.get("spec_to_plan")
     p2s = ev.get("plan_to_spec")
 
+    if not isinstance(s2p, list) or not isinstance(p2s, list):
+        _emit(False, "spec_to_plan and plan_to_spec must both be arrays")
+        return
+
     # --- verified N/A: out of scope (no code) + n/a + empty matrices ---
     if not code_changed:
         if verdict == "n/a" and not s2p and not p2s:
@@ -73,9 +77,21 @@ def main():
             _emit(False, "no code change but verdict is not n/a with empty matrices")
         return
 
-    if not isinstance(s2p, list) or not isinstance(p2s, list):
-        _emit(False, "spec_to_plan and plan_to_spec must both be arrays")
+    # --- code changed but the spec and/or plan artifact is absent: there is
+    #     nothing to map, so empty matrices are the correct form. The block
+    #     decision on a missing spec/plan belongs to conclude-preflight (it fires
+    #     on the code_changed & !spec_present / !plan_present scope flags, which
+    #     the recompute above already verified). Requiring a non-empty matrix here
+    #     would make the leg un-passable on any PR without a committed spec/plan. ---
+    if not spec_present or not plan_present:
+        if not s2p and not p2s:
+            _emit(True, f"verified absence (spec_present={spec_present}, "
+                        f"plan_present={plan_present}); empty matrices.")
+        else:
+            _emit(False, "spec/plan absent but spec_to_plan/plan_to_spec must be empty")
         return
+
+    # --- genuinely in-scope (code + spec + plan all present): matrices required ---
     if not s2p or not p2s:
         _emit(False, "in-scope leg must have non-empty spec_to_plan and plan_to_spec")
         return

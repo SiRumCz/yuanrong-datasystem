@@ -71,6 +71,18 @@ def main():
             _emit(False, "no code change but verdict is not n/a with empty plan_to_code + files")
         return
 
+    # --- code changed but the plan artifact is absent: there is no plan to map
+    #     against, so an empty plan_to_code is the correct form. conclude-preflight
+    #     owns the block on (code_changed & !plan_present), which the recompute
+    #     above already verified. Requiring a non-empty matrix here would make the
+    #     leg un-passable on any PR without a committed plan. ---
+    if not plan_present:
+        if not p2c:
+            _emit(True, "verified absence (plan_present=False); empty plan_to_code.")
+        else:
+            _emit(False, "plan absent but plan_to_code must be empty")
+        return
+
     if not isinstance(p2c, list) or not p2c:
         _emit(False, "in-scope leg must have a non-empty plan_to_code array")
         return
