@@ -1,11 +1,19 @@
 protocol: code-review
 instance: pr-7
-state: preflight
+state: failed
 iteration: 2
 gates: {}
 history:
 - iteration: 1
   agent_run_id: '28416780484'
+  checks:
+    evidence-present: pass
+    code-plan-coverage: fail
+    traces-exist-in-diff: pass
+  feedback: 'check is not executable: /home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/checks/code-plan-coverage.py
+    (chmod +x and add a shebang)'
+- iteration: 2
+  agent_run_id: '28417142561'
   checks:
     evidence-present: pass
     code-plan-coverage: fail
