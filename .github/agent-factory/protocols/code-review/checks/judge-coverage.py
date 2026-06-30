@@ -1,118 +1,194 @@
 #!/usr/bin/env python3
-"""Form-check for a <leg>-judge: re-runs the leg's gather check on the verbatim
-`evidence.gather` copy (verifying scope/verdict/coverage/traceability in one call),
-then requires a valid `severity` grade for every gather finding. Per-leg dispatch
-via CHECK_PARAMS {"leg","mode"}. Zone 3 — re-derives ground truth, holds no creds.
-ABI: judge-coverage.py <evidence.json> <diff.txt> <changed-files.txt>"""
-import importlib.util, json, os, sys
+"""Form-check for a <leg>-judge (Revision 3 — lightened shape).
+
+The judge echoes only `scope` + `gather_verdict`; this check:
+  1. Re-derives scope independently from diff/PR_BODY (per mode) and asserts
+     evidence.scope equals the recompute.
+  2. Verifies gather_verdict is in the leg's valid enum.
+  3. Checks scope-→-verdict consistency (e.g. !issue_linked ⇒ n/a).
+  4. Checks grade form: each graded_finding has ref (non-empty) +
+     severity in {blocking, advisory, noise}; examined is non-empty.
+
+Per-leg dispatch via CHECK_PARAMS {"leg", "mode"}. Zone 3 — re-derives ground
+truth, holds no creds.
+
+ABI: judge-coverage.py <evidence.json> <diff.txt> <changed-files.txt>
+Reads CHECK_PARAMS, PR_BODY, GITHUB_REPOSITORY, PR env.
+Prints one {"check","pass","feedback"}. ALWAYS exit 0.
+"""
+import json
+import os
+import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+import _locate  # noqa: E402
 import _paths  # noqa: E402
-import _coherence  # noqa: E402
 
 NAME = "judge-coverage"
 SEVS = {"blocking", "advisory", "noise"}
 
+# Per-mode valid gather_verdict enums
+_VERDICT_ENUMS = {
+    "spec-solves":  {"solves", "does-not-solve", "n/a"},
+    "plan-spec":    {"adheres", "underspec", "overspec", "n/a"},
+    "code-plan":    {"adheres", "underplan", "overplan", "n/a"},
+    "coherence":    {"adequate", "inadequate", "n/a"},
+    "mm":           {"compliant", "diverges"},
+    "security":     {"PASS", "LOCKED_VIOLATION", "n/a"},
+}
+
+# Whether the mode permits n/a (has a scope that can be out-of-range)
+_NA_PERMITTED = {"spec-solves", "plan-spec", "code-plan", "coherence", "security"}
+
+# For docs (coherence, applicable_without_code=True), n/a is NOT permitted
+# even though the mode is "coherence". We detect this by the leg id.
+_ALWAYS_APPLICABLE_LEGS = {"docs-updated-appropriately"}
+
+
 def _emit(ok, fb):
-    print(json.dumps({"check": NAME, "pass": ok, "feedback": fb}));
+    print(json.dumps({"check": NAME, "pass": ok, "feedback": fb}))
 
-def _load(stem):
-    spec = importlib.util.spec_from_file_location(stem.replace("-", "_"), os.path.join(HERE, f"{stem}.py"))
-    m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m); return m
 
-def _gather_refs(mode, gather):
-    """The finding refs the judge must grade, per leg."""
-    if mode == "coherence":
-        return _coherence.finding_refs(gather)
-    if mode == "plan-spec":
-        return [c.get("requirement") for c in gather.get("spec_to_plan", []) if isinstance(c, dict)] + \
-               [c.get("plan_item") for c in gather.get("plan_to_spec", []) if isinstance(c, dict)]
-    if mode == "code-plan":
-        return [c.get("plan_item") for c in gather.get("plan_to_code", []) if isinstance(c, dict)]
+def _recompute_scope(mode, leg, diff_text, files, body):
+    """Re-derive scope from diff+PR_BODY using the same _locate/_paths primitives
+    as the gather checks. Returns a dict of bool flags for the mode's scope keys,
+    or None for modes with no scope (mm, security)."""
     if mode == "spec-solves":
-        return [c.get("problem") for c in gather.get("matrix", []) if isinstance(c, dict)]
-    if mode == "mm":
-        return [str(i) for i, _ in enumerate(gather.get("divergences", []))]
-    if mode == "security":
-        return [str(i) for i, _ in enumerate(gather.get("engine_report", {}).get("violations", []))]
-    return []
+        issue_no = _locate.detect_issue_link(body)
+        issue_linked = issue_no is not None
+        spec_loc = _locate.locate("spec", body, files)
+        spec_present = spec_loc["found"] and spec_loc["source"] in ("file", "body-section")
+        return {"issue_linked": issue_linked, "spec_present": spec_present}
+
+    if mode == "plan-spec":
+        spec_loc = _locate.locate("spec", body, files)
+        plan_loc = _locate.locate("plan", body, files)
+        spec_present = spec_loc["found"] and spec_loc["source"] in ("file", "body-section")
+        plan_present = plan_loc["found"] and plan_loc["source"] in ("file", "body-section")
+        code_changed = any(_paths.is_code(p) for p in files)
+        return {"spec_present": spec_present, "plan_present": plan_present, "code_changed": code_changed}
+
+    if mode == "code-plan":
+        plan_loc = _locate.locate("plan", body, files)
+        plan_present = plan_loc["found"] and plan_loc["source"] in ("file", "body-section")
+        code_changed = any(_paths.is_code(p) for p in files)
+        return {"plan_present": plan_present, "code_changed": code_changed}
+
+    if mode == "coherence":
+        code_changed = any(_paths.is_code(p) for p in files)
+        return {"code_changed": code_changed}
+
+    # mm and security: no scope to recompute
+    return None
+
+
+def _check_scope_consistency(mode, leg, scope, gather_verdict):
+    """Check that scope flags are consistent with gather_verdict.
+    Returns (ok, feedback) where ok=True means consistent."""
+    if mode == "spec-solves":
+        if not scope.get("issue_linked") and gather_verdict != "n/a":
+            return (False, f"spec-solves: !issue_linked but gather_verdict is {gather_verdict!r} (must be 'n/a')")
+
+    if mode in ("plan-spec", "code-plan", "coherence"):
+        if not scope.get("code_changed"):
+            # No code changed → verdict must be n/a (for modes that allow it)
+            # docs (coherence + always-applicable leg) never has n/a
+            if leg in _ALWAYS_APPLICABLE_LEGS:
+                # docs: n/a is never valid; pass consistency check (no constraint from !code_changed)
+                pass
+            else:
+                if gather_verdict != "n/a":
+                    return (False, f"{mode}: !code_changed but gather_verdict is {gather_verdict!r} (must be 'n/a')")
+
+    return (True, "ok")
+
 
 def main():
     try:
         params = json.loads(os.environ.get("CHECK_PARAMS", "") or "{}")
-        mode = params.get("mode"); leg = params.get("leg")
+        mode = params.get("mode")
+        leg = params.get("leg")
     except ValueError:
         mode = leg = None
     if not mode or not leg:
-        _emit(False, "CHECK_PARAMS must carry {leg, mode}"); return
+        _emit(False, "CHECK_PARAMS must carry {leg, mode}")
+        return
+
     try:
         ev = json.load(open(sys.argv[1])) if len(sys.argv) > 1 else {}
     except (OSError, ValueError) as exc:
-        _emit(False, f"evidence unreadable: {exc}"); return
-    if not isinstance(ev, dict) or not isinstance(ev.get("gather"), dict):
-        _emit(False, "judge evidence needs a `gather` object"); return
-    gather = ev["gather"]
+        _emit(False, f"evidence unreadable: {exc}")
+        return
+
+    if not isinstance(ev, dict):
+        _emit(False, "evidence must be a JSON object")
+        return
+
+    # Read inputs
     diff_text = open(sys.argv[2]).read() if len(sys.argv) > 2 else ""
     files = _paths.read_changed_files(sys.argv[3] if len(sys.argv) > 3 else "")
-    body = os.environ.get("PR_BODY", "") or ""; repo = os.environ.get("GITHUB_REPOSITORY", ""); pr = os.environ.get("PR", "")
+    body = os.environ.get("PR_BODY", "") or ""
 
-    # 1) re-run the leg's own gather check on the copied gather evidence
-    if mode == "plan-spec":
-        ok, fb = _load("plan-spec-coverage").evaluate(gather, diff_text, files, body=body, repo=repo, pr=pr)
-    elif mode == "code-plan":
-        ok, fb = _load("code-plan-coverage").evaluate(gather, diff_text, files, body=body, repo=repo, pr=pr)
-        if ok:  # also re-verify the copied diff anchors (code-plan-coverage doesn't)
-            import _trace  # noqa: E402
-            errs = _trace.findings_anchor_errors(gather, sys.argv[2] if len(sys.argv) > 2 else "")
-            if errs:
-                ok, fb = False, "code findings anchors: " + "; ".join(errs[:3])
-    elif mode == "spec-solves":
-        ok, fb = _load("spec-solves-issue-coverage").evaluate(gather, diff_text, files, body=body, repo=repo, pr=pr)
-    elif mode == "coherence":
-        is_doc = leg.startswith("docs"); kind = _paths.is_doc if is_doc else _paths.is_test
-        r = _coherence.evaluate("coherence", gather, files, is_kind=kind,
-                                kind_label="doc" if is_doc else "test",
-                                applicable_without_code=is_doc)
-        ok, fb = r["pass"], r["feedback"]
-    elif mode == "mm":
-        v = gather.get("verdict")
-        ok = v in ("compliant", "diverges"); fb = "ok" if ok else f"mm verdict not in enum: {v!r}"
-    elif mode == "security":
-        sgc = _load("security-gather-coverage")
-        # Re-run required sub-object presence checks
-        for key in ("cedar", "guardians", "engine_report"):
-            val = gather.get(key)
-            if val is None:
-                _emit(False, f"gather copy fails its own check: missing required field: {key!r}"); return
-            if not isinstance(val, dict):
-                _emit(False, f"gather copy fails its own check: {key!r} must be a JSON object"); return
-        v = gather.get("verdict")
-        if v not in sgc.VALID_VERDICTS:
-            _emit(False, f"gather copy fails its own check: verdict {v!r} not in allowed enum {sorted(sgc.VALID_VERDICTS)}"); return
-        recomputed = sgc._recompute_verdict(gather.get("engine_report", {}))
-        if v != recomputed:
-            ok = False; fb = f"verdict mismatch: evidence says {v!r} but recompute gives {recomputed!r}"
-        else:
-            ok = True; fb = f"security-gather form valid: verdict={v!r}"
-    else:
-        _emit(False, f"unknown mode {mode!r}"); return
+    # 1. validate gather_verdict enum
+    valid_verdicts = _VERDICT_ENUMS.get(mode)
+    if valid_verdicts is None:
+        _emit(False, f"unknown mode {mode!r}")
+        return
+
+    gather_verdict = ev.get("gather_verdict")
+    if gather_verdict not in valid_verdicts:
+        _emit(False, f"gather_verdict {gather_verdict!r} not in valid enum for mode {mode!r}: {sorted(valid_verdicts)}")
+        return
+
+    # 2. scope re-derive and assert
+    ev_scope = ev.get("scope")
+    if not isinstance(ev_scope, dict):
+        _emit(False, "evidence must have a 'scope' object (use {} for mm/security)")
+        return
+
+    recomputed = _recompute_scope(mode, leg, diff_text, files, body)
+    if recomputed is not None:
+        # Assert all scope keys match
+        mismatches = []
+        for key, expected_val in recomputed.items():
+            agent_val = bool(ev_scope.get(key))
+            if agent_val != expected_val:
+                mismatches.append(f"{key}: agent={agent_val} recompute={expected_val}")
+        if mismatches:
+            _emit(False, f"scope disagreement: {'; '.join(mismatches)}")
+            return
+    # For mm/security (recomputed is None): scope accepted as-is (can be {})
+
+    # 3. scope→verdict consistency
+    ok, fb = _check_scope_consistency(mode, leg, ev_scope, gather_verdict)
     if not ok:
-        _emit(False, f"gather copy fails its own check: {fb}"); return
+        _emit(False, fb)
+        return
 
-    # 2) every gather finding must carry exactly one valid severity grade
+    # 4. docs mode: n/a not allowed (always applicable)
+    if mode == "coherence" and leg in _ALWAYS_APPLICABLE_LEGS and gather_verdict == "n/a":
+        _emit(False, f"coherence leg {leg!r} is always applicable; gather_verdict 'n/a' is not allowed")
+        return
+
+    # 5. examined must be non-empty
+    examined = ev.get("examined")
+    if not isinstance(examined, list) or not examined:
+        _emit(False, "examined must be a non-empty list")
+        return
+
+    # 6. grade form: each graded_finding must have ref (non-empty) + valid severity
     graded = ev.get("graded_findings")
     if not isinstance(graded, list):
-        _emit(False, "graded_findings must be an array"); return
+        _emit(False, "graded_findings must be an array")
+        return
     for g in graded:
-        if not isinstance(g, dict) or g.get("severity") not in SEVS or not g.get("ref"):
-            _emit(False, "each graded finding needs {ref, severity in blocking|advisory|noise}"); return
-    refs_needed = [r for r in _gather_refs(mode, gather) if r is not None]
-    graded_refs = {g["ref"] for g in graded}
-    missing = [r for r in refs_needed if str(r) not in graded_refs and r not in graded_refs]
-    if missing:
-        _emit(False, f"findings not graded: {missing[:5]}"); return
-    _emit(True, f"{leg}: gather re-verified + {len(graded)} findings graded.")
+        if not isinstance(g, dict) or not g.get("ref") or g.get("severity") not in SEVS:
+            _emit(False, "each graded finding needs {ref (non-empty), severity in blocking|advisory|noise}")
+            return
+
+    _emit(True, f"{leg} ({mode}): scope re-verified + gather_verdict={gather_verdict!r} + {len(graded)} findings graded.")
+
 
 if __name__ == "__main__":
     main()

@@ -41,7 +41,7 @@ post-steps:
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
 timeout-minutes: 10
-source: golivax/agentic-protocol-poc/.github/workflows/spec-solves-issue-judge-agent.md@d5c2a9b785787620f1ee181debb6ebec64edb925
+source: golivax/agentic-protocol-poc/.github/workflows/spec-solves-issue-judge-agent.md@3c0934933674436397ee54e4847c3f3b990bde95
 ---
 
 # Spec-Solves-Issue Judge — grade the seriousness of the gather's findings
@@ -59,27 +59,27 @@ leg's evidence: `{scope, verdict, matrix[], examined}`. Also read `.feedback`
 ```json
 {
   "leg": "spec-solves-issue",
-  "gather": <COPY .inputs.gather VERBATIM — same keys/values, do not alter any verdict/scope/cell>,
+  "scope": <ECHO .inputs.gather.scope exactly — emit {} if absent>,
+  "gather_verdict": "<ECHO .inputs.gather.verdict exactly>",
   "graded_findings": [
     { "ref": "<the finding key: see below>", "severity": "blocking | advisory | noise", "rationale": "<1-2 sentences>" }
   ],
-  "verdict": "block | warn | clear | n/a",
   "examined": [ "<the refs you graded>" ]
 }
 ```
 Rules:
-- Copy `.inputs.gather` into `gather` **verbatim** — a deterministic check re-verifies
-  the copy against the real diff/spec/plan; any alteration fails the gate and you iterate.
+- Echo `scope` from `.inputs.gather.scope` **exactly** — copy the object as-is; emit `{}`
+  if the gather has no scope field. The check re-derives scope independently and will
+  reject a mismatch.
+- Echo `gather_verdict` from `.inputs.gather.verdict` **exactly** — do not paraphrase.
+  If `scope` says out-of-scope, `gather_verdict` must be `n/a`.
 - Emit exactly **one** `graded_findings` entry per gather finding. A finding is:
   **each `matrix` cell — `ref` = `problem`**.
 - `severity`: `blocking` = a real adherence gap that should stop merge; `advisory` =
   worth noting, not blocking; `noise` = false positive / trivial. You MAY grade a
   gather finding `blocking` even if the gather verdict is clean (escalation); you may
   NOT use grades to argue a missing spec/plan is fine — that decision is the engine's.
-- If `.inputs.gather` is out-of-scope / `n/a` (empty findings), emit `graded_findings: []`
-  and `verdict: "n/a"` with `gather` still copied verbatim.
-- `verdict` is your advisory roll-up (block if any blocking; else warn if any advisory;
-  else clear; else n/a) — the engine recomputes the real decision.
+- If `.inputs.gather` is out-of-scope / `n/a` (empty findings), emit `graded_findings: []`.
 
 Write nothing else, then call `noop`. Do NOT post comments or use any other safe-output.
 

@@ -6,8 +6,8 @@ never hardcoded, so the same check serves any cluster regardless of how many
 inner legs it fans out to.
 
 A cell is well-formed iff it is an object with a non-empty `leg`, an object
-`gather`, and a list `graded_findings`. Every declared leg must appear exactly
-once; no cell may name an undeclared leg.
+`scope`, a string `gather_verdict`, and a list `graded_findings`. Every declared
+leg must appear exactly once; no cell may name an undeclared leg.
 
 ABI: cluster-coverage.py <evidence.json> <diff.txt> <changed-files.txt>
 """
@@ -49,7 +49,7 @@ def main():
             malformed.append("a cell with no `leg`")
             continue
         name = c["leg"]
-        if not isinstance(c.get("gather"), dict) or not isinstance(c.get("graded_findings"), list):
+        if not isinstance(c.get("scope"), dict) or not isinstance(c.get("gather_verdict"), str) or not isinstance(c.get("graded_findings"), list):
             malformed.append(name)
         seen[name] = seen.get(name, 0) + 1
 
@@ -60,7 +60,7 @@ def main():
     if missing:    problems.append(f"missing leg cell(s): {missing}")
     if dups:       problems.append(f"duplicate leg cell(s): {dups}")
     if unexpected: problems.append(f"unexpected leg cell(s): {unexpected}")
-    if malformed:  problems.append(f"malformed cell(s) (need leg+gather+graded_findings): {sorted(set(malformed))}")
+    if malformed:  problems.append(f"malformed cell(s) (need leg+scope+gather_verdict+graded_findings): {sorted(set(malformed))}")
 
     if problems:
         print(json.dumps({"check": "cluster-coverage", "pass": False,

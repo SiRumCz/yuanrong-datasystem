@@ -8,10 +8,11 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["leg", "gather", "graded_findings"],
+        "required": ["leg", "scope", "gather_verdict", "graded_findings"],
         "properties": {
           "leg": {"type": "string", "minLength": 1},
-          "gather": {"type": "object", "description": "verbatim copy of the inner leg's gather evidence"},
+          "scope": {"type": "object", "description": "echoed verbatim from the inner judge's scope ({} for legs with no scope)"},
+          "gather_verdict": {"type": "string", "minLength": 1, "description": "echoed verbatim from the inner judge's gather_verdict"},
           "graded_findings": {
             "type": "array",
             "items": {

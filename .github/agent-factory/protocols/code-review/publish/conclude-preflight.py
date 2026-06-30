@@ -5,27 +5,27 @@ Authoritative for blocking. Independently re-reads the 4 cluster branch outputs
 from CONCLUDE_INPUTS_DIR (NOT trusting the gate agent's consolidated render in
 argv[1], which is used only as display text for the comment):
 
-  adherence.json    - cluster rollup {cluster, legs:[{leg, gather, graded_findings}]}
+  adherence.json    - cluster rollup {cluster, legs:[{leg, scope, gather_verdict, graded_findings}]}
                       inner legs: spec-solves-issue, plan-implements-spec, code-implements-plan
-  mm-compliance.json - single judge evidence {leg?, gather:{verdict,...}, graded_findings}
-  consistency.json  - cluster rollup {cluster, legs:[{leg, gather, graded_findings}]}
+  mm-compliance.json - single judge evidence {leg, scope, gather_verdict, graded_findings, examined}
+  consistency.json  - cluster rollup {cluster, legs:[{leg, scope, gather_verdict, graded_findings}]}
                       inner legs: docs-updated-appropriately, tests-updated-appropriately
-  security.json     - single judge evidence {gather:{verdict:PASS|LOCKED_VIOLATION|n/a,...},
-                      graded_findings}
+  security.json     - single judge evidence {leg, scope, gather_verdict (PASS|LOCKED_VIOLATION|n/a),
+                      graded_findings, examined}
 
 Flatten the two cluster rollups' legs[] into per-leg records, then apply the same
 floor-vs-escalation policy at leaf granularity.
 
 Rollup (9 floors unchanged + security floor):
   block if: (issue_linked & !spec_present)
-          | (spec_present & spec.verdict=='does-not-solve')
+          | (spec_present & spec.gather_verdict=='does-not-solve')
           | (code_changed & !spec_present)
           | (code_changed & !plan_present)
-          | plan.verdict=='underspec' | code.verdict=='underplan'
-          | mm.verdict=='diverges'
-          | docs.verdict=='inadequate'
-          | (code & tests.verdict=='inadequate')
-          | security.gather.verdict=='LOCKED_VIOLATION'   [NEW security floor]
+          | plan.gather_verdict=='underspec' | code.gather_verdict=='underplan'
+          | mm.gather_verdict=='diverges'
+          | docs.gather_verdict=='inadequate'
+          | (code & tests.gather_verdict=='inadequate')
+          | security.gather_verdict=='LOCKED_VIOLATION'   [NEW security floor]
   warn:    plan.verdict=='overspec' | code.verdict=='overplan'
   n/a contributes nothing.
   missing cluster rollup OR missing inner leg => fail-safe block.
@@ -114,8 +114,9 @@ def _load_cluster(cluster_name, expected_legs):
 
     for leg_id in expected_legs:
         entry = by_id.get(leg_id)
-        # A valid entry must have a 'gather' dict.
-        if isinstance(entry, dict) and isinstance(entry.get("gather"), dict):
+        # A valid entry must have a 'scope' object or 'gather_verdict' string (lightened shape).
+        if isinstance(entry, dict) and (isinstance(entry.get("scope"), dict) or
+                                         isinstance(entry.get("gather_verdict"), str)):
             result[leg_id] = entry
         else:
             result[leg_id] = None
@@ -127,39 +128,31 @@ def _load_single(file_name, leg_id=None):
     """Load a single judge evidence file (mm-compliance or security).
 
     Returns (leg_id, leg_dict) where leg_dict is None if missing/garbled.
-    The returned dict is normalised to the same per-leg shape:
-      {gather: {...}, graded_findings: [...]}
-    For security the gather IS the top-level evidence (no nesting needed — the
-    security evidence schema puts gather-style fields at the root).
+    The returned dict is in the lightened per-leg shape:
+      {scope: {...}, gather_verdict: str, graded_findings: [...]}
     """
     raw = _load_file(file_name)
     key = leg_id or file_name
     if raw is None:
         return key, None
-    # mm-compliance and security single-judge evidences may present as:
-    #   A) {gather: {...}, graded_findings: [...]}  (standard judge shape)
-    #   B) {verdict: ..., graded_findings: [...]}   (flat — treat root as gather)
-    if isinstance(raw.get("gather"), dict):
-        return key, raw  # already in the right shape
-    # Treat the whole object as the gather (security schema puts fields at root).
-    return key, {"gather": raw, "graded_findings": raw.get("graded_findings", [])}
-
-
-def _gather(leg):
-    """Return the gather dict from a per-leg record, or {} if absent/garbled."""
-    if leg is None:
-        return {}
-    g = leg.get("gather")
-    return g if isinstance(g, dict) else {}
+    # Lightened judge shape: {leg, scope, gather_verdict, graded_findings, examined}
+    if isinstance(raw.get("gather_verdict"), str) or isinstance(raw.get("scope"), dict):
+        return key, raw  # already in the lightened shape
+    # Legacy fallback: {gather: {...}, graded_findings: [...]} — extract scope+verdict.
+    g = raw.get("gather")
+    if isinstance(g, dict):
+        return key, {"scope": g.get("scope") or {}, "gather_verdict": g.get("verdict", "n/a"),
+                     "graded_findings": raw.get("graded_findings", [])}
+    return key, None
 
 
 def _verdict(leg):
-    v = _gather(leg).get("verdict")
+    v = leg.get("gather_verdict") if isinstance(leg, dict) else None
     return v if isinstance(v, str) else "n/a"
 
 
 def _scope(leg):
-    s = _gather(leg).get("scope")
+    s = leg.get("scope") if isinstance(leg, dict) else None
     return s if isinstance(s, dict) else {}
 
 
@@ -175,8 +168,9 @@ def _has_blocking_grade(leg):
 
 
 def _present(leg):
-    """A leg whose evidence is missing/garbled (None or no gather dict) => fail-safe block."""
-    return leg is not None and isinstance(leg.get("gather"), dict)
+    """A leg whose evidence is missing/garbled (None or no scope/gather_verdict) => fail-safe block."""
+    return leg is not None and (isinstance(leg.get("scope"), dict) or
+                                 isinstance(leg.get("gather_verdict"), str))
 
 
 def rollup(spec_leg, plan_leg, code_leg, mm_leg, docs_leg, tests_leg, security_leg):
@@ -215,7 +209,7 @@ def rollup(spec_leg, plan_leg, code_leg, mm_leg, docs_leg, tests_leg, security_l
         reasons.append("relevant tests are not updated appropriately")
 
     # Security floor (NEW): LOCKED_VIOLATION is a deterministic block the judge cannot remove.
-    if _present(security_leg) and _gather(security_leg).get("verdict") == "LOCKED_VIOLATION":
+    if _present(security_leg) and _verdict(security_leg) == "LOCKED_VIOLATION":
         reasons.append("security: LOCKED_VIOLATION detected — deterministic security floor (cannot be overridden by judge grades)")
 
     if plan_v == "overspec":
