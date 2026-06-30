@@ -72,7 +72,7 @@ post-steps:
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
 timeout-minutes: 10
-source: golivax/agentic-protocol-poc/.github/workflows/plan-implements-spec-agent.md@e0b631a8edf3290a25ed3d9faadda9b1af699b5d
+source: golivax/agentic-protocol-poc/.github/workflows/plan-implements-spec-agent.md@0864e26572c579be4800d0d279c07bdb3482e7d3
 ---
 
 # Plan-Implements-Spec — does the plan implement the spec?
