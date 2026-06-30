@@ -1,0 +1,15 @@
+{
+  "dimension": "correctness",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "src/datasystem/client/object_cache/object_client_impl.cpp",
+      "line": 429,
+      "severity": "high",
+      "category": "correctness",
+      "title": "Handle rejected URMA switch submissions",
+      "impact": "After RecordUrmaResult has claimed the switch-in-progress gate, SubmitUrmaDataPlaneSwitch calls ThreadPool::Execute without handling its failure mode. The repository ThreadPool throws when the pool is already shut down, so a URMA failure observed during client shutdown or a late in-flight request can unwind out of the callback and terminate the process instead of marking the switch attempt failed. The tracker gate also remains claimed if submission does not complete normally, suppressing later failover decisions.",
+      "fix": "Submit the task through a non-throwing path or catch Execute exceptions, log the failure, and call FinishUrmaDataPlaneSwitchAttempt(false) on the reporting worker before returning false. Also avoid accepting new URMA failover callbacks once shutdown has started."
+    }
+  ]
+}
