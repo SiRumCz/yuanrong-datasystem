@@ -1,0 +1,33 @@
+{
+  "scope": {
+    "code_changed": true
+  },
+  "items": [
+    {
+      "path": "docs/source_zh_cn/appendix/client_env_guide.md",
+      "status": "updated_appropriately",
+      "reason": "The PR documents the two new client-configurable URMA failover gflags with defaults, ranges, window semantics, and disable behavior."
+    },
+    {
+      "path": ".repo_context/modules/client/client-sdk.md",
+      "status": "missing",
+      "reason": "The client module context already documents worker failover invariants, but the PR adds URMA data-plane failure as a new switch trigger and config surface without updating it."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "docs/source_zh_cn/appendix/client_env_guide.md",
+    ".repo_context/modules/client/client-sdk.md",
+    "docs/source_zh_cn/best_practices/best_pracitces_for_ub.md",
+    "docs/source_zh_cn/deployment/dscli.md",
+    "src/datasystem/client/client_worker_common_api.cpp",
+    "src/datasystem/client/object_cache/object_client_impl.cpp",
+    "src/datasystem/client/urma_success_rate_tracker.cpp",
+    "src/datasystem/common/util/gflag/common_gflag_define.cpp",
+    "src/datasystem/common/util/gflag/common_gflags_validate.cpp",
+    "src/datasystem/common/util/gflag/flags.h"
+  ]
+}
