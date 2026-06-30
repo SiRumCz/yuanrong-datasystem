@@ -1,7 +1,0 @@
-protocol: code-review
-instance: pr-7
-state: failed
-sub_state: docs-updated-appropriately-judge
-iteration: 1
-gates: {}
-history: []
