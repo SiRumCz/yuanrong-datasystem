@@ -1,0 +1,74 @@
+{
+  "id": 4049686,
+  "html_url": "https://gitcode.com/openeuler/yuanrong-datasystem/issues/574",
+  "number": "574",
+  "state": "closed",
+  "title": "[RFC]日志采样",
+  "body": "日志采样分析需求：\n1. 接口日志（access log）支持采样\n2. 运行日志总量支持控制总量，error/warning也需要采样控制\n3. 日志采样要改成随机采样，避免first N的采样方式\n4. 支持多个采样系数参数配置（接口、运行、error、时延等）\n\n<a href=\"https://gitcode.com/user-attachments/files/7982840/05315c09fa67481c913416971ef3da41.md\" target=\"_blank\">日志采样分析.md</a>",
+  "user": {
+    "avatar_url": "https://cdn-img.gitcode.com/eb/dc/ebd43493cda091384a230a01ad36859e409ff97f871c440c1801685735b459f0.png?time=1769136536152",
+    "html_url": "https://gitcode.com/yaohaolin",
+    "id": "681c9495b4377d6acc72e247",
+    "object_id": "681c9495b4377d6acc72e247",
+    "login": "yaohaolin",
+    "name": "Marck"
+  },
+  "assignee": {
+    "html_url": "https://gitcode.com/liudongliang",
+    "id": "6952265a89ac7e7fb9f51c86",
+    "object_id": "6952265a89ac7e7fb9f51c86",
+    "login": "liudongliang",
+    "name": "liudongliang"
+  },
+  "assignees": [
+    {
+      "html_url": "https://gitcode.com/liudongliang",
+      "id": "6952265a89ac7e7fb9f51c86",
+      "object_id": "6952265a89ac7e7fb9f51c86",
+      "login": "liudongliang",
+      "name": "liudongliang"
+    }
+  ],
+  "repository": {
+    "id": 7982840,
+    "full_name": "openeuler/yuanrong-datasystem",
+    "path": "yuanrong-datasystem",
+    "name": "yuanrong-datasystem",
+    "description": "openYuanrong 数据系统是以内存为中心、近计算的分布式异构多级缓存，为AI训推、Agent、大数据、微服务等分布式应用提供高性能的数据对象（KV）与数据流访问、HBM/DRAM/SSD 多级缓存以及实例间零拷贝数据共享能力。",
+    "created_at": "2025-10-28T16:39:02+08:00",
+    "updated_at": "2026-01-23T18:36:34+08:00",
+    "assigner": {},
+    "paas": ""
+  },
+  "created_at": "2026-05-27T15:20:44+08:00",
+  "updated_at": "2026-06-14T16:13:14+08:00",
+  "finished_at": "2026-06-14T16:13:07+08:00",
+  "labels": [
+    {
+      "id": 18089,
+      "name": "sig/sig-YuanRong",
+      "color": "#2865E0",
+      "created_at": "2025-11-08T15:25:33+08:00",
+      "updated_at": "2026-05-27T15:20:47+08:00"
+    }
+  ],
+  "issue_state": "已完成",
+  "comments": 3,
+  "priority": 1,
+  "issue_type": "需求",
+  "issue_state_detail": {
+    "title": "已完成",
+    "serial": 0,
+    "id": 1803
+  },
+  "issue_type_detail": {
+    "title": "需求",
+    "id": 1898,
+    "is_system": false
+  },
+  "issue_priority_detail": {
+    "title": "无优先级",
+    "id": 1627
+  },
+  "visibility_reason": "public"
+}
