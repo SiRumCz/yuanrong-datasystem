@@ -353,6 +353,11 @@ def run_conclude_hook(proto_path, proto, state_id, evid, instance, blocking,
         return {"conclusion": "neutral", "summary": "conclude hook unresolved", "blocked": False}
     env = dict(os.environ)
     env["BLOCKING"] = "1" if blocking else "0"
+    # Generic capability (not protocol-specific): expose the state checkout so a
+    # conclude hook can read any node's persisted evidence directly — e.g. read a
+    # deeply-nested leg's gather evidence whose path the input-resolver cannot
+    # reach from a sibling root child. "" when there is no checkout (degraded).
+    env["CONCLUDE_STATE_DIR"] = dir_ or ""
     workdir = None
     declared = lib.state_inputs(proto, state_id)
     if dir_ is not None and declared:

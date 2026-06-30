@@ -5,9 +5,14 @@ The declared leg set comes from CHECK_PARAMS.legs (the cluster node's params) �
 never hardcoded, so the same check serves any cluster regardless of how many
 inner legs it fans out to.
 
-A cell is well-formed iff it is an object with a non-empty `leg`, an object
-`scope`, a string `gather_verdict`, and a list `graded_findings`. Every declared
-leg must appear exactly once; no cell may name an undeclared leg.
+Option 2 (grades-only): a cell is well-formed iff it is an object with a
+non-empty `leg` and — when present — a list `graded_findings`. The rollup is an
+LLM with the same echo-unreliability as the inner judges, so this check no
+longer requires it to copy per-leg `scope`/`gather_verdict`: conclude-preflight
+reads those straight from each leg's persisted gather evidence, and treats the
+rollup's `graded_findings` as escalation-only (additive, can only block harder
+than the deterministic floor). Every declared leg must still appear exactly
+once; no cell may name an undeclared leg.
 
 ABI: cluster-coverage.py <evidence.json> <diff.txt> <changed-files.txt>
 """
@@ -49,7 +54,8 @@ def main():
             malformed.append("a cell with no `leg`")
             continue
         name = c["leg"]
-        if not isinstance(c.get("scope"), dict) or not isinstance(c.get("gather_verdict"), str) or not isinstance(c.get("graded_findings"), list):
+        gf = c.get("graded_findings")
+        if gf is not None and not isinstance(gf, list):
             malformed.append(name)
         seen[name] = seen.get(name, 0) + 1
 
@@ -60,7 +66,7 @@ def main():
     if missing:    problems.append(f"missing leg cell(s): {missing}")
     if dups:       problems.append(f"duplicate leg cell(s): {dups}")
     if unexpected: problems.append(f"unexpected leg cell(s): {unexpected}")
-    if malformed:  problems.append(f"malformed cell(s) (need leg+scope+gather_verdict+graded_findings): {sorted(set(malformed))}")
+    if malformed:  problems.append(f"malformed cell(s) (need leg; graded_findings must be a list if present): {sorted(set(malformed))}")
 
     if problems:
         print(json.dumps({"check": "cluster-coverage", "pass": False,

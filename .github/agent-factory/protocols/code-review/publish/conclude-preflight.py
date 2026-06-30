@@ -1,40 +1,43 @@
 #!/usr/bin/env python3
 """Conclude hook for the preflight gate (4-cluster architecture: adherence / mm-compliance / consistency / security).
 
-Authoritative for blocking. Independently re-reads the 4 cluster branch outputs
-from CONCLUDE_INPUTS_DIR (NOT trusting the gate agent's consolidated render in
-argv[1], which is used only as display text for the comment):
+Authoritative for blocking. The load-bearing facts of each leg — its `scope`
+flags and its gather `verdict` — are read directly from that leg's PERSISTED
+GATHER EVIDENCE in the state checkout (CONCLUDE_STATE_DIR), NOT from any LLM's
+echo. The gather evidence is the deterministic source the engine already holds;
+an LLM judge/rollup copying those facts forward proved unreliable (it could not
+reproduce the gather_verdict/scope a deterministic check recomputes anyway), so
+the copy is removed from the load-bearing path entirely.
 
-  adherence.json    - cluster rollup {cluster, legs:[{leg, scope, gather_verdict, graded_findings}]}
-                      inner legs: spec-solves-issue, plan-implements-spec, code-implements-plan
-  mm-compliance.json - single judge evidence {leg, scope, gather_verdict, graded_findings, examined}
-  consistency.json  - cluster rollup {cluster, legs:[{leg, scope, gather_verdict, graded_findings}]}
-                      inner legs: docs-updated-appropriately, tests-updated-appropriately
-  security.json     - single judge evidence {leg, scope, gather_verdict (PASS|LOCKED_VIOLATION|n/a),
-                      graded_findings, examined}
+The 4 cluster branch outputs (CONCLUDE_INPUTS_DIR) are still read, but ONLY for
+their per-leg `graded_findings` — the judges' severity grades, used for
+escalation (additive: a grade can only block harder than the floor, never clear
+it). The gate agent's consolidated render in argv[1] is display text only.
 
-Flatten the two cluster rollups' legs[] into per-leg records, then apply the same
-floor-vs-escalation policy at leaf granularity.
+  CONCLUDE_STATE_DIR/<pid>/<instance>/<dotted-gather-path>.evidence.json
+                    - per-leg {scope, verdict, ...}  (LOAD-BEARING: floors + presence)
+  CONCLUDE_INPUTS_DIR/adherence.json / consistency.json
+                    - cluster rollup {cluster, legs:[{leg, graded_findings}]}
+  CONCLUDE_INPUTS_DIR/mm-compliance.json / security.json
+                    - single judge evidence {leg, graded_findings, ...}
 
 Rollup (9 floors unchanged + security floor):
   block if: (issue_linked & !spec_present)
-          | (spec_present & spec.gather_verdict=='does-not-solve')
+          | (spec_present & spec.verdict=='does-not-solve')
           | (code_changed & !spec_present)
           | (code_changed & !plan_present)
-          | plan.gather_verdict=='underspec' | code.gather_verdict=='underplan'
-          | mm.gather_verdict=='diverges'
-          | docs.gather_verdict=='inadequate'
-          | (code & tests.gather_verdict=='inadequate')
-          | security.gather_verdict=='LOCKED_VIOLATION'   [NEW security floor]
+          | plan.verdict=='underspec' | code.verdict=='underplan'
+          | mm.verdict=='diverges'
+          | docs.verdict=='inadequate'
+          | (code & tests.verdict=='inadequate')
+          | security.verdict=='LOCKED_VIOLATION'
   warn:    plan.verdict=='overspec' | code.verdict=='overplan'
   n/a contributes nothing.
-  missing cluster rollup OR missing inner leg => fail-safe block.
-Presence flags are READ from the legs' form-verified scope objects, never recomputed
-here (the advance/zone-4 job has neither PR_BODY nor the changed-files list).
+  missing/unreadable GATHER evidence for a leg => fail-safe block.
 
 ABI: conclude-preflight.py <evidence.json> <instance-key>
-  env: BLOCKING ('1'/'0'), CONCLUDE_INPUTS_DIR, PUBLISH_TOKEN, PR, GITHUB_REPOSITORY,
-       ENGINE_LOCAL, VERDICT_OUT (optional; default /tmp/gh-aw/verdict.json).
+  env: BLOCKING ('1'/'0'), CONCLUDE_STATE_DIR, CONCLUDE_INPUTS_DIR, PUBLISH_TOKEN,
+       PR, GITHUB_REPOSITORY, ENGINE_LOCAL, VERDICT_OUT (default /tmp/gh-aw/verdict.json).
 Prints {"conclusion","summary","blocked","reasons":[...],"warnings":[...]}.
 """
 import json
@@ -53,6 +56,69 @@ _CONSISTENCY_LEGS = ("docs-updated-appropriately", "tests-updated-appropriately"
 # All 7 per-leg ids in canonical order.
 LEGS = ("spec-solves-issue", "plan-implements-spec", "code-implements-plan", "mm-compliance",
         "docs-updated-appropriately", "tests-updated-appropriately", "security")
+
+# protocol.json sits one level up from publish/.
+_PROTO_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "protocol.json")
+
+# leg -> the gather node's TREE path. Its persisted evidence lives at
+# <state>/<pid>/<instance>/<dot-joined-file-path>.evidence.json (state_path drops
+# nothing for this multi-phase protocol, so the dotted name is the full tree path).
+_GATHER_TREE_PATH = {
+    "spec-solves-issue": ["preflight", "adherence", "adherence-fanout",
+                          "spec-solves-issue", "spec-solves-issue-gather"],
+    "plan-implements-spec": ["preflight", "adherence", "adherence-fanout",
+                             "plan-implements-spec", "plan-implements-spec-gather"],
+    "code-implements-plan": ["preflight", "adherence", "adherence-fanout",
+                             "code-implements-plan", "code-implements-plan-gather"],
+    "docs-updated-appropriately": ["preflight", "consistency", "consistency-fanout",
+                                   "docs-updated-appropriately", "docs-updated-appropriately-gather"],
+    "tests-updated-appropriately": ["preflight", "consistency", "consistency-fanout",
+                                    "tests-updated-appropriately", "tests-updated-appropriately-gather"],
+    "mm-compliance": ["preflight", "mm-compliance", "mm-compliance-gather"],
+    "security": ["preflight", "security", "security-gather"],
+}
+
+
+def _load_proto():
+    try:
+        with open(_PROTO_PATH, encoding="utf-8") as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return None
+
+
+def gather_evidence_path(state_dir, pid, instance, leg):
+    """Deterministic path to a leg's persisted gather evidence.json in the state
+    checkout, or None if the protocol/leg is unknown. (Also used by tests to
+    place fixtures at exactly the path this hook reads — one source of truth.)"""
+    proto = _load_proto()
+    tree_path = _GATHER_TREE_PATH.get(leg)
+    if proto is None or tree_path is None or not state_dir:
+        return None
+    return lib.output_artifact_path(state_dir, pid, instance,
+                                    path=lib.state_path(proto, tree_path), kind="evidence")
+
+
+def _load_gather_facts(state_dir, pid, instance):
+    """Read {scope, verdict} per leg from each leg's persisted gather evidence.
+    Returns {leg: {"scope": dict, "verdict": str} | None}. A leg whose gather
+    evidence is missing/garbled/verdict-less maps to None (=> fail-safe block)."""
+    facts = {}
+    for leg in LEGS:
+        facts[leg] = None
+        path = gather_evidence_path(state_dir, pid, instance, leg)
+        if not path:
+            continue
+        try:
+            with open(path, encoding="utf-8") as fh:
+                ev = json.load(fh)
+        except (OSError, ValueError):
+            continue
+        if not isinstance(ev, dict) or not isinstance(ev.get("verdict"), str):
+            continue
+        facts[leg] = {"scope": ev["scope"] if isinstance(ev.get("scope"), dict) else {},
+                      "verdict": ev["verdict"]}
+    return facts
 
 # Cluster headings for the comment (cluster-file -> display label).
 _CLUSTER_HEADINGS = {
@@ -114,9 +180,11 @@ def _load_cluster(cluster_name, expected_legs):
 
     for leg_id in expected_legs:
         entry = by_id.get(leg_id)
-        # A valid entry must have a 'scope' object or 'gather_verdict' string (lightened shape).
+        # Read only for graded_findings now; accept any dict cell that carries a
+        # recognizable field (scope/gather_verdict/graded_findings — grades-only OK).
         if isinstance(entry, dict) and (isinstance(entry.get("scope"), dict) or
-                                         isinstance(entry.get("gather_verdict"), str)):
+                                         isinstance(entry.get("gather_verdict"), str) or
+                                         isinstance(entry.get("graded_findings"), list)):
             result[leg_id] = entry
         else:
             result[leg_id] = None
@@ -135,9 +203,10 @@ def _load_single(file_name, leg_id=None):
     key = leg_id or file_name
     if raw is None:
         return key, None
-    # Lightened judge shape: {leg, scope, gather_verdict, graded_findings, examined}
-    if isinstance(raw.get("gather_verdict"), str) or isinstance(raw.get("scope"), dict):
-        return key, raw  # already in the lightened shape
+    # Read only for graded_findings now; accept any recognizable judge-evidence shape.
+    if (isinstance(raw.get("gather_verdict"), str) or isinstance(raw.get("scope"), dict)
+            or isinstance(raw.get("graded_findings"), list)):
+        return key, raw
     # Legacy fallback: {gather: {...}, graded_findings: [...]} — extract scope+verdict.
     g = raw.get("gather")
     if isinstance(g, dict):
@@ -325,8 +394,25 @@ def _load_legs():
 
 def main():
     blocking = os.environ.get("BLOCKING", "") == "1"
+    instance = sys.argv[2] if len(sys.argv) > 2 else ""
+    pid = (_load_proto() or {}).get("name", "code-review")
+    state_dir = os.environ.get("CONCLUDE_STATE_DIR", "")
 
-    legs = _load_legs()
+    # Load-bearing facts (scope + verdict) from each leg's persisted gather evidence.
+    gather_facts = _load_gather_facts(state_dir, pid, instance)
+    # Cluster/judge branch outputs — read ONLY for per-leg graded_findings (escalation).
+    rollup_legs = _load_legs()
+
+    legs = {}
+    for leg in LEGS:
+        gf = gather_facts.get(leg)
+        if gf is None:
+            legs[leg] = None  # fail-safe: no trustworthy gather facts for this leg
+            continue
+        grades = (rollup_legs.get(leg) or {}).get("graded_findings")
+        legs[leg] = {"scope": gf["scope"], "gather_verdict": gf["verdict"],
+                     "graded_findings": grades if isinstance(grades, list) else []}
+
     spec_leg = legs.get("spec-solves-issue")
     plan_leg = legs.get("plan-implements-spec")
     code_leg = legs.get("code-implements-plan")
@@ -355,9 +441,8 @@ def main():
     records.append({"type": "verdict", "status": status, "blocked": blocked,
                     "blocking": bool(blocking), "reasons": reasons, "warnings": warnings})
     payload = {"records": records}
-    inst = sys.argv[2] if len(sys.argv) > 2 else ""
-    if inst.startswith("pr-") and inst[3:].isdigit():
-        payload["meta"] = {"pr_number": int(inst[3:]),
+    if instance.startswith("pr-") and instance[3:].isdigit():
+        payload["meta"] = {"pr_number": int(instance[3:]),
                            "head_sha": os.environ.get("HEAD_SHA", "")}
     out_path = os.environ.get("VERDICT_OUT", "/tmp/gh-aw/verdict.json")
     try:
