@@ -1,0 +1,10 @@
+{
+  "leg": "security",
+  "scope": {},
+  "gather_verdict": "PASS",
+  "graded_findings": [],
+  "examined": [
+    "policy/cedar/default",
+    "policy/guardians/default.policy.yaml"
+  ]
+}
