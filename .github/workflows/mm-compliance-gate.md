@@ -3,7 +3,13 @@ name: "MM Compliance Gate (protocol state: mm-compliance)"
 run-name: "MM Compliance Gate · cid:[${{ fromJSON(github.event.inputs.aw_context || '{}').cid }}]"
 'on':
   workflow_dispatch:
-engine: codex
+engine:
+  id: codex
+  model: gpt-5.5
+  # Codex (OpenAI) via the private OpenAI-compatible gateway (matches preflight +
+  # the other custody agents). gh-aw injects OPENAI_API_KEY (repo secret).
+  env:
+    OPENAI_BASE_URL: https://arcyleung-ubuntu.tailb940e6.ts.net/v1/
 network:
   allowed:
     - defaults

@@ -3,7 +3,11 @@ name: "Code-Implements-Plan Leg (protocol state: preflight.code-implements-plan)
 run-name: "Code-Implements-Plan · cid:[${{ fromJSON(github.event.inputs.aw_context || '{}').cid }}]"
 on:
   workflow_dispatch:
-engine: codex
+engine:
+  id: codex
+  model: gpt-5.5
+  env:
+    OPENAI_BASE_URL: https://arcyleung-ubuntu.tailb940e6.ts.net/v1/
 network:
   allowed:
     - defaults

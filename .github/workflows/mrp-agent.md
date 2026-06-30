@@ -3,7 +3,15 @@ name: "MRP Assembler (protocol state: mrp)"
 run-name: "MRP Assembler · cid:[${{ fromJSON(github.event.inputs.aw_context || '{}').cid }}]"
 on:
   workflow_dispatch:
-engine: codex
+engine:
+  id: codex
+  model: gpt-5.5
+  # Codex (OpenAI) routed through the private OpenAI-compatible gateway below
+  # (Tailscale Funnel, reachable from GitHub runners). gh-aw injects OPENAI_API_KEY
+  # (repo secret). The agent needs no GitHub network access — upstream phase
+  # evidence arrives inline via the engine's inputs[] (aw_context.inputs.<phase>).
+  env:
+    OPENAI_BASE_URL: https://arcyleung-ubuntu.tailb940e6.ts.net/v1/
 network:
   allowed:
     - defaults

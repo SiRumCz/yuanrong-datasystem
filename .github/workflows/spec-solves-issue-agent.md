@@ -3,7 +3,11 @@ name: "Spec-Solves-Issue Leg (protocol state: preflight.spec-solves-issue)"
 run-name: "Spec-Solves-Issue · cid:[${{ fromJSON(github.event.inputs.aw_context || '{}').cid }}]"
 on:
   workflow_dispatch:
-engine: codex
+engine:
+  id: codex
+  model: gpt-5.5
+  env:
+    OPENAI_BASE_URL: https://arcyleung-ubuntu.tailb940e6.ts.net/v1/
 network:
   allowed:
     - defaults

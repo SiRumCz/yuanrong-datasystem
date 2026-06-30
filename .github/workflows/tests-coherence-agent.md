@@ -3,7 +3,11 @@ name: "Tests-Updated-Appropriately Leg (protocol state: preflight.tests-updated-
 run-name: "Tests-Updated-Appropriately · cid:[${{ fromJSON(github.event.inputs.aw_context || '{}').cid }}]"
 on:
   workflow_dispatch:
-engine: codex
+engine:
+  id: codex
+  model: gpt-5.5
+  env:
+    OPENAI_BASE_URL: https://arcyleung-ubuntu.tailb940e6.ts.net/v1/
 network:
   allowed:
     - defaults

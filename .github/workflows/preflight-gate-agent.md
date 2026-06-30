@@ -3,7 +3,11 @@ name: "Preflight Gate (protocol state: preflight-gate)"
 run-name: "Preflight Gate · cid:[${{ fromJSON(github.event.inputs.aw_context || '{}').cid }}]"
 on:
   workflow_dispatch:
-engine: codex
+engine:
+  id: codex
+  model: gpt-5.5
+  env:
+    OPENAI_BASE_URL: https://arcyleung-ubuntu.tailb940e6.ts.net/v1/
 network:
   allowed:
     - defaults
