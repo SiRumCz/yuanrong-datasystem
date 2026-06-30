@@ -4,16 +4,31 @@ name: Agentic Orchestrator
 # runs a read-only `route` job to pick the matching protocol, then calls the
 # generic engine. run-name + concurrency live HERE (the caller), github.event-based,
 # never `inputs` (which would startup_failure a workflow_call workflow).
-run-name: "agentic · ${{ github.event.client_payload.instance || format('pr-{0}', github.event.issue.number || github.event.pull_request.number) }} @ ${{ github.event.client_payload.path || 'entry' }}"
+run-name: "agentic · ${{ github.event.inputs.instance || github.event.client_payload.instance || format('pr-{0}', github.event.issue.number || github.event.pull_request.number) }} @ ${{ github.event.client_payload.path || 'entry' }}"
 
 on:
   # No protocol auto-triggers on pull_request anymore — code-review is /review-only
-  # and recover-mental-model is /recover-only — so PR open/sync does nothing.
+  # so PR open/sync does nothing. recover-mental-model is started via the
+  # workflow_dispatch entry below (a UI with a token), not a PR comment.
   # Re-add a `pull_request:` block here (and the protocol's trigger) to restore it.
   issue_comment:
     types: [created]
   repository_dispatch:
     types: [protocol-continue]   # (Stage 4a: the old advance type was retired); protocol-join owned by protocol-join.yml
+  # UI/API entry: start a protocol against a branch/ref (no PR). The caller (e.g. a
+  # UI with an Actions:write token) supplies a correlation `instance` it can then
+  # poll the visibility API by. Runs only from the default branch (workflow_dispatch).
+  workflow_dispatch:
+    inputs:
+      protocol:
+        description: "protocol id to run"
+        default: "recover-mental-model"
+      ref:
+        description: "branch/ref to analyze (blank = default branch)"
+        default: ""
+      instance:
+        description: "instance/correlation id for status polling (blank = derived ref-<ref>)"
+        default: ""
 
 # The calling job's permissions are the CEILING for the reusable engine. Grant the
 # UNION the engine's jobs need; the engine's per-job permissions scope down within it.
@@ -29,7 +44,7 @@ concurrency:
   # Static prefix + instance + path. Protocol is unknown at concurrency-eval
   # time, so all protocols share this namespace (fine for one-pipeline-per-repo).
   # path is the NODE_PATH coordinate (e.g. "review.grumpy"); empty for entry events.
-  group: agentic-${{ github.event.client_payload.instance || format('pr-{0}', github.event.issue.number || github.event.pull_request.number) }}-${{ github.event.client_payload.path }}
+  group: agentic-${{ github.event.inputs.instance || github.event.client_payload.instance || format('pr-{0}', github.event.issue.number || github.event.pull_request.number) }}-${{ github.event.client_payload.path }}
   cancel-in-progress: false
 
 jobs:
@@ -38,6 +53,7 @@ jobs:
     # dispatch protocol; decides skip. Holds NO state PAT.
     if: >
       github.event_name == 'repository_dispatch' ||
+      github.event_name == 'workflow_dispatch' ||
       github.event_name == 'pull_request' ||
       (github.event_name == 'issue_comment' && github.event.issue.pull_request != null)
     runs-on: ubuntu-latest
@@ -51,7 +67,10 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           PR_EVENT_ACTION: ${{ github.event.action }}
           COMMENT_BODY: ${{ github.event.comment.body }}
-          DISPATCH_PROTOCOL: ${{ github.event.client_payload.protocol }}
+          # workflow_dispatch carries the protocol as an input; repository_dispatch
+          # carries it in client_payload. Either way lib.route's dispatch shortcut
+          # turns a protocol id straight into its path (no trigger scan).
+          DISPATCH_PROTOCOL: ${{ github.event.client_payload.protocol || github.event.inputs.protocol }}
           IS_PR_COMMENT: ${{ github.event.issue.pull_request != null }}
         run: |
           # Agent-derived strings (COMMENT_BODY, DISPATCH_PROTOCOL) are read via env
@@ -70,6 +89,10 @@ jobs:
     uses: ./.github/workflows/agentic-engine.yml
     with:
       protocol: ${{ needs.route.outputs.protocol }}
+      # Ref-target inputs (workflow_dispatch only); empty for PR/comment/dispatch
+      # events, where the engine derives the PR-based instance as before.
+      ref: ${{ github.event.inputs.ref }}
+      instance: ${{ github.event.inputs.instance }}
     secrets: inherit
     permissions:
       contents: read

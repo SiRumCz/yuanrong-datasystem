@@ -28,9 +28,22 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           INSTANCE: ${{ github.event.client_payload.instance }}
+          DISPATCH_PROTOCOL: ${{ github.event.client_payload.protocol }}
+          REPO: ${{ github.repository }}
         run: |
-          PR="${INSTANCE#pr-}"
-          SHA=$(gh pr view "$PR" --repo "${{ github.repository }}" --json headRefOid --jq .headRefOid)
+          # PR-keyed instance: PR head commit. Ref-/ui-keyed instance (no PR): the
+          # head_sha pinned in the instance state at start. (Same resolution as the
+          # engine's head step; the join hop arrives via repository_dispatch, which
+          # carries no ref.)
+          case "$INSTANCE" in
+            pr-*)
+              PR="${INSTANCE#pr-}"
+              SHA=$(gh pr view "$PR" --repo "$REPO" --json headRefOid --jq .headRefOid) ;;
+            *)
+              PR=""
+              SHA=$(gh api "repos/$REPO/contents/$DISPATCH_PROTOCOL/$INSTANCE/_instance.yaml?ref=agentic-state" \
+                     --jq '.content' | base64 -d | sed -n 's/^head_sha:[[:space:]]*//p' | head -1) ;;
+          esac
           echo "pr=$PR" >> "$GITHUB_OUTPUT"
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
       - name: Evaluate join

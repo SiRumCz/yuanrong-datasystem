@@ -2,7 +2,7 @@
   "name": "code-review",
   "version": "0.2.0",
   "min_engine_version": "1.0.0",
-  "_note": "The full custody pipeline plus the mental-model gates, wired as engine phases: preflight -> mm-compliance(blocking) -> overview(+risk) -> review fanout(5 dims) -> join -> triage -> fix -> post-fix fanout[context || mm-updater->mm-gate] -> join -> mrp -> done. Each phase pairs the generic `evidence-present` form check with a deterministic per-phase gate: preflight (adherence + conclude-preflight/publish-verdict, blocking on missing/non-adherent spec/plan), overview (schema + cohort-partition + a deterministic `conclude-overview` risk scorer porting score.js/diffusion.js that owns the authoritative band and halts only on a garbled/unknown run; the agent's risk_band is an advisory hint), mm-compliance (a BLOCKING gate node: conclude-mm-compliance halts on verdict:diverges via on_blocked:halt until /override), the 5 review dims (schema + findings-anchored + publish-review; the fanout's params.status_note flags request-changes legs in the status header), triage (schema + conclude-triage), fix (schema + conclude-fix). The post-fix fanout runs context (schema-valid only, advisory — a fanout leg runs NO conclude hook, so conclude-context.py is unused here) in PARALLEL with mm-updater (evidence-present + mm-questions-present; a gh-aw create-pull-request safe-output opens an [mm] PR when mm_changed, the mm-gate then holds for a human /mm-answer, else the empty gate auto-skips); the join waits for both before mrp (schema + conclude-mrp + a deterministic acceptance_plan: engine inputs[] deliver prior-phase evidence, per-cohort bands are re-derived via the shared _risk_score, and the custody-shaped pack is emitted as the merge-readiness-pack artifact). Remaining v1 simplifications to improve per-phase later: /fix is suggest-only (no push/PR/comment write-actions), and review findings are not yet posted as inline PR comments. Agent workflows live in .github/workflows/.",
+  "_note": "The full custody pipeline plus the mental-model gates, wired as engine phases: preflight fanout(6 adherence legs) -> join-preflight -> preflight-gate -> overview(+risk) -> review fanout(5 dims) -> join -> triage -> fix -> post-fix fanout[context || mm-updater->mm-gate] -> join -> mrp -> done. Each phase pairs the generic `evidence-present` form check with a deterministic per-phase gate: preflight (a 6-leg adherence fanout — spec-solves-issue || plan-implements-spec || code-implements-plan || mm-compliance || docs-updated-appropriately || tests-updated-appropriately — joined under preflight-gate, whose conclude-preflight runs a deterministic block-gaps/warn-extras rollup over the issue->spec->plan->code chain + mm-compliance, posts one consolidated comment, and halts via on_blocked:halt until /override), overview (schema + cohort-partition + a deterministic `conclude-overview` risk scorer porting score.js/diffusion.js that owns the authoritative band and halts only on a garbled/unknown run; the agent's risk_band is an advisory hint), the 5 review dims (schema + findings-anchored + publish-review; the fanout's params.status_note flags request-changes legs in the status header), triage (schema + conclude-triage), fix (schema + conclude-fix). The post-fix fanout runs context (schema-valid only, advisory — a fanout leg runs NO conclude hook, so conclude-context.py is unused here) in PARALLEL with mm-updater (evidence-present + mm-questions-present; a gh-aw create-pull-request safe-output opens an [mm] PR when mm_changed, the mm-gate then holds for a human /mm-answer, else the empty gate auto-skips); the join waits for both before mrp (schema + conclude-mrp + a deterministic acceptance_plan: engine inputs[] deliver prior-phase evidence, per-cohort bands are re-derived via the shared _risk_score, and the custody-shaped pack is emitted as the merge-readiness-pack artifact). Remaining v1 simplifications to improve per-phase later: /fix is suggest-only (no push/PR/comment write-actions), and review findings are not yet posted as inline PR comments. Agent workflows live in .github/workflows/.",
   "triggers": [
     { "on": "issue_comment", "comment_prefix": "/review", "command": "start" },
     { "on": "issue_comment", "comment_prefix": "/override", "command": "override" },
@@ -11,39 +11,100 @@
   "states": [
     {
       "id": "preflight",
+      "kind": "fanout",
+      "label": "pre-flight adherence chain",
+      "branches": [
+        {
+          "id": "spec-solves-issue",
+          "workflow": "spec-solves-issue-agent",
+          "evidence": "spec-solves-issue.evidence.schema.json",
+          "max_iterations": 2,
+          "params": { "require": ["verdict", "examined"] },
+          "checks": [
+            { "run": "evidence-present",            "on_fail": "iterate" },
+            { "run": "spec-solves-issue-coverage", "on_fail": "iterate" }
+          ]
+        },
+        {
+          "id": "plan-implements-spec",
+          "workflow": "plan-implements-spec-agent",
+          "evidence": "plan-implements-spec.evidence.schema.json",
+          "max_iterations": 2,
+          "params": { "require": ["verdict", "examined"] },
+          "checks": [
+            { "run": "evidence-present",   "on_fail": "iterate" },
+            { "run": "plan-spec-coverage", "on_fail": "iterate" }
+          ]
+        },
+        {
+          "id": "code-implements-plan",
+          "workflow": "code-implements-plan-agent",
+          "evidence": "code-implements-plan.evidence.schema.json",
+          "max_iterations": 2,
+          "params": { "require": ["verdict", "examined"] },
+          "checks": [
+            { "run": "evidence-present",     "on_fail": "iterate" },
+            { "run": "code-plan-coverage",   "on_fail": "iterate" },
+            { "run": "traces-exist-in-diff", "on_fail": "iterate" }
+          ]
+        },
+        {
+          "id": "mm-compliance",
+          "workflow": "mm-compliance-gate",
+          "evidence": "mm-compliance.evidence.schema.json",
+          "max_iterations": 2,
+          "params": { "require": ["verdict"] },
+          "checks": [
+            { "run": "evidence-present", "on_fail": "iterate" }
+          ]
+        },
+        {
+          "id": "docs-updated-appropriately",
+          "workflow": "docs-coherence-agent",
+          "evidence": "docs-coherence.evidence.schema.json",
+          "max_iterations": 2,
+          "params": { "require": ["verdict", "examined"] },
+          "checks": [
+            { "run": "evidence-present", "on_fail": "iterate" },
+            { "run": "docs-coverage",    "on_fail": "iterate" }
+          ]
+        },
+        {
+          "id": "tests-updated-appropriately",
+          "workflow": "tests-coherence-agent",
+          "evidence": "tests-coherence.evidence.schema.json",
+          "max_iterations": 2,
+          "params": { "require": ["verdict", "examined"] },
+          "checks": [
+            { "run": "evidence-present", "on_fail": "iterate" },
+            { "run": "tests-coverage",   "on_fail": "iterate" }
+          ]
+        }
+      ],
+      "next": "join-preflight"
+    },
+    { "id": "join-preflight", "kind": "join", "of": "preflight", "next": "preflight-gate" },
+    {
+      "id": "preflight-gate",
       "kind": "agent",
-      "label": "pre-flight gate",
-      "workflow": "preflight-agent",
-      "evidence": "preflight.evidence.schema.json",
+      "label": "pre-flight adherence gate",
+      "workflow": "preflight-gate-agent",
+      "evidence": "preflight-gate.evidence.schema.json",
       "max_iterations": 2,
-      "params": { "ai_checks": ["spec-adherence", "plan-adherence"] },
+      "inputs": [
+        { "from": "spec-solves-issue",         "as": "spec-solves-issue" },
+        { "from": "plan-implements-spec",       "as": "plan-implements-spec" },
+        { "from": "code-implements-plan",       "as": "code-implements-plan" },
+        { "from": "mm-compliance",             "as": "mm-compliance" },
+        { "from": "docs-updated-appropriately",  "as": "docs-updated-appropriately" },
+        { "from": "tests-updated-appropriately", "as": "tests-updated-appropriately" }
+      ],
+      "params": { "legs": ["spec-solves-issue", "plan-implements-spec", "code-implements-plan", "mm-compliance", "docs-updated-appropriately", "tests-updated-appropriately"] },
       "checks": [
-        { "run": "preflight-schema-valid",  "on_fail": "iterate"  },
-        { "run": "adherence-coverage",      "on_fail": "iterate"  },
-        { "run": "traces-exist-in-diff",    "on_fail": "iterate"  },
-        { "run": "spec-present",            "on_fail": "advisory" },
-        { "run": "plan-present",            "on_fail": "advisory" },
-        { "run": "docs-updated-with-code",  "on_fail": "advisory" },
-        { "run": "tests-updated-with-code", "on_fail": "advisory" },
+        { "run": "preflight-gate-coverage", "on_fail": "iterate"  },
         { "run": "local-review-evidence",   "on_fail": "advisory" }
       ],
       "conclude": "conclude-preflight",
-      "publish": "publish-verdict",
-      "on_blocked": "halt",
-      "next": "mm-compliance"
-    },
-    {
-      "id": "mm-compliance",
-      "kind": "agent",
-      "label": "mental-model compliance gate",
-      "workflow": "mm-compliance-gate",
-      "evidence": "mm-compliance.evidence.schema.json",
-      "max_iterations": 2,
-      "params": { "require": ["verdict"] },
-      "checks": [
-        { "run": "evidence-present", "on_fail": "iterate" }
-      ],
-      "conclude": "conclude-mm-compliance",
       "on_blocked": "halt",
       "next": "overview"
     },
@@ -172,7 +233,7 @@
       "evidence": "mrp.evidence.schema.json",
       "max_iterations": 2,
       "inputs": [
-        { "from": "preflight", "as": "preflight" },
+        { "from": "preflight-gate", "as": "preflight" },
         { "from": "overview",  "as": "overview" },
         { "from": "triage",    "as": "triage" },
         { "from": "context",   "as": "context" }

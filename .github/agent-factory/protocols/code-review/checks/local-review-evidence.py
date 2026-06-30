@@ -6,15 +6,16 @@ a flag, never a hard block; the gate's point is to make the review TRACEABLE.
 Two ways (custody's demo thesis):
   - yuanrong-way: PR review activity — line-anchored review comments, review
     submissions (COMMENTED/APPROVED/CHANGES_REQUESTED), or an approval (/lgtm,
-    /approve). Prefetched by the trusted checks job into PR_REVIEW_JSON (checks
-    hold no creds).
+    /approve). Fetched here via _review_fetch using the checks job's read-only
+    token (GITHUB_REPOSITORY + PR env) — the same way the job re-fetches the diff;
+    the engine never prefetches this, so it stays protocol-agnostic.
   - custody-way: a committed agent-conversation transcript for this PR
     (`.conversations/*.jsonl`, detected from the changed-files — this repo commits
     the transcript IN the PR head, cf. context phase), or a `Reviewed-by:` trailer
     in the PR body (read from PR_BODY).
 
 Usage: local-review-evidence.py <evidence.json> <diff.txt> <changed-files.txt>;
-reads PR_REVIEW_JSON + PR_BODY env."""
+reads GITHUB_REPOSITORY + PR (to fetch review activity) and PR_BODY env."""
 import json
 import os
 import re
@@ -22,6 +23,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _paths  # noqa: E402
+import _review_fetch  # noqa: E402
 
 TRAILER = re.compile(r"(^|\n)\s*reviewed-by:\s*\S", re.I)
 APPROVE = re.compile(r"(^|\s)/?(lgtm|approve)\b", re.I)
@@ -31,12 +33,8 @@ CONVERSATION = re.compile(r"(^|/)\.conversations/.+\.jsonl$", re.I)
 
 
 def main():
-    try:
-        review = json.loads(os.environ.get("PR_REVIEW_JSON", "") or "{}")
-        if not isinstance(review, dict):
-            review = {}
-    except ValueError:
-        review = {}
+    review = _review_fetch.fetch(os.environ.get("GITHUB_REPOSITORY", ""),
+                                 os.environ.get("PR", ""))
     body = os.environ.get("PR_BODY", "") or ""
     files = _paths.read_changed_files(sys.argv[3] if len(sys.argv) > 3 else "")
 

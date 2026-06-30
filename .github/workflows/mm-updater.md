@@ -3,13 +3,7 @@ name: "MM Updater (protocol leg: mm-updater)"
 run-name: "MM Updater · cid:[${{ fromJSON(github.event.inputs.aw_context || '{}').cid }}]"
 'on':
   workflow_dispatch:
-engine:
-  id: codex
-  model: gpt-5.5
-  # Codex (OpenAI) via the private OpenAI-compatible gateway (matches preflight +
-  # the other custody agents). gh-aw injects OPENAI_API_KEY (repo secret).
-  env:
-    OPENAI_BASE_URL: https://arcyleung-ubuntu.tailb940e6.ts.net/v1/
+engine: codex
 network:
   allowed:
     - defaults
@@ -63,6 +57,7 @@ post-steps:
       name: evidence
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
+source: golivax/agentic-protocol-poc/.github/workflows/mm-updater.md@e0b631a8edf3290a25ed3d9faadda9b1af699b5d
 ---
 
 # Mental-Model Updater

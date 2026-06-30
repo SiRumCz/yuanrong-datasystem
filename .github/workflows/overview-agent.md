@@ -3,15 +3,7 @@ name: "Overview Agent (protocol state: overview)"
 run-name: "Overview Agent · cid:[${{ fromJSON(github.event.inputs.aw_context || '{}').cid }}]"
 on:
   workflow_dispatch:
-engine:
-  id: codex
-  model: gpt-5.5
-  # Codex (OpenAI) routed through the private OpenAI-compatible gateway below
-  # (Tailscale Funnel, reachable from GitHub runners). gh-aw injects OPENAI_API_KEY
-  # (repo secret). The agent needs no GitHub network access — PR data is prefetched
-  # in steps: (outside the agent firewall).
-  env:
-    OPENAI_BASE_URL: https://arcyleung-ubuntu.tailb940e6.ts.net/v1/
+engine: codex
 network:
   allowed:
     - defaults
@@ -56,6 +48,7 @@ post-steps:
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
 timeout-minutes: 10
+source: golivax/agentic-protocol-poc/.github/workflows/overview-agent.md@e0b631a8edf3290a25ed3d9faadda9b1af699b5d
 ---
 
 # Guided Overview + Risk — cohort partition, layered walkthrough, breaking-change findings

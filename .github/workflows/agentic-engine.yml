@@ -16,6 +16,16 @@ on:
         description: "Path to the protocol.json (e.g. .github/agent-factory/protocols/code-review/protocol.json)"
         required: true
         type: string
+      ref:
+        description: "Ref-target only (workflow_dispatch): branch/ref to analyze. Blank for PR/comment/dispatch events."
+        required: false
+        type: string
+        default: ""
+      instance:
+        description: "Ref-target only (workflow_dispatch): UI-supplied instance/correlation id. Blank → derived ref-<ref>."
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -25,6 +35,7 @@ jobs:
   plan:
     if: >
       github.event_name == 'repository_dispatch' ||
+      github.event_name == 'workflow_dispatch' ||
       github.event_name == 'pull_request' ||
       (github.event_name == 'issue_comment' && github.event.issue.pull_request != null)
     runs-on: ubuntu-latest
@@ -46,6 +57,7 @@ jobs:
       inputs_json: ${{ steps.plan.outputs.inputs_json }}
       override_actor: ${{ steps.ctx.outputs.override_actor }}
       override_reason: ${{ steps.ctx.outputs.override_reason }}
+      checkout_ref: ${{ steps.ctx.outputs.checkout_ref }}
     steps:
       - uses: actions/checkout@v5
       - id: ctx
@@ -58,18 +70,36 @@ jobs:
           COMMENT_BODY: ${{ github.event.comment.body }}
           COMMENTER_LOGIN: ${{ github.event.comment.user.login }}
           GH_TOKEN: ${{ secrets.POC_DISPATCH_TOKEN }}
+          REPO: ${{ github.repository }}
+          WD_REF: ${{ inputs.ref }}
+          WD_INSTANCE: ${{ inputs.instance }}
         run: |
           # Derive (instance, command, node_path). Agent-derived strings
           # (payload fields, comment body) are read via env, never interpolated.
           # Entry events (pull_request/issue_comment) map through the protocol's
           # `triggers` block; internal repository_dispatch types are generic.
+          # CHECKOUT_REF is what the agents check out: PR head for PR-targeted runs,
+          # the requested ref for ref-targeted (workflow_dispatch) runs.
           NODE_PATH=""
           CMD=""
+          PR=""
+          CHECKOUT_REF=""
           case "${{ github.event_name }}" in
+            workflow_dispatch)
+              # Ref-target entry (UI/API). No PR: instance is UI-supplied or derived
+              # from the ref. The analyzed/checkout ref is the requested ref, or the
+              # repo default branch when blank.
+              TARGET_REF="$WD_REF"
+              [ -n "$TARGET_REF" ] || TARGET_REF=$(gh api "repos/$REPO" --jq .default_branch)
+              INSTANCE="$WD_INSTANCE"
+              [ -n "$INSTANCE" ] || INSTANCE="ref-$(printf '%s' "$TARGET_REF" | tr '/' '-')"
+              CMD="start"
+              CHECKOUT_REF="$TARGET_REF" ;;
             repository_dispatch)
               INSTANCE="$DISPATCH_INSTANCE"
               [ -n "$INSTANCE" ] || { echo "[ctx] repository_dispatch with empty instance" >&2; exit 1; }
-              PR="${INSTANCE#pr-}"
+              # PR-keyed instances carry a pr; ref-keyed ones (ref-*/ui-*) do not.
+              case "$INSTANCE" in pr-*) PR="${INSTANCE#pr-}" ;; *) PR="" ;; esac
               case "$DISPATCH_TYPE" in
                 protocol-continue) CMD="continue"; NODE_PATH="$DISPATCH_PATH" ;;
                 *) echo "[ctx] unknown repository_dispatch type: $DISPATCH_TYPE" >&2; exit 1 ;;
@@ -143,17 +173,39 @@ jobs:
               fi
               ;;
           esac
+          # PR-targeted runs check out the PR head; if ctx didn't already set a
+          # checkout ref (the ref-target case did), default to the PR merge ref.
+          [ -n "$CHECKOUT_REF" ] || { [ -n "$PR" ] && CHECKOUT_REF="refs/pull/$PR/head"; }
           echo "pr=$PR" >> "$GITHUB_OUTPUT"
           echo "instance=$INSTANCE" >> "$GITHUB_OUTPUT"
           echo "command=$CMD" >> "$GITHUB_OUTPUT"
           echo "node_path=$NODE_PATH" >> "$GITHUB_OUTPUT"
+          echo "checkout_ref=$CHECKOUT_REF" >> "$GITHUB_OUTPUT"
       - id: head
         if: steps.ctx.outputs.command != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR: ${{ steps.ctx.outputs.pr }}
+          CHECKOUT_REF: ${{ steps.ctx.outputs.checkout_ref }}
+          INSTANCE: ${{ steps.ctx.outputs.instance }}
+          PROTO: ${{ inputs.protocol }}
+          REPO: ${{ github.repository }}
         run: |
-          SHA=$(gh pr view "$PR" --repo "${{ github.repository }}" --json headRefOid --jq .headRefOid)
+          # The analyzed commit SHA, resolved per target kind:
+          #  - PR run: the PR head commit.
+          #  - ref-target START (workflow_dispatch): the requested ref/branch tip.
+          #  - ref-target CONTINUE/JOIN (repository_dispatch carries no ref, and a
+          #    ui-keyed instance has no ref to recover): read the SHA already pinned
+          #    in the instance state at start — the source of truth across all hops.
+          if [ -n "$PR" ]; then
+            SHA=$(gh pr view "$PR" --repo "$REPO" --json headRefOid --jq .headRefOid)
+          elif [ -n "$CHECKOUT_REF" ]; then
+            SHA=$(gh api "repos/$REPO/commits/$CHECKOUT_REF" --jq .sha)
+          else
+            PID=$(jq -r .name "$PROTO")
+            SHA=$(gh api "repos/$REPO/contents/$PID/$INSTANCE/_instance.yaml?ref=agentic-state" \
+                   --jq '.content' | base64 -d | sed -n 's/^head_sha:[[:space:]]*//p' | head -1)
+          fi
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
       - id: plan
         if: steps.ctx.outputs.command != ''
@@ -254,7 +306,10 @@ jobs:
         # protocol whose first phase is an agent (e.g. preflight) needs the
         # protocol-level comment + audit link created the moment it starts.
         # ensure-status-comment is a no-op for a single-agent protocol.
-        if: steps.plan.outputs.action == 'run-fanout' || steps.plan.outputs.action == 'run-agent'
+        # Skipped for ref-targeted runs (no PR): status lives in the visibility API.
+        if: >
+          (steps.plan.outputs.action == 'run-fanout' || steps.plan.outputs.action == 'run-agent')
+          && steps.ctx.outputs.pr != ''
         env:
           STATE_REMOTE: https://x-access-token:${{ secrets.POC_DISPATCH_TOKEN }}@github.com/${{ github.repository }}.git
           PUBLISH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -289,6 +344,8 @@ jobs:
           NODE_PATH: ${{ matrix.leg.path }}
           LEG_WORKFLOW: ${{ matrix.leg.workflow }}
           INPUTS_JSON: ${{ needs.plan.outputs.inputs_json }}
+          CHECKOUT_REF: ${{ needs.plan.outputs.checkout_ref }}
+          SHA: ${{ needs.plan.outputs.head_sha }}
         run: |
           # Correlation id: unique per dispatch (run id + attempt + leg path).
           # The leg token is derived from the dot-path (dots → dashes for readability).
@@ -296,11 +353,16 @@ jobs:
           [ -n "$LEGTOK" ] || LEGTOK="agent"
           CID="${{ github.run_id }}-${{ github.run_attempt }}-${LEGTOK}"
           INPUTS="$INPUTS_JSON"; [ -n "$INPUTS" ] || INPUTS='{}'
+          # ref/sha let an agent check out the analyzed code for either target kind.
+          # Prefer the explicit checkout ref (PR head ref, or the ref a ref-target
+          # START requested); fall back to the resolved SHA for ref-target CONTINUE
+          # hops, where the dispatch carries no ref (the SHA is pinned in state).
+          REF="${CHECKOUT_REF:-$SHA}"
           CTX=$(jq -nc \
             --arg pr "$PR" --arg iteration "$ITERATION" --arg feedback "$FEEDBACK" \
             --argjson sabotage "$SABOTAGE" --arg cid "$CID" \
-            --argjson inputs "$INPUTS" \
-            '{pr: $pr, iteration: $iteration, feedback: $feedback, sabotage: $sabotage, cid: $cid, inputs: $inputs}')
+            --argjson inputs "$INPUTS" --arg ref "$REF" --arg sha "$SHA" \
+            '{pr: $pr, iteration: $iteration, feedback: $feedback, sabotage: $sabotage, cid: $cid, inputs: $inputs, ref: $ref, sha: $sha}')
           # Workflow comes from the matrix leg (next.py emits it in legs[]); read
           # via env var (never interpolated) to keep the security invariant.
           NAME="$LEG_WORKFLOW"
@@ -342,6 +404,7 @@ jobs:
     permissions:
       contents: read
       actions: read
+      issues: read
       pull-requests: read
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -366,15 +429,31 @@ jobs:
               --repo "${{ github.repository }}" -n evidence -D /tmp/agent || echo "no evidence artifact"
           fi
       - name: Fetch independent ground truth
+        env:
+          PR: ${{ needs.plan.outputs.pr }}
         run: |
-          gh pr diff "${{ needs.plan.outputs.pr }}" --repo "${{ github.repository }}" > /tmp/diff.txt
-          gh pr diff "${{ needs.plan.outputs.pr }}" --repo "${{ github.repository }}" --name-only > /tmp/files.txt
+          # PR-targeted runs: independently re-fetch the PR diff (the checks' ground
+          # truth, never trusting agent output). Ref-targeted runs (UI/workflow_dispatch)
+          # have no PR — write empty diff/files; those protocols' checks verify
+          # evidence manifests, not a diff.
+          if [ -n "$PR" ]; then
+            gh pr diff "$PR" --repo "${{ github.repository }}" > /tmp/diff.txt
+            gh pr diff "$PR" --repo "${{ github.repository }}" --name-only > /tmp/files.txt
+          else
+            : > /tmp/diff.txt
+            : > /tmp/files.txt
+          fi
       - name: Run checks
         env:
           RID: ${{ steps.meta.outputs.rid }}
           OK: ${{ steps.meta.outputs.ok }}
           NODE_PATH: ${{ matrix.leg.path }}
           PROTO: ${{ inputs.protocol }}
+          # PR number reaches the checks via env (generic context, like PR_BODY).
+          # A protocol check (e.g. code-review's local-review-evidence) uses it to
+          # fetch its own review activity with this job's read-only token — the
+          # engine prefetches nothing protocol-specific.
+          PR: ${{ needs.plan.outputs.pr }}
         run: |
           # run-checks.py resolves the check LIST + node-scoped params from the
           # protocol given NODE_PATH. NODE_PATH is the dot-joined tree path of the
@@ -394,16 +473,6 @@ jobs:
           PR_BODY="$(gh pr view "${{ needs.plan.outputs.pr }}" --repo "${{ github.repository }}" --json body --jq '.body' 2>/dev/null || true)"
           PR_TITLE="$(gh pr view "${{ needs.plan.outputs.pr }}" --repo "${{ github.repository }}" --json title --jq '.title' 2>/dev/null || true)"
           export PR_BODY PR_TITLE
-          # Review activity for the advisory local-review-evidence preflight check
-          # (custody parity). Best-effort, fetched by this trusted job (checks hold no
-          # creds); the conversation-transcript signal is read from changed-files by the
-          # check and the Reviewed-by trailer from PR_BODY. Preflight leg only — the
-          # only leg that runs that check.
-          PR_REVIEW_JSON='{}'
-          if [ "$NODE_PATH" = "preflight" ]; then
-            PR_REVIEW_JSON="$(.github/agent-factory/engine/prefetch-review.py "${{ github.repository }}" "${{ needs.plan.outputs.pr }}" || echo '{}')"
-          fi
-          export PR_REVIEW_JSON
           VERDICTS=$(.github/agent-factory/engine/run-checks.py \
             "$PROTO" "$NODE" "$EV" /tmp/diff.txt /tmp/files.txt)
           jq . <<<"$VERDICTS"

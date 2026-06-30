@@ -1,6 +1,9 @@
 """Shared path classifiers for the preflight checks. Ports custody's
 checks.js (isDocFile/isTestFile/isCodeFile) + locate.js (spec/plan path arms).
-Imported by spec/plan/docs/tests-present and adherence-coverage."""
+Imported by _coherence (docs-coverage, tests-coverage), the per-leg
+preflight coverage checks (spec-solves-issue-coverage, plan-spec-coverage,
+code-plan-coverage), traces-exist-in-diff, and the spec-solves-issue-agent
+prefetch."""
 import re
 
 _DOC = re.compile(r"\.(md|mdx|rst|adoc|txt)$", re.I)

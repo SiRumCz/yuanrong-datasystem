@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "preflight-gate consolidated evidence",
+  "type": "object",
+  "required": ["legs", "examined"],
+  "properties": {
+    "legs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["leg", "verdict", "scope"],
+        "properties": {
+          "leg": { "type": "string" },
+          "verdict": { "type": "string" },
+          "scope": { "type": "object" },
+          "summary": { "type": "string" }
+        }
+      }
+    },
+    "examined": { "type": "array", "items": { "type": "string" } }
+  }
+}

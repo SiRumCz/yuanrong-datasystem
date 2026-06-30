@@ -2,9 +2,11 @@
 detectPlanInBody, locateArtifact's association layer).
 
 Pure: callers supply the PR body + changed paths; file/probe I/O stays in the
-caller (mirrors custody's `io` injection). Shared by spec-present, plan-present,
-adherence-coverage, and the preflight-agent prefetch so the "is this artifact
-ASSOCIATED with the PR?" rule has ONE source of truth.
+caller (mirrors custody's `io` injection). Shared by _coherence (docs-coverage,
+tests-coverage), the per-leg preflight coverage checks
+(spec-solves-issue-coverage, plan-spec-coverage, code-plan-coverage),
+traces-exist-in-diff, and the spec-solves-issue-agent prefetch so the
+"is this artifact ASSOCIATED with the PR?" rule has ONE source of truth.
 
 custody parity: an artifact counts as associated only when the PR brings it in
 its own diff (a changed spec/plan path) OR writes it into the body (a
@@ -27,6 +29,13 @@ _PLAN_HEADING = re.compile(r"^#{1,6}\s*(implementation\s+plan|plan)\b.*$", re.I 
 _CHECKLIST = re.compile(r"^\s*[-*]\s+\[[ xX]\]\s+.+$", re.M)
 _HEADING_SPLIT = re.compile(r"^#{1,6}\s", re.M)
 _NON_WS = re.compile(r"\S")
+
+# GitHub closing-keyword issue references — matches the inflections
+# close/closed/closes, fix/fixed/fixes, resolve/resolved/resolves (with an
+# optional colon and a space) followed by #N, case-insensitive, keyword as a
+# whole word. Pure — the GraphQL closingIssuesReferences fetch lives in the
+# caller (io injection).
+_CLOSING_ISSUE = re.compile(r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b\s*:?\s+#(\d+)", re.I)
 
 
 def detect_spec_in_body(body):
@@ -55,17 +64,47 @@ def detect_plan_in_body(body):
     return None
 
 
+def parse_closing_issue_refs(body):
+    """Issue numbers closed by this PR via closing keywords in the body.
+
+    Detects `Closes|Fixes|Resolves [:] #N` (case-insensitive, whole word) and
+    returns the referenced issue numbers as ints, de-duplicated in first-seen
+    order. Pure: the GraphQL `closingIssuesReferences` fetch (the authoritative
+    cross-repo source) stays in the caller, which unions its result with this."""
+    if not body:
+        return []
+    seen, out = set(), []
+    for m in _CLOSING_ISSUE.finditer(body):
+        n = int(m.group(1))
+        if n not in seen:
+            seen.add(n)
+            out.append(n)
+    return out
+
+
+def detect_issue_link(body):
+    """The single issue number this PR closes via a body keyword, or None.
+
+    Thin wrapper over parse_closing_issue_refs returning the FIRST referenced
+    issue (the one spec-solves-issue judges against), or None when the PR body
+    carries no closing keyword. This is the exact helper the
+    spec-solves-issue-coverage check imports to recompute `issue_linked`, so the
+    agent prefetch and the check agree on the SAME body-keyword source."""
+    refs = parse_closing_issue_refs(body)
+    return refs[0] if refs else None
+
+
 def _is_path(kind):
     return _paths.is_spec_path if kind == "spec" else _paths.is_plan_path
 
 
-def locate(kind, body, changed_paths):
+def locate(kind, body, changed_paths, *, allow_body_fallback=True):
     """Resolve whether a spec/plan artifact is associated with this PR.
 
     Returns {found, source, body_hit, changed_hits, evidence}; source is one of
     'file', 'body-section', 'pr-description', or None. Order mirrors custody:
     diff/body association first, then (spec only) the description-as-claim
-    fallback."""
+    fallback (controlled by allow_body_fallback)."""
     is_path = _is_path(kind)
     changed_hits = [p for p in (changed_paths or []) if is_path(p)]
     body_hit = detect_spec_in_body(body) if kind == "spec" else detect_plan_in_body(body)
@@ -82,7 +121,7 @@ def locate(kind, body, changed_paths):
     # Layer 2 (spec only): no committed spec file and no structured requirements
     # section, but the PR has a description → treat the description as the claim.
     # Plan has no such fallback — a description is a claim, not an implementation plan.
-    if kind == "spec" and body and _NON_WS.search(body):
+    if allow_body_fallback and kind == "spec" and body and _NON_WS.search(body):
         return {"found": True, "source": "pr-description", "body_hit": None, "changed_hits": [],
                 "evidence": [{"label": "PR description",
                               "detail": "No committed spec file or requirements section — "
