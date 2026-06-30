@@ -1,0 +1,64 @@
+{
+  "name": "code-review-demo",
+  "version": "0.1.0",
+  "min_engine_version": "1.0.0",
+  "_note": "Demo slice of code-review: review (5 dims, each opens domain-labeled issues via gh-aw create-issue) -> join -> triage (consolidate, link issues) -> fix (apply patches to the PR head, push, close resolved issues) -> done. Self-contained: its own checks/schemas/rubrics so dist installs it standalone. preflight/overview/post-fix/mrp are intentionally absent. Review legs run at max_iterations:1 so a retried agent run cannot double-open issues (create-issue fires in the agent job before checks). Reuses the stock triage-agent and fix-agent; the fix commit/close lives in this dir's conclude-fix. NOTE: the security leg's deterministic Cedar/Guardians engines depend on code-review/scripts/ and are NOT part of this standalone unit — for full security analysis install alongside code-review; otherwise the security leg runs as an AI-only reviewer.",
+  "triggers": [
+    { "on": "issue_comment", "comment_prefix": "/demo-review", "command": "start" }
+  ],
+  "states": [
+    {
+      "id": "review",
+      "kind": "fanout",
+      "label": "multi-dimension review (opens issues)",
+      "params": { "status_note": { "verdict_field": "verdict", "flag_verdicts": ["REQUEST_CHANGES"], "severity_field": "severity", "flag_severities": ["critical", "high"], "label": "request-changes" } },
+      "branches": [
+        { "id": "correctness",     "workflow": "demo-review-correctness-agent",     "evidence": "review.evidence.schema.json", "max_iterations": 1, "params": { "dimension": "correctness",     "require": ["dimension", "verdict", "findings"], "non_empty": ["dimension", "verdict"] }, "checks": [ { "run": "evidence-present", "on_fail": "advisory" }, { "run": "review-schema-valid", "on_fail": "advisory" }, { "run": "review-findings-anchored", "on_fail": "advisory" } ] },
+        { "id": "test",            "workflow": "demo-review-test-agent",            "evidence": "review.evidence.schema.json", "max_iterations": 1, "params": { "dimension": "test",            "require": ["dimension", "verdict", "findings"], "non_empty": ["dimension", "verdict"] }, "checks": [ { "run": "evidence-present", "on_fail": "advisory" }, { "run": "review-schema-valid", "on_fail": "advisory" }, { "run": "review-findings-anchored", "on_fail": "advisory" } ] },
+        { "id": "performance",     "workflow": "demo-review-performance-agent",     "evidence": "review.evidence.schema.json", "max_iterations": 1, "params": { "dimension": "performance",     "require": ["dimension", "verdict", "findings"], "non_empty": ["dimension", "verdict"] }, "checks": [ { "run": "evidence-present", "on_fail": "advisory" }, { "run": "review-schema-valid", "on_fail": "advisory" }, { "run": "review-findings-anchored", "on_fail": "advisory" } ] },
+        { "id": "security",        "workflow": "demo-review-security-agent",        "evidence": "review.evidence.schema.json", "max_iterations": 1, "params": { "dimension": "security",        "require": ["dimension", "verdict", "findings"], "non_empty": ["dimension", "verdict"] }, "checks": [ { "run": "evidence-present", "on_fail": "advisory" }, { "run": "review-schema-valid", "on_fail": "advisory" }, { "run": "review-findings-anchored", "on_fail": "advisory" } ] },
+        { "id": "maintainability", "workflow": "demo-review-maintainability-agent", "evidence": "review.evidence.schema.json", "max_iterations": 1, "params": { "dimension": "maintainability", "require": ["dimension", "verdict", "findings"], "non_empty": ["dimension", "verdict"] }, "checks": [ { "run": "evidence-present", "on_fail": "advisory" }, { "run": "review-schema-valid", "on_fail": "advisory" }, { "run": "review-findings-anchored", "on_fail": "advisory" } ] }
+      ],
+      "next": "join-review"
+    },
+    { "id": "join-review", "kind": "join", "of": "review", "next": "triage" },
+    {
+      "id": "triage",
+      "kind": "agent",
+      "label": "review triage (cluster & rank)",
+      "workflow": "triage-agent",
+      "evidence": "triage.evidence.schema.json",
+      "max_iterations": 2,
+      "inputs": [
+        { "from": "correctness",     "as": "correctness" },
+        { "from": "test",            "as": "test" },
+        { "from": "performance",     "as": "performance" },
+        { "from": "security",        "as": "security" },
+        { "from": "maintainability", "as": "maintainability" }
+      ],
+      "params": { "require": ["clusters", "summary"] },
+      "checks": [
+        { "run": "evidence-present", "on_fail": "iterate" },
+        { "run": "triage-schema-valid", "on_fail": "iterate" }
+      ],
+      "conclude": "conclude-triage",
+      "next": "fix"
+    },
+    {
+      "id": "fix",
+      "kind": "agent",
+      "label": "apply remediations + commit to PR",
+      "workflow": "fix-agent",
+      "evidence": "fix.evidence.schema.json",
+      "max_iterations": 2,
+      "inputs": [ { "from": "triage", "as": "triage" } ],
+      "params": { "require": ["fixes", "mode"] },
+      "checks": [
+        { "run": "evidence-present", "on_fail": "iterate" },
+        { "run": "fix-schema-valid", "on_fail": "iterate" }
+      ],
+      "conclude": "conclude-fix",
+      "next": "done"
+    }
+  ]
+}
