@@ -1,7 +1,7 @@
 protocol: code-review-demo
 instance: pr-8
 head_sha: ff6ab46fb549df87d6a04538f01a68ab4c5fae29
-phase: review
-joined: false
-phase_label: multi-dimension review (opens issues)
+phase: triage
+joined: true
+phase_label: review triage (cluster & rank)
 status_comment_id: 4848757186
