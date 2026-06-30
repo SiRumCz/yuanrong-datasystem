@@ -1,0 +1,40 @@
+{
+  "scope": { "code_changed": true },
+  "items": [
+    {
+      "path": "docs/source_zh_cn/appendix/client_env_guide.md",
+      "status": "updated_appropriately",
+      "reason": "PR documents the two new client hot-update gflags with defaults, validator ranges, client_dead_timeout_s window, and 0.0 disable behavior matching the diff."
+    },
+    {
+      "path": ".repo_context/modules/client/client-sdk.md",
+      "status": "missing",
+      "reason": "Existing client SDK context documents standby worker failover, but the PR adds URMA data-plane failure as a new client-side switch trigger without updating this context."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md",
+    ".repo_context/modules/client/client-sdk.md",
+    "docs/source_zh_cn/appendix/client_env_guide.md",
+    "docs/source_zh_cn/deployment/dscli.md",
+    "docs/source_zh_cn/deployment/k8s_configuration.md",
+    "docs/source_zh_cn/best_practices/best_practices_for_rdma.md",
+    "docs/source_zh_cn/best_practices/best_pracitces_for_ub.md",
+    "docs/source_zh_cn/installation/build_guide/bazel_build.md",
+    "docs/source_zh_cn/installation/build_guide/cmake_build.md",
+    ".repo_context/modules/infra/common-infra.md",
+    ".repo_context/modules/infra/observability/performance-troubleshooting.md",
+    ".repo_context/playbooks/operations/urma-warmup.md"
+  ]
+}
