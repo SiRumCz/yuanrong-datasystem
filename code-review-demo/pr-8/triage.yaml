@@ -1,6 +1,6 @@
 protocol: code-review-demo
 instance: pr-8
-state: triage
+state: done
 iteration: 2
 gates: {}
 head_sha: ff6ab46fb549df87d6a04538f01a68ab4c5fae29
@@ -15,3 +15,9 @@ history:
     be an object; summary.present must be a dimension array; summary.missing must
     be a dimension array; summary.present and summary.missing must partition all dimensions;
     summary.clusters must equal len(clusters)'
+- iteration: 2
+  agent_run_id: '28483023166'
+  checks:
+    evidence-present: pass
+    triage-schema-valid: pass
+  feedback: ''
