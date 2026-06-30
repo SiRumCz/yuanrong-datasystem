@@ -1,0 +1,75 @@
+{
+  "legs": [
+    {
+      "leg": "spec-solves-issue",
+      "verdict": "n/a",
+      "scope": {
+        "issue_linked": false,
+        "spec_present": false
+      },
+      "summary": "The spec-solves-issue leg reported no linked issue and no spec present, with an empty matrix. Its own verdict was n/a."
+    },
+    {
+      "leg": "plan-implements-spec",
+      "verdict": "underspec",
+      "scope": {
+        "code_changed": true,
+        "spec_present": false,
+        "plan_present": false,
+        "spec_path": null,
+        "plan_path": null
+      },
+      "summary": "The plan-implements-spec leg found code changes but no spec or plan paths available. It rendered empty spec-to-plan and plan-to-spec mappings and returned underspec."
+    },
+    {
+      "leg": "code-implements-plan",
+      "verdict": "underplan",
+      "scope": {
+        "code_changed": true,
+        "plan_present": false,
+        "plan_path": null,
+        "code_files": [
+          ".conversations/7b1e9a4c-2d3f-4a8b-9c1e-0a2b3c4d5e6f.jsonl",
+          "src/datasystem/client/BUILD.bazel",
+          "src/datasystem/client/client_worker_common_api.cpp",
+          "src/datasystem/client/client_worker_common_api.h",
+          "src/datasystem/client/listen_worker.h",
+          "src/datasystem/client/object_cache/client_worker_api/client_worker_base_api.cpp",
+          "src/datasystem/client/object_cache/client_worker_api/client_worker_remote_api.cpp",
+          "src/datasystem/client/object_cache/object_client_impl.cpp",
+          "src/datasystem/client/object_cache/object_client_impl.h",
+          "src/datasystem/client/urma_success_rate_tracker.cpp",
+          "src/datasystem/client/urma_success_rate_tracker.h",
+          "src/datasystem/common/util/gflag/common_gflag_define.cpp",
+          "src/datasystem/common/util/gflag/common_gflags.h",
+          "src/datasystem/common/util/gflag/common_gflags_validate.cpp",
+          "src/datasystem/common/util/gflag/flags.h"
+        ]
+      },
+      "summary": "The code-implements-plan leg found code changes and no present plan, with changed client, gflag, and related files in scope. It reported the implementation as underplan, with file findings categorized as extra against the absent plan."
+    },
+    {
+      "leg": "mm-compliance",
+      "verdict": "compliant",
+      "scope": {},
+      "summary": "The mental-model compliance leg reported compliant. It listed 0 divergences."
+    },
+    {
+      "leg": "docs-updated-appropriately",
+      "verdict": "inadequate",
+      "scope": {
+        "code_changed": true
+      },
+      "summary": "The docs leg found the client environment guide updated appropriately for the new URMA failover gflags. It returned inadequate because .repo_context/modules/client/client-sdk.md was missing updates for the tracker, failure switching, and new UT/ST targets."
+    },
+    {
+      "leg": "tests-updated-appropriately",
+      "verdict": "inadequate",
+      "scope": {
+        "code_changed": true
+      },
+      "summary": "The tests leg found the new URMA tracker UT and KV failover ST updated appropriately. It returned inadequate because flags validator coverage was missing for invalid ratio, NaN or out-of-range values, and zero min-sample rejection."
+    }
+  ],
+  "examined": []
+}
