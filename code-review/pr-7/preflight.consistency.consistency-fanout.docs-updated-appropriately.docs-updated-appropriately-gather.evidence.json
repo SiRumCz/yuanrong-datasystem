@@ -1,0 +1,35 @@
+{
+  "scope": {
+    "code_changed": true
+  },
+  "items": [
+    {
+      "path": "docs/source_zh_cn/appendix/client_env_guide.md",
+      "status": "updated_appropriately",
+      "reason": "The PR documents the two new client gflags, defaults, valid ranges, DATASYSTEM_CLIENT_CONFIG_PATH usage, and the disable/min-sample semantics."
+    },
+    {
+      "path": ".repo_context/modules/client/client-sdk.md",
+      "status": "missing",
+      "reason": "Client failover behavior changed with request-driven URMA data-plane success-rate tracking and async worker switching, but the client module context was not updated."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    "docs/source_zh_cn/appendix/client_env_guide.md",
+    "docs/source_zh_cn/deployment/dscli.md",
+    "docs/source_zh_cn/deployment/k8s_configuration.md",
+    ".repo_context/modules/client/client-sdk.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md",
+    "src/datasystem/client/client_worker_common_api.cpp",
+    "src/datasystem/client/object_cache/object_client_impl.cpp",
+    "src/datasystem/client/urma_success_rate_tracker.cpp",
+    "src/datasystem/common/util/gflag/common_gflag_define.cpp",
+    "src/datasystem/common/util/gflag/flags.h"
+  ]
+}
