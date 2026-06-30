@@ -1,0 +1,33 @@
+{
+  "scope": {
+    "code_changed": true
+  },
+  "items": [
+    {
+      "path": "docs/source_zh_cn/appendix/client_env_guide.md",
+      "status": "updated_appropriately",
+      "reason": "Documents the new client-side URMA failover gflags, defaults, validation ranges, DATASYSTEM_CLIENT_CONFIG_PATH configuration path, and client_dead_timeout_s window behavior shown in the diff."
+    },
+    {
+      "path": ".repo_context/modules/client/client-sdk.md",
+      "status": "missing",
+      "reason": "Client SDK behavior now includes URMA data-plane success-rate-triggered worker failover, but the client module context still only describes existing connectivity and standby failover invariants."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "docs/source_zh_cn/appendix/client_env_guide.md",
+    "docs/source_zh_cn/best_practices/best_pracitces_for_ub.md",
+    "docs/source_zh_cn/deployment/dscli.md",
+    ".repo_context/modules/client/client-sdk.md",
+    ".repo_context/modules/infra/logging/design.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md"
+  ]
+}
