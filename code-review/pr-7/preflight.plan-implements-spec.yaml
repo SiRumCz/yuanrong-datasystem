@@ -1,11 +1,17 @@
 protocol: code-review
 instance: pr-7
-state: preflight
+state: failed
 iteration: 2
 gates: {}
 history:
 - iteration: 1
   agent_run_id: '28417560808'
+  checks:
+    evidence-present: pass
+    plan-spec-coverage: fail
+  feedback: in-scope leg must have non-empty spec_to_plan and plan_to_spec
+- iteration: 2
+  agent_run_id: '28417834784'
   checks:
     evidence-present: pass
     plan-spec-coverage: fail
