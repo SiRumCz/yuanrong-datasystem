@@ -2,6 +2,5 @@ protocol: code-review
 instance: pr-7
 head_sha: a52b6f8823295a7e131d0755bbf24a61914c4a72
 phase: preflight
-joined: true
-phase_label: "\u274C failed"
-status_comment_id: 4839404449
+joined: false
+phase_label: pre-flight adherence chain

@@ -1,22 +1,7 @@
 protocol: code-review
 instance: pr-7
-state: failed
-iteration: 2
+state: preflight
+iteration: 1
 gates: {}
-history:
-- iteration: 1
-  agent_run_id: '28416781410'
-  checks:
-    evidence-present: pass
-    plan-spec-coverage: fail
-  feedback: 'check is not executable: /home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/checks/plan-spec-coverage.py
-    (chmod +x and add a shebang)'
-- iteration: 2
-  agent_run_id: '28417144029'
-  checks:
-    evidence-present: fail
-    plan-spec-coverage: fail
-  feedback: 'evidence shape: missing required key `verdict`; missing required key
-    `examined`; check is not executable: /home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/checks/plan-spec-coverage.py
-    (chmod +x and add a shebang)'
+history: []
 head_sha: a52b6f8823295a7e131d0755bbf24a61914c4a72
