@@ -35,10 +35,18 @@ Rollup (9 floors unchanged + security floor):
   n/a contributes nothing.
   missing/unreadable GATHER evidence for a leg => fail-safe block.
 
+Advisory mode (env PREFLIGHT_ADVISORY truthy): every leg still runs and every
+finding is still computed, but the gate NEVER blocks — the would-block reasons are
+surfaced as advisory notes and the pipeline always advances to the next phase.
+This is a runtime toggle (a repo variable forwarded by the engine); the default
+(unset) is the enforcing gate. In advisory mode the security floor
+(LOCKED_VIOLATION) is advisory too — nothing hard-blocks.
+
 ABI: conclude-preflight.py <evidence.json> <instance-key>
-  env: BLOCKING ('1'/'0'), CONCLUDE_STATE_DIR, CONCLUDE_INPUTS_DIR, PUBLISH_TOKEN,
-       PR, GITHUB_REPOSITORY, ENGINE_LOCAL, VERDICT_OUT (default /tmp/gh-aw/verdict.json).
-Prints {"conclusion","summary","blocked","reasons":[...],"warnings":[...]}.
+  env: BLOCKING ('1'/'0'), PREFLIGHT_ADVISORY ('1'/'true'/… => advisory),
+       CONCLUDE_STATE_DIR, CONCLUDE_INPUTS_DIR, PUBLISH_TOKEN, PR,
+       GITHUB_REPOSITORY, ENGINE_LOCAL, VERDICT_OUT (default /tmp/gh-aw/verdict.json).
+Prints {"conclusion","summary","blocked","reasons":[...],"warnings":[...],"advisory":bool}.
 """
 import json
 import os
@@ -48,6 +56,12 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 "..", "..", "..", "engine"))
 import lib  # noqa: E402
+
+
+def _truthy(v):
+    """A repo-variable / env flag is 'on' for 1/true/yes/on (case-insensitive)."""
+    return str(v).strip().lower() in ("1", "true", "yes", "on")
+
 
 # Cluster definitions: cluster-file -> list of expected inner leg ids (in order).
 _ADHERENCE_LEGS = ("spec-solves-issue", "plan-implements-spec", "code-implements-plan")
@@ -310,15 +324,18 @@ def rollup(spec_leg, plan_leg, code_leg, mm_leg, docs_leg, tests_leg, security_l
     return reasons, warnings
 
 
-def _render_comment(status, reasons, warnings, spec_leg, plan_leg, code_leg, mm_leg, docs_leg, tests_leg, security_leg):
+def _render_comment(status, reasons, warnings, spec_leg, plan_leg, code_leg, mm_leg, docs_leg, tests_leg, security_leg,
+                    would_block=None):
     """Build the single consolidated comment body grouped under 4 cluster headings.
 
     Agent-supplied summaries are concatenated into this string; the whole body is
     passed to lib.post_pr_comment as ONE `gh api -f body=BODY` argument (an argument
-    vector, never shell-interpolated).
+    vector, never shell-interpolated). In advisory mode `would_block` carries the
+    findings that WOULD block in enforcing mode (surfaced, non-blocking).
     """
-    icon = "\U0001f6d1" if status == "blocked" else "✅"
-    lines = [f"{icon} **Preflight {status}** — adherence · mental-model · consistency · security", ""]
+    icon = {"blocked": "\U0001f6d1", "advisory": "ℹ️"}.get(status, "✅")
+    label = "advisory (non-blocking)" if status == "advisory" else status
+    lines = [f"{icon} **Preflight {label}** — adherence · mental-model · consistency · security", ""]
 
     def _leg_row(name, leg):
         v = _verdict(leg)
@@ -359,10 +376,14 @@ def _render_comment(status, reasons, warnings, spec_leg, plan_leg, code_leg, mm_
 
     if reasons:
         lines += ["", "**Blocking:**"] + [f"- {r}" for r in reasons]
+    if would_block:
+        lines += ["", "**Advisory — would block in enforcing mode:**"] + [f"- {r}" for r in would_block]
     if warnings:
         lines += ["", "**Advisory:**"] + [f"- {w}" for w in warnings]
     if status == "blocked":
         lines += ["", "_Halted — a maintainer `/override` advances past the gate._"]
+    elif status == "advisory":
+        lines += ["", "_Advisory preflight mode — findings surfaced, not blocking; pipeline continues._"]
     return "\n".join(lines)
 
 
@@ -422,10 +443,22 @@ def main():
     security_leg = legs.get("security")
 
     reasons, warnings = rollup(spec_leg, plan_leg, code_leg, mm_leg, docs_leg, tests_leg, security_leg)
-    blocked = bool(blocking or reasons)
-    if blocking:
-        reasons = reasons + ["engine blocking signal"]
-    status = "blocked" if blocked else "clear"
+
+    advisory = _truthy(os.environ.get("PREFLIGHT_ADVISORY", ""))
+    would_block = []
+    if advisory:
+        # Advisory mode: every leg still ran and every finding is still computed,
+        # but the gate NEVER blocks. The would-block reasons (incl. the security
+        # LOCKED floor) are downgraded to advisory notes; the pipeline advances.
+        would_block = reasons
+        reasons = []
+        blocked = False
+        status = "advisory"
+    else:
+        blocked = bool(blocking or reasons)
+        if blocking:
+            reasons = reasons + ["engine blocking signal"]
+        status = "blocked" if blocked else "clear"
 
     # verdict.json — custody-shaped payload (folds in the retired publish-verdict role).
     records = []
@@ -439,7 +472,8 @@ def main():
         records.append({"type": "leg", "leg": name,
                         "verdict": _verdict(leg), "scope": _scope(leg)})
     records.append({"type": "verdict", "status": status, "blocked": blocked,
-                    "blocking": bool(blocking), "reasons": reasons, "warnings": warnings})
+                    "blocking": bool(blocking), "advisory": advisory,
+                    "reasons": reasons, "warnings": warnings, "would_block": would_block})
     payload = {"records": records}
     if instance.startswith("pr-") and instance[3:].isdigit():
         payload["meta"] = {"pr_number": int(instance[3:]),
@@ -455,13 +489,23 @@ def main():
     pr = os.environ.get("PR", "")
     if pr:
         body = _render_comment(status, reasons, warnings,
-                               spec_leg, plan_leg, code_leg, mm_leg, docs_leg, tests_leg, security_leg)
+                               spec_leg, plan_leg, code_leg, mm_leg, docs_leg, tests_leg, security_leg,
+                               would_block=would_block)
         lib.post_pr_comment(pr, body)
 
-    summary = ("Preflight blocked: " + "; ".join(reasons)) if blocked else "Preflight clear."
-    print(json.dumps({"conclusion": "blocked" if blocked else "clear",
-                      "summary": summary, "blocked": blocked,
-                      "reasons": reasons, "warnings": warnings}))
+    if advisory:
+        conclusion = "advisory"
+        summary = (f"Preflight advisory: {len(would_block)} issue(s) surfaced, not blocking."
+                   if would_block else "Preflight clear (advisory mode).")
+    elif blocked:
+        conclusion = "blocked"
+        summary = "Preflight blocked: " + "; ".join(reasons)
+    else:
+        conclusion = "clear"
+        summary = "Preflight clear."
+    print(json.dumps({"conclusion": conclusion, "summary": summary, "blocked": blocked,
+                      "reasons": reasons, "warnings": (would_block + warnings) if advisory else warnings,
+                      "advisory": advisory}))
 
 
 if __name__ == "__main__":

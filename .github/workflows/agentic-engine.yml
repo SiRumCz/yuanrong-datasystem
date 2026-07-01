@@ -531,6 +531,9 @@ jobs:
           PR_HEAD_SHA: ${{ needs.plan.outputs.head_sha }}
           NODE_PATH: ${{ matrix.leg.path }}
           PROTO: ${{ inputs.protocol }}
+          # Runtime toggle (repo variable): "1"/"true" => preflight runs advisory
+          # (conclude-preflight surfaces findings but never blocks). Unset => enforcing.
+          PREFLIGHT_ADVISORY: ${{ vars.PREFLIGHT_ADVISORY }}
         run: |
           export AGENT_RUN_ID=$(cat /tmp/meta/run_id 2>/dev/null || echo "")
           VERDICTS=$(cat /tmp/verdicts/verdicts.json 2>/dev/null || echo "")
