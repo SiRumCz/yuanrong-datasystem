@@ -47,7 +47,7 @@
     ".github/agent-factory/protocols/code-review-demo-zkchen/plans/2026-06-25-review-triage-fix-gate-parity.md": "eea1a0b5723a24c2caf1b08dd65f4c593308b65aee171f63d87881c280b5efd9",
     ".github/agent-factory/protocols/code-review-demo-zkchen/plans/2026-06-25-security-review-cedar-guardians.md": "98685833f5bc77882460bb83516931e49129b26e54fe772204db0ee344b6fd05",
     ".github/agent-factory/protocols/code-review-demo-zkchen/preflight-gate.evidence.schema.json": "a9a9bc0fcac496758664fc308719db7ba5ddb94e7fe6651a8d2c36c8855949de",
-    ".github/agent-factory/protocols/code-review-demo-zkchen/protocol.json": "6380232e2923cac0942f1aabcedee3767560854dca18ee950e038e9b742e33fc",
+    ".github/agent-factory/protocols/code-review-demo-zkchen/protocol.json": "93fd503432155b6dbb4b019326dc0f5da2471f755523c5b26ed64680cc4b2ed5",
     ".github/agent-factory/protocols/code-review-demo-zkchen/publish/_derive_gate.py": "225ba2426bc474b722dca46bb6bfd486fbec9cc0695c8d91dad5cc19e77eb55d",
     ".github/agent-factory/protocols/code-review-demo-zkchen/publish/_risk_score.py": "1270cb4820f9ea2aa48fac3ff4bcec35f4a0e789992ff86a4aa4c9731e146d17",
     ".github/agent-factory/protocols/code-review-demo-zkchen/publish/conclude-context.py": "2cf37f5b2b13d54fca2bd16eaa9540af6d27278e3b7dec47302e9a085f9868ec",
