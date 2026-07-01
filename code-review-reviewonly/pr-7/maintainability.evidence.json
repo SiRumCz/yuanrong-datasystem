@@ -1,0 +1,24 @@
+{
+  "dimension": "maintainability",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": "src/datasystem/client/client_worker_common_api.h",
+      "line": 259,
+      "severity": "medium",
+      "category": "maintainability",
+      "title": "URMA failover hooks leak into the common worker API",
+      "impact": "Adding RecordUrmaDataPlaneResult, FinishUrmaDataPlaneSwitchAttempt, and SetUrmaDataPlaneFailureCallback as no-op virtuals on IClientWorkerCommonApi makes every worker implementation carry URMA-specific failover concepts even when it cannot use URMA. Future transport-specific recovery logic will have to understand these hidden optional hooks or add more no-op methods, making the common API harder to reason about.",
+      "fix": "Keep the common worker API transport-neutral: move these hooks behind a small URMA-capable interface/observer owned by the remote worker API, or inject a nullable failover recorder into the UB send/get paths instead of widening IClientWorkerCommonApi."
+    },
+    {
+      "path": "src/datasystem/client/urma_success_rate_tracker.h",
+      "line": 78,
+      "severity": "low",
+      "category": "maintainability",
+      "title": "Test-only tracker accessor is part of the production API",
+      "impact": "GetCurrentSampleCountForTest exposes internal counter state on the production tracker solely for tests. Because this class is built as a normal client library, future code can accidentally depend on a test-oriented, implementation-specific snapshot and make later changes to the tracker state model harder.",
+      "fix": "Hide the accessor behind a test-only build guard or friend the unit test fixture, and keep the production surface limited to RecordUrmaResult, FinishSwitchAttempt, ResetWindow, and operational state needed by runtime logging."
+    }
+  ]
+}
