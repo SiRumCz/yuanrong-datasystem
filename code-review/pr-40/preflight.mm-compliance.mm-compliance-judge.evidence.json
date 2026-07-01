@@ -1,0 +1,21 @@
+{
+  "leg": "mm-compliance",
+  "scope": {},
+  "gather_verdict": "diverges",
+  "graded_findings": [
+    {
+      "ref": "0",
+      "severity": "blocking",
+      "rationale": "The finding describes a new Notify CLI/API surface that is outside the documented datasystem scope and interface families. Adding unrelated product capability is a substantive adherence gap that should stop merge unless the product scope is formally changed."
+    },
+    {
+      "ref": "1",
+      "severity": "advisory",
+      "rationale": "Missing repository-standard headers on new Python source and test files is a real convention violation, but it is mechanical to fix and does not by itself change runtime behavior or product scope."
+    }
+  ],
+  "examined": [
+    "0",
+    "1"
+  ]
+}
