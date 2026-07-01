@@ -1,0 +1,47 @@
+{
+  "legs": [
+    {
+      "leg": "spec-solves-issue",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence cluster evidence was not available, so this leaf leg has no source verdict or scope to render."
+    },
+    {
+      "leg": "plan-implements-spec",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence cluster evidence was not available, so this leaf leg has no source verdict or scope to render."
+    },
+    {
+      "leg": "code-implements-plan",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence cluster evidence was not available, so this leaf leg has no source verdict or scope to render."
+    },
+    {
+      "leg": "mm-compliance",
+      "verdict": "compliant",
+      "scope": {},
+      "summary": "MM compliance evidence reported compliant. It included 0 graded findings, so no divergences were rendered."
+    },
+    {
+      "leg": "docs-updated-appropriately",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Consistency cluster evidence was not available, so this leaf leg has no source verdict or scope to render."
+    },
+    {
+      "leg": "tests-updated-appropriately",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Consistency cluster evidence was not available, so this leaf leg has no source verdict or scope to render."
+    },
+    {
+      "leg": "security",
+      "verdict": "PASS",
+      "scope": {},
+      "summary": "Security evidence reported PASS. It included 0 graded findings, so no locked violations were rendered."
+    }
+  ],
+  "examined": []
+}
