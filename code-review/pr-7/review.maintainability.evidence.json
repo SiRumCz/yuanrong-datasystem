@@ -1,0 +1,24 @@
+{
+  "dimension": "maintainability",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": ".conversations/7b1e9a4c-2d3f-4a8b-9c1e-0a2b3c4d5e6f.jsonl",
+      "line": 1,
+      "severity": "medium",
+      "category": "maintainability",
+      "title": "Remove committed agent conversation transcript",
+      "impact": "The new .conversations file is not product source, tests, or durable design documentation; it embeds an AI work transcript with partial code snippets and implementation notes that can diverge from the real files. Future searches and reviews will have to distinguish this stale narrative from authoritative source, which adds noise and can mislead maintainers.",
+      "fix": "Drop the .conversations file from the PR. If any rationale from the transcript is useful, move a concise, source-backed explanation into the relevant code comment, design doc, or PR description instead."
+    },
+    {
+      "path": "src/datasystem/client/urma_success_rate_tracker.h",
+      "line": 74,
+      "severity": "low",
+      "category": "maintainability",
+      "title": "Keep test-only sample counter out of the production API",
+      "impact": "GetCurrentSampleCountForTest is declared on the production tracker class solely for tests. Even with the comment, it becomes part of the normal header surface and invites future production call sites to depend on internal counter state that the tracker should own privately.",
+      "fix": "Hide this behind a WITH_TESTS guard, expose it through a test-only friend/helper, or assert the same behavior through settled WindowStats so the production class does not carry test-only API."
+    }
+  ]
+}
