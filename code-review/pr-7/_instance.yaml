@@ -1,7 +1,7 @@
 protocol: code-review
 instance: pr-7
 head_sha: a52b6f8823295a7e131d0755bbf24a61914c4a72
-phase: triage
+phase: fix
 joined: true
-phase_label: review triage (cluster & rank)
+phase_label: propose remediations (suggest)
 status_comment_id: 4854982121
