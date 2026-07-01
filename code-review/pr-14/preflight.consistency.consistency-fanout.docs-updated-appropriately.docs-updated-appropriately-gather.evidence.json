@@ -1,0 +1,100 @@
+{
+  "scope": {
+    "code_changed": true
+  },
+  "items": [
+    {
+      "path": "docs/source_zh_cn/appendix/log_guide.md",
+      "status": "updated_appropriately",
+      "reason": "Changed doc replaces removed log_rate_limit behavior with request/access/diagnostic sample rates, derivation, worker authority, and dynamic config notes."
+    },
+    {
+      "path": "docs/source_zh_cn/appendix/client_env_guide.md",
+      "status": "updated_appropriately",
+      "reason": "Changed doc removes the obsolete DATASYSTEM_LOG_RATE_LIMIT environment variable, matching the new worker-authoritative sampler design."
+    },
+    {
+      "path": "docs/source_zh_cn/deployment/dscli.md",
+      "status": "updated_appropriately",
+      "reason": "Changed doc replaces dscli log_rate_limit config with the three sample-rate options and derivation semantics."
+    },
+    {
+      "path": ".repo_context/index.md",
+      "status": "updated_appropriately",
+      "reason": "Changed navigation adds the new log sampler design entrypoint for the logging module."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/README.md",
+      "status": "updated_appropriately",
+      "reason": "Changed module overview adds LogSampler responsibilities and routes readers to the new sampler design."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/log-sampler-design.md",
+      "status": "updated_appropriately",
+      "reason": "New design doc covers the new LogSampler behavior, config surface, propagation, hot-path constraints, and tests."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/design.md",
+      "status": "missing",
+      "reason": "Existing canonical logging design still documents log_rate_limit and LogRateLimiter even though the PR removes them and adds LogSampler."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/trace-and-context.md",
+      "status": "missing",
+      "reason": "Existing trace doc still says SetRequestTraceUUID creates a local decision via log_rate_limit/LogRateLimiter, which is stale under request_sample_rate and LogSampler."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/access-recorder.md",
+      "status": "missing",
+      "reason": "Existing access recorder doc does not describe the new access sampling guard/facades or access_sample_rate behavior for CLIENT and ACCESS records."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/plog-slow-request-plan.md",
+      "status": "missing",
+      "reason": "Existing PLOG plan still describes bypassing log_rate_limit sampling instead of the new diagnostic_sample_rate and request sampled-in semantics."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/plog-slow-get-implementation-summary.md",
+      "status": "missing",
+      "reason": "Existing PLOG summary still states PLOG bypasses log_rate_limit request sampling and was not updated for LogSampler diagnostic handling."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md",
+    ".repo_context/modules/infra/logging/README.md",
+    ".repo_context/modules/infra/logging/log-sampler-design.md",
+    ".repo_context/modules/infra/logging/design.md",
+    ".repo_context/modules/infra/logging/trace-and-context.md",
+    ".repo_context/modules/infra/logging/access-recorder.md",
+    ".repo_context/modules/infra/logging/plog-slow-request-plan.md",
+    ".repo_context/modules/infra/logging/plog-slow-get-implementation-summary.md",
+    "docs/source_zh_cn/appendix/log_guide.md",
+    "docs/source_zh_cn/appendix/client_env_guide.md",
+    "docs/source_zh_cn/deployment/dscli.md",
+    "cli/deploy/conf/worker_config.json",
+    "k8s/helm_chart/datasystem/templates/configmap.yaml",
+    "k8s/helm_chart/datasystem/templates/worker_daemonset.yaml",
+    "k8s/helm_chart/datasystem/values.yaml",
+    "k8s_deployment/helm_chart/worker.config",
+    "include/datasystem/utils/embedded_config.h",
+    "src/datasystem/common/log/log.h",
+    "src/datasystem/common/log/logging.cpp",
+    "src/datasystem/common/log/log_sampler.cpp",
+    "src/datasystem/common/log/log_sampler.h",
+    "src/datasystem/common/log/trace.cpp",
+    "src/datasystem/common/log/access_recorder.cpp",
+    "src/datasystem/protos/share_memory.proto",
+    "src/datasystem/protos/meta_zmq.proto"
+  ]
+}
