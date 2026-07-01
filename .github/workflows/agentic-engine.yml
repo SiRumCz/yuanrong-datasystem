@@ -525,7 +525,9 @@ jobs:
         env:
           STATE_REMOTE: https://x-access-token:${{ secrets.POC_DISPATCH_TOKEN }}@github.com/${{ github.repository }}.git
           GH_TOKEN: ${{ secrets.POC_DISPATCH_TOKEN }}
-          PUBLISH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # conclude-fix pushes to the PR head + closes issues; publish-review opens issues.
+          # Needs contents:write + issues:write — use the write-capable PAT, not GITHUB_TOKEN.
+          PUBLISH_TOKEN: ${{ secrets.POC_DISPATCH_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           PR: ${{ needs.plan.outputs.pr }}
           PR_HEAD_SHA: ${{ needs.plan.outputs.head_sha }}

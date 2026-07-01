@@ -116,6 +116,22 @@ def _write_triage(obj):
         pass
 
 
+def _linked_issue_lines(clusters):
+    seen, lines = set(), []
+    for c in sorted(clusters, key=lambda x: x.get("rank") or 999):
+        for m in c.get("member_findings") or []:
+            if not isinstance(m, dict):
+                continue
+            dim, title = m.get("dimension"), m.get("title")
+            if not dim or not title:
+                continue
+            key = (f"review:{dim}", title)
+            if key not in seen:
+                seen.add(key)
+                lines.append(f"- `{key[0]}` --- {title}")
+    return lines
+
+
 def _comment(triage):
     gate = triage["gate"]["verdict"]
     counts = triage["gate"]["counts"]
@@ -137,6 +153,11 @@ def _comment(triage):
                 f"{cluster.get('rank', '?')}. [{cluster.get('severity', '?')}] "
                 f"{cluster.get('cluster_id', '?')}: {cluster.get('title', '')}"
             )
+    linked = _linked_issue_lines(triage.get("clusters") or [])
+    if linked:
+        lines.append("")
+        lines.append("Linked issues:")
+        lines.extend(linked)
     return "\n".join(lines)
 
 
