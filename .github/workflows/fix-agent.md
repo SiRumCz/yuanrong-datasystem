@@ -56,6 +56,7 @@ post-steps:
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
 timeout-minutes: 10
+source: golivax/agentic-protocol-poc/.github/workflows/fix-agent.md@6e591f728eedbcf694b79c435dc5e6147c1d882c
 ---
 
 # Fix Agent — propose remediations (suggest mode)
@@ -114,14 +115,6 @@ For each fixable cluster, build one `fixes` entry:
 - `suggested_patch`: the exact replacement line(s) with your change applied. Read
   the current line content from `/tmp/gh-aw/agent/pr.diff` so the patch reproduces
   the target line(s) faithfully, with only the fix applied.
-- `original_line`: **REQUIRED.** The exact current content of the line at `line`,
-  verbatim — copied character-for-character from the `+`/context line in
-  `/tmp/gh-aw/agent/pr.diff` (drop only the leading `+`/space diff marker; keep all
-  indentation and code). The engine verifies this against the real file and
-  **re-anchors by this content** if your `line` number is off, so it must match a
-  real line exactly. A fix whose `original_line` cannot be found verbatim in the
-  file is **skipped, not applied** — so never guess it; if you cannot copy the
-  exact line, put the cluster under `skipped[]` instead.
 
 For each selected code-fixable cluster you intentionally do not fix, build one
 `skipped` entry:

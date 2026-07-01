@@ -48,10 +48,13 @@ if (require.main === module) {
   const [prPath, outDir] = process.argv.slice(2)
   const repo = process.env.REPO
   const pr = JSON.parse(fs.readFileSync(prPath, 'utf8'))
-  // The transcript lives IN the PR, so read its `.conversations/` at the PR head commit
-  // (headRefOid is commit-pinned; fall back to the branch name). pr.json comes from
-  // `gh pr view --json …,headRefName,headRefOid` in the workflow's prefetch step.
-  const ref = pr.headRefOid || pr.headRefName
+  // Where the transcript lives is configurable:
+  //   - default: IN the PR — its `.conversations/` at the PR head commit (headRefOid is
+  //     commit-pinned; fall back to the branch name). pr.json comes from
+  //     `gh pr view --json …,headRefName,headRefOid` in the workflow's prefetch step.
+  //   - CONVERSATIONS_REF (+ CONVERSATIONS_DIR): read from a dedicated branch instead,
+  //     e.g. CONVERSATIONS_REF=conversations with CONVERSATIONS_DIR=<owner>/<repo>/pr-<N>.
+  const ref = process.env.CONVERSATIONS_REF || pr.headRefOid || pr.headRefName
   const dir = CONVERSATIONS_DIR
   const gh = (args) => execFileSync('gh', args, { encoding: 'utf8', maxBuffer: 128 * 1024 * 1024 })
   const isNotFound = (err) => /Not Found|HTTP 404/i.test(String(err.message || err))

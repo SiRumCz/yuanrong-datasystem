@@ -2,13 +2,8 @@
 """Conclude hook for fix: completeness against real triage input + suggestions."""
 import json
 import os
-import shutil
 import subprocess
 import sys
-import tempfile
-
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import _apply_fixes  # noqa: E402
 
 CODE_FIXABLE = {"correctness", "security", "performance", "maintainability"}
 
@@ -133,182 +128,6 @@ def _post_review(payload):
     )
 
 
-def _triage_clusters():
-    return _triage_input().get("clusters") or []
-
-
-def _issue_targets(applied_cluster_ids):
-    """Map applied cluster_ids -> issue close-targets {label,title} via triage members."""
-    targets = []
-    seen = set()
-    for cluster in _triage_clusters():
-        if not isinstance(cluster, dict) or cluster.get("cluster_id") not in applied_cluster_ids:
-            continue
-        for m in cluster.get("member_findings") or []:
-            if not isinstance(m, dict):
-                continue
-            dim, title = m.get("dimension"), m.get("title")
-            if not dim or not title:
-                continue
-            key = (f"review:{dim}", title)
-            if key not in seen:
-                seen.add(key)
-                targets.append({"label": key[0], "title": title})
-    return targets
-
-
-def _git(args, cwd, token=None):
-    env = dict(os.environ)
-    if token:
-        env["GIT_TERMINAL_PROMPT"] = "0"
-    return subprocess.run(["git", *args], cwd=cwd, env=env,
-                          text=True, capture_output=True)
-
-
-def _apply_commit_close(evidence):
-    """Apply fixes to the PR head, push a commit, close resolved issues.
-    Returns a report dict. ENGINE_LOCAL short-circuits to APPLY_WORKDIR/APPLY_OUT."""
-    fixes = evidence.get("fixes") if isinstance(evidence.get("fixes"), list) else []
-    report = {"applied": 0, "skipped": [], "pushed": False, "close": []}
-    if not fixes:
-        _write_apply(report)
-        return report
-
-    local = os.environ.get("ENGINE_LOCAL", "0") == "1"
-    repo = os.environ.get("GITHUB_REPOSITORY", "")
-    pr = os.environ.get("PR", "")
-    token = os.environ.get("GH_TOKEN") or os.environ.get("PUBLISH_TOKEN")
-
-    if local:
-        workdir = os.environ.get("APPLY_WORKDIR")
-        results = _apply_fixes.apply_all(workdir, fixes) if workdir else []
-    else:
-        if not repo or not pr or not token:
-            _write_apply(report)
-            return report
-        head = _pr_head_ref(repo, pr, token)
-        if not head:
-            _write_apply(report)
-            return report
-        workdir = tempfile.mkdtemp(prefix="fix-apply-")
-        url = f"https://x-access-token:{token}@github.com/{repo}.git"
-        if _git(["clone", "--depth", "1", "--branch", head, url, workdir]).returncode != 0:
-            shutil.rmtree(workdir, ignore_errors=True)
-            _write_apply(report)
-            return report
-        results = _apply_fixes.apply_all(workdir, fixes)
-
-    try:
-        applied = [r for r in results if r["status"] == "applied"]
-        report["applied"] = len(applied)
-        report["skipped"] = [
-            {"cluster_id": r.get("cluster_id"), "path": r.get("path"), "reason": r.get("detail")}
-            for r in results if r["status"] != "applied"
-        ]
-        report["close"] = _issue_targets({r["cluster_id"] for r in applied})
-
-        if applied and not local:
-            paths = sorted({r["path"] for r in applied})
-            push = _commit_push(workdir, head, pr, paths, token)
-            report["pushed"] = push["ok"]
-            if not push["ok"]:
-                report["push_error"] = push["detail"]
-            if push["ok"]:
-                _close_issues(repo, report["close"], token)
-            shutil.rmtree(workdir, ignore_errors=True)
-    except Exception as e:
-        report["error"] = str(e)
-
-    if not local:
-        _post_apply_comment(repo, pr, token, report)
-    _write_apply(report)
-    return report
-
-
-def _pr_head_ref(repo, pr, token):
-    env = dict(os.environ); env["GH_TOKEN"] = token
-    r = subprocess.run(["gh", "pr", "view", pr, "--repo", repo, "--json", "headRefName",
-                        "--jq", ".headRefName"], text=True, capture_output=True, env=env)
-    return r.stdout.strip() if r.returncode == 0 else ""
-
-
-def _commit_push(workdir, head, pr, paths, token):
-    """Commit the given paths and push to the PR head branch. Returns
-    {"ok": bool, "detail": str} — detail carries the git error on failure."""
-    paths = sorted(set(paths))
-    if not paths:
-        return {"ok": False, "detail": "no paths to commit"}
-    _git(["config", "user.name", "agentic-fix-bot"], workdir)
-    _git(["config", "user.email", "agentic-fix-bot@users.noreply.github.com"], workdir)
-    _git(["add", "--", *paths], workdir)
-    msg = f"fix: apply AI review remediations (PR #{pr})"
-    c = _git(["commit", "-m", msg], workdir)
-    if c.returncode != 0:
-        return {"ok": False, "detail": f"commit failed: {(c.stderr or c.stdout).strip()[:300]}"}
-    # Explicit refspec so the push targets the PR head branch unambiguously.
-    p = _git(["push", "origin", f"HEAD:refs/heads/{head}"], workdir, token=token)
-    if p.returncode != 0:
-        return {"ok": False, "detail": f"push failed: {(p.stderr or p.stdout).strip()[:300]}"}
-    return {"ok": True, "detail": ""}
-
-
-def _post_apply_comment(repo, pr, token, report):
-    """Surface the fix-apply outcome on the PR so failures are visible (never silent)."""
-    if not repo or not pr:
-        return
-    lines = [f"AI fix phase: applied={report.get('applied', 0)}, pushed={report.get('pushed', False)}."]
-    if report.get("push_error"):
-        lines.append(f"Push error: {report['push_error']}")
-    if report.get("error"):
-        lines.append(f"Error: {report['error']}")
-    skipped = report.get("skipped") or []
-    if skipped:
-        lines.append("Skipped fixes:")
-        for s in skipped[:10]:
-            lines.append(f"- {s.get('cluster_id')} ({s.get('path')}): {s.get('reason')}")
-    body = "\n".join(lines)
-    env = dict(os.environ)
-    if token:
-        env["GH_TOKEN"] = token
-    subprocess.run(["gh", "api", f"repos/{repo}/issues/{pr}/comments", "-f", f"body={body}"],
-                   text=True, capture_output=True, env=env)
-
-
-def _close_issues(repo, targets, token):
-    env = dict(os.environ); env["GH_TOKEN"] = token
-    for t in targets:
-        label = t["label"]
-        target_title = t["title"]
-        # Reconstruct the full issue title as publish-review opens it:
-        # "[ai-review][<dim>] <finding-title>"
-        dim = label.split(":", 1)[1] if ":" in label else label
-        expected_title = f"[ai-review][{dim}] {target_title}"
-        listing = subprocess.run(
-            ["gh", "issue", "list", "--repo", repo, "--label", label,
-             "--state", "open", "--json", "number,title"],
-            text=True, capture_output=True, env=env)
-        try:
-            items = json.loads(listing.stdout or "[]")
-        except ValueError:
-            items = []
-        for it in items:
-            if (it.get("title") or "").strip() == expected_title.strip():
-                subprocess.run(["gh", "issue", "close", str(it["number"]), "--repo", repo,
-                                "--comment", "Resolved by the AI fix phase (committed to the PR)."],
-                               text=True, capture_output=True, env=env)
-
-
-def _write_apply(report):
-    out = os.environ.get("APPLY_OUT")
-    if not out:
-        return
-    try:
-        with open(out, "w") as fh:
-            json.dump(report, fh)
-    except OSError:
-        pass
-
-
 def main():
     evidence = _load_json(sys.argv[1] if len(sys.argv) > 1 else "")
     triage = _triage_input()
@@ -322,18 +141,14 @@ def main():
         "commit_id": os.environ.get("HEAD_SHA") or os.environ.get("PR_HEAD_SHA", ""),
     }
     _post_review(payload)
-    apply_report = _apply_commit_close(evidence)
     print(
         json.dumps(
             {
                 "conclusion": "neutral",
                 "summary": (
-                    f"Fix suggestions: clusters_fixed={len(report['applied'])}, "
+                    f"Fix suggestions: applied={len(report['applied'])}, "
                     f"skipped={len(report['skipped'])}, dropped={len(report['dropped'])}, "
                     f"unknown={len(report['unknown']['fixes']) + len(report['unknown']['skipped'])}."
-                    f" files_patched={apply_report['applied']}, pushed={apply_report['pushed']}"
-                    f"{('; push_error=' + apply_report['push_error']) if apply_report.get('push_error') else ''}"
-                    f"{('; error=' + apply_report['error']) if apply_report.get('error') else ''}."
                 ),
                 "blocked": False,
             }

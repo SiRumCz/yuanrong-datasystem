@@ -1,43 +1,9 @@
 // app/backend/component/reviewers/workflow/security/actions-from-transcript.js
 'use strict'
 const { decide } = require('./_cedar-decide.js')
-
-const SECRET_RE = /(^|\/)\.env|\.pem$|credentials|secret|\.key$/i
-const DESTRUCTIVE_RE = /\brm\s+-rf\b|git\s+push\s+--force|git\s+reset\s+--hard|\bmkfs\b|:\s*>\s*\//
-
-// Map one Claude Code tool_use entry to a PARC-ish action descriptor (or null to skip).
-function toAction(name, input) {
-  const n = String(name || '')
-  if (n === 'Read') {
-    const p = input.file_path || ''
-    return SECRET_RE.test(p)
-      ? { action: 'ReadSecret', resourceType: 'Secret', resource: p, touched_secret: true }
-      : { action: 'ReadFile', resourceType: 'File', resource: p }
-  }
-  if (n === 'Edit' || n === 'Write' || n === 'NotebookEdit')
-    return { action: 'WriteFile', resourceType: 'File', resource: input.file_path || input.notebook_path || '' }
-  if (n === 'WebFetch') {
-    let host
-    try { host = new URL(input.url).host } catch { return null }
-    if (!host) return null
-    return { action: 'Network', resourceType: 'Host', resource: host, external_host: true }
-  }
-  if (n === 'WebSearch') return null  // no destination host; not a network egress action
-  if (n === 'Bash')
-    return { action: 'RunCommand', resourceType: 'Command', resource: 'bash',
-             destructive: DESTRUCTIVE_RE.test(input.command || '') }
-  return null
-}
-
-function* toolUses(jsonlText) {
-  for (const line of jsonlText.split('\n')) {
-    if (!line.trim()) continue
-    let obj; try { obj = JSON.parse(line) } catch { continue }
-    const content = obj && obj.message && obj.message.content
-    if (!Array.isArray(content)) continue
-    for (const c of content) if (c && c.type === 'tool_use') yield { name: c.name, input: c.input || {} }
-  }
-}
+// Pure tool_use classification is shared with Guardians' transcript-extract.js (which must NOT pull
+// in the Cedar wasm engine required above), so it lives in a dependency-free module.
+const { toAction, toolUses } = require('./_transcript-actions.js')
 
 // analyzeTranscripts(jsonlTexts[], { policiesText, allowedHosts, changedPaths }) -> { status, flags }
 function analyzeTranscripts(jsonlTexts, { policiesText, allowedHosts = [], changedPaths = [] }) {
@@ -81,4 +47,4 @@ function analyzeTranscripts(jsonlTexts, { policiesText, allowedHosts = [], chang
   return { status: 'ok', flags }
 }
 
-module.exports = { analyzeTranscripts, toAction }
+module.exports = { analyzeTranscripts, toAction, toolUses }

@@ -426,6 +426,7 @@
       "max_iterations": 2,
       "inputs": [
         { "from": "preflight-gate", "as": "preflight" },
+        { "from": "mm-compliance", "as": "mm-compliance" },
         { "from": "overview",  "as": "overview" },
         { "from": "triage",    "as": "triage" },
         { "from": "context",   "as": "context" }

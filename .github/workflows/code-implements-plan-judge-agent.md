@@ -41,7 +41,7 @@ post-steps:
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
 timeout-minutes: 10
-source: golivax/agentic-protocol-poc/.github/workflows/code-implements-plan-judge-agent.md@3c0934933674436397ee54e4847c3f3b990bde95
+source: golivax/agentic-protocol-poc/.github/workflows/code-implements-plan-judge-agent.md@6e591f728eedbcf694b79c435dc5e6147c1d882c
 ---
 
 # Code-Implements-Plan Judge — grade the seriousness of the gather's findings

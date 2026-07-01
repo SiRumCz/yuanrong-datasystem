@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-"""Publish one labeled GitHub issue per finding from review evidence."""
+"""Publish one GitHub PR review from top-level review evidence."""
 import json
 import os
 import subprocess
 import sys
-
-AI_REVIEW_LABEL = "ai-review"
 
 
 def gh_api(path, method=None, input_json=None, token=None, jq=None):
@@ -36,77 +34,110 @@ def _conclusion(event):
     return "neutral"
 
 
-def _label(dim):
-    return f"review:{dim}"
+def _comment_body(finding):
+    sev = finding.get("severity") or "unknown"
+    title = finding.get("title") or "Review finding"
+    impact = finding.get("impact") or ""
+    fix = finding.get("fix") or ""
+    return (
+        f"**[{sev}] {title}**\n\n"
+        "<details><summary>Impact and fix</summary>\n\n"
+        f"Impact:\n{impact}\n\n"
+        f"Fix:\n{fix}\n"
+        "</details>"
+    )
 
 
-def _title(dim, f):
-    # prefix FIRST so conclude-fix._close_issues endswith(finding.title) matches
-    return f"[ai-review][{dim}] " + (f.get("title") or "")
+def _comments(evidence):
+    out = []
+    for finding in evidence.get("findings") or []:
+        comment = {
+            "path": finding["path"],
+            "line": finding["line"],
+            "side": "RIGHT",
+            "body": _comment_body(finding),
+        }
+        if finding.get("start_line"):
+            comment["start_line"] = finding["start_line"]
+            comment["start_side"] = "RIGHT"
+        out.append(comment)
+    return out
 
 
-def _issue_body(f, dim, pr):
-    return (f"`{f.get('path')}:{f.get('line')}` · **{f.get('severity') or 'unknown'}**\n\n"
-            f"{f.get('impact') or ''}\n\n"
-            f"**Suggested fix**\n```\n{f.get('fix') or ''}\n```\n\n"
-            f"Found by the {dim} reviewer on PR #{pr}")
-
-
-def _existing_titles(repo, dim, token):
-    r = gh_api(f"repos/{repo}/issues?state=open&labels={_label(dim)}&per_page=100",
-               token=token, jq=".[].title")
-    if r.returncode != 0:
-        return set()
-    return set(t.strip() for t in (r.stdout or "").splitlines() if t.strip())
-
-
-def _issue_plan(evidence, pr):
+def _body(evidence, event, ncomments):
     dim = evidence.get("dimension") or "review"
-    plan = []
-    for f in (evidence.get("findings") or [])[:5]:
-        plan.append({"title": _title(dim, f),
-                     "labels": [AI_REVIEW_LABEL, _label(dim)],
-                     "body": _issue_body(f, dim, pr)})
-    return dim, plan
+    if event == "REQUEST_CHANGES":
+        return (
+            f"{dim} review requests changes: {ncomments} finding(s) "
+            "passed deterministic shape and anchor checks."
+        )
+    if event == "APPROVE":
+        return f"{dim} review approves: no actionable findings."
+    return f"{dim} review comment: {ncomments} non-blocking finding(s)."
 
 
-def _open_issues(plan, repo, token):
-    opened = 0
-    for item in plan:
-        res = gh_api(f"repos/{repo}/issues", method="POST",
-                     input_json=json.dumps({"title": item["title"], "body": item["body"],
-                                            "labels": item["labels"]}), token=token)
-        if res.returncode == 0:
-            opened += 1
-        else:
-            sys.stderr.write(f"[publish-review] issue create failed: {res.stderr}\n")
-    return opened
+def _submit_review(repo, pr, token, payload, event):
+    def post(body):
+        result = gh_api(
+            f"repos/{repo}/pulls/{pr}/reviews",
+            method="POST",
+            input_json=json.dumps(body),
+            token=token,
+        )
+        if result.returncode != 0:
+            sys.stderr.write(f"[publish] reviews POST failed: {result.stdout}{result.stderr}\n")
+        return result.returncode == 0
+
+    if post(payload):
+        return
+    if event == "APPROVE":
+        sys.stderr.write("[publish] APPROVE rejected; falling back to COMMENT\n")
+        payload["event"] = "COMMENT"
+        if post(payload):
+            return
+    sys.stderr.write(f"[publish] review submission failed for event={event}\n")
+    sys.exit(1)
 
 
 def main():
-    evidence = json.load(open(sys.argv[1]))
-    instance = sys.argv[2] if len(sys.argv) > 2 else ""
-    repo = os.environ.get("GITHUB_REPOSITORY", "")
-    pr = os.environ.get("PR", "")
-    token = os.environ.get("PUBLISH_TOKEN", "")
+    with open(sys.argv[1]) as fh:
+        evidence = json.load(fh)
+
     event = _event(evidence.get("verdict"))
-    dim, plan = _issue_plan(evidence, pr)
+    comments = _comments(evidence)
+    payload = {
+        "event": event,
+        "body": _body(evidence, event, len(comments)),
+        "comments": comments,
+    }
+
+    repo = os.environ["GITHUB_REPOSITORY"]
+    pr = os.environ["PR"]
+    token = os.environ.get("PUBLISH_TOKEN", "")
+    head = os.environ.get("HEAD_SHA") or os.environ.get("PR_HEAD_SHA", "")
 
     if os.environ.get("ENGINE_LOCAL", "0") == "1":
-        out = os.environ.get("REVIEW_ISSUES_OUT", "")
+        payload["commit_id"] = head
+        out = os.environ.get("REVIEW_POST_OUT")
         if out:
-            with open(out, "w", encoding="utf-8") as fh:
-                json.dump(plan, fh)
+            with open(out, "w") as fh:
+                json.dump(payload, fh)
         else:
-            sys.stderr.write("[ENGINE_LOCAL] review issue plan: " + json.dumps(plan) + "\n")
-        opened = 0
+            sys.stderr.write(json.dumps(payload, indent=2) + "\n")
     else:
-        existing = _existing_titles(repo, dim, token)
-        plan = [p for p in plan if p["title"].strip() not in existing]
-        opened = _open_issues(plan, repo, token)
+        commit = head or gh_api(
+            f"repos/{repo}/pulls/{pr}", token=token, jq=".head.sha"
+        ).stdout.strip()
+        _submit_review(repo, pr, token, {**payload, "commit_id": commit}, event)
 
-    print(json.dumps({"conclusion": _conclusion(event),
-                      "summary": f"{dim}: {event}; opened {opened} issue(s)"}))
+    print(
+        json.dumps(
+            {
+                "conclusion": _conclusion(event),
+                "summary": _body(evidence, event, len(comments)),
+            }
+        )
+    )
 
 
 if __name__ == "__main__":

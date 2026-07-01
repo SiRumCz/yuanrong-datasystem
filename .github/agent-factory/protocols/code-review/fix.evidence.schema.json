@@ -14,8 +14,7 @@
           "path": { "type": "string", "minLength": 1 },
           "line": { "type": "integer", "minimum": 1 },
           "rationale": { "type": "string", "minLength": 1 },
-          "suggested_patch": { "type": "string", "minLength": 1 },
-          "original_line": { "type": "string", "minLength": 1 }
+          "suggested_patch": { "type": "string", "minLength": 1 }
         }
       }
     },

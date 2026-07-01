@@ -77,7 +77,7 @@ post-steps:
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
 timeout-minutes: 10
-source: golivax/agentic-protocol-poc/.github/workflows/mrp-agent.md@3c0934933674436397ee54e4847c3f3b990bde95
+source: golivax/agentic-protocol-poc/.github/workflows/mrp-agent.md@6e591f728eedbcf694b79c435dc5e6147c1d882c
 ---
 
 # MRP Assembler — synthesize, do not re-review
@@ -95,6 +95,9 @@ Read `/tmp/gh-aw/task-context.json` (use `cat`):
 - `.pr`, `.iteration`, `.feedback` — if `.iteration` > 1, fold the prior `.feedback`
   into this pass.
 - `.inputs.preflight` — preflight adherence evidence (`checks[]`, `examined[]`). MAY be absent.
+- `.inputs.mm-compliance` — mental-model compliance evidence: `verdict` (`"compliant"`|`"diverges"`),
+  `divergences[]` (each `{ decision, detail, evidence, fix }`), `examined[]`. The deterministic
+  post-step folds this into the pack's `smm_compliance` — you take NO action on it. MAY be absent.
 - `.inputs.overview` — the guided walkthrough + risk: `summary`, `cohorts[]` (each with
   `cohort`, `layers[]`, `bcFindings[].severityClass`), `risk_band`. MAY be absent.
 - `.inputs.triage` — clustered findings: `clusters[]` (each `{ title, dimension[],
