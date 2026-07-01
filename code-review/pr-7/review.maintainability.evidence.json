@@ -1,0 +1,24 @@
+{
+  "dimension": "maintainability",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": ".conversations/7b1e9a4c-2d3f-4a8b-9c1e-0a2b3c4d5e6f.jsonl",
+      "line": 1,
+      "severity": "medium",
+      "category": "maintainability",
+      "title": "Remove committed AI conversation transcript",
+      "impact": "This new hidden repository artifact is not source, test data, or durable documentation. It embeds an implementation transcript that can go stale immediately and mislead future maintainers about what code was actually reviewed or intended.",
+      "fix": "Drop the .conversations file from the PR, or move any durable design rationale into the normal repo documentation or code comments near the relevant implementation."
+    },
+    {
+      "path": "src/datasystem/client/client_worker_common_api.h",
+      "line": 259,
+      "severity": "medium",
+      "category": "maintainability",
+      "title": "Avoid URMA-specific no-op hooks on the generic worker API",
+      "impact": "The common client-worker interface now exposes URMA data-plane tracking and switch callbacks even for implementations that cannot use them, where the default behavior is a silent no-op. That makes the abstraction leaky and gives future call sites no compile-time signal that the operation only has meaning for remote URMA-capable workers.",
+      "fix": "Keep the URMA failover contract on the remote worker API or a small capability-specific interface, and wire callers through that narrower type instead of adding generic no-op methods to IClientWorkerCommonApi."
+    }
+  ]
+}
