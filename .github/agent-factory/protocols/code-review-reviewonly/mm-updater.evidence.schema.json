@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "mental-model updater evidence",
+  "type": "object",
+  "required": ["mm_changed", "questions", "rationale"],
+  "properties": {
+    "mm_changed": {
+      "type": "boolean",
+      "description": "True iff the PR warrants a mental-model update (and the agent opened an [mm] PR for it)."
+    },
+    "mm_pr": {
+      "type": "string",
+      "description": "URL or number of the opened [mm] PR when mm_changed; empty/absent otherwise."
+    },
+    "questions": {
+      "type": "array",
+      "description": "Gate questions. Emit EXACTLY ONE (asking a human to decide on the [mm] PR) when mm_changed is true; emit an EMPTY list when no MM change is warranted (the engine then auto-skips the gate straight to mrp).",
+      "items": {
+        "type": "object",
+        "required": ["id", "text"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "text": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "rationale": {
+      "type": "string",
+      "description": "Why an MM change is or is not warranted, grounded in the PR diff."
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "$schema": "../../engine/protocol.schema.json",
+  "name": "code-review-reviewonly",
+  "version": "0.1.0",
+  "min_engine_version": "1.0.0",
+  "max_depth": 6,
+  "_note": "Stripped-down protocol that runs ONLY the review fanout (correctness/test/performance/security/maintainability) then joins. Skips preflight, preflight-gate, overview, triage, fix, post-fix, and mrp. Triggered by /rphase to avoid colliding with code-review's /review trigger. The review agents re-fetch the PR diff themselves; no inputs reference earlier phases.",
+  "triggers": [
+    { "on": "issue_comment", "comment_prefix": "/rphase", "command": "start" }
+  ],
+  "states": [
+    {
+      "id": "review",
+      "kind": "fanout",
+      "label": "multi-dimension review",
+      "params": { "status_note": { "verdict_field": "verdict", "flag_verdicts": ["REQUEST_CHANGES"], "severity_field": "severity", "flag_severities": ["critical", "high"], "label": "request-changes" } },
+      "branches": [
+        { "id": "correctness",     "workflow": "review-correctness-agent",     "evidence": "review.evidence.schema.json", "max_iterations": 2, "params": { "dimension": "correctness",     "require": ["dimension", "verdict", "findings"], "non_empty": ["dimension", "verdict"] }, "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "review-schema-valid", "on_fail": "iterate" }, { "run": "review-findings-anchored", "on_fail": "iterate" } ], "publish": "publish-review" },
+        { "id": "test",            "workflow": "review-test-agent",            "evidence": "review.evidence.schema.json", "max_iterations": 2, "params": { "dimension": "test",            "require": ["dimension", "verdict", "findings"], "non_empty": ["dimension", "verdict"] }, "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "review-schema-valid", "on_fail": "iterate" }, { "run": "review-findings-anchored", "on_fail": "iterate" } ], "publish": "publish-review" },
+        { "id": "performance",     "workflow": "review-performance-agent",     "evidence": "review.evidence.schema.json", "max_iterations": 2, "params": { "dimension": "performance",     "require": ["dimension", "verdict", "findings"], "non_empty": ["dimension", "verdict"] }, "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "review-schema-valid", "on_fail": "iterate" }, { "run": "review-findings-anchored", "on_fail": "iterate" } ], "publish": "publish-review" },
+        { "id": "security",        "workflow": "review-security-agent",        "evidence": "review.evidence.schema.json", "max_iterations": 2, "params": { "dimension": "security",        "require": ["dimension", "verdict", "findings"], "non_empty": ["dimension", "verdict"] }, "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "review-schema-valid", "on_fail": "iterate" }, { "run": "review-findings-anchored", "on_fail": "iterate" } ], "publish": "publish-review" },
+        { "id": "maintainability", "workflow": "review-maintainability-agent", "evidence": "review.evidence.schema.json", "max_iterations": 2, "params": { "dimension": "maintainability", "require": ["dimension", "verdict", "findings"], "non_empty": ["dimension", "verdict"] }, "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "review-schema-valid", "on_fail": "iterate" }, { "run": "review-findings-anchored", "on_fail": "iterate" } ], "publish": "publish-review" }
+      ],
+      "next": "join-review"
+    },
+    { "id": "join-review", "kind": "join", "of": "review", "next": "done" }
+  ]
+}

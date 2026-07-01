@@ -1,0 +1,16 @@
+entity Agent;
+entity File; entity Host; entity Secret; entity Command;
+action ReadFile, WriteFile, ReadSecret, Network, RunCommand, DeletePath
+  appliesTo {
+    principal: Agent,
+    resource: [File, Host, Secret, Command],
+    context: {
+      touched_secret: Bool,
+      external_host: Bool,
+      destructive: Bool,
+      in_changed_set: Bool,
+      in_repo: Bool,
+      host: String,
+      allowed_hosts: Set<String>,
+    }
+  };
