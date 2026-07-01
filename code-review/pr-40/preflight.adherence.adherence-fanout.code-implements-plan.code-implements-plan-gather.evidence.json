@@ -1,0 +1,62 @@
+{
+  "scope": {
+    "code_changed": true,
+    "plan_present": true,
+    "plan_path": "plans/demo-notify.md",
+    "code_files": [
+      "src/notify/notifier.py"
+    ]
+  },
+  "plan_to_code": [
+    {
+      "plan_item": "- P1: Implement send_all(recipients) that calls send() once per recipient.",
+      "status": "implemented"
+    }
+  ],
+  "files": [
+    {
+      "path": "src/notify/notifier.py",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "send",
+            "send_all"
+          ],
+          "findings": [
+            {
+              "plan_item": null,
+              "status": "extra",
+              "side": "RIGHT",
+              "line": 1,
+              "existing_code": "\"\"\"Notify CLI core — sends notifications to a list of recipients.\"\"\""
+            },
+            {
+              "plan_item": "- P1: Implement send_all(recipients) that calls send() once per recipient.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 6,
+              "start_line": 4,
+              "existing_code": "def send(recipient):\n    \"\"\"Send a single notification and return a result string.\"\"\"\n    return f\"sent to {recipient}\""
+            },
+            {
+              "plan_item": "- P1: Implement send_all(recipients) that calls send() once per recipient.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 11,
+              "start_line": 9,
+              "existing_code": "def send_all(recipients):\n    \"\"\"Send a notification to each recipient, returning the list of results.\"\"\"\n    return [send(recipient) for recipient in recipients]"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "verdict": "overplan",
+  "examined": [
+    "scope.json",
+    "plan.txt",
+    "pr.diff",
+    "task-context.json"
+  ]
+}
