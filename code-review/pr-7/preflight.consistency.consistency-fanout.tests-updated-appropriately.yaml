@@ -1,7 +1,0 @@
-protocol: code-review
-instance: pr-7
-state: consistency-fanout
-sub_state: tests-updated-appropriately-gather
-iteration: 1
-gates: {}
-history: []
