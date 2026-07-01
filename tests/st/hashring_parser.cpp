@@ -54,7 +54,7 @@ int ReadFile(const std::string &file, std::string &content)
 {
     std::ifstream infile(file);
     if (!infile.is_open()) {
-        std::cerr << "Cannot open file " << file;
+        std::cerr << "Cannot open file " << file << std::endl;
         return -1;
     }
     std::stringstream buffer;
@@ -73,14 +73,14 @@ int Decode(const std::string &file)
 
     HashRingPb ring;
     if (!ring.ParseFromString(content)) {
-        std::cerr << "Parse HashRingPb failed.";
+        std::cerr << "Parse HashRingPb failed." << std::endl;
         return -1;
     }
 
     std::string jsonStr;
     auto status = google::protobuf::util::MessageToJsonString(ring, &jsonStr);
     if (!status.ok()) {
-        std::cerr << "Parse HashRingPb to json failed: " << status.ToString();
+        std::cerr << "Parse HashRingPb to json failed: " << status.ToString() << std::endl;
         return -1;
     }
 
@@ -98,7 +98,7 @@ int GetHashRingPbFromJsonFile(const std::string &file, HashRingPb &hashRing)
 
     auto status = google::protobuf::util::JsonStringToMessage(content, &hashRing);
     if (!status.ok()) {
-        std::cerr << "Parse json failed: " << status.ToString();
+        std::cerr << "Parse json failed: " << status.ToString() << std::endl;
         return -1;
     }
 
@@ -160,7 +160,7 @@ int main(int argc, char **argv)
                 return -1;
         }
     } catch (const std::exception &e) {
-        std::cerr << e.what();
+        std::cerr << e.what() << std::endl;
         return -1;
     }
 
