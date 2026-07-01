@@ -1,7 +1,7 @@
 protocol: code-review
 instance: pr-7
 state: adherence-fanout
-sub_state: code-implements-plan-gather
+sub_state: code-implements-plan-judge
 iteration: 1
 gates: {}
 history: []
