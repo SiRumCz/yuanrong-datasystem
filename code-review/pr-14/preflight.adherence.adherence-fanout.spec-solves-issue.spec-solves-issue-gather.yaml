@@ -1,12 +1,18 @@
 protocol: code-review
 instance: pr-14
-state: adherence-fanout
+state: failed
 iteration: 2
 gates: {}
 head_sha: 787afb118ccadc24eb5dadf81c623659b6ed083a
 history:
 - iteration: 1
   agent_run_id: '28552218056'
+  checks:
+    evidence-present: pass
+    spec-solves-issue-coverage: fail
+  feedback: 'issue fetch failed for #574 (cannot verify coverage)'
+- iteration: 2
+  agent_run_id: '28552754388'
   checks:
     evidence-present: pass
     spec-solves-issue-coverage: fail
