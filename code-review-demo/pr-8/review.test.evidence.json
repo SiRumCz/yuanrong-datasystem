@@ -1,0 +1,15 @@
+{
+  "dimension": "test",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": "src/datasystem/common/util/gflag/common_gflags_validate.cpp",
+      "line": 120,
+      "severity": "medium",
+      "category": "test",
+      "title": "Add negative tests for URMA failover flag validation",
+      "impact": "The PR adds validators that reject non-finite or out-of-range success ratios and zero min-sample counts, but the new UT/ST only exercise valid values. A regression that accidentally accepts NaN, values above 1.0, negative ratios, or min_sample_count=0 would not fail any test, leaving the new operator-facing config surface unguarded.",
+      "fix": "Add focused flag-validation tests, for example in the existing flags/validator test area, that attempt to set urma_failover_success_rate_ratio to -0.1, 1.1, and NaN/inf, and urma_failover_min_sample_count to 0, then assert SetCommandLineOption/validation fails and the previous flag value remains unchanged."
+    }
+  ]
+}
