@@ -1,0 +1,2127 @@
+{
+  "scope": {
+    "code_changed": true,
+    "plan_present": true,
+    "plan_path": ".repo_context/modules/infra/logging/plans/log-sampler-plan.md",
+    "code_files": [
+      "BUILD.bazel",
+      "cli/deploy/conf/worker_config.json",
+      "include/datasystem/utils/embedded_config.h",
+      "k8s/helm_chart/datasystem/templates/configmap.yaml",
+      "k8s/helm_chart/datasystem/templates/worker_daemonset.yaml",
+      "k8s/helm_chart/datasystem/values.yaml",
+      "k8s_deployment/helm_chart/worker.config",
+      "src/datasystem/c_api/kv_client_c_wrapper.cpp",
+      "src/datasystem/c_api/object_client_c_wrapper.cpp",
+      "src/datasystem/c_api/util.cpp",
+      "src/datasystem/c_api/util.h",
+      "src/datasystem/client/client_worker_common_api.cpp",
+      "src/datasystem/client/hetero_cache/hetero_client.cpp",
+      "src/datasystem/client/kv_cache/kv_client.cpp",
+      "src/datasystem/client/object_cache/object_client.cpp",
+      "src/datasystem/client/object_cache/object_client_impl.cpp",
+      "src/datasystem/client/stream_cache/consumer.cpp",
+      "src/datasystem/client/stream_cache/producer.cpp",
+      "src/datasystem/client/stream_cache/stream_client.cpp",
+      "src/datasystem/common/flags/BUILD.bazel",
+      "src/datasystem/common/flags/embedded_config.cpp",
+      "src/datasystem/common/flags/flag_manager.cpp",
+      "src/datasystem/common/kvstore/etcd/etcd_watch.h",
+      "src/datasystem/common/kvstore/etcd/grpc_session.h",
+      "src/datasystem/common/log/BUILD.bazel",
+      "src/datasystem/common/log/access_recorder.cpp",
+      "src/datasystem/common/log/access_recorder.h",
+      "src/datasystem/common/log/log.h",
+      "src/datasystem/common/log/log_sampler.cpp",
+      "src/datasystem/common/log/log_sampler.h",
+      "src/datasystem/common/log/log_sampler_proto.cpp",
+      "src/datasystem/common/log/logging.cpp",
+      "src/datasystem/common/log/logging.h",
+      "src/datasystem/common/log/spdlog/BUILD.bazel",
+      "src/datasystem/common/log/spdlog/log_message.cpp",
+      "src/datasystem/common/log/spdlog/log_message.h",
+      "src/datasystem/common/log/spdlog/log_message_impl.cpp",
+      "src/datasystem/common/log/spdlog/log_message_impl.h",
+      "src/datasystem/common/log/spdlog/log_rate_limiter.cpp",
+      "src/datasystem/common/log/spdlog/log_rate_limiter.h",
+      "src/datasystem/common/log/trace.cpp",
+      "src/datasystem/common/metrics/res_metric_collector.cpp",
+      "src/datasystem/common/metrics/res_metric_collector.h",
+      "src/datasystem/common/rpc/zmq/zmq_common.h",
+      "src/datasystem/common/util/gflag/common_gflags.h",
+      "src/datasystem/common/util/gflag/common_gflags_validate.cpp",
+      "src/datasystem/common/util/gflag/flags.cpp",
+      "src/datasystem/common/util/gflag/flags.h",
+      "src/datasystem/common/util/request_table.h",
+      "src/datasystem/java_api/kv/kv_impl.cpp",
+      "src/datasystem/java_api/kv/kv_impl.h",
+      "src/datasystem/java_api/kv/org_yuanrong_datasystem_kv_KVClient.cpp",
+      "src/datasystem/protos/meta_zmq.proto",
+      "src/datasystem/protos/share_memory.proto",
+      "src/datasystem/pybind_api/pybind_register_kv.cpp",
+      "src/datasystem/worker/object_cache/service/worker_oc_service_create_impl.cpp",
+      "src/datasystem/worker/object_cache/service/worker_oc_service_delete_impl.cpp",
+      "src/datasystem/worker/object_cache/service/worker_oc_service_expire_impl.cpp",
+      "src/datasystem/worker/object_cache/service/worker_oc_service_get_impl.cpp",
+      "src/datasystem/worker/object_cache/service/worker_oc_service_global_reference_impl.cpp",
+      "src/datasystem/worker/object_cache/service/worker_oc_service_multi_publish_impl.cpp",
+      "src/datasystem/worker/object_cache/service/worker_oc_service_publish_impl.cpp",
+      "src/datasystem/worker/object_cache/worker_oc_service_impl.cpp",
+      "src/datasystem/worker/object_cache/worker_oc_service_impl.h",
+      "src/datasystem/worker/object_cache/worker_request_manager.cpp",
+      "src/datasystem/worker/object_cache/worker_request_manager.h",
+      "src/datasystem/worker/stream_cache/client_worker_sc_service_impl.cpp",
+      "src/datasystem/worker/stream_cache/client_worker_sc_service_impl.h",
+      "src/datasystem/worker/worker_service_impl.cpp"
+    ]
+  },
+  "plan_to_code": [
+    {
+      "plan_item": "- **P1.1** Add `LogSampler` core (`src/datasystem/common/log/log_sampler.h`, `log_sampler.cpp`): singleton with an\n  immutable `LogSamplerSnapshot` published via atomic pointer, `IsSamplerEnabledFast()` relaxed-atomic gate, the\n  `BYPASS→REQUEST→DIAGNOSTIC→ACCESS` classifier, and integer ppm/threshold math (`BuildThreshold`, `RateToPpm`, `Mix64`,\n  process `sampleSalt_`). Satisfies R1, R4, R6, R9, R12, R16.",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- **P1.2** Implement classification so FATAL/CHECK map to `BYPASS` (always pass) and background logs bypass request/\n  diagnostic sampling. Satisfies R10, R11.",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- **P1.3** Implement config build/publish: `UpdateConfigFromFlags`, all-`1.0`→`enabled=false` fold, request-only\n  derivation `access=min(1,3r)` / `diagnostic=min(1,4r)` (`kAccessDeriveMultiplier`, `kDiagnosticDeriveMultiplier`), and\n  previous-good retention on invalid input. Satisfies R2, R13, R14.",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- **P1.4** Add per-event decorrelation using a `thread_local` sequence combined into the sample key with trace hash and\n  log kind; no global atomic counter on the hot path. Satisfies R12, R16.",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- **P2.1** Route `ShouldCreateLogMessage()` / `ShouldCreatePlogMessage()` through the sampler classifier instead of\n  `LogRateLimiter`, keeping FATAL/CHECK forced and checking PLOG before stream payload evaluation\n  (`src/datasystem/common/log/log.h`, `logging.cpp`, `logging.h`,\n  `src/datasystem/common/log/spdlog/log_message*.{h,cpp}`). Satisfies R4, R6, R9, R10.",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- **P2.2** Extend `AccessRecorder` (`src/datasystem/common/log/access_recorder.h`, `access_recorder.cpp`) with a\n  lambda-fill `Record()` and `ShouldRecord()` guard so `RequestParam` construction, clock read, `ToString()`, and\n  exporter send happen only when sampled in; add `FormatAccessReqMsg()` and switch `dataSize` from `string` to\n  `uint64_t`. Exclude `AccessKeyType::REQUEST_OUT` from access sampling. Satisfies R6, R7, R8, R17.",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- **P3.1** Replace `EnsureRequestSampleDecision()` with sampler-driven request-trace decision creation/caching in the\n  trace/ZMQ path (`src/datasystem/common/log/trace.cpp`, `src/datasystem/common/rpc/zmq/zmq_common.h`\n  `GetOrCreateLogSampleState()` / `ApplyLogSampleState()`, `src/datasystem/protos/meta_zmq.proto`\n  `log_sample_state`). Satisfies R5.",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- **P3.2** Add `LogSampleConfigPb` proto and (de)serialization (`src/datasystem/protos/share_memory.proto`,\n  `src/datasystem/common/log/log_sampler_proto.cpp` — `PopulateConfigProto` / `UpdateConfigFromProto`), changing\n  `RegisterClientRspPb` field 24 from `int32 log_rate_limit` to `LogSampleConfigPb log_sample_config`. Satisfies R15,\n  R18.",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- **P3.3** Publish effective config from the worker and apply it on the client from register/heartbeat responses, with\n  missing-field no-op and `enabled=false`+default-ppm pass-through\n  (`src/datasystem/worker/worker_service_impl.cpp`, `src/datasystem/client/client_worker_common_api.cpp`). Satisfies R15.",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- **P4.1** Add the three `double` gflags with range validation replacing `--log_rate_limit`\n  (`src/datasystem/common/util/gflag/flags.cpp`, `flags.h`, `common_gflags.h`, `common_gflags_validate.cpp`,\n  `flag_manager.cpp`). Satisfies R3, R14.",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- **P4.2** Replace `EmbeddedConfig::LogRateLimit(int)` with `RequestSampleRate(double)` / `AccessSampleRate(double)` /\n  `DiagnosticSampleRate(double)` (`include/datasystem/utils/embedded_config.h`,\n  `src/datasystem/common/flags/embedded_config.cpp`). Satisfies R3, R18.",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- **P5.1** Delete `LogRateLimiter` and its test (`src/datasystem/common/log/spdlog/log_rate_limiter.{h,cpp}`,\n  `tests/ut/common/log/spdlog/log_rate_limiter_test.cpp`) and drop build wiring / the `DATASYSTEM_LOG_RATE_LIMIT` env\n  var. Satisfies R18.",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- **P6.1** Add unit tests: `log_sampler_test`, `log_sampler_access_test`, `log_sampler_config_test`,\n  `log_sampler_integration_test`, `log_access_facade_test` covering LS-001…LS-009b, LS-013…LS-015c\n  (`tests/ut/common/log/*`). Satisfies R1–R15, R17.",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- **P6.2** Add ST `log_sampler_st_test` for cross-process propagation consistency (`tests/st/common/log/*`) and update\n  `zmq_trace_sampling_meta_test`. Satisfies R5, R12.",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- **P6.3** Extend `log_performance_test` with the 4000 QPS / 32-thread empty/enabled scenarios and allocator-hook\n  hot-path constraint checks. Satisfies R16.",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- **P7.1** Update `docs/source_zh_cn/appendix/log_guide.md`, `client_env_guide.md`,\n  `docs/source_zh_cn/deployment/dscli.md`, and the `.repo_context` logging index/design to describe three-dimensional\n  sampling and remove `log_rate_limit`. Supports R3, R18.",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- **P7.2** Replace `log_rate_limit` with the three sample-rate keys in `cli/deploy/conf/worker_config.json`,\n  `k8s/helm_chart/**`, and `k8s_deployment/helm_chart/worker.config`. Supports R3, R18.",
+      "status": "implemented"
+    }
+  ],
+  "files": [
+    {
+      "path": ".repo_context/index.md",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "design"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P7.1** Update `docs/source_zh_cn/appendix/log_guide.md`, `client_env_guide.md`,\n  `docs/source_zh_cn/deployment/dscli.md`, and the `.repo_context` logging index/design to describe three-dimensional\n  sampling and remove `log_rate_limit`. Supports R3, R18.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 50,
+              "existing_code": "| design unified class-based random log sampling | `modules/infra/logging/log-sampler-design.md` | `src/datasystem/common/log/*`, `src/datasystem/common/log/spdlog/*`, `src/datasystem/common/metrics/hard_disk_exporter/*`, `src/datasystem/common/util/gflag/*` |"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/README.md",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "AccessRecorder::Object"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P7.1** Update `docs/source_zh_cn/appendix/log_guide.md`, `client_env_guide.md`,\n  `docs/source_zh_cn/deployment/dscli.md`, and the `.repo_context` logging index/design to describe three-dimensional\n  sampling and remove `log_rate_limit`. Supports R3, R18.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 55,
+              "existing_code": "- `AccessRecorder::Object`, `AccessRecorder::Stream`, and `AccessRecorder::RequestOut` are the recommended access-log facades. Call sites describe fields and call `Record()`; sampling, lazy field materialization, elapsed time, formatting, and exporter writes are owned by `AccessRecorder`."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/log-sampler-design.md",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "facade"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P7.1** Update `docs/source_zh_cn/appendix/log_guide.md`, `client_env_guide.md`,\n  `docs/source_zh_cn/deployment/dscli.md`, and the `.repo_context` logging index/design to describe three-dimensional\n  sampling and remove `log_rate_limit`. Supports R3, R18.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 229,
+              "existing_code": "  facade internals. Call sites use typed `AccessRecorder::Object/Stream/RequestOut` facades."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "BUILD.bazel",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "src"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P5.1** Delete `LogRateLimiter` and its test (`src/datasystem/common/log/spdlog/log_rate_limiter.{h,cpp}`,\n  `tests/ut/common/log/spdlog/log_rate_limiter_test.cpp`) and drop build wiring / the `DATASYSTEM_LOG_RATE_LIMIT` env\n  var. Satisfies R18.",
+              "status": "traces",
+              "side": "LEFT",
+              "line": 62,
+              "existing_code": "        \"//src/datasystem/common/log/spdlog:log_rate_limiter\","
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "cli/deploy/conf/worker_config.json",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "request_sample_rate"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P7.2** Replace `log_rate_limit` with the three sample-rate keys in `cli/deploy/conf/worker_config.json`,\n  `k8s/helm_chart/**`, and `k8s_deployment/helm_chart/worker.config`. Supports R3, R18.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 470,
+              "existing_code": "    \"request_sample_rate\": {"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/source_zh_cn/appendix/client_env_guide.md",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "DATASYSTEM_LOG_RATE_LIMIT"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P7.1** Update `docs/source_zh_cn/appendix/log_guide.md`, `client_env_guide.md`,\n  `docs/source_zh_cn/deployment/dscli.md`, and the `.repo_context` logging index/design to describe three-dimensional\n  sampling and remove `log_rate_limit`. Supports R3, R18.",
+              "status": "traces",
+              "side": "LEFT",
+              "line": 41,
+              "existing_code": "| 25 | `DATASYSTEM_LOG_RATE_LIMIT` | `0` | 每秒采样请求数上限（0表示不限速）。仅对带 traceId 的请求日志生效：被采样到的请求会完整打印链路日志，未采样请求的链路日志会被整体丢弃（包含 WARNING/ERROR/FATAL）。 |"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/source_zh_cn/appendix/log_guide.md",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "request_sample_rate"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P7.1** Update `docs/source_zh_cn/appendix/log_guide.md`, `client_env_guide.md`,\n  `docs/source_zh_cn/deployment/dscli.md`, and the `.repo_context` logging index/design to describe three-dimensional\n  sampling and remove `log_rate_limit`. Supports R3, R18.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 117,
+              "existing_code": "- 三类独立采样率：`request_sample_rate`、`access_sample_rate`、`diagnostic_sample_rate`（各 0.0–1.0，默认 1.0=全量保留）"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/source_zh_cn/deployment/dscli.md",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "request_sample_rate"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P7.1** Update `docs/source_zh_cn/appendix/log_guide.md`, `client_env_guide.md`,\n  `docs/source_zh_cn/deployment/dscli.md`, and the `.repo_context` logging index/design to describe three-dimensional\n  sampling and remove `log_rate_limit`. Supports R3, R18.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 784,
+              "existing_code": "| request_sample_rate | double | `1.0` | 请求日志采样率（0.0–1.0）。1.0=全量保留；0.0=丢弃请求级 INFO/VLOG，请求级 ERROR/WARNING/PLOG 由 diagnostic_sample_rate 控制 |"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "include/datasystem/utils/embedded_config.h",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "only"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P4.2** Replace `EmbeddedConfig::LogRateLimit(int)` with `RequestSampleRate(double)` / `AccessSampleRate(double)` /\n  `DiagnosticSampleRate(double)` (`include/datasystem/utils/embedded_config.h`,\n  `src/datasystem/common/flags/embedded_config.cpp`). Satisfies R3, R18.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 153,
+              "existing_code": "     * - If only RequestSampleRate is set (without AccessSampleRate/DiagnosticSampleRate),"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "k8s/helm_chart/datasystem/templates/configmap.yaml",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "request_sample_rate"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P7.2** Replace `log_rate_limit` with the three sample-rate keys in `cli/deploy/conf/worker_config.json`,\n  `k8s/helm_chart/**`, and `k8s_deployment/helm_chart/worker.config`. Supports R3, R18.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 12,
+              "existing_code": "    -request_sample_rate={{ .Values.global.log.requestSampleRate }}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "k8s/helm_chart/datasystem/templates/worker_daemonset.yaml",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "request_sample_rate"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P7.2** Replace `log_rate_limit` with the three sample-rate keys in `cli/deploy/conf/worker_config.json`,\n  `k8s/helm_chart/**`, and `k8s_deployment/helm_chart/worker.config`. Supports R3, R18.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 100,
+              "existing_code": "        - -request_sample_rate=$(REQUEST_SAMPLE_RATE)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "k8s/helm_chart/datasystem/values.yaml",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "Request"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P7.2** Replace `log_rate_limit` with the three sample-rate keys in `cli/deploy/conf/worker_config.json`,\n  `k8s/helm_chart/**`, and `k8s_deployment/helm_chart/worker.config`. Supports R3, R18.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 147,
+              "existing_code": "    # Request log sample rate (0.0-1.0). Leave empty (null) to use default (1.0 = all logs pass)."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "k8s_deployment/helm_chart/worker.config",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "request_sample_rate"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P7.2** Replace `log_rate_limit` with the three sample-rate keys in `cli/deploy/conf/worker_config.json`,\n  `k8s/helm_chart/**`, and `k8s_deployment/helm_chart/worker.config`. Supports R3, R18.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 270,
+              "existing_code": "  \"request_sample_rate\": {"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/c_api/kv_client_c_wrapper.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "access"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 112,
+              "existing_code": "    auto access = datasystem::AccessRecorder::Object(datasystem::AccessRecorderKey::DS_KV_CLIENT_SET);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/c_api/object_client_c_wrapper.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "access"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 119,
+              "existing_code": "    auto access = datasystem::AccessRecorder::Object(datasystem::AccessRecorderKey::DS_OBJECT_CLIENT_PUT);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/c_api/util.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "uint32_t"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 347,
+              "existing_code": "                               uint32_t ctimeoutms, char **cVals, size_t *valsLen, size_t *totalSize)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/c_api/util.h",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "uint32_t"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 199,
+              "existing_code": "                               uint32_t ctimeoutms, char **cVals, size_t *valsLen, size_t *totalSize);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/client/CMakeLists.txt",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "common_log_proto"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 58,
+              "existing_code": "        common_log_proto"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/client/client_worker_common_api.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "rsp"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P3.3** Publish effective config from the worker and apply it on the client from register/heartbeat responses, with\n  missing-field no-op and `enabled=false`+default-ppm pass-through\n  (`src/datasystem/worker/worker_service_impl.cpp`, `src/datasystem/client/client_worker_common_api.cpp`). Satisfies R15.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 196,
+              "existing_code": "        if (rsp.has_log_sample_config()) {"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/client/hetero_cache/hetero_client.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "access"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 74,
+              "existing_code": "        auto access = AccessRecorder::Object(AccessRecorderKey::DS_HETERO_CLIENT_SHUTDOWN);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/client/kv_cache/kv_client.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "access"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 101,
+              "existing_code": "    auto access = AccessRecorder::Object(AccessRecorderKey::DS_KV_CLIENT_CREATE);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/client/object_cache/object_client.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "access"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 72,
+              "existing_code": "    auto access = AccessRecorder::Object(AccessRecorderKey::DS_OBJECT_CLIENT_CREATE);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/client/object_cache/object_client_impl.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "access"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 1299,
+              "existing_code": "    auto access = AccessRecorder::Object(AccessRecorderKey::DS_HETERO_CLIENT_MGETH2D);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/client/stream_cache/consumer.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "access"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 72,
+              "existing_code": "    auto access = AccessRecorder::Stream(AccessRecorderKey::DS_STREAM_CLOSE_CONSUMER);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/client/stream_cache/producer.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "access"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 65,
+              "existing_code": "    auto access = AccessRecorder::Stream(AccessRecorderKey::DS_STREAM_CLOSE_PRODUCER);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/client/stream_cache/stream_client.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "access"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 80,
+              "existing_code": "    auto access = AccessRecorder::Stream(AccessRecorderKey::DS_STREAM_CREATE_PRODUCER);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/flags/BUILD.bazel",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "Header"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P4.1** Add the three `double` gflags with range validation replacing `--log_rate_limit`\n  (`src/datasystem/common/util/gflag/flags.cpp`, `flags.h`, `common_gflags.h`, `common_gflags_validate.cpp`,\n  `flag_manager.cpp`). Satisfies R3, R14.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 6,
+              "existing_code": "# Header-only target (no circular deps - used by common_log_header)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/flags/embedded_config.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "EmbeddedConfig"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P4.2** Replace `EmbeddedConfig::LogRateLimit(int)` with `RequestSampleRate(double)` / `AccessSampleRate(double)` /\n  `DiagnosticSampleRate(double)` (`include/datasystem/utils/embedded_config.h`,\n  `src/datasystem/common/flags/embedded_config.cpp`). Satisfies R3, R18.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 124,
+              "existing_code": "EmbeddedConfig &EmbeddedConfig::RequestSampleRate(double rate)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/flags/flag_manager.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "securec"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P4.1** Add the three `double` gflags with range validation replacing `--log_rate_limit`\n  (`src/datasystem/common/util/gflag/flags.cpp`, `flags.h`, `common_gflags.h`, `common_gflags_validate.cpp`,\n  `flag_manager.cpp`). Satisfies R3, R14.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 26,
+              "existing_code": "#include <securec.h>"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/kvstore/etcd/etcd_watch.h",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "datasystem"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 37,
+              "existing_code": "#include \"datasystem/common/util/wait_post.h\""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/kvstore/etcd/grpc_session.h",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "access"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 243,
+              "existing_code": "            auto access = AccessRecorder::RequestOut(GetEtcdReqRecorderKey(methodName));"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/log/BUILD.bazel",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "LogSampler"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 6,
+              "existing_code": "# LogSampler header-only target (no circular deps - used by spdlog:ds_spdlog)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/log/CMakeLists.txt",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "log_sampler"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P1.1** Add `LogSampler` core (`src/datasystem/common/log/log_sampler.h`, `log_sampler.cpp`): singleton with an\n  immutable `LogSamplerSnapshot` published via atomic pointer, `IsSamplerEnabledFast()` relaxed-atomic gate, the\n  `BYPASS→REQUEST→DIAGNOSTIC→ACCESS` classifier, and integer ppm/threshold math (`BuildThreshold`, `RateToPpm`, `Mix64`,\n  process `sampleSalt_`). Satisfies R1, R4, R6, R9, R12, R16.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 9,
+              "existing_code": "        log_sampler.cpp"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/log/access_recorder.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "shouldRecord_"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.2** Extend `AccessRecorder` (`src/datasystem/common/log/access_recorder.h`, `access_recorder.cpp`) with a\n  lambda-fill `Record()` and `ShouldRecord()` guard so `RequestParam` construction, clock read, `ToString()`, and\n  exporter send happen only when sampled in; add `FormatAccessReqMsg()` and switch `dataSize` from `string` to\n  `uint64_t`. Exclude `AccessKeyType::REQUEST_OUT` from access sampling. Satisfies R6, R7, R8, R17.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 108,
+              "existing_code": "        shouldRecord_ = LogSampler::Instance().ShouldRecordAccess(key);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/log/access_recorder.h",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "ShouldRecordInternal"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.2** Extend `AccessRecorder` (`src/datasystem/common/log/access_recorder.h`, `access_recorder.cpp`) with a\n  lambda-fill `Record()` and `ShouldRecord()` guard so `RequestParam` construction, clock read, `ToString()`, and\n  exporter send happen only when sampled in; add `FormatAccessReqMsg()` and switch `dataSize` from `string` to\n  `uint64_t`. Exclude `AccessKeyType::REQUEST_OUT` from access sampling. Satisfies R6, R7, R8, R17.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 293,
+              "existing_code": "    bool ShouldRecordInternal() const"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/log/log.h",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "LogSampler::Instance"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.1** Route `ShouldCreateLogMessage()` / `ShouldCreatePlogMessage()` through the sampler classifier instead of\n  `LogRateLimiter`, keeping FATAL/CHECK forced and checking PLOG before stream payload evaluation\n  (`src/datasystem/common/log/log.h`, `logging.cpp`, `logging.h`,\n  `src/datasystem/common/log/spdlog/log_message*.{h,cpp}`). Satisfies R4, R6, R9, R10.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 98,
+              "existing_code": "    if (!LogSampler::Instance().IsSamplerEnabledFast()) {"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/log/log_sampler.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "LogSampler"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P1.1** Add `LogSampler` core (`src/datasystem/common/log/log_sampler.h`, `log_sampler.cpp`): singleton with an\n  immutable `LogSamplerSnapshot` published via atomic pointer, `IsSamplerEnabledFast()` relaxed-atomic gate, the\n  `BYPASS→REQUEST→DIAGNOSTIC→ACCESS` classifier, and integer ppm/threshold math (`BuildThreshold`, `RateToPpm`, `Mix64`,\n  process `sampleSalt_`). Satisfies R1, R4, R6, R9, R12, R16.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 84,
+              "existing_code": "LogSampler &LogSampler::Instance()"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/log/log_sampler.h",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "class"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P1.1** Add `LogSampler` core (`src/datasystem/common/log/log_sampler.h`, `log_sampler.cpp`): singleton with an\n  immutable `LogSamplerSnapshot` published via atomic pointer, `IsSamplerEnabledFast()` relaxed-atomic gate, the\n  `BYPASS→REQUEST→DIAGNOSTIC→ACCESS` classifier, and integer ppm/threshold math (`BuildThreshold`, `RateToPpm`, `Mix64`,\n  process `sampleSalt_`). Satisfies R1, R4, R6, R9, R12, R16.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 84,
+              "existing_code": "class LogSampler {"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/log/log_sampler_proto.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "LogSampler::ConfigUpdateResult"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P3.2** Add `LogSampleConfigPb` proto and (de)serialization (`src/datasystem/protos/share_memory.proto`,\n  `src/datasystem/common/log/log_sampler_proto.cpp` — `PopulateConfigProto` / `UpdateConfigFromProto`), changing\n  `RegisterClientRspPb` field 24 from `int32 log_rate_limit` to `LogSampleConfigPb log_sample_config`. Satisfies R15,\n  R18.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 23,
+              "existing_code": "LogSampler::ConfigUpdateResult LogSampler::UpdateConfigFromProto(const LogSampleConfigPb &proto)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/log/logging.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "Logging::InitLogSampler"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.1** Route `ShouldCreateLogMessage()` / `ShouldCreatePlogMessage()` through the sampler classifier instead of\n  `LogRateLimiter`, keeping FATAL/CHECK forced and checking PLOG before stream payload evaluation\n  (`src/datasystem/common/log/log.h`, `logging.cpp`, `logging.h`,\n  `src/datasystem/common/log/spdlog/log_message*.{h,cpp}`). Satisfies R4, R6, R9, R10.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 161,
+              "existing_code": "bool Logging::InitLogSampler()"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/log/logging.h",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "InitLogSampler"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.1** Route `ShouldCreateLogMessage()` / `ShouldCreatePlogMessage()` through the sampler classifier instead of\n  `LogRateLimiter`, keeping FATAL/CHECK forced and checking PLOG before stream payload evaluation\n  (`src/datasystem/common/log/log.h`, `logging.cpp`, `logging.h`,\n  `src/datasystem/common/log/spdlog/log_message*.{h,cpp}`). Satisfies R4, R6, R9, R10.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 167,
+              "existing_code": "    bool InitLogSampler();"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/log/spdlog/BUILD.bazel",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "src"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P5.1** Delete `LogRateLimiter` and its test (`src/datasystem/common/log/spdlog/log_rate_limiter.{h,cpp}`,\n  `tests/ut/common/log/spdlog/log_rate_limiter_test.cpp`) and drop build wiring / the `DATASYSTEM_LOG_RATE_LIMIT` env\n  var. Satisfies R18.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 37,
+              "existing_code": "        \"//src/datasystem/common/log:log_sampler\","
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/log/spdlog/CMakeLists.txt",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "log_rate_limiter"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P5.1** Delete `LogRateLimiter` and its test (`src/datasystem/common/log/spdlog/log_rate_limiter.{h,cpp}`,\n  `tests/ut/common/log/spdlog/log_rate_limiter_test.cpp`) and drop build wiring / the `DATASYSTEM_LOG_RATE_LIMIT` env\n  var. Satisfies R18.",
+              "status": "traces",
+              "side": "LEFT",
+              "line": 2,
+              "existing_code": "        log_rate_limiter.cpp"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/log/spdlog/log_message.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "impl_"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.1** Route `ShouldCreateLogMessage()` / `ShouldCreatePlogMessage()` through the sampler classifier instead of\n  `LogRateLimiter`, keeping FATAL/CHECK forced and checking PLOG before stream payload evaluation\n  (`src/datasystem/common/log/log.h`, `logging.cpp`, `logging.h`,\n  `src/datasystem/common/log/spdlog/log_message*.{h,cpp}`). Satisfies R4, R6, R9, R10.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 26,
+              "existing_code": "    impl_ = std::make_shared<LogMessageImpl>(logSeverity, file, line, forceLog, false);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/log/spdlog/log_message.h",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "LogMessage"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.1** Route `ShouldCreateLogMessage()` / `ShouldCreatePlogMessage()` through the sampler classifier instead of\n  `LogRateLimiter`, keeping FATAL/CHECK forced and checking PLOG before stream payload evaluation\n  (`src/datasystem/common/log/log.h`, `logging.cpp`, `logging.h`,\n  `src/datasystem/common/log/spdlog/log_message*.{h,cpp}`). Satisfies R4, R6, R9, R10.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 36,
+              "existing_code": "    LogMessage(LogSeverity logSeverity, const char *file, int line, bool forceLog, bool samplerChecked);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/log/spdlog/log_message_impl.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "LogSampler::Instance"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.1** Route `ShouldCreateLogMessage()` / `ShouldCreatePlogMessage()` through the sampler classifier instead of\n  `LogRateLimiter`, keeping FATAL/CHECK forced and checking PLOG before stream payload evaluation\n  (`src/datasystem/common/log/log.h`, `logging.cpp`, `logging.h`,\n  `src/datasystem/common/log/spdlog/log_message*.{h,cpp}`). Satisfies R4, R6, R9, R10.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 136,
+              "existing_code": "            && LogSampler::Instance().IsSamplerEnabledFast()"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/log/spdlog/log_message_impl.h",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "LogMessageImpl"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.1** Route `ShouldCreateLogMessage()` / `ShouldCreatePlogMessage()` through the sampler classifier instead of\n  `LogRateLimiter`, keeping FATAL/CHECK forced and checking PLOG before stream payload evaluation\n  (`src/datasystem/common/log/log.h`, `logging.cpp`, `logging.h`,\n  `src/datasystem/common/log/spdlog/log_message*.{h,cpp}`). Satisfies R4, R6, R9, R10.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 47,
+              "existing_code": "    LogMessageImpl(LogSeverity logSeverity, const char *file, int line, bool forceLog = false,"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/log/spdlog/log_rate_limiter.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "LogRateLimiter"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P5.1** Delete `LogRateLimiter` and its test (`src/datasystem/common/log/spdlog/log_rate_limiter.{h,cpp}`,\n  `tests/ut/common/log/spdlog/log_rate_limiter_test.cpp`) and drop build wiring / the `DATASYSTEM_LOG_RATE_LIMIT` env\n  var. Satisfies R18.",
+              "status": "traces",
+              "side": "LEFT",
+              "line": 30,
+              "existing_code": "LogRateLimiter &LogRateLimiter::Instance()"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/log/spdlog/log_rate_limiter.h",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "class"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P5.1** Delete `LogRateLimiter` and its test (`src/datasystem/common/log/spdlog/log_rate_limiter.{h,cpp}`,\n  `tests/ut/common/log/spdlog/log_rate_limiter_test.cpp`) and drop build wiring / the `DATASYSTEM_LOG_RATE_LIMIT` env\n  var. Satisfies R18.",
+              "status": "traces",
+              "side": "LEFT",
+              "line": 30,
+              "existing_code": "class LogRateLimiter {"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/log/trace.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "EnsureRequestSampleDecision"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P3.1** Replace `EnsureRequestSampleDecision()` with sampler-driven request-trace decision creation/caching in the\n  trace/ZMQ path (`src/datasystem/common/log/trace.cpp`, `src/datasystem/common/rpc/zmq/zmq_common.h`\n  `GetOrCreateLogSampleState()` / `ApplyLogSampleState()`, `src/datasystem/protos/meta_zmq.proto`\n  `log_sample_state`). Satisfies R5.",
+              "status": "traces",
+              "side": "LEFT",
+              "line": 46,
+              "existing_code": "void EnsureRequestSampleDecision(Trace &trace)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/metrics/res_metric_collector.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "datasystem"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 30,
+              "existing_code": "#include \"datasystem/common/metrics/hard_disk_exporter/hard_disk_exporter.h\""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/metrics/res_metric_collector.h",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "datasystem"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 30,
+              "existing_code": "#include \"datasystem/common/metrics/metrics_exporter.h\""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/rpc/zmq/zmq_common.h",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "LogSampler::Instance"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P3.1** Replace `EnsureRequestSampleDecision()` with sampler-driven request-trace decision creation/caching in the\n  trace/ZMQ path (`src/datasystem/common/log/trace.cpp`, `src/datasystem/common/rpc/zmq/zmq_common.h`\n  `GetOrCreateLogSampleState()` / `ApplyLogSampleState()`, `src/datasystem/protos/meta_zmq.proto`\n  `log_sample_state`). Satisfies R5.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 378,
+              "existing_code": "    if (LogSampler::Instance().IsSamplerEnabledFast()) {"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/util/gflag/CMakeLists.txt",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "target_link_libraries"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P4.1** Add the three `double` gflags with range validation replacing `--log_rate_limit`\n  (`src/datasystem/common/util/gflag/flags.cpp`, `flags.h`, `common_gflags.h`, `common_gflags_validate.cpp`,\n  `flag_manager.cpp`). Satisfies R3, R14.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 15,
+              "existing_code": "target_link_libraries(common_flags PRIVATE ${SECUREC_LIBRARY})"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/util/gflag/common_gflags.h",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "DS_DECLARE_double"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P4.1** Add the three `double` gflags with range validation replacing `--log_rate_limit`\n  (`src/datasystem/common/util/gflag/flags.cpp`, `flags.h`, `common_gflags.h`, `common_gflags_validate.cpp`,\n  `flag_manager.cpp`). Satisfies R3, R14.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 70,
+              "existing_code": "DS_DECLARE_double(request_sample_rate);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/util/gflag/common_gflags_validate.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "DS_DEFINE_validator"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P4.1** Add the three `double` gflags with range validation replacing `--log_rate_limit`\n  (`src/datasystem/common/util/gflag/flags.cpp`, `flags.h`, `common_gflags.h`, `common_gflags_validate.cpp`,\n  `flag_manager.cpp`). Satisfies R3, R14.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 175,
+              "existing_code": "DS_DEFINE_validator(request_sample_rate, &ValidateSampleRateRange);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/util/gflag/flags.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "request_sample_rate"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P4.1** Add the three `double` gflags with range validation replacing `--log_rate_limit`\n  (`src/datasystem/common/util/gflag/flags.cpp`, `flags.h`, `common_gflags.h`, `common_gflags_validate.cpp`,\n  `flag_manager.cpp`). Satisfies R3, R14.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 326,
+              "existing_code": "        \"request_sample_rate\", \"access_sample_rate\", \"diagnostic_sample_rate\""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/util/gflag/flags.h",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "request_sample_rate"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P4.1** Add the three `double` gflags with range validation replacing `--log_rate_limit`\n  (`src/datasystem/common/util/gflag/flags.cpp`, `flags.h`, `common_gflags.h`, `common_gflags_validate.cpp`,\n  `flag_manager.cpp`). Satisfies R3, R14.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 198,
+              "existing_code": "                                                              \"request_sample_rate\","
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/common/util/request_table.h",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "std::shared_ptr"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 312,
+              "existing_code": "                 std::shared_ptr<ObjectAccessRecorder> accessRecorderPoint)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/java_api/kv/kv_impl.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "Status"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 30,
+              "existing_code": "Status SetDirectBufferNativeImpl(JNIEnv *env, jlong handle, jstring keyJO, jobject valueJO, jobject paramJO,"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/java_api/kv/kv_impl.h",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "datasystem"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 27,
+              "existing_code": "#include \"datasystem/kv_client.h\""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/java_api/kv/org_yuanrong_datasystem_kv_KVClient.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "access"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 62,
+              "existing_code": "    auto access = AccessRecorder::Object(AccessRecorderKey::DS_KV_CLIENT_SET);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/protos/meta_zmq.proto",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "Converged"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P3.1** Replace `EnsureRequestSampleDecision()` with sampler-driven request-trace decision creation/caching in the\n  trace/ZMQ path (`src/datasystem/common/log/trace.cpp`, `src/datasystem/common/rpc/zmq/zmq_common.h`\n  `GetOrCreateLogSampleState()` / `ApplyLogSampleState()`, `src/datasystem/protos/meta_zmq.proto`\n  `log_sample_state`). Satisfies R5.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 33,
+              "existing_code": "// Converged to request-level complete-print decision via LogSampler."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/protos/share_memory.proto",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "message"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P3.2** Add `LogSampleConfigPb` proto and (de)serialization (`src/datasystem/protos/share_memory.proto`,\n  `src/datasystem/common/log/log_sampler_proto.cpp` — `PopulateConfigProto` / `UpdateConfigFromProto`), changing\n  `RegisterClientRspPb` field 24 from `int32 log_rate_limit` to `LogSampleConfigPb log_sample_config`. Satisfies R15,\n  R18.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 24,
+              "existing_code": "message LogSampleConfigPb {"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/pybind_api/pybind_register_kv.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "access"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 232,
+              "existing_code": "                auto access = AccessRecorder::Object(AccessRecorderKey::DS_KV_CLIENT_SET);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/worker/CMakeLists.txt",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "common_log_proto"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 44,
+              "existing_code": "        common_log_proto"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/worker/object_cache/service/worker_oc_service_create_impl.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "access"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 58,
+              "existing_code": "    auto access = AccessRecorder::Object(AccessRecorderKey::DS_POSIX_CREATE);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/worker/object_cache/service/worker_oc_service_delete_impl.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "access"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 63,
+              "existing_code": "    auto access = AccessRecorder::Object(AccessRecorderKey::DS_POSIX_DELETE_ALL_COPY);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/worker/object_cache/service/worker_oc_service_expire_impl.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "access"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 68,
+              "existing_code": "    auto access = AccessRecorder::Object(AccessRecorderKey::DS_POSIX_EXPIRE);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/worker/object_cache/service/worker_oc_service_get_impl.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "access"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 2800,
+              "existing_code": "    auto access = AccessRecorder::Object(AccessRecorderKey::DS_POSIX_EXIST);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/worker/object_cache/service/worker_oc_service_global_reference_impl.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "access"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 57,
+              "existing_code": "    auto access = AccessRecorder::Object(AccessRecorderKey::DS_POSIX_GINCREASEREF);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/worker/object_cache/service/worker_oc_service_multi_publish_impl.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "access"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 73,
+              "existing_code": "    auto access = AccessRecorder::Object(AccessRecorderKey::DS_POSIX_MULTIPUBLISH);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/worker/object_cache/service/worker_oc_service_publish_impl.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "access"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 431,
+              "existing_code": "    auto access = AccessRecorder::Object(AccessRecorderKey::DS_POSIX_PUBLISH);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/worker/object_cache/worker_oc_service_impl.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "access"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 1002,
+              "existing_code": "    auto access = AccessRecorder::Object(AccessRecorderKey::DS_POSIX_MULTI_CREATE);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/worker/object_cache/worker_oc_service_impl.h",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "datasystem"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 58,
+              "existing_code": "#include \"datasystem/common/util/wait_post.h\""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/worker/object_cache/worker_request_manager.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "Result"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 325,
+              "existing_code": "            .Result(accessRc).Record();"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/worker/object_cache/worker_request_manager.h",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "recorder_"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 115,
+              "existing_code": "        recorder_ = AccessRecorder::Object(key);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/worker/stream_cache/client_worker_sc_service_impl.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "AccessRecorder::Stream"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 140,
+              "existing_code": "        AccessRecorder::Stream(AccessRecorderKey::DS_POSIX_CREATE_PRODUCER));"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/worker/stream_cache/client_worker_sc_service_impl.h",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "CreateProducerReqPb"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.3** Migrate the ~65 access/log call sites in client and worker to the lambda-fill / `ShouldRecord()` pattern so\n  sampled-out events build no `RequestParam` (`src/datasystem/client/**`, `src/datasystem/worker/object_cache/**`,\n  `src/datasystem/worker/stream_cache/**`, `src/datasystem/c_api/**`, `src/datasystem/java_api/**`,\n  `src/datasystem/pybind_api/**`). Satisfies R6, R8.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 899,
+              "existing_code": "        const CreateProducerReqPb &req, std::shared_ptr<StreamAccessRecorder> recorder,"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "src/datasystem/worker/worker_service_impl.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "LogSampler::Instance"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P3.3** Publish effective config from the worker and apply it on the client from register/heartbeat responses, with\n  missing-field no-op and `enabled=false`+default-ppm pass-through\n  (`src/datasystem/worker/worker_service_impl.cpp`, `src/datasystem/client/client_worker_common_api.cpp`). Satisfies R15.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 323,
+              "existing_code": "    LogSampler::Instance().PopulateConfigProto(rsp.mutable_log_sample_config());"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "tests/st/client/object_cache/client_one_worker_log_size_test.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "opts"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P6.1** Add unit tests: `log_sampler_test`, `log_sampler_access_test`, `log_sampler_config_test`,\n  `log_sampler_integration_test`, `log_access_facade_test` covering LS-001…LS-009b, LS-013…LS-015c\n  (`tests/ut/common/log/*`). Satisfies R1–R15, R17.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 80,
+              "existing_code": "        opts.workerGflagParams = \"-shared_memory_size_mb=128 -v=2 -log_monitor=true\";"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "tests/st/common/log/BUILD.bazel",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "name"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P6.2** Add ST `log_sampler_st_test` for cross-process propagation consistency (`tests/st/common/log/*`) and update\n  `zmq_trace_sampling_meta_test`. Satisfies R5, R12.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 31,
+              "existing_code": "    name = \"log_sampler_st_test\","
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "tests/st/common/log/log_sampler_st_test.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "Description:"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P6.2** Add ST `log_sampler_st_test` for cross-process propagation consistency (`tests/st/common/log/*`) and update\n  `zmq_trace_sampling_meta_test`. Satisfies R5, R12.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 18,
+              "existing_code": " * Description: System-level tests for LogSampler cross-process behavior."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "tests/ut/CMakeLists.txt",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "common_log_proto"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P6.1** Add unit tests: `log_sampler_test`, `log_sampler_access_test`, `log_sampler_config_test`,\n  `log_sampler_integration_test`, `log_access_facade_test` covering LS-001…LS-009b, LS-013…LS-015c\n  (`tests/ut/common/log/*`). Satisfies R1–R15, R17.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 16,
+              "existing_code": "        common_log_proto"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "tests/ut/common/flags/flags_test.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "EXPECT_TRUE"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P6.1** Add unit tests: `log_sampler_test`, `log_sampler_access_test`, `log_sampler_config_test`,\n  `log_sampler_integration_test`, `log_access_facade_test` covering LS-001…LS-009b, LS-013…LS-015c\n  (`tests/ut/common/log/*`). Satisfies R1–R15, R17.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 539,
+              "existing_code": "EXPECT_TRUE(fi.isDefault);     // value == default -> isDefault=true"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "tests/ut/common/log/BUILD.bazel",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "LogSampler"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P6.1** Add unit tests: `log_sampler_test`, `log_sampler_access_test`, `log_sampler_config_test`,\n  `log_sampler_integration_test`, `log_access_facade_test` covering LS-001…LS-009b, LS-013…LS-015c\n  (`tests/ut/common/log/*`). Satisfies R1–R15, R17.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 75,
+              "existing_code": "# LogSampler测试"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "tests/ut/common/log/log_access_facade_test.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "LogSampler::Instance"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P6.1** Add unit tests: `log_sampler_test`, `log_sampler_access_test`, `log_sampler_config_test`,\n  `log_sampler_integration_test`, `log_access_facade_test` covering LS-001…LS-009b, LS-013…LS-015c\n  (`tests/ut/common/log/*`). Satisfies R1–R15, R17.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 40,
+              "existing_code": "        LogSampler::Instance().ResetForTest();"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "tests/ut/common/log/log_performance_test.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "LogSampler::Instance"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P6.3** Extend `log_performance_test` with the 4000 QPS / 32-thread empty/enabled scenarios and allocator-hook\n  hot-path constraint checks. Satisfies R16.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 78,
+              "existing_code": "        LogSampler::Instance().ResetForTest();"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "tests/ut/common/log/log_sampler_access_test.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "Description:"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P6.1** Add unit tests: `log_sampler_test`, `log_sampler_access_test`, `log_sampler_config_test`,\n  `log_sampler_integration_test`, `log_access_facade_test` covering LS-001…LS-009b, LS-013…LS-015c\n  (`tests/ut/common/log/*`). Satisfies R1–R15, R17.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 18,
+              "existing_code": " * Description: Unit tests for LogSampler access guard (Step 4)."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "tests/ut/common/log/log_sampler_config_test.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "Description:"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P6.1** Add unit tests: `log_sampler_test`, `log_sampler_access_test`, `log_sampler_config_test`,\n  `log_sampler_integration_test`, `log_access_facade_test` covering LS-001…LS-009b, LS-013…LS-015c\n  (`tests/ut/common/log/*`). Satisfies R1–R15, R17.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 18,
+              "existing_code": " * Description: Unit tests for LogSampler config integration (Step 5 + Step 7)."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "tests/ut/common/log/log_sampler_integration_test.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "Description:"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P6.1** Add unit tests: `log_sampler_test`, `log_sampler_access_test`, `log_sampler_config_test`,\n  `log_sampler_integration_test`, `log_access_facade_test` covering LS-001…LS-009b, LS-013…LS-015c\n  (`tests/ut/common/log/*`). Satisfies R1–R15, R17.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 18,
+              "existing_code": " * Description: Integration test for LOG/PLOG macros with LogSampler."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "tests/ut/common/log/log_sampler_test.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "Description:"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P6.1** Add unit tests: `log_sampler_test`, `log_sampler_access_test`, `log_sampler_config_test`,\n  `log_sampler_integration_test`, `log_access_facade_test` covering LS-001…LS-009b, LS-013…LS-015c\n  (`tests/ut/common/log/*`). Satisfies R1–R15, R17.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 18,
+              "existing_code": " * Description: Unit tests for LogSampler core component."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "tests/ut/common/log/logging_test.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "LogSampler::Instance"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P6.1** Add unit tests: `log_sampler_test`, `log_sampler_access_test`, `log_sampler_config_test`,\n  `log_sampler_integration_test`, `log_access_facade_test` covering LS-001…LS-009b, LS-013…LS-015c\n  (`tests/ut/common/log/*`). Satisfies R1–R15, R17.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 504,
+              "existing_code": "    LogSampler::Instance().ResetForTest();"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "tests/ut/common/log/spdlog/BUILD.bazel",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "# 日志速率限制测试"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P6.1** Add unit tests: `log_sampler_test`, `log_sampler_access_test`, `log_sampler_config_test`,\n  `log_sampler_integration_test`, `log_access_facade_test` covering LS-001…LS-009b, LS-013…LS-015c\n  (`tests/ut/common/log/*`). Satisfies R1–R15, R17.",
+              "status": "traces",
+              "side": "LEFT",
+              "line": 28,
+              "existing_code": "# 日志速率限制测试"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "tests/ut/common/log/spdlog/log_message_test.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "LogSampler::Instance"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P2.1** Route `ShouldCreateLogMessage()` / `ShouldCreatePlogMessage()` through the sampler classifier instead of\n  `LogRateLimiter`, keeping FATAL/CHECK forced and checking PLOG before stream payload evaluation\n  (`src/datasystem/common/log/log.h`, `logging.cpp`, `logging.h`,\n  `src/datasystem/common/log/spdlog/log_message*.{h,cpp}`). Satisfies R4, R6, R9, R10.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 54,
+              "existing_code": "        LogSampler::Instance().ResetForTest();"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "tests/ut/common/log/spdlog/log_rate_limiter_test.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "limiter"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P5.1** Delete `LogRateLimiter` and its test (`src/datasystem/common/log/spdlog/log_rate_limiter.{h,cpp}`,\n  `tests/ut/common/log/spdlog/log_rate_limiter_test.cpp`) and drop build wiring / the `DATASYSTEM_LOG_RATE_LIMIT` env\n  var. Satisfies R18.",
+              "status": "traces",
+              "side": "LEFT",
+              "line": 59,
+              "existing_code": "    auto &limiter = LogRateLimiter::Instance();"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "tests/ut/common/rpc/BUILD.bazel",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "src"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P6.1** Add unit tests: `log_sampler_test`, `log_sampler_access_test`, `log_sampler_config_test`,\n  `log_sampler_integration_test`, `log_access_facade_test` covering LS-001…LS-009b, LS-013…LS-015c\n  (`tests/ut/common/log/*`). Satisfies R1–R15, R17.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 31,
+              "existing_code": "        \"//src/datasystem/common/log:log_sampler\","
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "tests/ut/common/rpc/zmq_trace_sampling_meta_test.cpp",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "LogSampler::Instance"
+          ],
+          "findings": [
+            {
+              "plan_item": "- **P6.2** Add ST `log_sampler_st_test` for cross-process propagation consistency (`tests/st/common/log/*`) and update\n  `zmq_trace_sampling_meta_test`. Satisfies R5, R12.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 37,
+              "existing_code": "        LogSampler::Instance().ResetForTest();"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "verdict": "adheres",
+  "examined": [
+    "scope.json",
+    "plan.txt",
+    "pr.diff",
+    "task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md"
+  ]
+}
