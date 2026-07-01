@@ -3,5 +3,5 @@ instance: pr-8
 head_sha: ff6ab46fb549df87d6a04538f01a68ab4c5fae29
 phase: fix
 joined: true
-phase_label: apply remediations + commit to PR
+phase_label: "\u2705 done"
 status_comment_id: 4849569607
