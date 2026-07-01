@@ -1,0 +1,32 @@
+{
+  "scope": { "code_changed": true },
+  "items": [
+    {
+      "path": "docs/notify.md",
+      "status": "inadequate",
+      "reason": "The new usage doc describes send/send_all return values but omits the timestamped audit log behavior required by specs/demo-notify.md."
+    },
+    {
+      "path": "plans/demo-notify.md",
+      "status": "inadequate",
+      "reason": "The implementation plan covers per-recipient sends only and does not plan the timestamped audit log requirement added in the spec."
+    },
+    {
+      "path": "specs/demo-notify.md",
+      "status": "updated_appropriately",
+      "reason": "The new specification documents both per-recipient notification delivery and timestamped audit logging requirements."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "docs/notify.md (from PR diff)",
+    "plans/demo-notify.md (from PR diff)",
+    "specs/demo-notify.md (from PR diff)",
+    "src/notify/notifier.py (from PR diff)",
+    "tests/test_notifier.py (from PR diff)",
+    "repository documentation search for notify/notifier/send_all/audit log references"
+  ]
+}
