@@ -1,0 +1,44 @@
+{
+  "scope": { "code_changed": true },
+  "items": [
+    {
+      "path": "docs/notify.md",
+      "status": "inadequate",
+      "reason": "The API doc lists send_all(recipients) but omits the new dry_run parameter and behavior covered by the implementation, spec, plan, and tests."
+    },
+    {
+      "path": "specs/demo-notify.md",
+      "status": "updated_appropriately",
+      "reason": "The specification documents both sending each recipient and dry-run behavior introduced by the change."
+    },
+    {
+      "path": "plans/demo-notify.md",
+      "status": "updated_appropriately",
+      "reason": "The implementation plan includes both send_all fanout and dry-run support matching the code change."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    "docs/notify.md (from pr.diff; not present in base checkout)",
+    "specs/demo-notify.md (from pr.diff; not present in base checkout)",
+    "plans/demo-notify.md (from pr.diff; not present in base checkout)",
+    "src/notify/notifier.py (from pr.diff; not present in base checkout)",
+    "tests/test_notifier.py (from pr.diff; not present in base checkout)",
+    "README.md",
+    "README_EN.md",
+    "docs/",
+    "specs/",
+    "plans/",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md"
+  ]
+}
