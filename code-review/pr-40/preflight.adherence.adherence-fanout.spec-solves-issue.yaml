@@ -1,7 +1,7 @@
 protocol: code-review
 instance: pr-40
 state: adherence-fanout
-sub_state: spec-solves-issue-gather
+sub_state: spec-solves-issue-judge
 iteration: 1
 gates: {}
 history: []
