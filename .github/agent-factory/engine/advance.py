@@ -21,6 +21,7 @@ import typing
 # Import shared library from the same directory as this script.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib
+import paths as _paths
 
 
 @dataclasses.dataclass
@@ -265,12 +266,23 @@ def advance_node(ctx, process):
         complete_sequence(ctx, cur)
 
 
-def run_publish_hook(proto_path, proto, branch, agent_state, evid, instance, pid):
+def run_publish_hook(proto_path, proto, branch, agent_state, evid, instance, pid,
+                     tree_path=None):
     """Resolve and run the protocol's publish-state executable.
     Returns {conclusion, summary} dict; on any resolution/exec failure,
-    returns a neutral conclusion so the transition still completes."""
+    returns a neutral conclusion so the transition still completes.
 
-    if branch:
+    When tree_path is not None (NODE_PATH mode), resolve the action path-aware:
+    use node_at_path to get the leg's node dict directly (which carries .publish),
+    regardless of which fanout the leg belongs to. This fixes the first-fanout-only
+    resolution bug where the old branch-scan always broke on the first fanout found."""
+
+    if tree_path is not None:
+        # Path-aware resolution: look up the exact leg node and read its .publish.
+        node = _paths.node_at_path(proto, tree_path) or {}
+        action = node.get("publish") or None
+        exec_override = ""
+    elif branch:
         # fan-out branch: get .publish from the branch entry
         action = None
         for state in proto.get("states", []):
@@ -595,8 +607,21 @@ def main():
         # fire the enclosing fanout's path-keyed join — DO NOT write a cursor
         # file at the parent (that would prematurely mark the whole fanout done).
         if _paths.is_fanout(proto, _paths.parent_path(tree_path)):
-            lib.set_check_run(cr_name, sha, "completed", "success",
-                              f"{substate} complete", "")
+            # Run the publish hook if this leg declares one. Use path-aware
+            # resolution (tree_path) so legs in the SECOND (or any later) fanout
+            # resolve correctly. Legs without a "publish" key are unchanged
+            # (conclusion "success", empty summary — no-op, no hook invocation).
+            leg_node = _paths.node_at_path(proto, tree_path) or {}
+            if leg_node.get("publish"):
+                hook = run_publish_hook(proto_path, proto, branch, agent_state,
+                                        evid, instance, pid, tree_path=tree_path)
+                concl = hook.get("conclusion", "neutral")
+                csum = hook.get("summary", "")
+            else:
+                concl = "success"
+                csum = ""
+            lib.set_check_run(cr_name, sha, "completed", concl,
+                              f"{substate} complete", csum)
             update_status_comment(sf, inf, branch, pr, pid, instance, proto_path, dir_,
                                   "✅ done — published.", max_iter, github_repository)
             lib.cas_push(dir_, f"{instance}: {'.'.join(tree_path)} done → leg done")
