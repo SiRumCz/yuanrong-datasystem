@@ -1,7 +1,6 @@
 protocol: code-review
 instance: pr-41
 head_sha: 5451fba484b5dc0665ba7dde5438bed820b5be67
-phase: preflight-gate
-joined: true
-phase_label: pre-flight adherence gate
-status_comment_id: 4855511134
+phase: preflight
+joined: false
+phase_label: pre-flight adherence chain
