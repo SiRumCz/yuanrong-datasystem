@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["leg", "scope", "gather_verdict", "graded_findings", "examined"],
+  "properties": {
+    "leg": {"type": "string", "minLength": 1},
+    "scope": {
+      "type": "object",
+      "description": "echoed verbatim from the gather's scope (small object; {} for mm/security)"
+    },
+    "gather_verdict": {
+      "type": "string",
+      "description": "echoed verbatim from the gather's verdict — the deterministic floor signal",
+      "minLength": 1
+    },
+    "graded_findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ref", "severity", "rationale"],
+        "properties": {
+          "ref": {"type": "string", "minLength": 1},
+          "severity": {"enum": ["blocking", "advisory", "noise"]},
+          "rationale": {"type": "string"}
+        }
+      }
+    },
+    "examined": {"type": "array", "items": {"type": "string"}}
+  }
+}

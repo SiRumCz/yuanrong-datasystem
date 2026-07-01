@@ -1,0 +1,18 @@
+{
+  "transcript_present": false,
+  "phases": [
+    {
+      "phase": "EXPLORE",
+      "token_count": 3,
+      "message_count": 1
+    }
+  ],
+  "meta": {
+    "pr_number": 42,
+    "head_sha": "abcdef123456"
+  },
+  "session_export": {
+    "path": "session-export.json",
+    "error": false
+  }
+}

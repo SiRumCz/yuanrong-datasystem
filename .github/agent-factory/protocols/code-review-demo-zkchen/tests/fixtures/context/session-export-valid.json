@@ -1,0 +1,94 @@
+{
+  "version": "1.0",
+  "exportedAt": "2026-06-25T00:00:00.000Z",
+  "files": [
+    {
+      "id": "ctx-42",
+      "filename": "feature.jsonl",
+      "title": "PR #42 - feature/context-phase",
+      "conversation": {
+        "messages": [
+          {
+            "id": "m1",
+            "role": "user",
+            "parts": [
+              {
+                "id": "p1",
+                "type": "text",
+                "token_count": 12,
+                "component": "UNDERSTAND"
+              }
+            ]
+          },
+          {
+            "id": "m2",
+            "role": "assistant",
+            "parts": [
+              {
+                "id": "p2",
+                "type": "tool-call",
+                "toolName": "Read",
+                "token_count": 4,
+                "component": "EXPLORE"
+              },
+              {
+                "id": "p3",
+                "type": "reasoning",
+                "token_count": 20,
+                "component": "ANALYZE"
+              }
+            ]
+          },
+          {
+            "id": "m3",
+            "role": "assistant",
+            "parts": [
+              {
+                "id": "p4",
+                "type": "tool-call",
+                "toolName": "Bash",
+                "token_count": 8,
+                "component": "VERIFY"
+              }
+            ]
+          }
+        ]
+      },
+      "colors": {
+        "UNDERSTAND": "#60a5fa",
+        "EXPLORE": "#2dd4bf",
+        "ANALYZE": "#fb7185",
+        "VERIFY": "#a3e635"
+      },
+      "summary": null,
+      "analysis": null,
+      "metadata": {
+        "parserName": "Context Viewer",
+        "agent": "claude-code",
+        "model": "unknown"
+      }
+    }
+  ],
+  "groups": [],
+  "analytics": {
+    "componentComparison": [
+      {
+        "fileId": "ctx-42",
+        "filename": "feature.jsonl",
+        "totalTokens": 44,
+        "turnCount": 1,
+        "messageCount": 3,
+        "componentTokens": {
+          "UNDERSTAND": 12,
+          "EXPLORE": 4,
+          "ANALYZE": 20,
+          "VERIFY": 8
+        }
+      }
+    ]
+  },
+  "meta": {
+    "pr_number": 42,
+    "head_sha": "abcdef123456"
+  }
+}
