@@ -55,6 +55,9 @@ def main():
             p.append(f"{fp}.rationale missing/empty")
         if not _non_empty_str(fix.get("suggested_patch")):
             p.append(f"{fp}.suggested_patch missing/empty")
+        ol = fix.get("original_line")
+        if ol is not None and (not isinstance(ol, str) or ol == ""):
+            p.append(f"fixes[{i}].original_line must be a non-empty string when present")
         if len(p) > 8:
             break
 
