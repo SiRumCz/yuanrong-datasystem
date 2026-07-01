@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Evidence emitted by the security-gather agent. Contains the raw outputs of the Cedar (agent tool-call audit) and Guardians (plan data-flow) deterministic security engines, plus a deterministic verdict derived from those outputs. No LLM judgment: verdict and examined are fully determined by the engine_report.",
+  "type": "object",
+  "required": ["scope", "cedar", "guardians", "engine_report", "verdict", "examined"],
+  "properties": {
+    "scope": {
+      "type": "object",
+      "description": "Scope flags for this gather step. Security has no scope flags — may be {}.",
+      "additionalProperties": true
+    },
+    "cedar": {
+      "type": "object",
+      "description": "Raw output of the Cedar engine (agent tool-call audit). Keys: status, flags. May be a fallback stub when Cedar could not run.",
+      "required": [],
+      "additionalProperties": true
+    },
+    "guardians": {
+      "type": "object",
+      "description": "Raw output of the Guardians engine (plan data-flow verification). Keys: ok, violations, warnings. May be a fallback stub when Guardians could not run.",
+      "required": [],
+      "additionalProperties": true
+    },
+    "engine_report": {
+      "type": "object",
+      "description": "Fused report from emit-engine-report.js combining Cedar + Guardians outputs. The `violations` array drives the deterministic verdict. May be a fallback stub when both engines failed.",
+      "required": [],
+      "properties": {
+        "violations": {
+          "type": "array",
+          "description": "Security violations found by Cedar and/or Guardians. Each entry may carry `locked:true` to indicate a blocking violation.",
+          "items": {
+            "type": "object",
+            "required": [],
+            "properties": {
+              "id": {"type": "string"},
+              "locked": {"type": "boolean"},
+              "rule": {"type": "string"},
+              "detail": {"type": "string"}
+            },
+            "additionalProperties": true
+          }
+        },
+        "summary": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "verdict": {
+      "enum": ["PASS", "LOCKED_VIOLATION", "n/a"],
+      "description": "Deterministic verdict. LOCKED_VIOLATION iff engine_report.violations contains any entry with locked:true. n/a if neither engine could run (fail-open — never silent PASS). PASS otherwise."
+    },
+    "examined": {
+      "type": "array",
+      "description": "Policy ids, file paths, or other identifiers examined. Non-empty trace confirming the agent ran the engines.",
+      "items": {"type": "string"}
+    }
+  }
+}

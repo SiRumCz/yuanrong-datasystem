@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "mental-model compliance evidence",
+  "type": "object",
+  "required": ["verdict", "divergences", "examined"],
+  "properties": {
+    "verdict": {
+      "type": "string",
+      "enum": ["compliant", "diverges"],
+      "description": "Whether the PR upholds the stored mental model (compliant) or contradicts it (diverges)."
+    },
+    "divergences": {
+      "type": "array",
+      "description": "One entry per stored decision/convention the diff contradicts; empty when compliant.",
+      "items": {
+        "type": "object",
+        "required": ["decision", "detail"],
+        "properties": {
+          "decision": { "type": "string", "description": "The MM decision/convention diverged from (e.g. an ADR id or arc42 section)." },
+          "detail": { "type": "string", "description": "What the diff does that contradicts it." },
+          "evidence": { "type": "string", "description": "Changed file path / hunk citation grounding the divergence." },
+          "fix": { "type": "string", "description": "One-line remediation (change the code, or update the MM)." }
+        }
+      }
+    },
+    "examined": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "MM docs + changed files the agent inspected (negative-attestation trace)."
+    }
+  }
+}

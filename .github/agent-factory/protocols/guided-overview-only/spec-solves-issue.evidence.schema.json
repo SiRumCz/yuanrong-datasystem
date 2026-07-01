@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "spec-solves-issue leg evidence",
+  "type": "object",
+  "required": ["verdict", "scope", "examined"],
+  "properties": {
+    "matrix": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["problem", "status"],
+        "properties": {
+          "problem": { "type": "string" },
+          "status": { "type": "string", "enum": ["addressed_by_spec", "not_addressed"] },
+          "spec_quote": { "type": ["string", "null"] },
+          "spec_location": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "verdict": { "type": "string", "enum": ["solves", "does-not-solve", "n/a"] },
+    "scope": {
+      "type": "object",
+      "required": ["issue_linked", "spec_present"],
+      "properties": {
+        "issue_linked": { "type": "boolean" },
+        "spec_present": { "type": "boolean" }
+      }
+    },
+    "examined": { "type": "array", "items": { "type": "string" } }
+  }
+}

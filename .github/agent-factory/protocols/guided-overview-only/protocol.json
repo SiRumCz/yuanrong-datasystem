@@ -1,0 +1,32 @@
+{
+  "$schema": "../../engine/protocol.schema.json",
+  "name": "guided-overview-only",
+  "version": "0.1.0",
+  "min_engine_version": "1.0.0",
+  "max_depth": 6,
+  "_note": "Stripped-down protocol that runs ONLY the guided overview (overview-agent -> conclude-overview), then done. Skips preflight, preflight-gate, review, triage, fix, post-fix, and mrp. Triggered by /ophase to avoid colliding with code-review's /review trigger. overview-agent re-fetches the PR diff itself; no inputs reference earlier phases.",
+  "triggers": [
+    { "on": "issue_comment", "comment_prefix": "/overview", "command": "start" }
+  ],
+  "states": [
+    {
+      "id": "overview",
+      "kind": "agent",
+      "label": "guided overview + risk",
+      "workflow": "overview-agent",
+      "evidence": "overview.evidence.schema.json",
+      "max_iterations": 2,
+      "params": {
+        "require": ["cohorts", "summary"],
+        "non_empty": ["cohorts", "summary"]
+      },
+      "checks": [
+        { "run": "evidence-present", "on_fail": "iterate" },
+        { "run": "overview-schema-valid", "on_fail": "iterate" },
+        { "run": "cohort-partition-complete", "on_fail": "iterate" }
+      ],
+      "conclude": "conclude-overview",
+      "next": "done"
+    }
+  ]
+}

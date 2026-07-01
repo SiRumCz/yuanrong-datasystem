@@ -1,0 +1,16 @@
+{
+  "pr": 9,
+  "iteration": 1,
+  "feedback": "",
+  "inputs": {
+    "preflight": { "checks": [{ "id": "spec-adherence", "status": "fail" }, { "id": "plan-adherence", "status": "pass" }], "examined": ["specs/z.md"] },
+    "overview": {
+      "summary": "Reworks the shared cache API across subsystems.",
+      "risk_band": "Critical",
+      "cohorts": [
+        { "cohort": "core-api", "cohortOrder": 1, "area": "backend", "files": ["src/cache/x.cpp", "lib/rpc/y.cpp"], "layers": [], "bcFindings": [{ "symbol": "CacheApi", "kind": "method", "category": "api", "severityClass": "hard-break", "evidence": "removed method" }] }
+      ]
+    },
+    "context": { "phases": [], "transcript_present": false }
+  }
+}
