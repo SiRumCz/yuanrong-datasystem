@@ -1,0 +1,46 @@
+{
+  "verdict": "diverges",
+  "divergences": [
+    {
+      "decision": "System scope is openYuanrong DataSystem: a distributed cache exposing KV, object, stream, and heterogeneous-NPU interfaces, consumed through the documented SDKs plus dscli/dsbench.",
+      "detail": "The PR adds a new Notify CLI specification, docs, production module, and tests under docs/notify.md, specs/demo-notify.md, plans/demo-notify.md, src/notify/notifier.py, and tests/test_notifier.py. This notification API is unrelated to the MM's bounded context and is not one of the documented interface families or CLI channels.",
+      "evidence": "src/notify/notifier.py:new file; specs/demo-notify.md:new file; docs/notify.md:new file",
+      "fix": "Remove the unrelated Notify CLI from this repository, or update the mental model and product scope through the appropriate maintainer decision if this is now an intended datasystem capability."
+    },
+    {
+      "decision": "Conventional constraint: every source file carries the Apache-2.0 + Huawei copyright header.",
+      "detail": "The newly added Python source and test files start directly with a docstring/imports and do not include the copyright/license header required by the MM conventional constraints.",
+      "evidence": "src/notify/notifier.py:new file; tests/test_notifier.py:new file",
+      "fix": "Add the repository-standard Apache-2.0 + Huawei copyright header to new source files, or update the mental model if this convention no longer applies to Python/test sources."
+    }
+  ],
+  "examined": [
+    "/tmp/gh-aw/agent/pr.json",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-001-master-worker-split.adoc",
+    "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-002-pluggable-cluster-metadata.adoc",
+    "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-003-consistent-hash-ring-placement.adoc",
+    "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-004-performance-first-optional-reliability.adoc",
+    "_mm/socratic/docs/arc42/arc42-yuanrong-datasystem.adoc",
+    "_mm/socratic/docs/specs/prd-yuanrong-datasystem.adoc",
+    "_mm/socratic/docs/specs/use-cases-yuanrong-datasystem.adoc",
+    "_mm/socratic/OPEN_QUESTIONS-yuanrong-datasystem.adoc",
+    "_mm/socratic/QUESTION_TREE-yuanrong-datasystem.adoc",
+    "_mm/legion-map/CODEBASE.md",
+    "_mm/vibed-codeset context for src/notify/notifier.py",
+    "_mm/vibed-codeset context for docs/notify.md",
+    "_mm/vibed-codeset context for tests/test_notifier.py",
+    "docs/notify.md",
+    "plans/demo-notify.md",
+    "specs/demo-notify.md",
+    "src/notify/notifier.py",
+    "tests/test_notifier.py"
+  ]
+}
