@@ -1,7 +1,12 @@
 protocol: code-review
 instance: pr-14
-state: consistency-fanout
+state: done
 iteration: 1
 gates: {}
 head_sha: 75c00e6f356b9bebe424309423c37af04e0dbc91
-history: []
+history:
+- iteration: 1
+  agent_run_id: '28491277813'
+  checks:
+    judge-coverage: pass
+  feedback: ''
