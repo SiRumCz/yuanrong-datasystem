@@ -1,0 +1,6 @@
+protocol: code-review-demo-zkchen
+instance: pr-14
+head_sha: 75c00e6f356b9bebe424309423c37af04e0dbc91
+phase: preflight
+joined: false
+phase_label: pre-flight adherence chain
