@@ -358,11 +358,16 @@ jobs:
           # START requested); fall back to the resolved SHA for ref-target CONTINUE
           # hops, where the dispatch carries no ref (the SHA is pinned in state).
           REF="${CHECKOUT_REF:-$SHA}"
+          # Protocol dir (dirname of the routed protocol.json) so a shared agent can
+          # resolve ITS protocol's scripts/ instead of a hardcoded code-review path.
+          # PROTO is engine-controlled (read from env, never interpolated into a run body).
+          PROTO_DIR=$(dirname "$PROTO")
           CTX=$(jq -nc \
             --arg pr "$PR" --arg iteration "$ITERATION" --arg feedback "$FEEDBACK" \
             --argjson sabotage "$SABOTAGE" --arg cid "$CID" \
             --argjson inputs "$INPUTS" --arg ref "$REF" --arg sha "$SHA" \
-            '{pr: $pr, iteration: $iteration, feedback: $feedback, sabotage: $sabotage, cid: $cid, inputs: $inputs, ref: $ref, sha: $sha}')
+            --arg protocol_dir "$PROTO_DIR" \
+            '{pr: $pr, iteration: $iteration, feedback: $feedback, sabotage: $sabotage, cid: $cid, inputs: $inputs, ref: $ref, sha: $sha, protocol_dir: $protocol_dir}')
           # Workflow comes from the matrix leg (next.py emits it in legs[]); read
           # via env var (never interpolated) to keep the security invariant.
           NAME="$LEG_WORKFLOW"
