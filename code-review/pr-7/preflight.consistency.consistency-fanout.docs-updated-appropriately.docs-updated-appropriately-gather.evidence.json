@@ -1,0 +1,46 @@
+{
+  "scope": {
+    "code_changed": true
+  },
+  "items": [
+    {
+      "path": "docs/source_zh_cn/appendix/client_env_guide.md",
+      "status": "inadequate",
+      "reason": "The PR adds the new URMA failover gflags, but the doc omits that worker switching only happens when cross-node connection/failover is enabled."
+    },
+    {
+      "path": ".repo_context/modules/client/client-sdk.md",
+      "status": "missing",
+      "reason": "Client context still only notes standby failover behavior and was not updated for the new URMA data-plane failure trigger, tracker, and client runtime gflags."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md",
+    ".repo_context/modules/client/client-sdk.md",
+    ".repo_context/modules/client/README.md",
+    ".repo_context/modules/infra/common-infra.md",
+    "docs/source_zh_cn/appendix/client_env_guide.md",
+    "docs/source_zh_cn/api_reference/api/cpp/struct-ConnectOptions.rst",
+    "docs/source_zh_cn/api_reference/api/python/yr.datasystem.kv_client.KVClient.rst",
+    "docs/source_zh_cn/api_reference/api/python/yr.datasystem.DsClient.rst",
+    "docs/source_zh_cn/api_reference/api/python/yr.datasystem.hetero_client.HeteroClient.rst",
+    "docs/source_zh_cn/deployment/dscli.md",
+    "docs/source_zh_cn/deployment/k8s_configuration.md",
+    "docs/source_zh_cn/best_practices/best_pracitces_for_ub.md",
+    "src/datasystem/client/object_cache/object_client_impl.cpp",
+    "src/datasystem/common/util/gflag/common_gflag_define.cpp",
+    "src/datasystem/common/util/gflag/common_gflags_validate.cpp",
+    "src/datasystem/common/util/gflag/flags.h"
+  ]
+}
