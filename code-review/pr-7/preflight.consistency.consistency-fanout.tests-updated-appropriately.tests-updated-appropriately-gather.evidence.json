@@ -1,0 +1,55 @@
+{
+  "scope": { "code_changed": true },
+  "items": [
+    {
+      "path": "tests/ut/client/urma_success_rate_tracker_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Added UT covers the new tracker window settlement, strict threshold, min-sample gate, disable/reset, failed-switch backoff, hot min-sample reads, and concurrent boundary trigger behavior."
+    },
+    {
+      "path": "tests/st/client/kv_cache/kv_client_urma_failover_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Added ST covers service-discovery failover for remote URMA Set/Get failures, TCP fallback, K_URMA_ERROR, switch failure/backoff recovery, disabled threshold, and dynamic config updates."
+    },
+    {
+      "path": "tests/ut/common/flags/flags_test.cpp",
+      "status": "missing",
+      "reason": "The PR adds validators rejecting non-finite/out-of-range urma_failover_success_rate_ratio and zero urma_failover_min_sample_count, but no changed test covers invalid flag rejection."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/modules/client/client-sdk.md",
+    ".repo_context/modules/quality/tests-and-reproduction.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/features/quality/test-implementation.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md",
+    "src/datasystem/client/urma_success_rate_tracker.cpp",
+    "src/datasystem/client/urma_success_rate_tracker.h",
+    "src/datasystem/client/client_worker_common_api.cpp",
+    "src/datasystem/client/client_worker_common_api.h",
+    "src/datasystem/client/object_cache/client_worker_api/client_worker_base_api.cpp",
+    "src/datasystem/client/object_cache/client_worker_api/client_worker_remote_api.cpp",
+    "src/datasystem/client/object_cache/object_client_impl.cpp",
+    "src/datasystem/common/util/gflag/common_gflag_define.cpp",
+    "src/datasystem/common/util/gflag/common_gflags.h",
+    "src/datasystem/common/util/gflag/common_gflags_validate.cpp",
+    "src/datasystem/common/util/gflag/flags.h",
+    "tests/ut/client/urma_success_rate_tracker_test.cpp",
+    "tests/st/client/kv_cache/kv_client_urma_failover_test.cpp",
+    "tests/ut/common/flags/flags_test.cpp",
+    "tests/ut/CMakeLists.txt",
+    "tests/st/CMakeLists.txt",
+    "tests/ut/client/BUILD.bazel",
+    "tests/st/client/kv_cache/BUILD.bazel"
+  ]
+}
