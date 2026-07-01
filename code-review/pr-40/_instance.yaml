@@ -1,0 +1,6 @@
+protocol: code-review
+instance: pr-40
+head_sha: 66294c98b820aec34046094f07cf127ac2850dec
+phase: preflight
+joined: false
+phase_label: pre-flight adherence chain
