@@ -182,11 +182,13 @@ k8s/helm_chart/datasystem/templates/configmap.yaml].
 The significant decisions are recorded as ADRs (see `docs/specs/adrs/`): the
 master/worker split, the pluggable ETCD-vs-Metastore metadata backend, consistent
 hash-ring placement, and the performance-first / opt-in-reliability WriteMode
-model [src/datasystem/master/master_service_impl.h:38-73,
+model, plus client-side failover on persistent URMA data-plane failure
+[src/datasystem/master/master_service_impl.h:38-73,
 src/datasystem/worker/worker.h:45-115,
 docs/source_zh_cn/design_document/cluster_management.md:7-52,
 src/datasystem/worker/hash_ring/hash_ring.h:51-96,
-include/datasystem/object/object_enum.h:30-35].
+include/datasystem/object/object_enum.h:30-35,
+src/datasystem/client/urma_success_rate_tracker.cpp:33].
 
 == 10. Quality Requirements
 

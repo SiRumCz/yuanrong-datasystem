@@ -1,0 +1,73 @@
+= ADR-005: Client-side failover on persistent URMA data-plane failure
+:doctype: article
+
+== Status
+
+Accepted (in code). Operational thresholds remain tunable by deployment.
+
+== Context
+
+The client-worker fast path can fail independently from worker liveness: URMA
+writes and worker-to-client URMA Get responses may fail while the worker remains
+reachable through TCP fallback. PR #7 adds a request-driven
+`UrmaSuccessRateTracker` that evaluates each client-worker connection over a
+`client_dead_timeout_s`-length window and only considers a window unhealthy when
+its success rate is strictly below `urma_failover_success_rate_ratio` and at least
+`urma_failover_min_sample_count` samples were observed
+[src/datasystem/client/urma_success_rate_tracker.cpp:33]. The two thresholds are
+runtime client configuration flags, with `0.0` disabling the feature and clearing
+tracker state [src/datasystem/common/util/gflag/common_gflag_define.cpp:72].
+
+Set/Publish traffic records actual URMA write success or failure after the UB
+write attempt [src/datasystem/client/object_cache/client_worker_api/client_worker_base_api.cpp:300].
+Get traffic records worker-to-client URMA failure both when the payload falls
+back to TCP and when the response returns `K_URMA_ERROR`
+[src/datasystem/client/object_cache/client_worker_api/client_worker_remote_api.cpp:476].
+
+== Decision
+
+Treat persistent client-worker URMA data-plane degradation as a client-side worker
+switch trigger, distinct from heartbeat loss and voluntary scale-down. The switch
+is submitted asynchronously through the existing worker-switch machinery
+[src/datasystem/client/object_cache/object_client_impl.cpp:420], and the new
+`URMA_DATA_PLANE_FAILURE` switch reason keeps the current worker available while
+the client searches for a replacement [src/datasystem/client/listen_worker.h:53].
+Failed switch attempts back off per tracker, and a complete healthy window resets
+the backoff [src/datasystem/client/urma_success_rate_tracker.cpp:62].
+
+== Consequences
+
+* (+) A client no longer stays pinned to a bad URMA fast path when TCP fallback is
+  masking the failure; persistent degradation can move the client to another
+  worker without waiting for heartbeat-based worker death.
+* (+) Keeping the current worker during a URMA data-plane switch preserves business
+  continuity through TCP fallback when no better worker is immediately available
+  [src/datasystem/client/object_cache/object_client_impl.cpp:787].
+* (+) Window length, strict success-rate threshold, minimum sample count, disable
+  semantics, and failed-switch backoff reduce reaction to sparse or transient
+  failures.
+* (-) Failover policy now depends on data-plane result accounting in every URMA
+  request path; missing a path can silently under-report degradation.
+* (-) The mechanism improves availability by switching away from a bad
+  client-worker transport path, but it does not make cache-only data durable or
+  replace the cluster metadata failover model captured in ADR-002 and ADR-004.
+
+== Pugh Matrix
+
+Baseline: TCP fallback only, with no data-plane-driven worker switch. Scale -1 / 0
+/ +1.
+
+[cols="3,1,1,1", options="header"]
+|===
+| Criterion | TCP fallback only (baseline) | Heartbeat/death switch only | URMA data-plane failover (chosen)
+| Performance efficiency      | 0 | 0 | +1
+| Availability / elasticity   | 0 | 0 | +1
+| Reliability / recovery      | 0 | 0 | 0
+| Concurrency & memory safety | 0 | 0 | -1
+| Operability                 | 0 | 0 | 0
+| *Total*                     | *0* | *0* | *+1*
+|===
+
+The chosen design preserves the performance-first fast path while adding a
+bounded, request-observed escape hatch when that fast path is persistently
+unhealthy.
