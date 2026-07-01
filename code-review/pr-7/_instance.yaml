@@ -1,7 +1,6 @@
 protocol: code-review
 instance: pr-7
 head_sha: a52b6f8823295a7e131d0755bbf24a61914c4a72
-phase: post-fix
+phase: preflight
 joined: false
-phase_label: "context capture \u2225 mental-model update"
-status_comment_id: 4854982121
+phase_label: pre-flight adherence chain
