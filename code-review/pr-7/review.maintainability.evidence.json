@@ -1,0 +1,15 @@
+{
+  "dimension": "maintainability",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": ".conversations/7b1e9a4c-2d3f-4a8b-9c1e-0a2b3c4d5e6f.jsonl",
+      "line": 1,
+      "severity": "low",
+      "category": "maintainability",
+      "title": "Remove checked-in AI conversation transcript",
+      "impact": "This new file is an implementation transcript rather than source, test, or durable repository documentation. Keeping it in the tree creates noisy future diffs and leaves readers with an uncategorized artifact that can drift from the actual code and reviewed design.",
+      "fix": "Drop the .conversations JSONL file from the PR, or move any source-backed rationale that should persist into the relevant design or repo-context documentation."
+    }
+  ]
+}
