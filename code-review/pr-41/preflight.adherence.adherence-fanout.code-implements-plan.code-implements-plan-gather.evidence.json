@@ -1,0 +1,66 @@
+{
+  "scope": {
+    "code_changed": true,
+    "plan_present": true,
+    "plan_path": "plans/demo-notify.md",
+    "code_files": [
+      "src/notify/notifier.py"
+    ]
+  },
+  "plan_to_code": [
+    {
+      "plan_item": "- P1: Implement send_all(recipients) that calls send() once per recipient.",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- P2: Implement dry-run mode in send_all(recipients, dry_run=False) that returns the messages without sending them.",
+      "status": "implemented"
+    }
+  ],
+  "files": [
+    {
+      "path": "src/notify/notifier.py",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "send_all",
+            "dry_run",
+            "send"
+          ],
+          "findings": [
+            {
+              "plan_item": "- P1: Implement send_all(recipients) that calls send() once per recipient.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 22,
+              "existing_code": "    return [send(recipient) for recipient in recipients]"
+            },
+            {
+              "plan_item": "- P2: Implement dry-run mode in send_all(recipients, dry_run=False) that returns the messages without sending them.",
+              "status": "traces",
+              "side": "RIGHT",
+              "start_line": 20,
+              "line": 21,
+              "existing_code": "    if dry_run:\n        return [f\"sent to {recipient}\" for recipient in recipients]"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "verdict": "adheres",
+  "examined": [
+    "scope.json",
+    "plan.txt",
+    "pr.diff",
+    "task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md"
+  ]
+}
