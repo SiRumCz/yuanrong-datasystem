@@ -1,6 +1,6 @@
 protocol: code-review
 instance: pr-7
-state: overview
+state: done
 iteration: 2
 gates: {}
 head_sha: a52b6f8823295a7e131d0755bbf24a61914c4a72
@@ -13,3 +13,10 @@ history:
     cohort-partition-complete: pass
   feedback: 'overview schema invalid: cohorts[2].layers[0].layer ''docs'' not in [''api'',
     ''backend'', ''frontend'', ''other'', ''schema'', ''tests'']'
+- iteration: 2
+  agent_run_id: '28544264155'
+  checks:
+    evidence-present: pass
+    overview-schema-valid: pass
+    cohort-partition-complete: pass
+  feedback: ''
