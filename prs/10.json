@@ -1,1 +1,1 @@
-{"seq":1,"entries":[{"seq":1,"time":"2026-06-27T00:29:53.791Z","message":"Pipeline opened for PR #10","tag":"active","key":"opened"}]}
+{"seq":2,"entries":[{"seq":1,"time":"2026-06-27T00:29:53.791Z","message":"Pipeline opened for PR #10","tag":"active","key":"opened"},{"seq":2,"time":"2026-07-01T02:02:52.740Z","message":"Context export ready — 1.8k tok","tag":"ok","key":"context:a6cafa62e49031d945123b2c7dd562191d151489"}]}
