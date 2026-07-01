@@ -1,0 +1,24 @@
+{
+  "dimension": "test",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "src/datasystem/client/object_cache/client_worker_api/client_worker_base_api.cpp",
+      "line": 305,
+      "severity": "medium",
+      "category": "test",
+      "title": "Pipeline URMA write result recording is untested",
+      "impact": "The new failover accounting records pipeline URMA transfer success or failure, but the added ST traffic uses 512 KiB values while the default URMA max write size is 2 MiB, so it exercises the single-write path rather than this pipeline branch. A regression where large-object pipeline failures are not recorded would leave clients pinned to a bad URMA data plane for large payloads.",
+      "fix": "Add a URMA failover test that forces the pipeline path, for example by writing an object/value larger than the configured URMA max write size or lowering the test max-write-size flag, inject a pipeline UrmaWritePayload failure, and assert that the unhealthy window triggers the same worker switch."
+    },
+    {
+      "path": "src/datasystem/common/util/gflag/common_gflags_validate.cpp",
+      "line": 118,
+      "severity": "medium",
+      "category": "test",
+      "title": "New URMA failover gflag validators lack negative tests",
+      "impact": "The PR adds validation for NaN, out-of-range success-rate ratios, and zero min-sample counts, but the new tests only cover valid runtime values. Invalid config updates could be accepted, rejected incorrectly, or leave stale values without any regression signal.",
+      "fix": "Add focused validator or client-config-monitor tests that attempt invalid values such as -0.1, 1.1, NaN/inf, and min_sample_count=0, then assert the update is rejected and the previous valid configuration remains in effect."
+    }
+  ]
+}
