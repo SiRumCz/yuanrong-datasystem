@@ -70,6 +70,10 @@
   - English PLOG slow Set/Get request design, first-pass thresholds, and production `v=0` constraints
 - `log-sampler-design.md`
   - production design for class-based random sampling coefficients and strict hot-path performance constraints
+- `specs/log-sampler-spec.md`
+  - reconstructed requirements (R1–R18) and LS-0xx acceptance scenarios for the unified log sampler (PR #14)
+- `plans/log-sampler-plan.md`
+  - reconstructed phased implementation plan tracing each requirement to the changed source files (PR #14)
 - `plog-slow-get-implementation-summary.md`
   - implementation scope, changed slow Get segments, remote validation commands, and remaining validation blocker
 - `log-lifecycle-and-rotation.md`
