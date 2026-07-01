@@ -176,17 +176,25 @@ k8s/helm_chart/datasystem/templates/configmap.yaml].
   minimal-reshuffle placement and online scaling
   [src/datasystem/worker/hash_ring/hash_ring.h:51-96,
   src/datasystem/protos/hash_ring.proto].
+* *Client-side URMA data-plane failover* — a client records per-worker URMA
+  success/failure samples and may switch workers on a sustained unhealthy window,
+  while keeping the current worker usable during `URMA_DATA_PLANE_FAILURE`
+  failover attempts
+  [src/datasystem/client/urma_success_rate_tracker.cpp:33,
+  src/datasystem/client/object_cache/object_client_impl.cpp:790].
 
 == 9. Architecture Decisions
 
 The significant decisions are recorded as ADRs (see `docs/specs/adrs/`): the
 master/worker split, the pluggable ETCD-vs-Metastore metadata backend, consistent
 hash-ring placement, and the performance-first / opt-in-reliability WriteMode
-model [src/datasystem/master/master_service_impl.h:38-73,
+model, plus client-side URMA data-plane failover
+[src/datasystem/master/master_service_impl.h:38-73,
 src/datasystem/worker/worker.h:45-115,
 docs/source_zh_cn/design_document/cluster_management.md:7-52,
 src/datasystem/worker/hash_ring/hash_ring.h:51-96,
-include/datasystem/object/object_enum.h:30-35].
+include/datasystem/object/object_enum.h:30-35,
+src/datasystem/client/urma_success_rate_tracker.cpp:33].
 
 == 10. Quality Requirements
 

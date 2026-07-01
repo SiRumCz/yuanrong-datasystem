@@ -1,0 +1,78 @@
+= ADR-005: Client-side URMA data-plane failover
+:doctype: article
+
+== Status
+
+Accepted (in code). Operational thresholds remain tunable by deployment.
+
+== Context
+
+The client can be connected to a worker whose process is still alive while the
+URMA fast data plane between that client and worker is persistently unhealthy.
+Before PR #7, the mental model only treated worker/node liveness as the driver for
+worker switching; the new implementation adds a request-driven
+`UrmaSuccessRateTracker` that records URMA success/failure samples in a full
+`client_dead_timeout_s` window, gates on `urma_failover_min_sample_count`, and
+triggers only when the settled window success rate is strictly below
+`urma_failover_success_rate_ratio` [src/datasystem/client/urma_success_rate_tracker.cpp:33,
+src/datasystem/client/urma_success_rate_tracker.cpp:105,
+src/datasystem/common/util/gflag/common_gflag_define.cpp:69].
+
+The measured samples come from both client-to-worker Set/Publish UB writes and
+worker-to-client Get responses. Get-side TCP fallback and `K_URMA_ERROR` are still
+treated as URMA data-plane failure signals when the request attempted URMA
+[src/datasystem/client/object_cache/client_worker_api/client_worker_base_api.cpp:301,
+src/datasystem/client/object_cache/client_worker_api/client_worker_remote_api.cpp:478].
+
+== Decision
+
+Treat sustained URMA data-plane failure as a client-side worker-selection signal,
+separate from worker liveness. When the settled per-connection success-rate window
+is unhealthy, the client submits an asynchronous switch with the distinct
+`URMA_DATA_PLANE_FAILURE` reason; the switch path keeps the current worker usable
+while looking for a replacement, so business requests can continue through TCP
+fallback if failover cannot find a better candidate
+[src/datasystem/client/listen_worker.h:50,
+src/datasystem/client/object_cache/object_client_impl.cpp:421,
+src/datasystem/client/object_cache/object_client_impl.cpp:790].
+
+== Consequences
+
+* (+) A degraded fast path no longer pins a remote client indefinitely to an
+  unhealthy URMA connection; service discovery can move the client to another
+  worker even while the original worker remains alive
+  [tests/st/client/kv_cache/kv_client_urma_failover_test.cpp:551].
+* (+) Availability is preserved during diagnosis and switch attempts because
+  `URMA_DATA_PLANE_FAILURE` keeps the current worker available, unlike a hard
+  worker-unavailable switch
+  [tests/st/client/kv_cache/kv_client_urma_failover_test.cpp:611].
+* (+) Operators can tune or disable the behavior through hot-updated client
+  configuration: `0.0` disables and clears the tracker, and minimum sample count
+  suppresses low-volume false positives
+  [src/datasystem/common/util/gflag/flags.h:194,
+  tests/st/client/kv_cache/kv_client_urma_failover_test.cpp:675].
+* (−) Worker selection now depends on per-client observed data-plane health, so
+  reasoning about failover includes local traffic volume, sample windows, and
+  failed-switch backoff, not just cluster membership and heartbeat state
+  [src/datasystem/client/urma_success_rate_tracker.cpp:52,
+  src/datasystem/client/urma_success_rate_tracker.cpp:65].
+
+== Pugh Matrix
+
+Baseline: stay on the current worker and rely only on TCP fallback when URMA
+fails. Scale −1 / 0 / +1.
+
+[cols="3,1,1,1", options="header"]
+|===
+| Criterion | TCP fallback only (baseline) | Immediate switch on first URMA error | Windowed success-rate failover (chosen)
+| Performance efficiency      | -1 // may remain on dead fast path | 0 | +1
+| Availability / elasticity   | 0  | -1 // noisy failover can disrupt current worker use | +1
+| Reliability / recovery      | 0  | 0  | +1
+| Concurrency & memory safety | 0  | -1 // duplicate switch pressure | 0
+| Security                    | 0  | 0  | 0
+| *Total*                     | *-1* | *-2* | *+3*
+|===
+
+The chosen behavior keeps the performance-first model by recovering the URMA fast
+path, while using windowing, sample floors, async switching, and backoff to avoid
+turning transient transport errors into disruptive worker churn.
