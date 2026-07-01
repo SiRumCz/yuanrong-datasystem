@@ -1,0 +1,15 @@
+{
+  "dimension": "performance",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": "src/datasystem/client/object_cache/client_worker_api/client_worker_remote_api.cpp",
+      "line": 136,
+      "severity": "low",
+      "category": "performance",
+      "title": "Avoid a second payload_info scan on URMA Get responses",
+      "impact": "Every successful URMA Get with payload metadata now walks all payload_info entries in HasUrmaTcpFallbackPayload, and FillUrmaBuffer immediately walks the same entries again. For large batched or chunked Get responses this adds avoidable O(n) CPU on the foreground Get path.",
+      "fix": "Fold fallback detection into the existing FillUrmaBuffer payload_info loop, or have FillUrmaBuffer return/report whether any entry already had part_index data, so the request path scans the response metadata once."
+    }
+  ]
+}
