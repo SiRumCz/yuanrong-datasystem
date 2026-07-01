@@ -1,7 +1,12 @@
 protocol: code-review-demo-zkchen
 instance: pr-14
-state: preflight
+state: done
 iteration: 1
 gates: {}
 head_sha: 75c00e6f356b9bebe424309423c37af04e0dbc91
-history: []
+history:
+- iteration: 1
+  agent_run_id: '28539956680'
+  checks:
+    evidence-present: pass
+  feedback: ''
