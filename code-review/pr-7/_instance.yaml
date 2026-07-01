@@ -1,11 +1,6 @@
 protocol: code-review
 instance: pr-7
 head_sha: a52b6f8823295a7e131d0755bbf24a61914c4a72
-phase: preflight-gate
-joined: true
-phase_label: "\u26D4 blocked"
-status_comment_id: 4849238497
-halted:
-  phase: preflight-gate
-  reason: blocked
-  sha: a52b6f8823295a7e131d0755bbf24a61914c4a72
+phase: preflight
+joined: false
+phase_label: pre-flight adherence chain
