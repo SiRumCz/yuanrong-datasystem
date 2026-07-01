@@ -1,1 +1,1 @@
-{"seq":2,"entries":[{"seq":1,"time":"2026-07-01T23:43:19.296Z","message":"Engine run advanced — refreshing pipeline","tag":"active","key":"runwatch:[\"787afb118ccadc24eb5dadf81c623659b6ed083a\",[]]"},{"seq":2,"time":"2026-07-01T23:43:19.310Z","message":"Gate PASS","tag":"ok","key":"verdict:clear:787afb118ccadc24eb5dadf81c623659b6ed083a"}]}
+{"seq":1,"entries":[{"seq":1,"time":"2026-07-01T23:43:19.296Z","message":"Engine run advanced — refreshing pipeline","tag":"active","key":"runwatch:[\"787afb118ccadc24eb5dadf81c623659b6ed083a\",[]]"}]}
