@@ -1,7 +1,7 @@
 protocol: code-review
 instance: pr-14
 state: preflight
-sub_state: consistency-intro
+sub_state: consistency-fanout
 iteration: 1
 gates: {}
 history: []

@@ -1,7 +1,12 @@
 protocol: code-review
 instance: pr-14
-state: preflight
+state: done
 iteration: 1
 gates: {}
 head_sha: 787afb118ccadc24eb5dadf81c623659b6ed083a
-history: []
+history:
+- iteration: 1
+  agent_run_id: '28551844600'
+  checks:
+    evidence-present: pass
+  feedback: ''
