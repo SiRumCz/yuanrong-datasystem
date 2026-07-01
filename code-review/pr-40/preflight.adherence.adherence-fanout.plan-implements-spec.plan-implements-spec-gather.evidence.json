@@ -1,0 +1,35 @@
+{
+  "scope": {
+    "code_changed": true,
+    "spec_present": true,
+    "plan_present": true,
+    "spec_path": "specs/demo-notify.md",
+    "plan_path": "plans/demo-notify.md"
+  },
+  "spec_to_plan": [
+    {
+      "requirement": "- R1: The notifier MUST send a notification for each recipient in the input list.",
+      "status": "covered",
+      "plan_quote": "- P1: Implement send_all(recipients) that calls send() once per recipient."
+    },
+    {
+      "requirement": "- R2: The notifier MUST write a timestamped audit log line for every notification sent.",
+      "status": "missing",
+      "plan_quote": null
+    }
+  ],
+  "plan_to_spec": [
+    {
+      "plan_item": "- P1: Implement send_all(recipients) that calls send() once per recipient.",
+      "status": "traces",
+      "spec_quote": "- R1: The notifier MUST send a notification for each recipient in the input list."
+    }
+  ],
+  "verdict": "underspec",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/spec.txt",
+    "/tmp/gh-aw/agent/plan.txt",
+    "/tmp/gh-aw/task-context.json"
+  ]
+}
