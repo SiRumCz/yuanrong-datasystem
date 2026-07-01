@@ -1,7 +1,13 @@
 protocol: code-review-demo
 instance: pr-8
-state: triage
+state: done
 iteration: 1
 gates: {}
 head_sha: ff6ab46fb549df87d6a04538f01a68ab4c5fae29
-history: []
+history:
+- iteration: 1
+  agent_run_id: '28490279930'
+  checks:
+    evidence-present: pass
+    triage-schema-valid: pass
+  feedback: ''

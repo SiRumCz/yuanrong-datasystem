@@ -1,7 +1,7 @@
 protocol: code-review-demo
 instance: pr-8
 head_sha: ff6ab46fb549df87d6a04538f01a68ab4c5fae29
-phase: triage
+phase: fix
 joined: true
-phase_label: review triage (cluster & rank)
+phase_label: apply remediations + commit to PR
 status_comment_id: 4849569607
