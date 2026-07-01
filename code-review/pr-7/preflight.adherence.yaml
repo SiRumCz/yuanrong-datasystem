@@ -1,6 +1,6 @@
 protocol: code-review
 instance: pr-7
-state: preflight
+state: failed
 sub_state: adherence-fanout
 iteration: 1
 gates: {}
