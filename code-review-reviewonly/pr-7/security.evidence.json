@@ -1,0 +1,15 @@
+{
+  "dimension": "security",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": ".conversations/7b1e9a4c-2d3f-4a8b-9c1e-0a2b3c4d5e6f.jsonl",
+      "line": 8,
+      "severity": "low",
+      "category": "security",
+      "title": "Checked-in conversation transcript exposes internal development context",
+      "impact": "This new JSONL transcript stores assistant reasoning, tool calls, generated source snippets, model metadata, and prompt context in the repository. Repository readers and downstream artifacts can consume this private development context, and the same pattern can accidentally publish credentials, tenant data, host details, or other sensitive prompt contents when future transcripts are captured.",
+      "fix": "Remove the .conversations artifact from the PR and add this directory to the repository ignore/exclusion policy, or replace it with a sanitized, minimal test fixture that contains no real prompt, reasoning, tool, or environment content."
+    }
+  ]
+}
