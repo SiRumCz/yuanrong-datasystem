@@ -201,20 +201,26 @@ def _apply_commit_close(evidence):
     try:
         applied = [r for r in results if r["status"] == "applied"]
         report["applied"] = len(applied)
-        report["skipped"] = [r for r in results if r["status"] != "applied"]
+        report["skipped"] = [
+            {"cluster_id": r.get("cluster_id"), "path": r.get("path"), "reason": r.get("detail")}
+            for r in results if r["status"] != "applied"
+        ]
         report["close"] = _issue_targets({r["cluster_id"] for r in applied})
 
         if applied and not local:
             paths = sorted({r["path"] for r in applied})
-            _commit_push(workdir, repo, pr, token, paths=paths)
-            report["pushed"] = True
-            _close_issues(repo, report["close"], token)
+            push = _commit_push(workdir, head, pr, paths, token)
+            report["pushed"] = push["ok"]
+            if not push["ok"]:
+                report["push_error"] = push["detail"]
+            if push["ok"]:
+                _close_issues(repo, report["close"], token)
             shutil.rmtree(workdir, ignore_errors=True)
     except Exception as e:
         report["error"] = str(e)
-        _write_apply(report)
-        return report
 
+    if not local:
+        _post_apply_comment(repo, pr, token, report)
     _write_apply(report)
     return report
 
@@ -226,16 +232,46 @@ def _pr_head_ref(repo, pr, token):
     return r.stdout.strip() if r.returncode == 0 else ""
 
 
-def _commit_push(workdir, repo, pr, token, paths=()):
+def _commit_push(workdir, head, pr, paths, token):
+    """Commit the given paths and push to the PR head branch. Returns
+    {"ok": bool, "detail": str} — detail carries the git error on failure."""
     paths = sorted(set(paths))
     if not paths:
-        return
+        return {"ok": False, "detail": "no paths to commit"}
     _git(["config", "user.name", "agentic-fix-bot"], workdir)
     _git(["config", "user.email", "agentic-fix-bot@users.noreply.github.com"], workdir)
     _git(["add", "--", *paths], workdir)
     msg = f"fix: apply AI review remediations (PR #{pr})"
-    _git(["commit", "-m", msg], workdir)
-    _git(["push", "origin", "HEAD"], workdir, token=token)
+    c = _git(["commit", "-m", msg], workdir)
+    if c.returncode != 0:
+        return {"ok": False, "detail": f"commit failed: {(c.stderr or c.stdout).strip()[:300]}"}
+    # Explicit refspec so the push targets the PR head branch unambiguously.
+    p = _git(["push", "origin", f"HEAD:refs/heads/{head}"], workdir, token=token)
+    if p.returncode != 0:
+        return {"ok": False, "detail": f"push failed: {(p.stderr or p.stdout).strip()[:300]}"}
+    return {"ok": True, "detail": ""}
+
+
+def _post_apply_comment(repo, pr, token, report):
+    """Surface the fix-apply outcome on the PR so failures are visible (never silent)."""
+    if not repo or not pr:
+        return
+    lines = [f"AI fix phase: applied={report.get('applied', 0)}, pushed={report.get('pushed', False)}."]
+    if report.get("push_error"):
+        lines.append(f"Push error: {report['push_error']}")
+    if report.get("error"):
+        lines.append(f"Error: {report['error']}")
+    skipped = report.get("skipped") or []
+    if skipped:
+        lines.append("Skipped fixes:")
+        for s in skipped[:10]:
+            lines.append(f"- {s.get('cluster_id')} ({s.get('path')}): {s.get('reason')}")
+    body = "\n".join(lines)
+    env = dict(os.environ)
+    if token:
+        env["GH_TOKEN"] = token
+    subprocess.run(["gh", "api", f"repos/{repo}/issues/{pr}/comments", "-f", f"body={body}"],
+                   text=True, capture_output=True, env=env)
 
 
 def _close_issues(repo, targets, token):
@@ -289,7 +325,9 @@ def main():
                     f"Fix suggestions: clusters_fixed={len(report['applied'])}, "
                     f"skipped={len(report['skipped'])}, dropped={len(report['dropped'])}, "
                     f"unknown={len(report['unknown']['fixes']) + len(report['unknown']['skipped'])}."
-                    f" files_patched={apply_report['applied']}, pushed={apply_report['pushed']}."
+                    f" files_patched={apply_report['applied']}, pushed={apply_report['pushed']}"
+                    f"{('; push_error=' + apply_report['push_error']) if apply_report.get('push_error') else ''}"
+                    f"{('; error=' + apply_report['error']) if apply_report.get('error') else ''}."
                 ),
                 "blocked": False,
             }
