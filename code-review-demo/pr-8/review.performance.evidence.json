@@ -1,0 +1,15 @@
+{
+  "dimension": "performance",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "src/datasystem/client/urma_success_rate_tracker.cpp",
+      "line": 122,
+      "severity": "high",
+      "category": "performance",
+      "title": "Avoid shared atomic increments on every URMA fast-path request",
+      "impact": "Every successful URMA Set/Get now calls RecordUrmaDataPlaneResult and lands in RecordInCurrentWindow, where all client threads contend on the same successCount_/failureCount_ cache lines. On a high-QPS multi-threaded client this adds a cross-core atomic read-modify-write to the RDMA fast path and can reduce the throughput/latency benefit that URMA is supposed to provide even when the data plane is healthy.",
+      "fix": "Replace the single shared counters with a lower-contention design, such as per-thread/per-shard counters that are aggregated only when the window settles, or another batched/sampled accounting scheme that avoids an atomic RMW on every healthy URMA request. Keep the failure-trigger path bounded and preserve the min-sample/window semantics."
+    }
+  ]
+}
