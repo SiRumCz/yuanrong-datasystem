@@ -1,0 +1,33 @@
+{
+  "dimension": "maintainability",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": ".conversations/8c2f0b5d-3e4a-4b9c-8d2f-1b3c4d5e6f70.jsonl",
+      "line": 1,
+      "severity": "medium",
+      "category": "maintainability",
+      "title": "Remove generated conversation transcript from the product diff",
+      "impact": "The PR checks in a 31-line AI conversation transcript that is neither source, tests, documentation, nor repo context. Future maintainers have to decide whether it is authoritative design history, test data, or accidental debug output, and it can drift independently from the implementation.",
+      "fix": "Drop the .conversations JSONL file from the PR. If the design rationale is useful, move a concise, source-backed summary into the existing repo context or the PR description instead."
+    },
+    {
+      "path": "src/datasystem/client/urma_success_rate_tracker.h",
+      "line": 79,
+      "severity": "low",
+      "category": "maintainability",
+      "title": "Hide the test-only tracker accessor from the production interface",
+      "impact": "GetCurrentSampleCountForTest is exposed in the production tracker header even though its comment marks it as test only. That makes an internal counter layout part of the visible class surface and invites future production callers to couple to tracker internals.",
+      "fix": "Move this accessor behind a test-only compile guard or expose test inspection through a friend test fixture. If production diagnostics need this value, rename it to a non-test API and document the supported contract."
+    },
+    {
+      "path": "src/datasystem/client/client_worker_common_api.h",
+      "line": 279,
+      "severity": "low",
+      "category": "maintainability",
+      "title": "Document the URMA failover callback return contract consistently",
+      "impact": "The interface comment says the callback returns true when the worker switch succeeds, but the installed callback returns true when it successfully submits asynchronous switch work and reports the real switch result later through FinishUrmaDataPlaneSwitchAttempt. This mismatch makes the callback contract easy to misuse in future implementations.",
+      "fix": "Change the comment to say the callback returns whether asynchronous switch work was submitted, and keep the switch outcome contract on FinishUrmaDataPlaneSwitchAttempt."
+    }
+  ]
+}
