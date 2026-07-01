@@ -1,0 +1,15 @@
+{
+  "dimension": "performance",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": "src/datasystem/client/urma_success_rate_tracker.cpp",
+      "line": 35,
+      "severity": "medium",
+      "category": "performance",
+      "title": "Disabled failover still resets shared atomics on every URMA result",
+      "impact": "When urma_failover_success_rate_ratio is set to 0.0, the feature is documented as disabled, but every hot Set/Get URMA result still enters RecordUrmaResult and calls ResetWindow. That performs several release atomic stores on the per-worker tracker for every request, so a high-throughput client that disables failover still pays shared cache-line traffic and contention on the foreground data path.",
+      "fix": "Make the disabled path a true no-op after state has been cleared, for example by clearing only on the transition to disabled or by having callers skip RecordUrmaDataPlaneResult while the ratio is 0.0."
+    }
+  ]
+}
