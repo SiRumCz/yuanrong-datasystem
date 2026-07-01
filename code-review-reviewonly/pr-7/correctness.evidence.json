@@ -1,0 +1,15 @@
+{
+  "dimension": "correctness",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "src/datasystem/client/urma_success_rate_tracker.cpp",
+      "line": 57,
+      "severity": "high",
+      "category": "correctness",
+      "title": "Concurrent window rollover can erase new-window samples",
+      "impact": "The rollover thread first publishes the new window start at line 54, then exchanges the shared success/failure counters at lines 57-58. A concurrent request that observes the new start can record into what it believes is the new window before those exchanges run, and that sample is then reset to zero. Under concurrent client traffic this loses URMA success/failure samples, so unhealthy windows can be under-counted or misclassified and failover can be skipped even while the data plane is persistently failing.",
+      "fix": "Make rollover atomic with respect to recording, for example by serializing window rollover and counter updates with a small mutex, or by using per-window counter state/generation so threads cannot add to the new window until the old counters have been drained."
+    }
+  ]
+}
