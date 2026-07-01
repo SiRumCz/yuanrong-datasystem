@@ -1,0 +1,47 @@
+{
+  "legs": [
+    {
+      "leg": "spec-solves-issue",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence cluster evidence was not available, so no spec-solves-issue verdict was provided."
+    },
+    {
+      "leg": "plan-implements-spec",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence cluster evidence was not available, so no plan-implements-spec verdict was provided."
+    },
+    {
+      "leg": "code-implements-plan",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence cluster evidence was not available, so no code-implements-plan verdict was provided."
+    },
+    {
+      "leg": "mm-compliance",
+      "verdict": "compliant",
+      "scope": {},
+      "summary": "MM compliance evidence reported compliant with 0 graded divergences."
+    },
+    {
+      "leg": "docs-updated-appropriately",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Consistency cluster evidence was not available, so no docs-updated-appropriately verdict was provided."
+    },
+    {
+      "leg": "tests-updated-appropriately",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Consistency cluster evidence was not available, so no tests-updated-appropriately verdict was provided."
+    },
+    {
+      "leg": "security",
+      "verdict": "PASS",
+      "scope": {},
+      "summary": "Security evidence reported PASS with no locked violations."
+    }
+  ],
+  "examined": []
+}
