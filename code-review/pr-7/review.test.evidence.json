@@ -1,0 +1,15 @@
+{
+  "dimension": "test",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "src/datasystem/common/util/gflag/common_gflags_validate.cpp",
+      "line": 116,
+      "severity": "medium",
+      "category": "test",
+      "title": "Missing tests for new URMA failover flag validators",
+      "impact": "The PR adds runtime validation for the operator-facing `urma_failover_success_rate_ratio` and `urma_failover_min_sample_count` flags, but the added tests only use valid values. Regressions that accept NaN, out-of-range ratios, or a zero sample count would not be caught, and those invalid hot-update values can silently disable or distort failover behavior.",
+      "fix": "Add focused flag-validation tests, for example in `tests/ut/common/util/flags_test.cpp`, that verify ratio accepts 0.0 and 1.0 but rejects negative, greater-than-one, and non-finite values, and that min sample count rejects 0 while accepting positive values through the same flag update path used by client config monitoring."
+    }
+  ]
+}
