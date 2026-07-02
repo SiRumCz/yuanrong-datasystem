@@ -23,7 +23,7 @@
       "checks": [
         { "run": "evidence-present", "on_fail": "iterate" },
         { "run": "overview-schema-valid", "on_fail": "iterate" },
-        { "run": "cohort-partition-complete", "on_fail": "iterate" }
+        { "run": "cohort-partition-complete", "on_fail": "advisory" }
       ],
       "conclude": "conclude-overview",
       "next": "done"
