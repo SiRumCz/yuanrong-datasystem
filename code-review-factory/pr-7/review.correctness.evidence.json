@@ -1,0 +1,15 @@
+{
+  "dimension": "correctness",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "src/datasystem/client/urma_success_rate_tracker.cpp",
+      "line": 145,
+      "severity": "high",
+      "category": "correctness",
+      "title": "URMA failover triggers on healthy windows instead of unhealthy ones",
+      "impact": "IsUnhealthy returns true when successCount is greater than total * threshold, so a healthy window above the configured success-rate ratio can trigger a worker switch, while a fully failed or low-success window does not. With the default 0.5 ratio, 10/10 failures will never request failover, and 10/10 successes are classified unhealthy, breaking the core client-side URMA data-plane failover behavior.",
+      "fix": "Invert the predicate to match the documented strict-low threshold, e.g. return static_cast<double>(snapshot.successCount) < static_cast<double>(total) * successRateRatio; and keep the equality case healthy."
+    }
+  ]
+}
