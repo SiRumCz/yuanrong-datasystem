@@ -1,0 +1,7 @@
+protocol: impl-feature-auto
+instance: issue-76
+state: design
+iteration: 1
+gates: {}
+head_sha: e96599b38d9ce78ce6da40e2a69b91fad59cd7af
+history: []
