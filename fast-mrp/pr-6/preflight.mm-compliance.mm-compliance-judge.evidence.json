@@ -1,0 +1,15 @@
+{
+  "leg": "mm-compliance",
+  "scope": {},
+  "gather_verdict": "diverges",
+  "graded_findings": [
+    {
+      "ref": "0",
+      "severity": "blocking",
+      "rationale": "Changing RegisterClientRspPb field 24 from int32 log_rate_limit to LogSampleConfigPb log_sample_config is an incompatible protobuf wire-contract change on the SDK-to-worker bootstrap path. The gathered evidence also shows the PR's own design text reserved field 24 and used field 25, so the implementation directly diverges from the stated compatibility plan."
+    }
+  ],
+  "examined": [
+    "0"
+  ]
+}
