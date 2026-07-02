@@ -1,27 +1,7 @@
 protocol: impl-feature-auto
 instance: issue-76
-state: done
-iteration: 2
+state: design
+iteration: 1
 gates: {}
 head_sha: e96599b38d9ce78ce6da40e2a69b91fad59cd7af
-history:
-- iteration: 1
-  agent_run_id: '28624177112'
-  checks:
-    ledger-wellformed: fail
-    ledger-consistent: pass
-    read-these-first-consistent: pass
-    spec-present: pass
-    plan-present: pass
-  feedback: 'L3: field ''revisit_if'' missing/trivial; L6: field ''revisit_if'' missing/trivial;
-    L7: field ''revisit_if'' missing/trivial; L7: ASSUMPTION must carry verified:true
-    (verify the code fact)'
-- iteration: 2
-  agent_run_id: '28624728452'
-  checks:
-    ledger-wellformed: pass
-    ledger-consistent: pass
-    read-these-first-consistent: pass
-    spec-present: pass
-    plan-present: pass
-  feedback: ''
+history: []
