@@ -1,7 +1,7 @@
 protocol: fast-mrp
 instance: pr-6
 head_sha: 09251b3b05e5a081527e702280377d8e28108e81
-phase: review
-joined: false
-phase_label: multi-dimension review
+phase: triage
+joined: true
+phase_label: review triage (cluster & rank)
 status_comment_id: 4862477620
