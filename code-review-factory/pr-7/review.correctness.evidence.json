@@ -1,0 +1,15 @@
+{
+  "dimension": "correctness",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "src/datasystem/client/urma_success_rate_tracker.cpp",
+      "line": 146,
+      "severity": "high",
+      "category": "correctness",
+      "title": "Unhealthy window check is inverted",
+      "impact": "The tracker treats windows with a success rate greater than the threshold as unhealthy, so a healthy URMA data plane can trigger failover while persistently failing windows below the threshold are ignored. This breaks the core failover behavior and can leave clients pinned to a bad worker.",
+      "fix": "Change the predicate to return true only when successCount is strictly less than totalCount * successRateRatio."
+    }
+  ]
+}
