@@ -35,4 +35,12 @@ history:
     `summary`; key `cohorts` is empty; key `summary` is empty; overview schema invalid:
     `cohorts` must be a non-empty array; cohort partition incomplete: `cohorts` is
     missing or not an array'
+- iteration: 2
+  agent_run_id: '28557885474'
+  checks:
+    evidence-present: pass
+    overview-schema-valid: pass
+    cohort-partition-complete: fail
+  feedback: 'cohort partition incomplete: 3 changed file(s) in no cohort: src/datasystem/common/util/gflag/CMakeLists.txt,
+    tests/ut/CMakeLists.txt, tests/ut/common/log/spdlog/log_message_test.cpp'
 status_comment_id: 4860930098
