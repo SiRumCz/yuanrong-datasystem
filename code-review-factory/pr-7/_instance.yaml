@@ -3,5 +3,5 @@ instance: pr-7
 head_sha: ec85cf52ae9637cf8159dd1cdbeefaae5b714c7d
 phase: fix
 joined: true
-phase_label: propose remediations (suggest)
+phase_label: "\u2705 done"
 status_comment_id: 4864592545
