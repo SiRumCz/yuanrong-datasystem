@@ -1,7 +1,7 @@
 protocol: impl-feature-auto
 instance: issue-76
 state: design
-iteration: 2
+iteration: 3
 gates: {}
 head_sha: e96599b38d9ce78ce6da40e2a69b91fad59cd7af
 history:
@@ -14,3 +14,14 @@ history:
     spec-present: pass
     plan-present: pass
   feedback: 'L8: ASSUMPTION must carry verified:true (verify the code fact)'
+- iteration: 2
+  agent_run_id: '28628250314'
+  checks:
+    ledger-wellformed: fail
+    ledger-consistent: pass
+    read-these-first-consistent: fail
+    spec-present: pass
+    plan-present: pass
+  feedback: 'L7: ASSUMPTION must carry verified:true (verify the code fact); read_these_first
+    order is not risk-descending: [(''L7'', 1), (''L2'', 1), (''L9'', 0), (''L4'',
+    0), (''L5'', 0), (''L6'', 0), (''L8'', 0), (''L1'', 0), (''L3'', 1)]'
