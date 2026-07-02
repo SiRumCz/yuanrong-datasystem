@@ -51,4 +51,13 @@ history:
     cohort-partition-complete: fail
   feedback: 'cohort partition incomplete: 3 changed file(s) in no cohort: src/datasystem/common/flags/flag_manager.cpp,
     src/datasystem/common/util/gflag/CMakeLists.txt, src/datasystem/worker/object_cache/worker_oc_service_impl.h'
+- iteration: 2
+  agent_run_id: '28560413933'
+  checks:
+    evidence-present: fail
+    overview-schema-valid: fail
+    cohort-partition-complete: fail
+  feedback: 'evidence shape: missing required key `cohorts`; missing required key
+    `summary`; key `cohorts` is empty; key `summary` is empty; overview schema invalid:
+    `cohorts` must be a non-empty array'
 status_comment_id: 4860930098
