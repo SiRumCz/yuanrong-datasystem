@@ -1,0 +1,22 @@
+{
+  "scope": { "code_changed": true },
+  "items": [
+    {
+      "path": "tests/ut/common/util/strings_util_test.cpp",
+      "status": "missing",
+      "reason": "StripPrefix adds new shared string utility behavior, but the PR changes no test file to cover matching, non-matching, empty-prefix, or exact-prefix cases."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "src/datasystem/common/util/strings_util.h",
+    "tests/ut/common/util/strings_util_test.cpp",
+    ".repo_context/modules/quality/tests-and-reproduction.md",
+    ".repo_context/modules/quality/test-suite-design.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md"
+  ]
+}
