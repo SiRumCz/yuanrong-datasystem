@@ -1,0 +1,148 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "Shutdown frees sampler snapshots while log hot paths can still hold raw pointers",
+      "dimension": [
+        "correctness"
+      ],
+      "severity": "high",
+      "paths": [
+        "src/datasystem/common/log/log_sampler.cpp"
+      ],
+      "member_findings": [
+        {
+          "dimension": "correctness",
+          "path": "src/datasystem/common/log/log_sampler.cpp",
+          "line": 97,
+          "severity": "high",
+          "category": "correctness",
+          "title": "Shutdown frees sampler snapshots while log hot paths can still hold raw pointers",
+          "impact": "Log hot paths load `snapshot_` as a raw pointer and then dereference it without any reader lifetime guard. During shutdown, this line deletes the current snapshot immediately after an atomic exchange, so any concurrent LOG/PLOG/AccessRecorder path that already loaded the pointer can dereference freed memory and crash during worker or client teardown.",
+          "fix": "Do not reclaim snapshots until readers are quiesced. Publish disabled state before teardown and add a shutdown barrier for logging users, or replace the raw pointer scheme with a shared/RCU/hazard-pointer style lifetime so snapshots remain alive until all in-flight readers have left."
+        }
+      ],
+      "rank": 1
+    },
+    {
+      "cluster_id": "c2",
+      "title": "Avoid copying the formatted request message for every access log",
+      "dimension": [
+        "performance"
+      ],
+      "severity": "medium",
+      "paths": [
+        "src/datasystem/common/log/access_recorder.cpp"
+      ],
+      "member_findings": [
+        {
+          "dimension": "performance",
+          "path": "src/datasystem/common/log/access_recorder.cpp",
+          "line": 994,
+          "severity": "medium",
+          "category": "performance",
+          "title": "Avoid copying the formatted request message for every access log",
+          "impact": "Each emitted access log now calls FormatAccessReqMsg(), which returns a std::string before appending it to logStream. In the common non-sampled-marker case that helper returns reqMsg by value, adding another allocation/copy of the already formatted request payload on every foreground client/worker access-log path.",
+          "fix": "Change the helper back to an append-style API, for example AppendReqMsgWithSampleMark(std::ostream&, AccessKeyType, const std::string&), so the existing reqMsg is streamed directly and the sampled marker is appended without materializing a second full request-message string."
+        }
+      ],
+      "rank": 2
+    },
+    {
+      "cluster_id": "c3",
+      "title": "Every sampler config change retains another snapshot until shutdown",
+      "dimension": [
+        "correctness"
+      ],
+      "severity": "medium",
+      "paths": [
+        "src/datasystem/common/log/log_sampler.cpp"
+      ],
+      "member_findings": [
+        {
+          "dimension": "correctness",
+          "path": "src/datasystem/common/log/log_sampler.cpp",
+          "line": 206,
+          "severity": "medium",
+          "category": "correctness",
+          "title": "Every sampler config change retains another snapshot until shutdown",
+          "impact": "Each distinct config update pushes the previous snapshot into `oldSnapshots_` and nothing frees those entries until process shutdown. A worker or client receiving repeated dynamic sampling updates will leak memory monotonically, which can eventually exhaust memory in a long-running service.",
+          "fix": "Use a bounded reclamation strategy tied to reader lifetime, such as shared snapshots or epoch/RCU reclamation, so old snapshots are freed after in-flight readers are safe instead of accumulating for the process lifetime."
+        }
+      ],
+      "rank": 3
+    },
+    {
+      "cluster_id": "c4",
+      "title": "Dynamic sampler flag transaction is untested",
+      "dimension": [
+        "test"
+      ],
+      "severity": "medium",
+      "paths": [
+        "src/datasystem/common/util/gflag/flags.cpp"
+      ],
+      "member_findings": [
+        {
+          "dimension": "test",
+          "path": "src/datasystem/common/util/gflag/flags.cpp",
+          "line": 320,
+          "severity": "medium",
+          "category": "test",
+          "title": "Dynamic sampler flag transaction is untested",
+          "impact": "The new dynamic update path validates sampler flags as a batch, mutates the process gflags, rolls back on failure, and passes explicit-state bits into LogSampler. The diff only changes flags_test.cpp formatting and exercises sampler config directly, so regressions in Flags::UpdateFlagParameter, unchanged-value explicit marking, multi-flag derivation blocking, or rollback after a bad dynamic update would not be caught.",
+          "fix": "Add Flags-layer unit tests that call UpdateFlagParameter with request/access/diagnostic sample-rate maps and assert both FLAGS_* values and LogSampler snapshot ppm values. Cover request-only derivation, explicit access_sample_rate=1.0 blocking derivation, mixed sampler/non-sampler updates, and an invalid batch preserving the previous gflags and sampler snapshot."
+        }
+      ],
+      "rank": 4
+    },
+    {
+      "cluster_id": "c5",
+      "title": "Non-owning recorder setters need an explicit lifetime contract",
+      "dimension": [
+        "maintainability"
+      ],
+      "severity": "low",
+      "paths": [
+        "src/datasystem/common/log/access_recorder.h"
+      ],
+      "member_findings": [
+        {
+          "dimension": "maintainability",
+          "path": "src/datasystem/common/log/access_recorder.h",
+          "line": 325,
+          "severity": "low",
+          "category": "maintainability",
+          "title": "Non-owning recorder setters need an explicit lifetime contract",
+          "impact": "The new fluent facade exposes `ObjectKeyRef`, `ObjectKeysRef`, `RemoteClientId`, and similar setters that store `string_view` values or container pointers in recorder state, while the same recorder type is also moved through async/shared ownership paths. Future call sites can easily choose a `*Ref` setter for a temporary or shorter-lived object because the header does not document which setters borrow and which own, making the API hard to maintain safely as more access-log fields are added.",
+          "fix": "Document the borrow/own lifetime rule directly on the `*Ref` and `*Owned` APIs, or encode it in the API by preferring owning setters for async-capable recorders and reserving ref setters for same-scope synchronous use."
+        }
+      ],
+      "rank": 5
+    }
+  ],
+  "summary": {
+    "present": [
+      "correctness",
+      "test",
+      "performance",
+      "security",
+      "maintainability"
+    ],
+    "missing": [],
+    "clusters": 5,
+    "total_findings": 5,
+    "by_severity": {
+      "high": 1,
+      "medium": 3,
+      "low": 1
+    },
+    "by_dimension": {
+      "correctness": 2,
+      "test": 1,
+      "performance": 1,
+      "security": 0,
+      "maintainability": 1
+    }
+  }
+}

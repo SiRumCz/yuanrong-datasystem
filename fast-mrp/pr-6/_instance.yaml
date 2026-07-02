@@ -1,7 +1,7 @@
 protocol: fast-mrp
 instance: pr-6
 head_sha: 09251b3b05e5a081527e702280377d8e28108e81
-phase: triage
+phase: context
 joined: true
-phase_label: review triage (cluster & rank)
+phase_label: conversation context capture
 status_comment_id: 4871082787
