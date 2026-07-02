@@ -322,6 +322,24 @@ inline bool StripSuffix(std::string &filename, const std::string &suffix)
 }
 
 /**
+ * @brief Strip the prefix from a string.
+ * @param[in,out] str The string to modify in place.
+ * @param[in] prefix Prefix to be stripped.
+ * @return True if the prefix was present and removed, false otherwise.
+ */
+inline bool StripPrefix(std::string &str, const std::string &prefix)
+{
+    if (prefix.empty() || str.size() < prefix.size()) {
+        return false;
+    }
+    if (str.compare(0, prefix.size(), prefix) != 0) {
+        return false;
+    }
+    str.erase(0, prefix.size());
+    return true;
+}
+
+/**
  * @brief Turn string to uppercase.
  * @param[in] str The string the transform.
  * @return String in uppercase.
