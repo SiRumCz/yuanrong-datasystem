@@ -1,0 +1,18 @@
+{
+  "scope": { "code_changed": true },
+  "items": [],
+  "verdict": "adequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "src/datasystem/common/util/strings_util.h",
+    ".repo_context/modules/infra/common-infra.md",
+    ".repo_context/modules/overview/repository-overview.md",
+    ".repo_context/index.md",
+    "README.md",
+    "README_EN.md",
+    "docs/source_zh_cn/api_reference/index.md",
+    "docs/source_zh_cn/index.rst"
+  ]
+}
