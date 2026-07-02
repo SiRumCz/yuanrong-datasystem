@@ -3,5 +3,5 @@ instance: pr-6
 head_sha: 09251b3b05e5a081527e702280377d8e28108e81
 phase: mrp
 joined: true
-phase_label: merge-readiness pack (synthesis)
+phase_label: "\u2705 done"
 status_comment_id: 4869811134
