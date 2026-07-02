@@ -1,7 +1,7 @@
 protocol: code-review
 instance: pr-54
 state: preflight
-sub_state: adherence-intro
+sub_state: adherence-fanout
 iteration: 1
 gates: {}
 history: []
