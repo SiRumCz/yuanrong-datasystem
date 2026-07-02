@@ -74,6 +74,25 @@
       }
     },
     "riskBand": { "type": ["string", "null"] },
+    "smm_compliance": {
+      "type": ["object", "null"],
+      "properties": {
+        "verdict": { "type": "string" },
+        "divergences": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "mm_doc": { "type": "string" },
+              "decision": { "type": "string" },
+              "contradiction": { "type": "string" },
+              "evidence_path": { "type": "string" },
+              "fix": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
     "meta": {
       "type": "object",
       "properties": {

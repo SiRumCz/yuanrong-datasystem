@@ -112,7 +112,8 @@ Read `/tmp/gh-aw/task-context.json` (use `cat`):
 - `.inputs.preflight` — preflight adherence evidence (`checks[]`, `examined[]`). MAY be absent.
 - `.inputs.mm-compliance` — mental-model compliance evidence: `verdict` (`"compliant"`|`"diverges"`),
   `divergences[]` (each `{ decision, detail, evidence, fix }`), `examined[]`. The deterministic
-  post-step folds this into the pack's `smm_compliance` — you take NO action on it. MAY be absent.
+  post-step folds this into the pack's `smm_compliance` and the engine evidence's `smm_compliance` —
+  you take NO action on it. MAY be absent.
 - `.inputs.overview` — the guided walkthrough + risk: `summary`, `cohorts[]` (each with
   `cohort`, `layers[]`, `bcFindings[].severityClass`), `risk_band`. MAY be absent.
 - `.inputs.triage` — clustered findings: `clusters[]` (each `{ title, dimension[],

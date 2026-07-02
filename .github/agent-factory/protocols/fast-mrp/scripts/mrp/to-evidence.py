@@ -70,6 +70,7 @@ def _error_evidence(path):
         "acceptance_plan": {"per_cohort": [], "staged_rungs": STAGED_RUNGS},
         "acceptance": {"recommendation": "hold", "reasons": ["mrp pack missing or unreadable"]},
         "riskBand": None,
+        "smm_compliance": None,
         "meta": {},
         "pack": {"path": path, "error": True},
     }
@@ -86,6 +87,7 @@ def evidence_from_pack(path):
         "acceptance_plan": pack.get("acceptance_plan") or {"per_cohort": [], "staged_rungs": STAGED_RUNGS},
         "acceptance": _derive_acceptance(pack),
         "riskBand": pack.get("riskBand"),
+        "smm_compliance": pack.get("smm_compliance"),
         "meta": pack.get("meta") or {},
         "pack": {"path": path, "error": False},
     }
