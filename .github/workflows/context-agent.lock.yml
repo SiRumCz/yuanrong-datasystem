@@ -1,4 +1,4 @@
-# gh-aw-metadata: {"schema_version":"v4","frontmatter_hash":"94e4cb749b4b7d9142a6b87dc9c7f7f97c003e85f49fe81c8d7a736ad80fe4da","body_hash":"01b380984355b0d58d86581365137a05fe3b52b3a5c556e2bceec003989b61c5","compiler_version":"v0.77.5","strict":true,"agent_id":"codex","agent_model":"gpt-5.5"}
+# gh-aw-metadata: {"schema_version":"v4","frontmatter_hash":"ef4ef9a38d21f7e2f4fc3ccc94266594c809cb1ee22ec08d94ca864a8da7c573","body_hash":"e0df99ae6ec11c1c3d421bee9495b861ba21cbfa35bf38fbebbfce9d428d9eea","compiler_version":"v0.77.5","strict":true,"agent_id":"codex","agent_model":"gpt-5.5"}
 # gh-aw-manifest: {"version":1,"secrets":["CODEX_API_KEY","GH_AW_GITHUB_MCP_SERVER_TOKEN","GH_AW_GITHUB_TOKEN","GITHUB_TOKEN","OPENAI_API_KEY"],"actions":[{"repo":"actions/checkout","sha":"93cb6efe18208431cddfb8368fd83d5badbf9bfd","version":"v5"},{"repo":"actions/checkout","sha":"de0fac2e4500dabe0009e67214ff5f5447ce83dd","version":"v6.0.2"},{"repo":"actions/download-artifact","sha":"3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c","version":"v8.0.1"},{"repo":"actions/github-script","sha":"3a2844b7e9c422d3c10d287c895573f7108da1b3","version":"v9.0.0"},{"repo":"actions/setup-node","sha":"48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","version":"v6.4.0"},{"repo":"actions/upload-artifact","sha":"043fb46d1a93c77aae656e7c1c64a875d1fc6a0a","version":"v7.0.1"},{"repo":"actions/upload-artifact","sha":"ea165f8d65b6e75b540449e92b4886f43607fa02","version":"v4"},{"repo":"github/gh-aw-actions/setup","sha":"3ea13c02d765410340d533515cb31a7eef2baaf0","version":"v0.77.5"}],"containers":[{"image":"ghcr.io/github/gh-aw-firewall/agent:0.25.58"},{"image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.25.58"},{"image":"ghcr.io/github/gh-aw-firewall/squid:0.25.58"},{"image":"ghcr.io/github/gh-aw-mcpg:v0.3.22"},{"image":"ghcr.io/github/github-mcp-server:v1.1.0"},{"image":"node:lts-alpine","digest":"sha256:2bdb65ed1dab192432bc31c95f94155ca5ad7fc1392fb7eb7526ab682fa5bf14","pinned_image":"node:lts-alpine@sha256:2bdb65ed1dab192432bc31c95f94155ca5ad7fc1392fb7eb7526ab682fa5bf14"}]}
 #    ___                   _   _      
 #   / _ \                 | | (_)     
@@ -188,23 +188,23 @@ jobs:
         run: |
           bash "${RUNNER_TEMP}/gh-aw/actions/create_prompt_first.sh"
           {
-          cat << 'GH_AW_PROMPT_e79d804ae1f0c072_EOF'
+          cat << 'GH_AW_PROMPT_93a6dc7c6e02ffe7_EOF'
           <system>
-          GH_AW_PROMPT_e79d804ae1f0c072_EOF
+          GH_AW_PROMPT_93a6dc7c6e02ffe7_EOF
           cat "${RUNNER_TEMP}/gh-aw/prompts/xpia.md"
           cat "${RUNNER_TEMP}/gh-aw/prompts/temp_folder_prompt.md"
           cat "${RUNNER_TEMP}/gh-aw/prompts/markdown.md"
           cat "${RUNNER_TEMP}/gh-aw/prompts/safe_outputs_prompt.md"
-          cat << 'GH_AW_PROMPT_e79d804ae1f0c072_EOF'
+          cat << 'GH_AW_PROMPT_93a6dc7c6e02ffe7_EOF'
           <safe-output-tools>
           Tools: create_issue, missing_tool, missing_data, noop
-          GH_AW_PROMPT_e79d804ae1f0c072_EOF
+          GH_AW_PROMPT_93a6dc7c6e02ffe7_EOF
           cat "${RUNNER_TEMP}/gh-aw/prompts/safe_outputs_auto_create_issue.md"
-          cat << 'GH_AW_PROMPT_e79d804ae1f0c072_EOF'
+          cat << 'GH_AW_PROMPT_93a6dc7c6e02ffe7_EOF'
           </safe-output-tools>
-          GH_AW_PROMPT_e79d804ae1f0c072_EOF
+          GH_AW_PROMPT_93a6dc7c6e02ffe7_EOF
           cat "${RUNNER_TEMP}/gh-aw/prompts/mcp_cli_tools_prompt.md"
-          cat << 'GH_AW_PROMPT_e79d804ae1f0c072_EOF'
+          cat << 'GH_AW_PROMPT_93a6dc7c6e02ffe7_EOF'
           <github-context>
           The following GitHub context information is available for this workflow:
           {{#if github.actor}}
@@ -233,12 +233,12 @@ jobs:
           {{/if}}
           </github-context>
           
-          GH_AW_PROMPT_e79d804ae1f0c072_EOF
+          GH_AW_PROMPT_93a6dc7c6e02ffe7_EOF
           cat "${RUNNER_TEMP}/gh-aw/prompts/github_mcp_tools_with_safeoutputs_prompt.md"
-          cat << 'GH_AW_PROMPT_e79d804ae1f0c072_EOF'
+          cat << 'GH_AW_PROMPT_93a6dc7c6e02ffe7_EOF'
           </system>
           {{#runtime-import .github/workflows/context-agent.md}}
-          GH_AW_PROMPT_e79d804ae1f0c072_EOF
+          GH_AW_PROMPT_93a6dc7c6e02ffe7_EOF
           } > "$GH_AW_PROMPT"
       - name: Interpolate variables and render templates
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
@@ -375,9 +375,10 @@ jobs:
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR: ${{ fromJSON(github.event.inputs.aw_context || '{}').pr }}
+          PROTO_DIR: ${{ fromJSON(github.event.inputs.aw_context || '{}').protocol_dir }}
           REPO: ${{ github.repository }}
         name: Prefetch PR + locate transcript + parse parts
-        run: "set -euo pipefail\nmkdir -p /tmp/gh-aw/agent /tmp/gh-aw/agent/transcripts\ngh pr view \"$PR\" --repo \"$REPO\" --json number,title,author,files,baseRefName,headRefName,headRefOid > /tmp/gh-aw/agent/pr.json\nREPO=\"$REPO\" node .github/agent-factory/protocols/code-review/scripts/context/locate.js /tmp/gh-aw/agent/pr.json /tmp/gh-aw/agent/transcripts || true\nif ls /tmp/gh-aw/agent/transcripts/*.jsonl >/dev/null 2>&1; then\n  # gh-aw can order setup actions after custom steps. Install Bun inline while\n  # the trusted pre-agent step still has network access.\n  command -v bun >/dev/null 2>&1 || { npm install -g bun >/dev/null 2>&1 && export PATH=\"$(npm prefix -g)/bin:$PATH\"; } || true\n  ( cd .github/agent-factory/protocols/code-review/scripts/context/parts-driver \\\n    && (bun install --frozen-lockfile || bun install) \\\n    && bun driver.ts /tmp/gh-aw/agent/transcripts /tmp/gh-aw/agent/parts.json ) || true\nfi\n"
+        run: "set -euo pipefail\n# Resolve THIS protocol's scripts/ (aw_context.protocol_dir); fall back to code-review.\nBASE=\"${PROTO_DIR:-.github/agent-factory/protocols/code-review}\"\nmkdir -p /tmp/gh-aw/agent /tmp/gh-aw/agent/transcripts\ngh pr view \"$PR\" --repo \"$REPO\" --json number,title,author,files,baseRefName,headRefName,headRefOid > /tmp/gh-aw/agent/pr.json\n# Transcripts live on the dedicated `conversations` branch at <owner>/<repo>/pr-<N>/*.jsonl\n# (the custody convention), so point locate.js there via CONVERSATIONS_REF/DIR rather than\n# the in-PR `.conversations/` default.\nREPO=\"$REPO\" CONVERSATIONS_REF=conversations CONVERSATIONS_DIR=\"${REPO}/pr-${PR}\" \\\n  node \"$BASE/scripts/context/locate.js\" /tmp/gh-aw/agent/pr.json /tmp/gh-aw/agent/transcripts || true\nif ls /tmp/gh-aw/agent/transcripts/*.jsonl >/dev/null 2>&1; then\n  # gh-aw can order setup actions after custom steps. Install Bun inline while\n  # the trusted pre-agent step still has network access.\n  command -v bun >/dev/null 2>&1 || { npm install -g bun >/dev/null 2>&1 && export PATH=\"$(npm prefix -g)/bin:$PATH\"; } || true\n  ( cd \"$BASE/scripts/context/parts-driver\" \\\n    && (bun install --frozen-lockfile || bun install) \\\n    && bun driver.ts /tmp/gh-aw/agent/transcripts /tmp/gh-aw/agent/parts.json ) || true\nfi\n"
       - env:
           CTX: ${{ github.event.inputs.aw_context }}
         name: Materialize task context
@@ -460,9 +461,9 @@ jobs:
           mkdir -p "${RUNNER_TEMP}/gh-aw/safeoutputs"
           mkdir -p /tmp/gh-aw/safeoutputs
           mkdir -p /tmp/gh-aw/mcp-logs/safeoutputs
-          cat > "${RUNNER_TEMP}/gh-aw/safeoutputs/config.json" << 'GH_AW_SAFE_OUTPUTS_CONFIG_c8d440953e06e4d1_EOF'
+          cat > "${RUNNER_TEMP}/gh-aw/safeoutputs/config.json" << 'GH_AW_SAFE_OUTPUTS_CONFIG_e023405a8dc92dbc_EOF'
           {"create_issue":{"labels":["context-agent"],"max":1,"title_prefix":"[context-agent]"},"create_report_incomplete_issue":{},"missing_data":{},"missing_tool":{},"noop":{"max":1,"report-as-issue":"true"},"report_incomplete":{}}
-          GH_AW_SAFE_OUTPUTS_CONFIG_c8d440953e06e4d1_EOF
+          GH_AW_SAFE_OUTPUTS_CONFIG_e023405a8dc92dbc_EOF
       - name: Generate Safe Outputs Tools
         env:
           GH_AW_TOOLS_META_JSON: |
@@ -669,7 +670,7 @@ jobs:
           DOCKER_SOCK_GID=$(stat -c '%g' "$DOCKER_SOCK_PATH" 2>/dev/null || echo '0')
           export MCP_GATEWAY_DOCKER_COMMAND='docker run -i --rm --network host --add-host host.docker.internal:127.0.0.1 --user '"${MCP_GATEWAY_UID}"':'"${MCP_GATEWAY_GID}"' --group-add '"${DOCKER_SOCK_GID}"' -v '"${DOCKER_SOCK_PATH}"':/var/run/docker.sock -e MCP_GATEWAY_PORT -e MCP_GATEWAY_DOMAIN -e MCP_GATEWAY_API_KEY -e MCP_GATEWAY_PAYLOAD_DIR -e MCP_GATEWAY_PAYLOAD_SIZE_THRESHOLD -e DOCKER_HOST=unix:///var/run/docker.sock -e DEBUG -e MCP_GATEWAY_LOG_DIR -e GH_AW_MCP_LOG_DIR -e GH_AW_SAFE_OUTPUTS -e GH_AW_SAFE_OUTPUTS_CONFIG_PATH -e GH_AW_SAFE_OUTPUTS_TOOLS_PATH -e GH_AW_ASSETS_BRANCH -e GH_AW_ASSETS_MAX_SIZE_KB -e GH_AW_ASSETS_ALLOWED_EXTS -e DEFAULT_BRANCH -e GITHUB_MCP_SERVER_TOKEN -e GITHUB_MCP_GUARD_MIN_INTEGRITY -e GITHUB_MCP_GUARD_REPOS -e GITHUB_REPOSITORY -e GITHUB_SERVER_URL -e GITHUB_SHA -e GITHUB_WORKSPACE -e GITHUB_TOKEN -e GITHUB_RUN_ID -e GITHUB_RUN_NUMBER -e GITHUB_RUN_ATTEMPT -e GITHUB_JOB -e GITHUB_ACTION -e GITHUB_EVENT_NAME -e GITHUB_EVENT_PATH -e GITHUB_ACTOR -e GITHUB_ACTOR_ID -e GITHUB_TRIGGERING_ACTOR -e GITHUB_WORKFLOW -e GITHUB_WORKFLOW_REF -e GITHUB_WORKFLOW_SHA -e GITHUB_REF -e GITHUB_REF_NAME -e GITHUB_REF_TYPE -e GITHUB_HEAD_REF -e GITHUB_BASE_REF -e GH_AW_SAFE_OUTPUTS_PORT -e GH_AW_SAFE_OUTPUTS_API_KEY -e CODEX_HOME -v /tmp/gh-aw/mcp-payloads:/tmp/gh-aw/mcp-payloads:rw -v /opt:/opt:ro -v /tmp:/tmp:rw -v '"${GITHUB_WORKSPACE}"':'"${GITHUB_WORKSPACE}"':rw ghcr.io/github/gh-aw-mcpg:v0.3.22'
           
-          cat > "${RUNNER_TEMP}/gh-aw/mcp-config/config.toml" << GH_AW_MCP_CONFIG_e9166e1433aa49c7_EOF
+          cat > "${RUNNER_TEMP}/gh-aw/mcp-config/config.toml" << GH_AW_MCP_CONFIG_eb72ce9d8bbceb27_EOF
           [history]
           persistence = "none"
           
@@ -696,11 +697,11 @@ jobs:
           
           [mcp_servers.safeoutputs."guard-policies".write-sink]
           accept = ["*"]
-          GH_AW_MCP_CONFIG_e9166e1433aa49c7_EOF
+          GH_AW_MCP_CONFIG_eb72ce9d8bbceb27_EOF
           
           # Generate JSON config for MCP gateway
           GH_AW_NODE=$(which node 2>/dev/null || command -v node 2>/dev/null || echo node)
-          cat << GH_AW_MCP_CONFIG_e9166e1433aa49c7_EOF | "$GH_AW_NODE" "${RUNNER_TEMP}/gh-aw/actions/start_mcp_gateway.cjs"
+          cat << GH_AW_MCP_CONFIG_eb72ce9d8bbceb27_EOF | "$GH_AW_NODE" "${RUNNER_TEMP}/gh-aw/actions/start_mcp_gateway.cjs"
           {
             "mcpServers": {
               "github": {
@@ -740,11 +741,11 @@ jobs:
               "payloadDir": "${MCP_GATEWAY_PAYLOAD_DIR}"
             }
           }
-          GH_AW_MCP_CONFIG_e9166e1433aa49c7_EOF
+          GH_AW_MCP_CONFIG_eb72ce9d8bbceb27_EOF
           
           # Sync converter output to writable CODEX_HOME for Codex
           mkdir -p /tmp/gh-aw/mcp-config
-          cat > "/tmp/gh-aw/mcp-config/config.toml" << GH_AW_CODEX_SHELL_POLICY_92f2b5e38e9ce823_EOF
+          cat > "/tmp/gh-aw/mcp-config/config.toml" << GH_AW_CODEX_SHELL_POLICY_fa1ffef9998aa2d7_EOF
 
           model_provider = "openai-proxy"
 
@@ -756,7 +757,7 @@ jobs:
           [shell_environment_policy]
           inherit = "core"
           include_only = ["^CODEX_API_KEY$", "^GH_AW_ASSETS_ALLOWED_EXTS$", "^GH_AW_ASSETS_BRANCH$", "^GH_AW_ASSETS_MAX_SIZE_KB$", "^GH_AW_SAFE_OUTPUTS$", "^GITHUB_PERSONAL_ACCESS_TOKEN$", "^GITHUB_REPOSITORY$", "^GITHUB_SERVER_URL$", "^HOME$", "^OPENAI_API_KEY$", "^PATH$"]
-          GH_AW_CODEX_SHELL_POLICY_92f2b5e38e9ce823_EOF
+          GH_AW_CODEX_SHELL_POLICY_fa1ffef9998aa2d7_EOF
           awk '
             BEGIN { skip_openai_proxy = 0 }
             /^[[:space:]]*model_provider[[:space:]]*=/ { next }
@@ -960,12 +961,20 @@ jobs:
           if [ ! -f /tmp/gh-aw/agent_output.json ]; then
             echo '{"items":[]}' > /tmp/gh-aw/agent_output.json
           fi
-      - if: always()
+      - env:
+          PROTO_DIR: ${{ fromJSON(github.event.inputs.aw_context || '{}').protocol_dir }}
+        if: always()
         name: Assemble SessionExport
-        run: node .github/agent-factory/protocols/code-review/scripts/context/assemble.js /tmp/gh-aw/agent/parts.json /tmp/gh-aw/agent/phases.jsonl /tmp/gh-aw/agent/pr.json > /tmp/gh-aw/session-export.json
-      - if: always()
+        run: |
+          BASE="${PROTO_DIR:-.github/agent-factory/protocols/code-review}"
+          node "$BASE/scripts/context/assemble.js" /tmp/gh-aw/agent/parts.json /tmp/gh-aw/agent/phases.jsonl /tmp/gh-aw/agent/pr.json > /tmp/gh-aw/session-export.json
+      - env:
+          PROTO_DIR: ${{ fromJSON(github.event.inputs.aw_context || '{}').protocol_dir }}
+        if: always()
         name: Derive engine evidence
-        run: python3 .github/agent-factory/protocols/code-review/scripts/context/to-evidence.py /tmp/gh-aw/session-export.json /tmp/gh-aw/evidence.json
+        run: |
+          BASE="${PROTO_DIR:-.github/agent-factory/protocols/code-review}"
+          python3 "$BASE/scripts/context/to-evidence.py" /tmp/gh-aw/session-export.json /tmp/gh-aw/evidence.json
       - if: always()
         name: Upload session export
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -1304,18 +1313,18 @@ jobs:
           DOCKER_SOCK_GID=$(stat -c '%g' "$DOCKER_SOCK_PATH" 2>/dev/null || echo '0')
           export MCP_GATEWAY_DOCKER_COMMAND='docker run -i --rm --network host --add-host host.docker.internal:127.0.0.1 --user '"${MCP_GATEWAY_UID}"':'"${MCP_GATEWAY_GID}"' --group-add '"${DOCKER_SOCK_GID}"' -v '"${DOCKER_SOCK_PATH}"':/var/run/docker.sock -e MCP_GATEWAY_PORT -e MCP_GATEWAY_DOMAIN -e MCP_GATEWAY_API_KEY -e MCP_GATEWAY_PAYLOAD_DIR -e MCP_GATEWAY_PAYLOAD_SIZE_THRESHOLD -e DOCKER_HOST=unix:///var/run/docker.sock -e DEBUG -e MCP_GATEWAY_LOG_DIR -e GH_AW_MCP_LOG_DIR -e GH_AW_SAFE_OUTPUTS -e GH_AW_SAFE_OUTPUTS_CONFIG_PATH -e GH_AW_SAFE_OUTPUTS_TOOLS_PATH -e GH_AW_ASSETS_BRANCH -e GH_AW_ASSETS_MAX_SIZE_KB -e GH_AW_ASSETS_ALLOWED_EXTS -e DEFAULT_BRANCH -e GITHUB_MCP_SERVER_TOKEN -e GITHUB_MCP_GUARD_MIN_INTEGRITY -e GITHUB_MCP_GUARD_REPOS -e GITHUB_REPOSITORY -e GITHUB_SERVER_URL -e GITHUB_SHA -e GITHUB_WORKSPACE -e GITHUB_TOKEN -e GITHUB_RUN_ID -e GITHUB_RUN_NUMBER -e GITHUB_RUN_ATTEMPT -e GITHUB_JOB -e GITHUB_ACTION -e GITHUB_EVENT_NAME -e GITHUB_EVENT_PATH -e GITHUB_ACTOR -e GITHUB_ACTOR_ID -e GITHUB_TRIGGERING_ACTOR -e GITHUB_WORKFLOW -e GITHUB_WORKFLOW_REF -e GITHUB_WORKFLOW_SHA -e GITHUB_REF -e GITHUB_REF_NAME -e GITHUB_REF_TYPE -e GITHUB_HEAD_REF -e GITHUB_BASE_REF -e CODEX_HOME -v /tmp/gh-aw/mcp-payloads:/tmp/gh-aw/mcp-payloads:rw -v /opt:/opt:ro -v /tmp:/tmp:rw -v '"${GITHUB_WORKSPACE}"':'"${GITHUB_WORKSPACE}"':rw ghcr.io/github/gh-aw-mcpg:v0.3.22'
           
-          cat > "${RUNNER_TEMP}/gh-aw/mcp-config/config.toml" << GH_AW_MCP_CONFIG_fa62b2aabe2e9280_EOF
+          cat > "${RUNNER_TEMP}/gh-aw/mcp-config/config.toml" << GH_AW_MCP_CONFIG_b33bb08eeee5b402_EOF
           [history]
           persistence = "none"
           
           [shell_environment_policy]
           inherit = "core"
           include_only = ["^CODEX_API_KEY$", "^HOME$", "^OPENAI_API_KEY$", "^PATH$"]
-          GH_AW_MCP_CONFIG_fa62b2aabe2e9280_EOF
+          GH_AW_MCP_CONFIG_b33bb08eeee5b402_EOF
           
           # Generate JSON config for MCP gateway
           GH_AW_NODE=$(which node 2>/dev/null || command -v node 2>/dev/null || echo node)
-          cat << GH_AW_MCP_CONFIG_07272f06884a3567_EOF | "$GH_AW_NODE" "${RUNNER_TEMP}/gh-aw/actions/start_mcp_gateway.cjs"
+          cat << GH_AW_MCP_CONFIG_a7b9b0d56551784e_EOF | "$GH_AW_NODE" "${RUNNER_TEMP}/gh-aw/actions/start_mcp_gateway.cjs"
           {
             "mcpServers": {
             },
@@ -1326,11 +1335,11 @@ jobs:
               "payloadDir": "${MCP_GATEWAY_PAYLOAD_DIR}"
             }
           }
-          GH_AW_MCP_CONFIG_07272f06884a3567_EOF
+          GH_AW_MCP_CONFIG_a7b9b0d56551784e_EOF
           
           # Sync converter output to writable CODEX_HOME for Codex
           mkdir -p /tmp/gh-aw/mcp-config
-          cat > "/tmp/gh-aw/mcp-config/config.toml" << GH_AW_CODEX_SHELL_POLICY_a0ec2dbe3c3eacaa_EOF
+          cat > "/tmp/gh-aw/mcp-config/config.toml" << GH_AW_CODEX_SHELL_POLICY_2c2da99713034c90_EOF
           model_provider = "openai-proxy"
           [model_providers.openai-proxy]
           name = "OpenAI AWF proxy"
@@ -1340,7 +1349,7 @@ jobs:
           [shell_environment_policy]
           inherit = "core"
           include_only = ["^CODEX_API_KEY$", "^HOME$", "^OPENAI_API_KEY$", "^PATH$"]
-          GH_AW_CODEX_SHELL_POLICY_a0ec2dbe3c3eacaa_EOF
+          GH_AW_CODEX_SHELL_POLICY_2c2da99713034c90_EOF
           awk '
             BEGIN { skip_openai_proxy = 0 }
             /^[[:space:]]*model_provider[[:space:]]*=/ { next }
