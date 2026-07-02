@@ -1,0 +1,81 @@
+{
+  "scope": {
+    "code_changed": true
+  },
+  "items": [
+    {
+      "path": "docs/source_zh_cn/appendix/log_guide.md",
+      "status": "updated_appropriately",
+      "reason": "The PR replaces the old log_rate_limit guide with the new request/access/diagnostic sample-rate model, propagation behavior, derivation rules, and configuration examples."
+    },
+    {
+      "path": "docs/source_zh_cn/appendix/client_env_guide.md",
+      "status": "updated_appropriately",
+      "reason": "The PR removes DATASYSTEM_LOG_RATE_LIMIT from the client environment guide, matching the code removal of that client-side env override."
+    },
+    {
+      "path": "docs/source_zh_cn/deployment/dscli.md",
+      "status": "updated_appropriately",
+      "reason": "The PR replaces the dscli log_rate_limit option with request_sample_rate, access_sample_rate, diagnostic_sample_rate, and documents derivation semantics."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/log-sampler-design.md",
+      "status": "updated_appropriately",
+      "reason": "The PR adds a source-backed design for LogSampler covering the new random sampling categories, config propagation, hot-path constraints, and removal of log_rate_limit compatibility."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/README.md",
+      "status": "updated_appropriately",
+      "reason": "The PR routes logging-context readers to the new LogSampler design and updates the module responsibilities and component table for unified sampling."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/design.md",
+      "status": "missing",
+      "reason": "This existing logging design doc still lists log_rate_limit, DATASYSTEM_LOG_RATE_LIMIT, LogRateLimiter, and old register-sync behavior, but the PR removes that model."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/trace-and-context.md",
+      "status": "missing",
+      "reason": "This trace doc still describes local sampling decisions under log_rate_limit and a LogRateLimiter per-second counter instead of the new LogSampler trace-state behavior."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/plog-slow-request-plan.md",
+      "status": "missing",
+      "reason": "This PLOG plan still references log_rate_limit and LogRateLimiter::ShouldLog even though PLOG is now handled as diagnostic sampling under LogSampler."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/plog-slow-get-implementation-summary.md",
+      "status": "missing",
+      "reason": "This implementation summary still says PLOG bypasses log_rate_limit request sampling and was not updated for the new diagnostic_sample_rate behavior."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md",
+    ".repo_context/modules/infra/logging/README.md",
+    ".repo_context/modules/infra/logging/design.md",
+    ".repo_context/modules/infra/logging/trace-and-context.md",
+    ".repo_context/modules/infra/logging/plog-slow-request-plan.md",
+    ".repo_context/modules/infra/logging/plog-slow-get-implementation-summary.md",
+    "docs/source_zh_cn/appendix/log_guide.md",
+    "docs/source_zh_cn/appendix/client_env_guide.md",
+    "docs/source_zh_cn/deployment/dscli.md",
+    "include/datasystem/utils/embedded_config.h",
+    "src/datasystem/common/util/gflag/flags.h",
+    "src/datasystem/common/util/gflag/flags.cpp",
+    "src/datasystem/common/log/logging.cpp",
+    "cli/deploy/conf/worker_config.json",
+    "k8s/helm_chart/datasystem/values.yaml",
+    "k8s_deployment/helm_chart/worker.config"
+  ]
+}
