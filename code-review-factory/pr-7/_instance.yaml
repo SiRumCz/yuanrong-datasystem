@@ -2,6 +2,5 @@ protocol: code-review-factory
 instance: pr-7
 head_sha: a52b6f8823295a7e131d0755bbf24a61914c4a72
 phase: review
-joined: true
-phase_label: "\u274C failed"
-status_comment_id: 4861102832
+joined: false
+phase_label: multi-dimension review

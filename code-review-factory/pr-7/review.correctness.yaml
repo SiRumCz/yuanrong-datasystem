@@ -1,33 +1,7 @@
 protocol: code-review-factory
 instance: pr-7
-state: failed
-iteration: 2
+state: review
+iteration: 1
 gates: {}
-history:
-- iteration: 1
-  agent_run_id: '28556695443'
-  checks:
-    evidence-present: fail
-    review-schema-valid: fail
-    review-findings-anchored: fail
-  feedback: 'evidence shape: missing required key `dimension`; missing required key
-    `verdict`; missing required key `findings`; key `dimension` is empty; key `verdict`
-    is empty; review schema invalid: `dimension` None not in [''correctness'', ''maintainability'',
-    ''performance'', ''security'', ''test'']; `dimension` None does not match branch
-    ''correctness''; `verdict` None not in [''APPROVE'', ''COMMENT'', ''REQUEST_CHANGES''];
-    `findings` must be an array; unanchored findings: `findings` missing or not an
-    array'
-- iteration: 2
-  agent_run_id: '28556910903'
-  checks:
-    evidence-present: fail
-    review-schema-valid: fail
-    review-findings-anchored: fail
-  feedback: 'evidence shape: missing required key `dimension`; missing required key
-    `verdict`; missing required key `findings`; key `dimension` is empty; key `verdict`
-    is empty; review schema invalid: `dimension` None not in [''correctness'', ''maintainability'',
-    ''performance'', ''security'', ''test'']; `dimension` None does not match branch
-    ''correctness''; `verdict` None not in [''APPROVE'', ''COMMENT'', ''REQUEST_CHANGES''];
-    `findings` must be an array; unanchored findings: `findings` missing or not an
-    array'
+history: []
 head_sha: a52b6f8823295a7e131d0755bbf24a61914c4a72
