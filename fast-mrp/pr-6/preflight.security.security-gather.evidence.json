@@ -1,0 +1,25 @@
+{
+  "scope": {},
+  "cedar": {
+    "status": "n/a",
+    "flags": []
+  },
+  "guardians": {
+    "ok": true,
+    "violations": [],
+    "warnings": []
+  },
+  "engine_report": {
+    "violations": [],
+    "summary": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0
+    }
+  },
+  "verdict": "n/a",
+  "examined": [
+    "policy/cedar/default",
+    "policy/guardians/default.policy.yaml"
+  ]
+}
