@@ -1,0 +1,24 @@
+{
+  "dimension": "test",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "src/datasystem/common/flags/embedded_config.cpp",
+      "line": 124,
+      "severity": "high",
+      "category": "test",
+      "title": "Public EmbeddedConfig sampler setters have no direct regression coverage",
+      "impact": "The PR replaces the public embedded-worker LogRateLimit API with RequestSampleRate, AccessSampleRate, and DiagnosticSampleRate, but the added tests exercise LogSampler internals rather than this public path. A typo in the extraArgs key, bad string conversion, or invalid-rate handling would leave embedded workers running the wrong sampling policy without failing any test.",
+      "fix": "Add an EmbeddedConfig-focused unit test that calls all three setters, verifies the emitted extraArgs names and values, verifies chaining, and covers invalid, NaN, and out-of-range inputs leaving the prior config unchanged."
+    },
+    {
+      "path": "tests/st/common/log/log_sampler_st_test.cpp",
+      "line": 103,
+      "severity": "medium",
+      "category": "test",
+      "title": "Cross-process sampling test does not assert the operation or propagation outcome",
+      "impact": "CrossProcessSamplingConsistency claims to verify client-to-worker sampling consistency, but inside the workload it only calls Set/Get/Del and ignores failures and log/sample state. The test would still pass if Set failed for every operation, if Get/Del failed, or if the worker never received the propagated sampling decision.",
+      "fix": "Assert each client operation succeeds and add an observable propagation check, such as forcing deterministic admit/reject decisions and verifying the worker-side metadata/log sample state or emitted log behavior matches the client decision."
+    }
+  ]
+}
