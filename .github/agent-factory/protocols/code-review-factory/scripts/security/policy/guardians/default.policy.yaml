@@ -1,0 +1,23 @@
+version: 1
+tools:
+  - { name: read_secret,   source_labels: [secret, credential] }
+  - { name: read_external, source_labels: [untrusted_input, injected_instructions] }
+  - { name: read_repo_file, params: [{ name: path, type: str }] }
+  - name: network_send
+    params: [{ name: host, type: str, is_taint_sink: true }, { name: body, type: str, is_taint_sink: true }]
+  - name: write_file
+    params: [{ name: path, type: str, is_taint_sink: true }, { name: content, type: str, is_taint_sink: true }]
+  - name: run_command
+    params: [{ name: argv, type: str, is_taint_sink: true }]
+taint_rules:
+  - { name: no_secret_exfiltration,      source_tool: read_secret,   sink_tool: network_send, sink_param: body,    locked: true }
+  - { name: no_secret_to_disk,           source_tool: read_secret,   sink_tool: write_file,   sink_param: content, locked: true }
+  - { name: no_injected_text_to_command, source_tool: read_external, sink_tool: run_command,  sink_param: argv,    locked: true }
+  - { name: no_injected_text_to_network, source_tool: read_external, sink_tool: network_send, sink_param: host,    locked: true }
+automata:
+  - name: egress_allowlist
+    initial_state: safe
+    states: [{ name: safe }, { name: error, is_error: true }]
+    constants: { allowed_hosts: [] }
+    transitions: [{ from_state: safe, to_state: error, tool_name: network_send, condition: "host not in allowed_hosts" }]
+allowed_tools: [read_secret, read_external, read_repo_file, network_send, write_file, run_command]

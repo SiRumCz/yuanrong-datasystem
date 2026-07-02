@@ -1,0 +1,16 @@
+{
+  "number": 42,
+  "title": "feat: x",
+  "headRefName": "feat/x",
+  "headRefOid": "abc1234",
+  "files": [
+    {
+      "filename": ".conversations/feat/x/sess.jsonl",
+      "status": "added"
+    },
+    {
+      "filename": "src/a.js",
+      "status": "modified"
+    }
+  ]
+}
