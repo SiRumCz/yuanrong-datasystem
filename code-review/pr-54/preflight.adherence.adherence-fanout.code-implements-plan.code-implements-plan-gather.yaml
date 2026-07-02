@@ -1,7 +1,15 @@
 protocol: code-review
 instance: pr-54
 state: adherence-fanout
-iteration: 1
+iteration: 2
 gates: {}
 head_sha: 648522a0159e5b4f14447327b6c9fe47c8de1a12
-history: []
+history:
+- iteration: 1
+  agent_run_id: '28596232052'
+  checks:
+    evidence-present: pass
+    code-plan-coverage: pass
+    traces-exist-in-diff: fail
+  feedback: 'Unverifiable claims: existing_code does not match RIGHT line(s) 334 of
+    src/datasystem/common/util/strings_util.h (code-implements-plan)'
