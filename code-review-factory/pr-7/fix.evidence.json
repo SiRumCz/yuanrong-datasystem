@@ -1,1 +1,0 @@
-{"fixes":[],"skipped":[{"cluster_id":"c1","reason":"Requires a synchronization redesign across start time and counters, such as mutex-protecting the window invariant or generation/double-buffering; no safe single-line or small contiguous patch can prevent concurrent writers from racing with rollover exchanges."}],"mode":"suggest"}
