@@ -1,6 +1,6 @@
 protocol: fast-mrp
 instance: pr-6
-state: preflight
+state: done
 sub_state: mm-compliance-judge
 iteration: 1
 gates: {}
