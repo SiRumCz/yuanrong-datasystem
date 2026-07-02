@@ -142,7 +142,7 @@ void UrmaSuccessRateTracker::RecordInCurrentWindow(bool success)
 bool UrmaSuccessRateTracker::IsUnhealthy(const WindowSnapshot &snapshot, double successRateRatio)
 {
     uint64_t total = snapshot.successCount + snapshot.failureCount;
-    return static_cast<double>(snapshot.successCount) < static_cast<double>(total) * successRateRatio;
+    return static_cast<double>(snapshot.successCount) > static_cast<double>(total) * successRateRatio;
 }
 }  // namespace client
 }  // namespace datasystem
