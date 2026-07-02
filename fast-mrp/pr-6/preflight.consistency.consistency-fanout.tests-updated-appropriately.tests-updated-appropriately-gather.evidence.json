@@ -1,0 +1,96 @@
+{
+  "scope": {
+    "code_changed": true
+  },
+  "items": [
+    {
+      "path": "tests/ut/common/log/log_sampler_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Added core LogSampler coverage for rate derivation, normalization, invalid config rejection, random threshold behavior, disabled fast paths, fatal bypass, distribution, and concurrent config reads."
+    },
+    {
+      "path": "tests/ut/common/log/log_sampler_config_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Added proto/config coverage for enabled/disabled snapshots, ppm boundaries, previous-good retention, missing proto handling, and request-only derivation rules."
+    },
+    {
+      "path": "tests/ut/common/log/log_sampler_access_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Added access sampling coverage for CLIENT/ACCESS/REQUEST_OUT classification, request-sampled-in forced retention, zero-rate drops, per-event sampling, and logSampled markers."
+    },
+    {
+      "path": "tests/ut/common/log/log_access_facade_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Added facade coverage for lazy field providers, sampled-out skip behavior, async/shared ownership patterns, C-array/string-view key handling, and object/stream/request-out record fields."
+    },
+    {
+      "path": "tests/ut/common/log/log_sampler_integration_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Added macro integration coverage for LOG/VLOG/PLOG sampling, diagnostic supplement behavior, sampled-in diagnostic forcing, FATAL/CHECK bypass, and background-log bypass."
+    },
+    {
+      "path": "tests/ut/common/rpc/zmq_trace_sampling_meta_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Updated RPC metadata tests to cover LOG_SAMPLE_UNDECIDED/REJECT behavior and disabled/full/zero request-rate propagation semantics."
+    },
+    {
+      "path": "tests/st/common/log/log_sampler_st_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Added system coverage for worker-delivered LogSampleConfigPb and multi-client request activity under sampler-enabled worker config."
+    },
+    {
+      "path": "tests/ut/common/log/log_performance_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Updated performance tests to exercise sampler fast paths, rejected expensive payload skipping, sampler-only decision cost, and sampled-out access field construction avoidance."
+    },
+    {
+      "path": "tests/ut/common/util/flags_test.cpp",
+      "status": "missing",
+      "reason": "No test exercises the changed Flags::UpdateFlagParameter sampler-rate transaction path, including validation failure and rollback after partial gflag commits."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/modules/quality/tests-and-reproduction.md",
+    ".repo_context/modules/quality/test-suite-design.md",
+    ".repo_context/playbooks/features/quality/test-implementation.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md",
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    "src/datasystem/common/log/log_sampler.cpp",
+    "src/datasystem/common/log/log_sampler.h",
+    "src/datasystem/common/log/log_sampler_proto.cpp",
+    "src/datasystem/common/log/access_recorder.cpp",
+    "src/datasystem/common/log/access_recorder.h",
+    "src/datasystem/common/log/log.h",
+    "src/datasystem/common/log/spdlog/log_message.cpp",
+    "src/datasystem/common/rpc/zmq/zmq_common.h",
+    "src/datasystem/common/util/gflag/flags.cpp",
+    "src/datasystem/common/util/gflag/common_gflags_validate.cpp",
+    "src/datasystem/protos/meta_zmq.proto",
+    "src/datasystem/protos/share_memory.proto",
+    "src/datasystem/worker/worker_service_impl.cpp",
+    "src/datasystem/client/client_worker_common_api.cpp",
+    "include/datasystem/utils/embedded_config.h",
+    "src/datasystem/common/flags/embedded_config.cpp",
+    "tests/ut/common/log/log_sampler_test.cpp",
+    "tests/ut/common/log/log_sampler_config_test.cpp",
+    "tests/ut/common/log/log_sampler_access_test.cpp",
+    "tests/ut/common/log/log_access_facade_test.cpp",
+    "tests/ut/common/log/log_sampler_integration_test.cpp",
+    "tests/ut/common/log/log_performance_test.cpp",
+    "tests/ut/common/rpc/zmq_trace_sampling_meta_test.cpp",
+    "tests/st/common/log/log_sampler_st_test.cpp",
+    "tests/st/client/object_cache/client_one_worker_log_size_test.cpp",
+    "tests/ut/common/flags/flags_test.cpp",
+    "tests/ut/common/util/flags_test.cpp"
+  ]
+}
