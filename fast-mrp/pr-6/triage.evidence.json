@@ -1,0 +1,170 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "Public EmbeddedConfig sampler setters have no direct regression coverage",
+      "dimension": [
+        "test"
+      ],
+      "severity": "high",
+      "paths": [
+        "src/datasystem/common/flags/embedded_config.cpp"
+      ],
+      "member_findings": [
+        {
+          "dimension": "test",
+          "path": "src/datasystem/common/flags/embedded_config.cpp",
+          "line": 124,
+          "severity": "high",
+          "category": "test",
+          "title": "Public EmbeddedConfig sampler setters have no direct regression coverage",
+          "impact": "The PR replaces the public embedded-worker LogRateLimit API with RequestSampleRate, AccessSampleRate, and DiagnosticSampleRate, but the added tests exercise LogSampler internals rather than this public path. A typo in the extraArgs key, bad string conversion, or invalid-rate handling would leave embedded workers running the wrong sampling policy without failing any test.",
+          "fix": "Add an EmbeddedConfig-focused unit test that calls all three setters, verifies the emitted extraArgs names and values, verifies chaining, and covers invalid, NaN, and out-of-range inputs leaving the prior config unchanged."
+        }
+      ],
+      "rank": 1
+    },
+    {
+      "cluster_id": "c2",
+      "title": "Sampler-disabled access logs take the sampled formatting path",
+      "dimension": [
+        "performance"
+      ],
+      "severity": "medium",
+      "paths": [
+        "src/datasystem/common/log/access_recorder.cpp"
+      ],
+      "member_findings": [
+        {
+          "dimension": "performance",
+          "path": "src/datasystem/common/log/access_recorder.cpp",
+          "line": 71,
+          "severity": "medium",
+          "category": "performance",
+          "title": "Sampler-disabled access logs take the sampled formatting path",
+          "impact": "When sampling is disabled, every request-context CLIENT/ACCESS record now returns true from IsCurrentRequestLogSampled, so FormatAccessReqMsg appends logSampled:true and builds an extra ostringstream/string before LogPerformance writes the line. That makes the default pass-through mode larger and more allocation-heavy on the access-log hot path, even though the sampler is supposed to add only a lightweight enabled check when disabled.",
+          "fix": "Preserve the previous no-marker path when the sampler is disabled, or pass the existing LogPerformance stream into the marker formatter so disabled/pass-through access logging avoids the extra string allocation and payload expansion."
+        }
+      ],
+      "rank": 2
+    },
+    {
+      "cluster_id": "c3",
+      "title": "Access recorder facade repeats the same guard-and-store pattern across every setter",
+      "dimension": [
+        "maintainability"
+      ],
+      "severity": "medium",
+      "paths": [
+        "src/datasystem/common/log/access_recorder.cpp"
+      ],
+      "member_findings": [
+        {
+          "dimension": "maintainability",
+          "path": "src/datasystem/common/log/access_recorder.cpp",
+          "line": 282,
+          "severity": "medium",
+          "category": "maintainability",
+          "title": "Access recorder facade repeats the same guard-and-store pattern across every setter",
+          "impact": "The new facade adds dozens of near-identical setters that each manually check ShouldRecordInternal(), mutate one state field, and rely on Record() to remember a matching Fill step. Future access-log fields now require coordinated edits in the state struct, header declaration, cpp setter, and Record() assembly path, so it is easy for a later change to miss the sampled-out guard or silently omit a field from the emitted request parameters.",
+          "fix": "Centralize the repeated setter pattern behind small private helpers, for example a guarded SetIfRecording helper for FieldEntry/ObjectKeyState assignments and a single assembly helper per recorder type, so adding a field has one obvious place for the guard and one obvious place for serialization."
+        }
+      ],
+      "rank": 3
+    },
+    {
+      "cluster_id": "c4",
+      "title": "Cross-process sampling test does not assert the operation or propagation outcome",
+      "dimension": [
+        "test"
+      ],
+      "severity": "medium",
+      "paths": [
+        "tests/st/common/log/log_sampler_st_test.cpp"
+      ],
+      "member_findings": [
+        {
+          "dimension": "test",
+          "path": "tests/st/common/log/log_sampler_st_test.cpp",
+          "line": 103,
+          "severity": "medium",
+          "category": "test",
+          "title": "Cross-process sampling test does not assert the operation or propagation outcome",
+          "impact": "CrossProcessSamplingConsistency claims to verify client-to-worker sampling consistency, but inside the workload it only calls Set/Get/Del and ignores failures and log/sample state. The test would still pass if Set failed for every operation, if Get/Del failed, or if the worker never received the propagated sampling decision.",
+          "fix": "Assert each client operation succeeds and add an observable propagation check, such as forcing deterministic admit/reject decisions and verifying the worker-side metadata/log sample state or emitted log behavior matches the client decision."
+        }
+      ],
+      "rank": 4
+    },
+    {
+      "cluster_id": "c5",
+      "title": "objectKeysToString overloads duplicate the same truncation and formatting logic",
+      "dimension": [
+        "maintainability"
+      ],
+      "severity": "low",
+      "paths": [
+        "src/datasystem/common/log/access_recorder.cpp"
+      ],
+      "member_findings": [
+        {
+          "dimension": "maintainability",
+          "path": "src/datasystem/common/log/access_recorder.cpp",
+          "line": 1029,
+          "severity": "low",
+          "category": "maintainability",
+          "title": "objectKeysToString overloads duplicate the same truncation and formatting logic",
+          "impact": "The new RepeatedPtrField and C-array overloads reimplement the same bracket/comma/truncation/total handling already present for vector keys. Any future change to access-log key formatting or truncation limits will need to be made in several slightly different loops, which invites inconsistent output across C++, protobuf, and C API call sites.",
+          "fix": "Factor the shared formatter into a small helper that accepts key count and a key accessor/span-like callback, then keep each overload as only an adapter from its container representation to that helper."
+        }
+      ],
+      "rank": 5
+    },
+    {
+      "cluster_id": "c6",
+      "title": "AccessRecorder public header now depends directly on LogSampler",
+      "dimension": [
+        "maintainability"
+      ],
+      "severity": "low",
+      "paths": [
+        "src/datasystem/common/log/access_recorder.h"
+      ],
+      "member_findings": [
+        {
+          "dimension": "maintainability",
+          "path": "src/datasystem/common/log/access_recorder.h",
+          "line": 35,
+          "severity": "low",
+          "category": "maintainability",
+          "title": "AccessRecorder public header now depends directly on LogSampler",
+          "impact": "Including log_sampler.h from access_recorder.h couples every AccessRecorder consumer to the sampler implementation even though the public declarations in this header do not expose LogSampler types. That increases rebuild surface and makes the logging subsystem dependency direction harder to reason about as both headers now know about each other\u2019s concepts.",
+          "fix": "Move the log_sampler.h include to access_recorder.cpp and keep access_recorder.h limited to the AccessRecorder public API and minimal forward declarations."
+        }
+      ],
+      "rank": 6
+    }
+  ],
+  "summary": {
+    "present": [
+      "correctness",
+      "test",
+      "performance",
+      "security",
+      "maintainability"
+    ],
+    "missing": [],
+    "clusters": 6,
+    "total_findings": 6,
+    "by_severity": {
+      "high": 1,
+      "medium": 3,
+      "low": 2
+    },
+    "by_dimension": {
+      "test": 2,
+      "performance": 1,
+      "maintainability": 3
+    }
+  }
+}
