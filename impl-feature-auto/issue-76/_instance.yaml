@@ -3,5 +3,5 @@ instance: issue-76
 head_sha: e96599b38d9ce78ce6da40e2a69b91fad59cd7af
 phase: implement
 joined: false
-phase_label: implement (TDD + open PR)
+phase_label: "\u2705 done"
 status_comment_id: 4870797576
