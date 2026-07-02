@@ -1,0 +1,40 @@
+{
+  "scope": {
+    "code_changed": true
+  },
+  "items": [
+    {
+      "path": "specs/2026-07-02-stale-cache-scan.md",
+      "status": "updated_appropriately",
+      "reason": "New spec documents CollectStalePaths inputs, strict mtime cutoff, order preservation, purity, and no filesystem removal."
+    },
+    {
+      "path": "plans/2026-07-02-stale-cache-scan.md",
+      "status": "updated_appropriately",
+      "reason": "New plan matches the helper implementation scope and explicitly keeps removal and directory walking out of scope."
+    }
+  ],
+  "verdict": "adequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md",
+    ".repo_context/modules/infra/common-infra.md",
+    ".repo_context/modules/infra/l2cache/README.md",
+    ".repo_context/modules/infra/l2cache/design.md",
+    ".repo_context/modules/infra/slot/README.md",
+    ".repo_context/modules/infra/slot/design.md",
+    ".repo_context/modules/runtime/object-cache-eviction/README.md",
+    ".repo_context/modules/runtime/object-cache-eviction/design.md",
+    "src/datasystem/common/util/file_util.cpp",
+    "src/datasystem/common/util"
+  ]
+}
