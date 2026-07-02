@@ -1,7 +1,13 @@
 protocol: code-review
 instance: pr-54
-state: adherence-fanout
+state: done
 iteration: 1
 gates: {}
 head_sha: 648522a0159e5b4f14447327b6c9fe47c8de1a12
-history: []
+history:
+- iteration: 1
+  agent_run_id: '28596232147'
+  checks:
+    evidence-present: pass
+    spec-solves-issue-coverage: pass
+  feedback: ''
