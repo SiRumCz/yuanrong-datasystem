@@ -1,0 +1,469 @@
+{
+  "cohorts": [
+    {
+      "cohort": "AI logging context",
+      "cohortOrder": 1,
+      "area": "docs",
+      "files": [
+        ".repo_context/index.md",
+        ".repo_context/modules/infra/logging/README.md",
+        ".repo_context/modules/infra/logging/log-sampler-design.md"
+      ],
+      "layers": [
+        {
+          "layer": "other",
+          "order": 1,
+          "area": "docs",
+          "title": "Document sampler design",
+          "summary": "This layer adds repository AI context for the new LogSampler design and wires it into the context index. It explains the request/access/diagnostic sampling model, hot-path constraints, RPC propagation, and expected validation scenarios.",
+          "files": [
+            ".repo_context/index.md",
+            ".repo_context/modules/infra/logging/README.md",
+            ".repo_context/modules/infra/logging/log-sampler-design.md"
+          ],
+          "diff": "+| design unified class-based random log sampling | `modules/infra/logging/log-sampler-design.md` | `src/datasystem/common/log/*`, `src/datasystem/common/log/spdlog/*`, `src/datasystem/common/metrics/hard_disk_exporter/*`, `src/datasystem/common/util/gflag/*` |\n+- `LogSampler` provides unified random hash-threshold sampling across request/access/diagnostic dimensions, with per-request granularity and low-overhead hot-path decisions.\n+- `AccessRecorder::Object`, `AccessRecorder::Stream`, and `AccessRecorder::RequestOut` are the recommended access-log facades. Call sites describe fields and call `Record()`; sampling, lazy field materialization, elapsed time, formatting, and exporter writes are owned by `AccessRecorder`.\n+## Log Processing Flow\n+1. FATAL/CHECK -> always pass\n+2. External API access / client access log -> force emit when request is sampled in; otherwise apply access_sample_rate\n+3. ERROR/WARNING/PLOG with request context -> force emit if request is sampled in; otherwise check diagnostic_sample_rate\n+4. Request INFO/VLOG -> make one random request-trace decision via request_sample_rate; reuse it for the trace"
+        }
+      ],
+      "bcFindings": []
+    },
+    {
+      "cohort": "Operator sampling configuration",
+      "cohortOrder": 2,
+      "area": "infra",
+      "files": [
+        "cli/deploy/conf/worker_config.json",
+        "docs/source_zh_cn/appendix/client_env_guide.md",
+        "docs/source_zh_cn/appendix/log_guide.md",
+        "docs/source_zh_cn/deployment/dscli.md",
+        "include/datasystem/utils/embedded_config.h",
+        "k8s/helm_chart/datasystem/templates/configmap.yaml",
+        "k8s/helm_chart/datasystem/templates/worker_daemonset.yaml",
+        "k8s/helm_chart/datasystem/values.yaml",
+        "k8s_deployment/helm_chart/worker.config",
+        "src/datasystem/common/flags/BUILD.bazel",
+        "src/datasystem/common/flags/embedded_config.cpp",
+        "src/datasystem/common/flags/flag_manager.cpp",
+        "src/datasystem/common/util/gflag/CMakeLists.txt",
+        "src/datasystem/common/util/gflag/common_gflags.h",
+        "src/datasystem/common/util/gflag/common_gflags_validate.cpp",
+        "src/datasystem/common/util/gflag/flags.cpp",
+        "src/datasystem/common/util/gflag/flags.h"
+      ],
+      "layers": [
+        {
+          "layer": "api",
+          "order": 1,
+          "area": "infra",
+          "title": "Replace public config knobs",
+          "summary": "The old per-second `log_rate_limit` setting is replaced with three double sample-rate controls. EmbeddedConfig exposes the new request/access/diagnostic methods, so embedded users move from a quota API to ratio-based sampling.",
+          "files": [
+            "include/datasystem/utils/embedded_config.h",
+            "src/datasystem/common/flags/embedded_config.cpp"
+          ],
+          "diff": "-    EmbeddedConfig &LogRateLimit(int limit);\n+    EmbeddedConfig &RequestSampleRate(double rate);\n+    EmbeddedConfig &AccessSampleRate(double rate);\n+    EmbeddedConfig &DiagnosticSampleRate(double rate);\n+     * - If only RequestSampleRate is set (without AccessSampleRate/DiagnosticSampleRate),\n+     *   access_rate = min(1.0, rate * 3), diagnostic_rate = min(1.0, rate * 4)"
+        },
+        {
+          "layer": "backend",
+          "order": 2,
+          "area": "infra",
+          "title": "Validate sampler flags transactionally",
+          "summary": "Runtime flag handling now recognizes the three sampler flags as a batch. The implementation validates candidate values, applies them transactionally, and only commits the LogSampler config if the whole update succeeds.",
+          "files": [
+            "src/datasystem/common/flags/BUILD.bazel",
+            "src/datasystem/common/flags/flag_manager.cpp",
+            "src/datasystem/common/util/gflag/CMakeLists.txt",
+            "src/datasystem/common/util/gflag/common_gflags.h",
+            "src/datasystem/common/util/gflag/common_gflags_validate.cpp",
+            "src/datasystem/common/util/gflag/flags.cpp",
+            "src/datasystem/common/util/gflag/flags.h"
+          ],
+          "diff": "+bool Flags::ValidateAndCommitSamplerFlags(const std::unordered_map<std::string, std::string> &flagMap)\n+{\n+    static const std::unordered_set<std::string> samplerFlagNames = {\n+        \"request_sample_rate\", \"access_sample_rate\", \"diagnostic_sample_rate\"\n+    };\n+    LogSampleUserConfig cfg;\n+    cfg.requestSampleRate = FLAGS_request_sample_rate;\n+    cfg.accessSampleRate = FLAGS_access_sample_rate;\n+    cfg.diagnosticSampleRate = FLAGS_diagnostic_sample_rate;\n+    cfg.requestSampleRateExplicit = (flagMap.count(\"request_sample_rate\") > 0);\n+    cfg.accessSampleRateExplicit = (flagMap.count(\"access_sample_rate\") > 0);\n+    cfg.diagnosticSampleRateExplicit = (flagMap.count(\"diagnostic_sample_rate\") > 0);"
+        },
+        {
+          "layer": "other",
+          "order": 3,
+          "area": "infra",
+          "title": "Update deployment surfaces",
+          "summary": "Helm, worker config, dscli docs, and the logging guide now describe sample rates instead of rate limits. The standalone client environment variable documentation removes `DATASYSTEM_LOG_RATE_LIMIT`, matching the worker-authoritative configuration model.",
+          "files": [
+            "cli/deploy/conf/worker_config.json",
+            "docs/source_zh_cn/appendix/client_env_guide.md",
+            "docs/source_zh_cn/appendix/log_guide.md",
+            "docs/source_zh_cn/deployment/dscli.md",
+            "k8s/helm_chart/datasystem/templates/configmap.yaml",
+            "k8s/helm_chart/datasystem/templates/worker_daemonset.yaml",
+            "k8s/helm_chart/datasystem/values.yaml",
+            "k8s_deployment/helm_chart/worker.config"
+          ],
+          "diff": "-| Worker 命令行 | `--log_rate_limit=N` 启动参数 | `./datasystem_worker --log_rate_limit=20` |\n-默认值为 `0`（不限速），完全向后兼容。\n+| Worker 命令行 | `--request_sample_rate=0.5`（仅 request 触发派生） | `./datasystem_worker --request_sample_rate=0.5` |\n+默认值均为 `1.0`（全量保留），完全向后兼容。\n-    -log_rate_limit={{ .Values.global.log.logRateLimit }}\n+    -request_sample_rate={{ .Values.global.log.requestSampleRate }}\n+    -access_sample_rate={{ .Values.global.log.accessSampleRate }}\n+    -diagnostic_sample_rate={{ .Values.global.log.diagnosticSampleRate }}"
+        }
+      ],
+      "bcFindings": [
+        {
+          "symbol": "datasystem::EmbeddedConfig::LogRateLimit(int)",
+          "kind": "method",
+          "category": "REMOVE_METHOD",
+          "severityClass": "hard-break",
+          "evidence": "`include/datasystem/utils/embedded_config.h` removes `EmbeddedConfig &LogRateLimit(int limit);` and replaces it with `RequestSampleRate(double)`, `AccessSampleRate(double)`, and `DiagnosticSampleRate(double)`."
+        },
+        {
+          "symbol": "--log_rate_limit",
+          "kind": "field",
+          "category": "REMOVE_FIELD",
+          "severityClass": "hard-break",
+          "evidence": "Deployment/docs/config hunks remove `log_rate_limit`/`logRateLimit` and replace them with request/access/diagnostic sample-rate flags with no compatibility mapping."
+        },
+        {
+          "symbol": "DATASYSTEM_LOG_RATE_LIMIT",
+          "kind": "field",
+          "category": "REMOVE_FIELD",
+          "severityClass": "hard-break",
+          "evidence": "`docs/source_zh_cn/appendix/client_env_guide.md` deletes the documented standalone client environment variable `DATASYSTEM_LOG_RATE_LIMIT`."
+        }
+      ]
+    },
+    {
+      "cohort": "Sampler core logging pipeline",
+      "cohortOrder": 3,
+      "area": "backend",
+      "files": [
+        "BUILD.bazel",
+        "src/datasystem/common/log/BUILD.bazel",
+        "src/datasystem/common/log/CMakeLists.txt",
+        "src/datasystem/common/log/log.h",
+        "src/datasystem/common/log/log_sampler.cpp",
+        "src/datasystem/common/log/log_sampler.h",
+        "src/datasystem/common/log/log_sampler_proto.cpp",
+        "src/datasystem/common/log/logging.cpp",
+        "src/datasystem/common/log/logging.h",
+        "src/datasystem/common/log/spdlog/BUILD.bazel",
+        "src/datasystem/common/log/spdlog/CMakeLists.txt",
+        "src/datasystem/common/log/spdlog/log_message.cpp",
+        "src/datasystem/common/log/spdlog/log_message.h",
+        "src/datasystem/common/log/spdlog/log_message_impl.cpp",
+        "src/datasystem/common/log/spdlog/log_message_impl.h",
+        "src/datasystem/common/log/spdlog/log_rate_limiter.cpp",
+        "src/datasystem/common/log/spdlog/log_rate_limiter.h",
+        "src/datasystem/common/log/trace.cpp",
+        "src/datasystem/common/metrics/res_metric_collector.cpp",
+        "src/datasystem/common/metrics/res_metric_collector.h"
+      ],
+      "layers": [
+        {
+          "layer": "backend",
+          "order": 1,
+          "area": "backend",
+          "title": "Add LogSampler",
+          "summary": "The new core sampler owns normalized sample rates, immutable snapshots, salt-based hash thresholds, and hot-path entry points. It keeps disabled sampling to a relaxed atomic check and classifies runtime logs into request, diagnostic, access, or bypass paths.",
+          "files": [
+            "src/datasystem/common/log/BUILD.bazel",
+            "src/datasystem/common/log/CMakeLists.txt",
+            "src/datasystem/common/log/log_sampler.cpp",
+            "src/datasystem/common/log/log_sampler.h",
+            "src/datasystem/common/log/log_sampler_proto.cpp"
+          ],
+          "diff": "+class LogSampler {\n+public:\n+    static LogSampler &Instance();\n+    bool UpdateConfigFromFlags(const LogSampleUserConfig &userConfig);\n+    ConfigUpdateResult UpdateConfigFromProto(const LogSampleConfigPb &proto);\n+    void PopulateConfigProto(LogSampleConfigPb *proto);\n+    inline bool IsSamplerEnabledFast() const\n+    {\n+        return samplerEnabled_.load(std::memory_order_relaxed);\n+    }\n+    bool ShouldCreateRuntimeLog(LogSeverity severity, bool isPlog);\n+    bool IsCurrentRequestSampledIn();\n+    bool ShouldRecordAccess(AccessRecorderKey key);\n+    std::atomic<LogSamplerSnapshot *> snapshot_{ nullptr };\n+    std::atomic<bool> samplerEnabled_{ false };"
+        },
+        {
+          "layer": "backend",
+          "order": 2,
+          "area": "backend",
+          "title": "Replace rate limiter",
+          "summary": "The spdlog rate limiter target and header are removed from the build. Log creation now asks LogSampler after the normal severity gate, preserving FATAL behavior and avoiding the old first-N request quota.",
+          "files": [
+            "BUILD.bazel",
+            "src/datasystem/common/log/log.h",
+            "src/datasystem/common/log/logging.cpp",
+            "src/datasystem/common/log/logging.h",
+            "src/datasystem/common/log/spdlog/BUILD.bazel",
+            "src/datasystem/common/log/spdlog/CMakeLists.txt",
+            "src/datasystem/common/log/spdlog/log_message.cpp",
+            "src/datasystem/common/log/spdlog/log_message.h",
+            "src/datasystem/common/log/spdlog/log_message_impl.cpp",
+            "src/datasystem/common/log/spdlog/log_message_impl.h",
+            "src/datasystem/common/log/spdlog/log_rate_limiter.cpp",
+            "src/datasystem/common/log/spdlog/log_rate_limiter.h",
+            "src/datasystem/common/log/trace.cpp"
+          ],
+          "diff": "-#include \"datasystem/common/log/spdlog/log_rate_limiter.h\"\n+#include \"datasystem/common/log/log_sampler.h\"\n-    auto &limiter = LogRateLimiter::Instance();\n-    if (!limiter.IsEnabled()) {\n+    if (!LogSampler::Instance().IsSamplerEnabledFast()) {\n         return true;\n     }\n+    return LogSampler::Instance().ShouldCreateRuntimeLog(logSeverity, false);\n-diff --git a/src/datasystem/common/log/spdlog/log_rate_limiter.h b/src/datasystem/common/log/spdlog/log_rate_limiter.h\n-deleted file mode 100644"
+        },
+        {
+          "layer": "backend",
+          "order": 3,
+          "area": "backend",
+          "title": "Adjust metrics coupling",
+          "summary": "The logging/metrics coupling is updated for the sampler-backed pipeline. Resource metric collection changes remain small and stay in the common logging blast radius.",
+          "files": [
+            "src/datasystem/common/metrics/res_metric_collector.cpp",
+            "src/datasystem/common/metrics/res_metric_collector.h"
+          ],
+          "diff": "diff --git a/src/datasystem/common/metrics/res_metric_collector.cpp b/src/datasystem/common/metrics/res_metric_collector.cpp\n--- a/src/datasystem/common/metrics/res_metric_collector.cpp\n+++ b/src/datasystem/common/metrics/res_metric_collector.cpp\n@@\n-// adjusted with logging sampler integration\n+// resource metrics remain outside request/access sampling"
+        }
+      ],
+      "bcFindings": [
+        {
+          "symbol": "datasystem::LogRateLimiter",
+          "kind": "type",
+          "category": "REMOVE_TYPE",
+          "severityClass": "hard-break",
+          "evidence": "`src/datasystem/common/log/spdlog/log_rate_limiter.h` and `.cpp` are deleted, removing the public `LogRateLimiter` class and its methods."
+        }
+      ]
+    },
+    {
+      "cohort": "Sampler propagation protocol",
+      "cohortOrder": 4,
+      "area": "backend",
+      "files": [
+        "src/datasystem/client/CMakeLists.txt",
+        "src/datasystem/client/client_worker_common_api.cpp",
+        "src/datasystem/common/rpc/zmq/zmq_common.h",
+        "src/datasystem/common/util/request_table.h",
+        "src/datasystem/protos/meta_zmq.proto",
+        "src/datasystem/protos/share_memory.proto",
+        "src/datasystem/worker/CMakeLists.txt",
+        "src/datasystem/worker/worker_service_impl.cpp"
+      ],
+      "layers": [
+        {
+          "layer": "schema",
+          "order": 1,
+          "area": "backend",
+          "title": "Add sampler config proto",
+          "summary": "The shared-memory protobuf gains `LogSampleConfigPb` and carries it in register and heartbeat responses. `RegisterClientRspPb` reuses field 24 with a different type/name, changing the wire contract for clients generated against the old schema.",
+          "files": [
+            "src/datasystem/protos/share_memory.proto",
+            "src/datasystem/protos/meta_zmq.proto"
+          ],
+          "diff": "+message LogSampleConfigPb {\n+    bool enabled = 1;\n+    uint32 access_sample_ppm = 2;\n+    uint32 request_sample_ppm = 3;\n+    uint32 diagnostic_sample_ppm = 4;\n+}\n@@\n-    int32 log_rate_limit = 24;\n+    LogSampleConfigPb log_sample_config = 24;\n@@\n+    LogSampleConfigPb log_sample_config = 8;"
+        },
+        {
+          "layer": "backend",
+          "order": 2,
+          "area": "backend",
+          "title": "Propagate sample state",
+          "summary": "ZMQ metadata now uses LogSampler to create and apply request sample state instead of LogRateLimiter. Register and heartbeat responses publish the effective sampler config so clients follow the worker authority.",
+          "files": [
+            "src/datasystem/client/CMakeLists.txt",
+            "src/datasystem/client/client_worker_common_api.cpp",
+            "src/datasystem/common/rpc/zmq/zmq_common.h",
+            "src/datasystem/common/util/request_table.h",
+            "src/datasystem/worker/CMakeLists.txt",
+            "src/datasystem/worker/worker_service_impl.cpp"
+          ],
+          "diff": "-#include \"datasystem/common/log/spdlog/log_rate_limiter.h\"\n+#include \"datasystem/common/log/log_sampler.h\"\n@@\n-    rsp.set_log_rate_limit(FLAGS_log_rate_limit);\n+    LogSampler::Instance().PopulateConfigProto(rsp.mutable_log_sample_config());\n@@\n+    LogSampler::Instance().PopulateConfigProto(rsp.mutable_log_sample_config());\n@@\n+            if (LogSampler::Instance().IsSamplerEnabledFast()) {\n+                (void)LogSampler::Instance().IsCurrentRequestSampledIn();\n+            }"
+        }
+      ],
+      "bcFindings": [
+        {
+          "symbol": "RegisterClientRspPb.log_rate_limit",
+          "kind": "field",
+          "category": "CHANGE_IN_FIELD_TYPE",
+          "severityClass": "hard-break",
+          "evidence": "`src/datasystem/protos/share_memory.proto` changes field 24 from `int32 log_rate_limit = 24;` to `LogSampleConfigPb log_sample_config = 24;`, changing the generated accessor and protobuf wire type."
+        }
+      ]
+    },
+    {
+      "cohort": "Access recorder migration",
+      "cohortOrder": 5,
+      "area": "backend",
+      "files": [
+        "src/datasystem/c_api/kv_client_c_wrapper.cpp",
+        "src/datasystem/c_api/object_client_c_wrapper.cpp",
+        "src/datasystem/c_api/util.cpp",
+        "src/datasystem/c_api/util.h",
+        "src/datasystem/client/hetero_cache/hetero_client.cpp",
+        "src/datasystem/client/kv_cache/kv_client.cpp",
+        "src/datasystem/client/object_cache/object_client.cpp",
+        "src/datasystem/client/object_cache/object_client_impl.cpp",
+        "src/datasystem/client/stream_cache/consumer.cpp",
+        "src/datasystem/client/stream_cache/producer.cpp",
+        "src/datasystem/client/stream_cache/stream_client.cpp",
+        "src/datasystem/common/kvstore/etcd/etcd_watch.h",
+        "src/datasystem/common/kvstore/etcd/grpc_session.h",
+        "src/datasystem/common/log/access_recorder.cpp",
+        "src/datasystem/common/log/access_recorder.h",
+        "src/datasystem/java_api/kv/kv_impl.cpp",
+        "src/datasystem/java_api/kv/kv_impl.h",
+        "src/datasystem/java_api/kv/org_yuanrong_datasystem_kv_KVClient.cpp",
+        "src/datasystem/pybind_api/pybind_register_kv.cpp",
+        "src/datasystem/worker/object_cache/service/worker_oc_service_create_impl.cpp",
+        "src/datasystem/worker/object_cache/service/worker_oc_service_delete_impl.cpp",
+        "src/datasystem/worker/object_cache/service/worker_oc_service_expire_impl.cpp",
+        "src/datasystem/worker/object_cache/service/worker_oc_service_get_impl.cpp",
+        "src/datasystem/worker/object_cache/service/worker_oc_service_global_reference_impl.cpp",
+        "src/datasystem/worker/object_cache/service/worker_oc_service_multi_publish_impl.cpp",
+        "src/datasystem/worker/object_cache/service/worker_oc_service_publish_impl.cpp",
+        "src/datasystem/worker/object_cache/worker_oc_service_impl.cpp",
+        "src/datasystem/worker/object_cache/worker_oc_service_impl.h",
+        "src/datasystem/worker/object_cache/worker_request_manager.cpp",
+        "src/datasystem/worker/object_cache/worker_request_manager.h",
+        "src/datasystem/worker/stream_cache/client_worker_sc_service_impl.cpp",
+        "src/datasystem/worker/stream_cache/client_worker_sc_service_impl.h"
+      ],
+      "layers": [
+        {
+          "layer": "backend",
+          "order": 1,
+          "area": "backend",
+          "title": "Introduce lazy facades",
+          "summary": "AccessRecorder is reshaped around Object, Stream, and RequestOut recorder facades that skip field materialization when sampling says not to record. The previous direct Record overloads and stream wrapper are removed, so callers must use builder-style field setters and final `Record()`.",
+          "files": [
+            "src/datasystem/common/log/access_recorder.cpp",
+            "src/datasystem/common/log/access_recorder.h"
+          ],
+          "diff": "-    void Record(StatusCode code, const std::string &dataSize = \"\", const RequestParam &reqParam = {},\n-                const std::string &respMsg = \"\", uint64_t asyncElapseTime = 0);\n-    void Record(int code, const std::string &dataSize = \"\", const RequestParam &reqParam = {},\n-                const std::string &respMsg = \"\", uint64_t asyncElapseTime = 0);\n+    static ObjectAccessRecorder Object(AccessRecorderKey key);\n+    static StreamAccessRecorder Stream(AccessRecorderKey key);\n+    static RequestOutRecorder RequestOut(AccessRecorderKey key);\n+    void Record();\n+    ObjectAccessRecorder &DataSize(uint64_t dataSize);\n+    template <typename SizeProvider>\n+    ObjectAccessRecorder &DataSizeProvider(SizeProvider &&provider)"
+        },
+        {
+          "layer": "backend",
+          "order": 2,
+          "area": "backend",
+          "title": "Migrate client call sites",
+          "summary": "C, C++, Java, Python, hetero, object, KV, and stream client paths switch from constructing `RequestParam` eagerly to describing fields through lazy recorder facades. This preserves access log output while avoiding payload construction when access sampling drops the event.",
+          "files": [
+            "src/datasystem/c_api/kv_client_c_wrapper.cpp",
+            "src/datasystem/c_api/object_client_c_wrapper.cpp",
+            "src/datasystem/c_api/util.cpp",
+            "src/datasystem/c_api/util.h",
+            "src/datasystem/client/hetero_cache/hetero_client.cpp",
+            "src/datasystem/client/kv_cache/kv_client.cpp",
+            "src/datasystem/client/object_cache/object_client.cpp",
+            "src/datasystem/client/object_cache/object_client_impl.cpp",
+            "src/datasystem/client/stream_cache/consumer.cpp",
+            "src/datasystem/client/stream_cache/producer.cpp",
+            "src/datasystem/client/stream_cache/stream_client.cpp",
+            "src/datasystem/java_api/kv/kv_impl.cpp",
+            "src/datasystem/java_api/kv/kv_impl.h",
+            "src/datasystem/java_api/kv/org_yuanrong_datasystem_kv_KVClient.cpp",
+            "src/datasystem/pybind_api/pybind_register_kv.cpp"
+          ],
+          "diff": "-    datasystem::AccessRecorder accessPoint(datasystem::AccessRecorderKey::DS_KV_CLIENT_SET);\n+    auto access = datasystem::AccessRecorder::Object(datasystem::AccessRecorderKey::DS_KV_CLIENT_SET);\n@@\n-    datasystem::RequestParam reqParam;\n-    reqParam.writeMode = cWriteMode;\n-    reqParam.ttlSecond = std::to_string(ttlSecond);\n-    accessPoint.Record(rc.code, std::to_string(valLen), reqParam, rc.errMsg);\n+    access.ObjectKeyRef(keyView).WriteModeText(writeModeView).TtlSecond(ttlSecond)\n+        .Result(rc.code, rc.errMsg).DataSize(valLen).Record();"
+        },
+        {
+          "layer": "backend",
+          "order": 3,
+          "area": "backend",
+          "title": "Migrate worker call sites",
+          "summary": "Worker object, stream, and request-manager paths adopt the same recorder facades. Etcd request-out logging is kept outside access sampling while using the new typed RequestOut path.",
+          "files": [
+            "src/datasystem/common/kvstore/etcd/etcd_watch.h",
+            "src/datasystem/common/kvstore/etcd/grpc_session.h",
+            "src/datasystem/worker/object_cache/service/worker_oc_service_create_impl.cpp",
+            "src/datasystem/worker/object_cache/service/worker_oc_service_delete_impl.cpp",
+            "src/datasystem/worker/object_cache/service/worker_oc_service_expire_impl.cpp",
+            "src/datasystem/worker/object_cache/service/worker_oc_service_get_impl.cpp",
+            "src/datasystem/worker/object_cache/service/worker_oc_service_global_reference_impl.cpp",
+            "src/datasystem/worker/object_cache/service/worker_oc_service_multi_publish_impl.cpp",
+            "src/datasystem/worker/object_cache/service/worker_oc_service_publish_impl.cpp",
+            "src/datasystem/worker/object_cache/worker_oc_service_impl.cpp",
+            "src/datasystem/worker/object_cache/worker_oc_service_impl.h",
+            "src/datasystem/worker/object_cache/worker_request_manager.cpp",
+            "src/datasystem/worker/object_cache/worker_request_manager.h",
+            "src/datasystem/worker/stream_cache/client_worker_sc_service_impl.cpp",
+            "src/datasystem/worker/stream_cache/client_worker_sc_service_impl.h"
+          ],
+          "diff": "-    AccessRecorder recorder(AccessRecorderKey::DS_POSIX_DELETE_STREAM);\n+    auto access = AccessRecorder::Stream(AccessRecorderKey::DS_POSIX_DELETE_STREAM);\n@@\n-    recorder.Record(rc.GetCode(), reqParam, rspParam);\n+    access.StreamName(req.stream_name()).ClientId(req.client_id()).Result(rc).Record();\n@@\n-    const SubscribeReqPb &req, std::shared_ptr<AccessRecorderStreamWrap> recorder,\n+    const SubscribeReqPb &req, std::shared_ptr<StreamAccessRecorder> recorder,"
+        }
+      ],
+      "bcFindings": [
+        {
+          "symbol": "datasystem::AccessRecorder::Record(StatusCode,const std::string&,const RequestParam&,const std::string&,uint64_t)",
+          "kind": "method",
+          "category": "CHANGE_IN_PARAMETER_LIST",
+          "severityClass": "hard-break",
+          "evidence": "`access_recorder.h` removes the old public `Record` overloads taking string `dataSize` and request params; callers must now use typed facade setters plus `Record()`."
+        },
+        {
+          "symbol": "datasystem::AccessRecorder::Record(int,const std::string&,const RequestParam&,const std::string&,uint64_t)",
+          "kind": "method",
+          "category": "CHANGE_IN_PARAMETER_LIST",
+          "severityClass": "hard-break",
+          "evidence": "`access_recorder.h` removes the integer-code `Record` overload with string `dataSize`; the replacement records through `ObjectAccessRecorder::DataSize(uint64_t)` and final `Record()`."
+        },
+        {
+          "symbol": "datasystem::AccessRecorder::AccessRecorder(std::string)",
+          "kind": "method",
+          "category": "REMOVE_METHOD",
+          "severityClass": "hard-break",
+          "evidence": "`access_recorder.h` deletes the public `explicit AccessRecorder(std::string keyName);` constructor."
+        },
+        {
+          "symbol": "datasystem::AccessRecorderStreamWrap",
+          "kind": "type",
+          "category": "REMOVE_TYPE",
+          "severityClass": "hard-break",
+          "evidence": "`access_recorder.h` removes `struct AccessRecorderStreamWrap` and replaces worker stream signatures with `std::shared_ptr<StreamAccessRecorder>`."
+        }
+      ]
+    },
+    {
+      "cohort": "Sampler validation coverage",
+      "cohortOrder": 6,
+      "area": "tests",
+      "files": [
+        "tests/st/client/object_cache/client_one_worker_log_size_test.cpp",
+        "tests/st/common/log/BUILD.bazel",
+        "tests/st/common/log/log_sampler_st_test.cpp",
+        "tests/ut/CMakeLists.txt",
+        "tests/ut/common/flags/flags_test.cpp",
+        "tests/ut/common/log/BUILD.bazel",
+        "tests/ut/common/log/log_access_facade_test.cpp",
+        "tests/ut/common/log/log_performance_test.cpp",
+        "tests/ut/common/log/log_sampler_access_test.cpp",
+        "tests/ut/common/log/log_sampler_config_test.cpp",
+        "tests/ut/common/log/log_sampler_integration_test.cpp",
+        "tests/ut/common/log/log_sampler_test.cpp",
+        "tests/ut/common/log/logging_test.cpp",
+        "tests/ut/common/log/spdlog/BUILD.bazel",
+        "tests/ut/common/log/spdlog/log_message_test.cpp",
+        "tests/ut/common/log/spdlog/log_rate_limiter_test.cpp",
+        "tests/ut/common/rpc/BUILD.bazel",
+        "tests/ut/common/rpc/zmq_trace_sampling_meta_test.cpp"
+      ],
+      "layers": [
+        {
+          "layer": "tests",
+          "order": 1,
+          "area": "tests",
+          "title": "Replace limiter tests",
+          "summary": "The old LogRateLimiter tests are deleted and the spdlog log-message tests are rewritten for sampler behavior. New unit tests cover derivation, proto config, runtime log classification, access guard behavior, and facade formatting.",
+          "files": [
+            "tests/ut/CMakeLists.txt",
+            "tests/ut/common/flags/flags_test.cpp",
+            "tests/ut/common/log/BUILD.bazel",
+            "tests/ut/common/log/log_access_facade_test.cpp",
+            "tests/ut/common/log/log_performance_test.cpp",
+            "tests/ut/common/log/log_sampler_access_test.cpp",
+            "tests/ut/common/log/log_sampler_config_test.cpp",
+            "tests/ut/common/log/log_sampler_integration_test.cpp",
+            "tests/ut/common/log/log_sampler_test.cpp",
+            "tests/ut/common/log/logging_test.cpp",
+            "tests/ut/common/log/spdlog/BUILD.bazel",
+            "tests/ut/common/log/spdlog/log_message_test.cpp",
+            "tests/ut/common/log/spdlog/log_rate_limiter_test.cpp",
+            "tests/ut/common/rpc/BUILD.bazel",
+            "tests/ut/common/rpc/zmq_trace_sampling_meta_test.cpp"
+          ],
+          "diff": "+ds_cc_test(\n+    name = \"log_sampler_test\",\n+    srcs = [\"log_sampler_test.cpp\"],\n+)\n+ds_cc_test(\n+    name = \"log_sampler_access_test\",\n+    srcs = [\"log_sampler_access_test.cpp\"],\n+)\n+TEST_F(LogSamplerTest, RequestOnlyDerivation)\n+{\n+    cfg.requestSampleRate = 0.2;\n+    cfg.requestSampleRateExplicit = true;\n+    EXPECT_EQ(snap->config.accessRate.ppm, 600000);\n+    EXPECT_EQ(snap->config.diagnosticRate.ppm, 800000);\n+}"
+        },
+        {
+          "layer": "tests",
+          "order": 2,
+          "area": "tests",
+          "title": "Add system propagation test",
+          "summary": "System tests exercise cross-process request reject propagation, sampler consistency, and worker-to-client config delivery. Existing log-size ST parameters are migrated away from `log_rate_limit`.",
+          "files": [
+            "tests/st/client/object_cache/client_one_worker_log_size_test.cpp",
+            "tests/st/common/log/BUILD.bazel",
+            "tests/st/common/log/log_sampler_st_test.cpp"
+          ],
+          "diff": "+ * Description: System-level tests for LogSampler cross-process behavior.\n+ * Covers LS-002b (request reject propagation), LS-012 (cross-process\n+ * consistency), and LS-013 (worker config delivery via register/heartbeat).\n+DS_DECLARE_double(request_sample_rate);\n+DS_DECLARE_double(access_sample_rate);\n+DS_DECLARE_double(diagnostic_sample_rate);\n+class LogSamplerSTTest : public OCClientCommon {"
+        }
+      ],
+      "bcFindings": []
+    }
+  ],
+  "summary": "This PR replaces the old first-N log rate limiter with a worker-authoritative random LogSampler spanning request, access, and diagnostic logs, with new config/proto propagation, lazy access logging facades, deployment/docs updates, and expanded tests.",
+  "risk_band": "Critical"
+}
