@@ -43,6 +43,18 @@
       "type": "object",
       "additionalProperties": { "type": "string" }
     },
+    "routed_spots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "spot_id": { "type": "string" },
+          "cohort": { "type": "string" },
+          "diff_hunk_pointer": { "type": "string" },
+          "risk_source": { "type": "string" }
+        }
+      }
+    },
     "acceptance": {
       "type": "object",
       "required": ["recommendation", "reasons"],
