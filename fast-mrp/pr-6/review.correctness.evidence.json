@@ -1,0 +1,24 @@
+{
+  "dimension": "correctness",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "src/datasystem/common/log/log_sampler.cpp",
+      "line": 97,
+      "severity": "high",
+      "category": "correctness",
+      "title": "Shutdown frees sampler snapshots while log hot paths can still hold raw pointers",
+      "impact": "Log hot paths load `snapshot_` as a raw pointer and then dereference it without any reader lifetime guard. During shutdown, this line deletes the current snapshot immediately after an atomic exchange, so any concurrent LOG/PLOG/AccessRecorder path that already loaded the pointer can dereference freed memory and crash during worker or client teardown.",
+      "fix": "Do not reclaim snapshots until readers are quiesced. Publish disabled state before teardown and add a shutdown barrier for logging users, or replace the raw pointer scheme with a shared/RCU/hazard-pointer style lifetime so snapshots remain alive until all in-flight readers have left."
+    },
+    {
+      "path": "src/datasystem/common/log/log_sampler.cpp",
+      "line": 206,
+      "severity": "medium",
+      "category": "correctness",
+      "title": "Every sampler config change retains another snapshot until shutdown",
+      "impact": "Each distinct config update pushes the previous snapshot into `oldSnapshots_` and nothing frees those entries until process shutdown. A worker or client receiving repeated dynamic sampling updates will leak memory monotonically, which can eventually exhaust memory in a long-running service.",
+      "fix": "Use a bounded reclamation strategy tied to reader lifetime, such as shared snapshots or epoch/RCU reclamation, so old snapshots are freed after in-flight readers are safe instead of accumulating for the process lifetime."
+    }
+  ]
+}
