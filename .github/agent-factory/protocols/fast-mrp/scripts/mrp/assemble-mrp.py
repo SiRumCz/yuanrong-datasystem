@@ -32,30 +32,14 @@ sys.path.insert(0, os.path.join(HERE, "..", "..", "publish"))    # _risk_score (
 import pack_map  # noqa: E402
 import _risk_score as rs  # noqa: E402
 
-# Mirrors custody assemble-mrp.js: a DEMO smm_compliance placeholder used ONLY as a
-# fallback when the mm-compliance leg produced no evidence (leg absent/disabled). When
-# the leg IS present, _normalize_compliance() below folds its real evidence into this
-# same custody-facing shape.
-DEMO_COMPLIANCE = {
-    "demo": True,
-    "verdict": "compliant",
-    "divergences": [
-        {"mm_doc": "adr/0007-example-decision.md",
-         "decision": "(sample) Use a single shared cache",
-         "contradiction": "(sample) introduces a second cache layer",
-         "evidence_path": "(sample) app/x.js",
-         "fix": "(sample) reuse the shared cache"},
-    ],
-}
-
-
 def _normalize_compliance(mm):
-    """Map the mm-compliance leg's engine evidence -> the custody smm_compliance shape.
+    """Map the mm-compliance leg's engine evidence -> the pack smm_compliance shape.
 
     Engine evidence (mm-compliance.evidence.schema.json): {verdict, divergences[], examined}
-    with each divergence {decision, detail, evidence, fix}. The custody pack expects
-    {demo, verdict, divergences[]} with each {mm_doc, decision, contradiction, evidence_path,
-    fix}. `examined` is dropped (trace-only, not part of the pack)."""
+    with each divergence {decision, detail, evidence, fix}. The pack expects
+    {verdict, divergences[]} with each {mm_doc, decision, contradiction, evidence_path,
+    fix}. `examined` is dropped (trace-only, not part of the pack). Returns None when the
+    leg produced no evidence (absent/disabled) -> smm_compliance is simply null in the pack."""
     if not isinstance(mm, dict):
         return None
     verdict = mm.get("verdict") if mm.get("verdict") in ("compliant", "diverges") else "compliant"
@@ -66,13 +50,13 @@ def _normalize_compliance(mm):
         decision = dv.get("decision") or ""
         evidence = dv.get("evidence") or ""
         divergences.append({
-            "mm_doc": evidence or decision,
+            "mm_doc": decision or evidence,
             "decision": decision,
             "contradiction": dv.get("detail") or "",
             "evidence_path": evidence,
             "fix": dv.get("fix") or "",
         })
-    return {"demo": False, "verdict": verdict, "divergences": divergences}
+    return {"verdict": verdict, "divergences": divergences}
 
 
 def _read_json(path):
@@ -170,7 +154,7 @@ def assemble(task_ctx, agent, pr):
         "routed_spots": routed_spots,
         "spec_findings": {"adherence": _adherence_of(preflight, "spec-adherence")},
         "plan_findings": {"adherence": _adherence_of(preflight, "plan-adherence")},
-        "smm_compliance": _normalize_compliance(mm) if mm else DEMO_COMPLIANCE,
+        "smm_compliance": _normalize_compliance(mm),
         "critique_ledger": critique_ledger,
         "trajectory": ({"phases": phases, "totalTokens": total_tokens} if context else None),
         "rationale": rationale,

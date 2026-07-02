@@ -12,14 +12,15 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["point", "source"],
+            "required": ["point", "snippet", "source"],
             "properties": {
               "point": { "type": "string" },
-              "source": { "type": "string" }
+              "snippet": { "type": "string" },
+              "source": { "type": "string", "enum": ["conversation", "walkthrough"] }
             }
           }
         },
-        "intentMatch": { "type": "string" }
+        "intentMatch": { "type": "string", "enum": ["aligned", "partial", "unclear"] }
       }
     },
     "critique_ledger": {
