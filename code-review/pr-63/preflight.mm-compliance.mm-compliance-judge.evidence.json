@@ -1,0 +1,13 @@
+{
+  "leg": "mm-compliance",
+  "scope": {},
+  "gather_verdict": "diverges",
+  "graded_findings": [
+    {
+      "ref": "0",
+      "severity": "blocking",
+      "rationale": "The finding identifies new production common-layer utility logic that defines a TTL staleness boundary without focused tests for the key boundary and ordering behaviors. Given the repository's infrastructure-quality requirements and the MM test gate for local helper changes, this is a real adherence gap that should stop merge until covered."
+    }
+  ],
+  "examined": ["0"]
+}
