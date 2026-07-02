@@ -332,6 +332,7 @@ def main():
     }
     _post_review(payload)
     apply_report = _apply_commit_close(evidence)
+    sys.stderr.write("[conclude-fix] APPLY_REPORT " + json.dumps(apply_report) + "\n")
     print(
         json.dumps(
             {
