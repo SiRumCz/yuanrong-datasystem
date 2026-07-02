@@ -1,0 +1,47 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "Success-rate predicate is inverted",
+      "dimension": [
+        "correctness"
+      ],
+      "severity": "high",
+      "paths": [
+        "src/datasystem/client/urma_success_rate_tracker.cpp"
+      ],
+      "member_findings": [
+        {
+          "dimension": "correctness",
+          "path": "src/datasystem/client/urma_success_rate_tracker.cpp",
+          "line": 147,
+          "severity": "high",
+          "category": "correctness",
+          "title": "Success-rate predicate is inverted",
+          "impact": "The tracker claims to check for a success rate below the threshold, but this line returns true when successCount is greater than total * ratio. With the default 0.5 threshold, a fully healthy window triggers worker failover while a 0% success window does not, so persistent URMA data-plane failures leave the client pinned to the bad worker and healthy traffic can cause unnecessary switches.",
+          "fix": "Change the predicate to strict less-than, for example `return static_cast<double>(snapshot.successCount) < static_cast<double>(total) * successRateRatio;`, and keep the equality case non-triggering."
+        }
+      ],
+      "rank": 1
+    }
+  ],
+  "summary": {
+    "present": [
+      "correctness"
+    ],
+    "missing": [
+      "test",
+      "performance",
+      "security",
+      "maintainability"
+    ],
+    "clusters": 1,
+    "total_findings": 1,
+    "by_severity": {
+      "high": 1
+    },
+    "by_dimension": {
+      "correctness": 1
+    }
+  }
+}
