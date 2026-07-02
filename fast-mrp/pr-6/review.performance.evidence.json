@@ -1,0 +1,15 @@
+{
+  "dimension": "performance",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": "src/datasystem/common/log/access_recorder.cpp",
+      "line": 71,
+      "severity": "medium",
+      "category": "performance",
+      "title": "Sampler-disabled access logs take the sampled formatting path",
+      "impact": "When sampling is disabled, every request-context CLIENT/ACCESS record now returns true from IsCurrentRequestLogSampled, so FormatAccessReqMsg appends logSampled:true and builds an extra ostringstream/string before LogPerformance writes the line. That makes the default pass-through mode larger and more allocation-heavy on the access-log hot path, even though the sampler is supposed to add only a lightweight enabled check when disabled.",
+      "fix": "Preserve the previous no-marker path when the sampler is disabled, or pass the existing LogPerformance stream into the marker formatter so disabled/pass-through access logging avoids the extra string allocation and payload expansion."
+    }
+  ]
+}
