@@ -1,0 +1,11 @@
+{
+  "matrix": [],
+  "verdict": "n/a",
+  "scope": {
+    "issue_linked": false,
+    "spec_present": true
+  },
+  "examined": [
+    "scope.json"
+  ]
+}
