@@ -1,0 +1,7 @@
+protocol: code-review-factory
+instance: pr-7
+state: triage
+iteration: 1
+gates: {}
+head_sha: ec85cf52ae9637cf8159dd1cdbeefaae5b714c7d
+history: []
