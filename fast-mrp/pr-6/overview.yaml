@@ -1,6 +1,6 @@
 protocol: fast-mrp
 instance: pr-6
-state: overview
+state: done
 iteration: 2
 gates: {}
 head_sha: 09251b3b05e5a081527e702280377d8e28108e81
@@ -15,3 +15,10 @@ history:
     `summary`; key `cohorts` is empty; key `summary` is empty; overview schema invalid:
     `cohorts` must be a non-empty array; cohort partition incomplete: `cohorts` is
     missing or not an array'
+- iteration: 2
+  agent_run_id: '28618074816'
+  checks:
+    evidence-present: pass
+    overview-schema-valid: pass
+    cohort-partition-complete: pass
+  feedback: ''
