@@ -1,0 +1,27 @@
+{
+  "scope": { "code_changed": true },
+  "items": [
+    {
+      "path": "tests/ut/common/util/file_util_test.cpp",
+      "status": "missing",
+      "reason": "No test changed in this PR covers CollectStalePaths selecting only mtime < cutoff, excluding mtime == cutoff, and preserving input order."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    ".repo_context/modules/quality/tests-and-reproduction.md",
+    ".repo_context/modules/quality/test-suite-design.md",
+    ".repo_context/playbooks/features/quality/test-implementation.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/modules/infra/common-infra.md",
+    "src/datasystem/common/util/stale_scan.h",
+    "tests/ut/CMakeLists.txt",
+    "tests/ut/common/util/file_util_test.cpp",
+    "tests/ut/common/util/strings_util_test.cpp",
+    "tests/ut/common/util"
+  ]
+}
