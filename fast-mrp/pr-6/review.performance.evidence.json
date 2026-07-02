@@ -1,0 +1,15 @@
+{
+  "dimension": "performance",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": "src/datasystem/common/log/access_recorder.cpp",
+      "line": 994,
+      "severity": "medium",
+      "category": "performance",
+      "title": "Avoid copying the formatted request message for every access log",
+      "impact": "Each emitted access log now calls FormatAccessReqMsg(), which returns a std::string before appending it to logStream. In the common non-sampled-marker case that helper returns reqMsg by value, adding another allocation/copy of the already formatted request payload on every foreground client/worker access-log path.",
+      "fix": "Change the helper back to an append-style API, for example AppendReqMsgWithSampleMark(std::ostream&, AccessKeyType, const std::string&), so the existing reqMsg is streamed directly and the sampled marker is appended without materializing a second full request-message string."
+    }
+  ]
+}
