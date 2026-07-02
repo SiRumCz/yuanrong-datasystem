@@ -1,7 +1,14 @@
 protocol: fast-mrp
 instance: pr-6
-state: review
+state: done
 iteration: 1
 gates: {}
-history: []
+history:
+- iteration: 1
+  agent_run_id: '28627783013'
+  checks:
+    evidence-present: pass
+    review-schema-valid: pass
+    review-findings-anchored: pass
+  feedback: ''
 head_sha: 09251b3b05e5a081527e702280377d8e28108e81
