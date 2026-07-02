@@ -1,0 +1,95 @@
+{
+  "scope": { "code_changed": true },
+  "items": [
+    {
+      "path": "tests/ut/common/log/log_sampler_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Covers core sampler derivation, threshold sampling, disabled/fatal paths, distribution, and concurrent config/hot-path reads."
+    },
+    {
+      "path": "tests/ut/common/log/log_sampler_config_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Covers LogSampleConfigPb update/populate, invalid ppm rejection, previous-good retention, and request-only derivation."
+    },
+    {
+      "path": "tests/ut/common/log/log_sampler_integration_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Covers LOG/PLOG macro gating, payload suppression, diagnostic supplement sampling, FATAL/CHECK bypass, and background bypass."
+    },
+    {
+      "path": "tests/ut/common/log/log_sampler_access_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Covers access/request-out sampling, request sampled-in forcing, marker formatting, and access guard behavior."
+    },
+    {
+      "path": "tests/ut/common/log/log_access_facade_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Covers typed AccessRecorder facades, deferred provider execution, sampled-out skips, key handling, and stream/request-out records."
+    },
+    {
+      "path": "tests/ut/common/log/log_performance_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Covers 4000 QPS sampler paths, pass-through overhead, reject fast path, sampler-only decision cost, and access sampled-out cost."
+    },
+    {
+      "path": "tests/ut/common/rpc/zmq_trace_sampling_meta_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Covers ZMQ MetaPb log_sample_state propagation for admitted, rejected, undecided, disabled, full-rate, and zero-rate cases."
+    },
+    {
+      "path": "tests/st/common/log/log_sampler_st_test.cpp",
+      "status": "inadequate",
+      "reason": "The cross-process consistency case only smoke-runs Set/Get/Del operations and does not assert propagated sampling decisions or client/worker log outcomes."
+    },
+    {
+      "path": "tests/ut/common/flags/flags_test.cpp",
+      "status": "inadequate",
+      "reason": "The touched flags test only changes formatting and does not exercise sampler flag validation, transaction rollback, explicit-state handling, or dynamic UpdateFlagParameter behavior."
+    },
+    {
+      "path": "tests/st/embedded_client/embedded_client_test.cpp",
+      "status": "missing",
+      "reason": "EmbeddedConfig's new RequestSampleRate/AccessSampleRate/DiagnosticSampleRate public setters are not tested through embedded startup or argument propagation."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/modules/quality/tests-and-reproduction.md",
+    ".repo_context/modules/quality/test-suite-design.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md",
+    "src/datasystem/common/log/log_sampler.cpp",
+    "src/datasystem/common/log/log_sampler.h",
+    "src/datasystem/common/log/log_sampler_proto.cpp",
+    "src/datasystem/common/log/log.h",
+    "src/datasystem/common/log/logging.cpp",
+    "src/datasystem/common/util/gflag/flags.cpp",
+    "src/datasystem/common/util/gflag/common_gflags_validate.cpp",
+    "include/datasystem/utils/embedded_config.h",
+    "src/datasystem/common/flags/embedded_config.cpp",
+    "src/datasystem/client/client_worker_common_api.cpp",
+    "src/datasystem/worker/worker_service_impl.cpp",
+    "src/datasystem/protos/share_memory.proto",
+    "tests/ut/common/log/log_sampler_test.cpp",
+    "tests/ut/common/log/log_sampler_config_test.cpp",
+    "tests/ut/common/log/log_sampler_integration_test.cpp",
+    "tests/ut/common/log/log_sampler_access_test.cpp",
+    "tests/ut/common/log/log_access_facade_test.cpp",
+    "tests/ut/common/log/log_performance_test.cpp",
+    "tests/ut/common/rpc/zmq_trace_sampling_meta_test.cpp",
+    "tests/st/common/log/log_sampler_st_test.cpp",
+    "tests/ut/common/flags/flags_test.cpp",
+    "tests/st/embedded_client/embedded_client_test.cpp",
+    "tests/ut/CMakeLists.txt",
+    "tests/st/CMakeLists.txt"
+  ]
+}
