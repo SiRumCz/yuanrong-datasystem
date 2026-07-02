@@ -184,16 +184,23 @@ def _apply_commit_close(evidence):
         results = _apply_fixes.apply_all(workdir, fixes) if workdir else []
     else:
         if not repo or not pr or not token:
+            report["diag"] = f"env missing: repo={bool(repo)} pr={bool(pr)} token={bool(token)}"
+            _post_apply_comment(repo, pr, token, report)
             _write_apply(report)
             return report
         head = _pr_head_ref(repo, pr, token)
         if not head:
+            report["diag"] = "pr_head_ref empty (gh pr view --json headRefName failed)"
+            _post_apply_comment(repo, pr, token, report)
             _write_apply(report)
             return report
         workdir = tempfile.mkdtemp(prefix="fix-apply-")
         url = f"https://x-access-token:{token}@github.com/{repo}.git"
-        if _git(["clone", "--depth", "1", "--branch", head, url, workdir]).returncode != 0:
+        cl = _git(["clone", "--depth", "1", "--branch", head, url, workdir])
+        if cl.returncode != 0:
             shutil.rmtree(workdir, ignore_errors=True)
+            report["diag"] = f"clone failed (branch={head}): {((cl.stderr or cl.stdout) or '').strip()[:200]}"
+            _post_apply_comment(repo, pr, token, report)
             _write_apply(report)
             return report
         results = _apply_fixes.apply_all(workdir, fixes)
@@ -257,6 +264,8 @@ def _post_apply_comment(repo, pr, token, report):
     if not repo or not pr:
         return
     lines = [f"AI fix phase: applied={report.get('applied', 0)}, pushed={report.get('pushed', False)}."]
+    if report.get("diag"):
+        lines.append(f"Diag: {report['diag']}")
     if report.get("push_error"):
         lines.append(f"Push error: {report['push_error']}")
     if report.get("error"):
