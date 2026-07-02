@@ -2,6 +2,5 @@ protocol: fast-mrp
 instance: pr-6
 head_sha: 09251b3b05e5a081527e702280377d8e28108e81
 phase: preflight
-joined: true
-phase_label: "\u274C failed"
-status_comment_id: 4861564296
+joined: false
+phase_label: pre-flight adherence chain
