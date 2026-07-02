@@ -1,0 +1,85 @@
+{
+  "scope": { "code_changed": true },
+  "items": [
+    {
+      "path": "docs/source_zh_cn/appendix/log_guide.md",
+      "status": "updated_appropriately",
+      "reason": "Replaces log_rate_limit with LogSampler behavior, three sample rates, derivation rules, and supported configuration paths."
+    },
+    {
+      "path": "docs/source_zh_cn/appendix/client_env_guide.md",
+      "status": "updated_appropriately",
+      "reason": "Removes the obsolete standalone DATASYSTEM_LOG_RATE_LIMIT client environment variable after worker-owned sampling config replaces it."
+    },
+    {
+      "path": "docs/source_zh_cn/deployment/dscli.md",
+      "status": "updated_appropriately",
+      "reason": "Replaces the dscli log_rate_limit entry with request_sample_rate, access_sample_rate, diagnostic_sample_rate, and derivation semantics."
+    },
+    {
+      "path": ".repo_context/index.md",
+      "status": "updated_appropriately",
+      "reason": "Adds routing entries for the new unified class-based log sampler design."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/README.md",
+      "status": "updated_appropriately",
+      "reason": "Adds LogSampler to the logging module overview, source list, routing guidance, and component map."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/log-sampler-design.md",
+      "status": "updated_appropriately",
+      "reason": "New design doc covers the random sampler architecture, flags, propagation, hot-path constraints, and validation expectations."
+    },
+    {
+      "path": "docs/source_zh_cn/deployment/k8s_configuration.md",
+      "status": "missing",
+      "reason": "The Helm values changed from logRateLimit to requestSampleRate/accessSampleRate/diagnosticSampleRate, but the Kubernetes configuration table was not updated."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/design.md",
+      "status": "missing",
+      "reason": "The existing logging design still describes log_rate_limit quota behavior and client sync instead of the new LogSampler sample-rate model."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/trace-and-context.md",
+      "status": "missing",
+      "reason": "Trace context docs still refer to local log_rate_limit decisions and need the new request_sample_rate/LogSampleState semantics."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/access-recorder.md",
+      "status": "missing",
+      "reason": "AccessRecorder now participates in access_sample_rate pre-drop and forced retention, but the existing access-recorder doc was not updated."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md",
+    ".repo_context/modules/infra/logging/README.md",
+    ".repo_context/modules/infra/logging/design.md",
+    ".repo_context/modules/infra/logging/trace-and-context.md",
+    ".repo_context/modules/infra/logging/access-recorder.md",
+    ".repo_context/modules/infra/logging/plog-slow-request-plan.md",
+    ".repo_context/modules/infra/logging/plog-slow-get-implementation-summary.md",
+    "docs/source_zh_cn/appendix/log_guide.md",
+    "docs/source_zh_cn/appendix/client_env_guide.md",
+    "docs/source_zh_cn/deployment/dscli.md",
+    "docs/source_zh_cn/deployment/k8s_configuration.md",
+    "k8s/helm_chart/datasystem/values.yaml",
+    "k8s/helm_chart/datasystem/templates/configmap.yaml",
+    "k8s/helm_chart/datasystem/templates/worker_daemonset.yaml",
+    "k8s_deployment/helm_chart/worker.config",
+    "cli/deploy/conf/worker_config.json",
+    "include/datasystem/utils/embedded_config.h"
+  ]
+}
