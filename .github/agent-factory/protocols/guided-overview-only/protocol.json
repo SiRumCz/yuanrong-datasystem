@@ -4,11 +4,24 @@
   "version": "0.1.0",
   "min_engine_version": "1.0.0",
   "max_depth": 6,
-  "_note": "Stripped-down protocol that runs ONLY the guided overview (overview-agent -> conclude-overview), then done. Skips preflight, preflight-gate, review, triage, fix, post-fix, and mrp. Triggered by /ophase to avoid colliding with code-review's /review trigger. overview-agent re-fetches the PR diff itself; no inputs reference earlier phases.",
+  "_note": "Runs a MINIMAL preflight (adherence-intro-agent: no analysis, no diff read, emits {cluster,examined} then noop) followed by the guided overview (overview-agent -> conclude-overview), then done. The preflight exists SOLELY to make the protocol multi-phase (>1 agent/fanout phase) so the engine writes per-node state under <protocol>/pr-N/<phase>.yaml (+ .evidence.json) like code-review, instead of the single-phase flat <protocol>/pr-N.yaml. No engine or API change. Triggered by /overview to avoid colliding with code-review's /review trigger. Each agent re-fetches its own PR data; no inputs reference earlier phases.",
   "triggers": [
     { "on": "issue_comment", "comment_prefix": "/overview", "command": "start" }
   ],
   "states": [
+    {
+      "id": "preflight",
+      "kind": "agent",
+      "label": "minimal preflight (cluster entry — no analysis)",
+      "workflow": "adherence-intro-agent",
+      "evidence": "cluster-intro.evidence.schema.json",
+      "max_iterations": 2,
+      "params": { "require": ["examined"] },
+      "checks": [
+        { "run": "evidence-present", "on_fail": "iterate" }
+      ],
+      "next": "overview"
+    },
     {
       "id": "overview",
       "kind": "agent",
