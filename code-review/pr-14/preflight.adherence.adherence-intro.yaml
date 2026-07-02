@@ -1,7 +1,12 @@
 protocol: code-review
 instance: pr-14
 state: preflight
-iteration: 1
+iteration: 2
 gates: {}
 head_sha: 787afb118ccadc24eb5dadf81c623659b6ed083a
-history: []
+history:
+- iteration: 1
+  agent_run_id: '28555807523'
+  checks:
+    evidence-present: fail
+  feedback: 'evidence shape: missing required key `examined`'
