@@ -1,0 +1,132 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "Multiple reviewers flagged sampler flag update coverage and duplicated flag-name handling",
+      "dimension": ["test", "maintainability"],
+      "severity": "high",
+      "paths": ["src/datasystem/common/util/gflag/flags.cpp"],
+      "member_findings": [
+        {
+          "dimension": "test",
+          "path": "src/datasystem/common/util/gflag/flags.cpp",
+          "line": 323,
+          "severity": "high",
+          "category": "test",
+          "title": "Runtime sampler flag transaction has no regression test",
+          "impact": "The new UpdateFlagParameter path now batches request_sample_rate, access_sample_rate, and diagnostic_sample_rate through ValidateAndCommitSamplerFlags/CommitSamplerFlagsTransaction, including validation failure and rollback behavior. The diff only changes an unrelated flags_test assertion indentation, so a regression where gflags are committed but LogSampler is not updated, explicit derivation state is wrong, or a partial invalid batch is not rolled back would not be caught.",
+          "fix": "Add a flags unit test that drives Flags::UpdateFlagParameter with sampler flags: a valid multi-flag update that changes both FLAGS_* values and LogSampler::GetSnapshotForTest(), a request-only update that proves access/diagnostic derivation, and an invalid mixed batch that leaves prior FLAGS_* and the sampler snapshot unchanged."
+        },
+        {
+          "dimension": "maintainability",
+          "path": "src/datasystem/common/util/gflag/flags.cpp",
+          "line": 325,
+          "severity": "low",
+          "category": "maintainability",
+          "title": "Sampler flag name set is duplicated across update paths",
+          "impact": "The same three sampler flag names are declared here and again in UpdateFlagParameter. Adding, renaming, or removing a sampler flag later requires multiple edits and can silently split validation from dispatch behavior if one list is missed.",
+          "fix": "Move the sampler flag names into one file-local constant or helper such as IsSamplerFlag(), and reuse it from both ValidateAndCommitSamplerFlags and UpdateFlagParameter."
+        }
+      ],
+      "rank": 1
+    },
+    {
+      "cluster_id": "c2",
+      "title": "Batch delete access logging now copies every object key",
+      "dimension": ["performance"],
+      "severity": "high",
+      "paths": ["src/datasystem/worker/object_cache/service/worker_oc_service_delete_impl.cpp"],
+      "member_findings": [
+        {
+          "dimension": "performance",
+          "path": "src/datasystem/worker/object_cache/service/worker_oc_service_delete_impl.cpp",
+          "line": 64,
+          "severity": "high",
+          "category": "performance",
+          "title": "Batch delete access logging now copies every object key",
+          "impact": "DeleteAllCopy previously logged ObjectKeysToAbbrStr(req.object_keys()), which only needed the first key and count. The new ObjectKeysRef(req.object_keys()) path stores a PROTO_REF, and ObjectKeyState::FillObjectKey materializes it by reserving protoRef->size() and emplacing every key into a std::vector before formatting. With the default access sample rate of 1.0, every sampled-in batch delete pays O(number of keys) heap allocations and string copies on the worker request path, even though the log output is bounded/truncated.",
+          "fix": "Keep this call on a summary path: add/use a protobuf-compatible ObjectKeysSummaryRef or ObjectKeyProvider that formats only the first key and count, and change the PROTO_REF formatter to stream directly from the repeated field instead of copying it into a vector."
+        }
+      ],
+      "rank": 2
+    },
+    {
+      "cluster_id": "c3",
+      "title": "Config snapshot retirement leaks memory across dynamic updates",
+      "dimension": ["correctness"],
+      "severity": "medium",
+      "paths": ["src/datasystem/common/log/log_sampler.cpp"],
+      "member_findings": [
+        {
+          "dimension": "correctness",
+          "path": "src/datasystem/common/log/log_sampler.cpp",
+          "line": 206,
+          "severity": "medium",
+          "category": "correctness",
+          "title": "Config snapshot retirement leaks memory across dynamic updates",
+          "impact": "Every sampler config change exchanges in a new snapshot and appends the old one to oldSnapshots_, but production code only frees that vector during Shutdown. A long-running worker/client that receives repeated dynamic sampler updates or worker register/heartbeat config changes will retain one snapshot per change for the lifetime of the process, eventually creating unbounded memory growth and possible OOM.",
+          "fix": "Replace the raw snapshot retirement list with a safe reclamation scheme: for example publish snapshots through shared ownership/RCU epoch protection, or periodically reclaim retired snapshots after readers have quiesced, instead of keeping all old snapshots until shutdown."
+        }
+      ],
+      "rank": 3
+    },
+    {
+      "cluster_id": "c4",
+      "title": "Duplicate object-key formatting logic for protobuf keys",
+      "dimension": ["maintainability"],
+      "severity": "low",
+      "paths": ["src/datasystem/common/log/access_recorder.cpp"],
+      "member_findings": [
+        {
+          "dimension": "maintainability",
+          "path": "src/datasystem/common/log/access_recorder.cpp",
+          "line": 1032,
+          "severity": "low",
+          "category": "maintainability",
+          "title": "Duplicate object-key formatting logic for protobuf keys",
+          "impact": "The new protobuf overload repeats the same truncation, count, and total-size logic as the vector overload above it. Any future change to access-log key formatting will need to be kept in sync across both implementations, which is easy to miss in this hot logging utility.",
+          "fix": "Factor the shared loop into a small helper that accepts an iterable/range of string-like keys, or have both overloads adapt their input into a common formatting function."
+        }
+      ],
+      "rank": 4
+    },
+    {
+      "cluster_id": "c5",
+      "title": "Comment relies on a brittle design-document line reference",
+      "dimension": ["maintainability"],
+      "severity": "low",
+      "paths": ["src/datasystem/common/log/log_sampler.cpp"],
+      "member_findings": [
+        {
+          "dimension": "maintainability",
+          "path": "src/datasystem/common/log/log_sampler.cpp",
+          "line": 280,
+          "severity": "low",
+          "category": "maintainability",
+          "title": "Comment relies on a brittle design-document line reference",
+          "impact": "The zero-rate branch documents its invariant as 'hard per design 533', but line-number references will drift as the design doc changes and do not explain the local reason a reject decision must not be created here. Future maintainers will have to chase external context before safely modifying this branch.",
+          "fix": "Replace the line-number reference with a short source-local rationale describing which path owns reject-decision creation/propagation and why this branch must remain read-only."
+        }
+      ],
+      "rank": 5
+    }
+  ],
+  "summary": {
+    "present": ["correctness", "test", "performance", "security", "maintainability"],
+    "missing": [],
+    "clusters": 5,
+    "total_findings": 6,
+    "by_severity": {
+      "high": 2,
+      "medium": 1,
+      "low": 2
+    },
+    "by_dimension": {
+      "correctness": 1,
+      "test": 1,
+      "performance": 1,
+      "security": 0,
+      "maintainability": 3
+    }
+  }
+}
