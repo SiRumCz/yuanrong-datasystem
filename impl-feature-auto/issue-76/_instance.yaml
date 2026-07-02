@@ -3,5 +3,5 @@ instance: issue-76
 head_sha: e96599b38d9ce78ce6da40e2a69b91fad59cd7af
 phase: design
 joined: false
-phase_label: design (spec + ledger + plan)
+phase_label: "\u274C failed"
 status_comment_id: 4871260132
