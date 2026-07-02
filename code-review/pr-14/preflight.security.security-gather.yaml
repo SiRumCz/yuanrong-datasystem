@@ -1,12 +1,18 @@
 protocol: code-review
 instance: pr-14
-state: preflight
+state: failed
 iteration: 2
 gates: {}
 head_sha: 787afb118ccadc24eb5dadf81c623659b6ed083a
 history:
 - iteration: 1
   agent_run_id: '28555808138'
+  checks:
+    evidence-present: pass
+    security-gather-coverage: fail
+  feedback: 'missing required field: ''cedar'''
+- iteration: 2
+  agent_run_id: '28556056445'
   checks:
     evidence-present: pass
     security-gather-coverage: fail

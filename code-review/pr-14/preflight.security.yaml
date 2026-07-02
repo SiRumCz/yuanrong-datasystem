@@ -1,6 +1,6 @@
 protocol: code-review
 instance: pr-14
-state: preflight
+state: failed
 sub_state: security-gather
 iteration: 1
 gates: {}
