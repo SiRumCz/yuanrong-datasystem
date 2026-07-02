@@ -1,7 +1,13 @@
 protocol: code-review-factory
 instance: pr-7
-state: fix
+state: done
 iteration: 1
 gates: {}
 head_sha: 04d50e8e279f7bbc6c0431f6c1d5d31974bf6354
-history: []
+history:
+- iteration: 1
+  agent_run_id: '28560097624'
+  checks:
+    evidence-present: pass
+    fix-schema-valid: pass
+  feedback: ''
