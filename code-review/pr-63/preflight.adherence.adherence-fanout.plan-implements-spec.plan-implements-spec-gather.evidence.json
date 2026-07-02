@@ -1,0 +1,125 @@
+{
+  "scope": {
+    "code_changed": true,
+    "spec_present": true,
+    "plan_present": true,
+    "spec_path": "specs/2026-07-02-stale-cache-scan.md",
+    "plan_path": "plans/2026-07-02-stale-cache-scan.md"
+  },
+  "spec_to_plan": [
+    {
+      "requirement": "**Scope:** one new header-only helper under `src/datasystem/common/util/`. Selection only.",
+      "status": "covered",
+      "plan_quote": "1. Add header `src/datasystem/common/util/stale_scan.h` in namespace `datasystem`."
+    },
+    {
+      "requirement": "Provide `CollectStalePaths(entries, cutoffEpochSec)`:",
+      "status": "covered",
+      "plan_quote": "3. Implement `inline std::vector<std::string> CollectStalePaths(const std::vector<ScanEntry>&, int64_t cutoffEpochSec)`."
+    },
+    {
+      "requirement": "- Input is a snapshot of `(path, mtime)` entries; `mtime` is epoch seconds.",
+      "status": "covered",
+      "plan_quote": "2. Define `ScanEntry = std::pair<std::string, int64_t>` (path + mtime in epoch seconds)."
+    },
+    {
+      "requirement": "- Returns the paths whose `mtime` is **strictly older** than `cutoffEpochSec`.",
+      "status": "covered",
+      "plan_quote": "   - Return the paths with `mtime < cutoffEpochSec`, preserving input order."
+    },
+    {
+      "requirement": "- Preserves input order.",
+      "status": "covered",
+      "plan_quote": "   - Return the paths with `mtime < cutoffEpochSec`, preserving input order."
+    },
+    {
+      "requirement": "- Pure: performs no filesystem access.",
+      "status": "covered",
+      "plan_quote": "- No directory walking (the caller passes the snapshot)."
+    },
+    {
+      "requirement": "- **This helper does not remove anything.** It selects and returns paths only. Reclaiming or removing\n  the selected entries is the **caller's** responsibility and is explicitly out of scope for this\n  change. The helper must have no side effects.",
+      "status": "covered",
+      "plan_quote": "- **No removal of any selected entry.** This change is selection-only; the helper and this PR must\n  not remove or reclaim anything. The reclaim step is a separate change owned by the caller."
+    },
+    {
+      "requirement": "- No directory walking in this iteration (the caller supplies the snapshot).",
+      "status": "covered",
+      "plan_quote": "- No directory walking (the caller passes the snapshot)."
+    },
+    {
+      "requirement": "- Header compiles standalone.",
+      "status": "missing",
+      "plan_quote": null
+    },
+    {
+      "requirement": "- `CollectStalePaths({{\"a\",10},{\"b\",100}}, 50) == {\"a\"}`.",
+      "status": "covered",
+      "plan_quote": "   - Return the paths with `mtime < cutoffEpochSec`, preserving input order."
+    },
+    {
+      "requirement": "- Entry exactly at the cutoff is **not** selected (strictly older).",
+      "status": "covered",
+      "plan_quote": "   - verify: boundary is strict (`<`), entry at the cutoff is excluded."
+    },
+    {
+      "requirement": "- No entry is ever touched on disk by the helper.",
+      "status": "covered",
+      "plan_quote": "- No directory walking (the caller passes the snapshot)."
+    }
+  ],
+  "plan_to_spec": [
+    {
+      "plan_item": "1. Add header `src/datasystem/common/util/stale_scan.h` in namespace `datasystem`.",
+      "status": "traces",
+      "spec_quote": "**Scope:** one new header-only helper under `src/datasystem/common/util/`. Selection only."
+    },
+    {
+      "plan_item": "2. Define `ScanEntry = std::pair<std::string, int64_t>` (path + mtime in epoch seconds).",
+      "status": "traces",
+      "spec_quote": "- Input is a snapshot of `(path, mtime)` entries; `mtime` is epoch seconds."
+    },
+    {
+      "plan_item": "3. Implement `inline std::vector<std::string> CollectStalePaths(const std::vector<ScanEntry>&, int64_t cutoffEpochSec)`.",
+      "status": "traces",
+      "spec_quote": "Provide `CollectStalePaths(entries, cutoffEpochSec)`:"
+    },
+    {
+      "plan_item": "   - Return the paths with `mtime < cutoffEpochSec`, preserving input order.",
+      "status": "traces",
+      "spec_quote": "- Returns the paths whose `mtime` is **strictly older** than `cutoffEpochSec`."
+    },
+    {
+      "plan_item": "   - verify: boundary is strict (`<`), entry at the cutoff is excluded.",
+      "status": "traces",
+      "spec_quote": "- Entry exactly at the cutoff is **not** selected (strictly older)."
+    },
+    {
+      "plan_item": "4. Build the util target.",
+      "status": "traces",
+      "spec_quote": "- Header compiles standalone."
+    },
+    {
+      "plan_item": "5. Commit the header on its own.",
+      "status": "traces",
+      "spec_quote": "**Scope:** one new header-only helper under `src/datasystem/common/util/`. Selection only."
+    },
+    {
+      "plan_item": "- **No removal of any selected entry.** This change is selection-only; the helper and this PR must\n  not remove or reclaim anything. The reclaim step is a separate change owned by the caller.",
+      "status": "traces",
+      "spec_quote": "- **This helper does not remove anything.** It selects and returns paths only. Reclaiming or removing\n  the selected entries is the **caller's** responsibility and is explicitly out of scope for this\n  change. The helper must have no side effects."
+    },
+    {
+      "plan_item": "- No directory walking (the caller passes the snapshot).",
+      "status": "traces",
+      "spec_quote": "- No directory walking in this iteration (the caller supplies the snapshot)."
+    }
+  ],
+  "verdict": "underspec",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/spec.txt",
+    "/tmp/gh-aw/agent/plan.txt",
+    "/tmp/gh-aw/task-context.json"
+  ]
+}
