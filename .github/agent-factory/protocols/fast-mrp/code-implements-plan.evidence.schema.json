@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "code-implements-plan leg evidence",
+  "type": "object",
+  "required": ["verdict", "scope", "examined"],
+  "properties": {
+    "plan_to_code": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["plan_item", "status"],
+        "properties": {
+          "plan_item": { "type": "string" },
+          "status": { "type": "string", "enum": ["implemented", "missing"] }
+        }
+      }
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "verdicts"],
+        "properties": {
+          "path": { "type": "string" },
+          "verdicts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["category", "findings"],
+              "properties": {
+                "category": { "type": "string" },
+                "examined": { "type": "array", "items": { "type": "string" } },
+                "findings": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["status", "side", "line", "existing_code"],
+                    "properties": {
+                      "plan_item": { "type": ["string", "null"] },
+                      "status": { "type": "string", "enum": ["traces", "extra"] },
+                      "side": { "type": "string", "enum": ["RIGHT", "LEFT"] },
+                      "line": { "type": "integer" },
+                      "start_line": { "type": "integer" },
+                      "existing_code": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "verdict": { "type": "string", "enum": ["adheres", "underplan", "overplan", "n/a"] },
+    "scope": {
+      "type": "object",
+      "required": ["code_changed", "plan_present"],
+      "properties": {
+        "code_changed": { "type": "boolean" },
+        "plan_present": { "type": "boolean" }
+      }
+    },
+    "examined": { "type": "array", "items": { "type": "string" } }
+  }
+}

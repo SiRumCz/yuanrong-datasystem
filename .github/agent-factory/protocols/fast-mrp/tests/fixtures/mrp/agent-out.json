@@ -1,0 +1,18 @@
+{
+  "rationale": {
+    "summary": "Switches the worker on URMA data-plane failure to keep the cache available.",
+    "keyPoints": [{ "point": "fails over to a standby worker", "source": "walkthrough" }],
+    "intentMatch": "aligned"
+  },
+  "routed_spots": [
+    { "spot_id": "s1", "cohort": "client-failover", "diff_hunk_pointer": "src/client/a.cpp:42", "risk_source": "critique" },
+    { "spot_id": "s2", "cohort": "core", "diff_hunk_pointer": "src/a/x.cpp:10", "risk_source": "critique" }
+  ],
+  "critique_ledger": [
+    { "dimension": "correctness", "path": "src/client/a.cpp", "line": 42, "severity": "high", "verdict": "risk", "title": "null deref on failover", "rationale": "may crash when the standby is null" }
+  ],
+  "routed_questions": {
+    "client-failover": "Does the failover handle a null standby worker at line 42?",
+    "core": "Is the cross-subsystem API change backward compatible?"
+  }
+}
