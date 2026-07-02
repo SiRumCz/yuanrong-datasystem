@@ -70,6 +70,11 @@
           "type": "string",
           "description": "Protocol command this event invokes.",
           "enum": ["start", "reset", "override", "resolve-gate", "answer"]
+        },
+        "target": {
+          "type": "string",
+          "description": "For issue_comment: whether this trigger fires on a comment on a PR (default) or on a plain issue. Plain-issue protocols (e.g. impl-feature-auto, keyed issue-<N>) set \"issue\".",
+          "enum": ["pr", "issue"]
         }
       }
     },
@@ -97,20 +102,28 @@
     },
     "input": {
       "type": "object",
-      "required": ["from", "as"],
+      "required": ["as"],
       "additionalProperties": false,
-      "description": "Materialize an earlier node's evidence (or a gate's answers) as inputs/<as>.json for this node's agent.",
+      "description": "Materialize an earlier node's evidence (or a gate's answers) as inputs/<as>.json for this node's agent. Exactly one of 'from' or 'from_fanout' must be set.",
       "properties": {
         "_note": { "type": "string", "description": "Free-text annotation; ignored by the engine." },
         "from": {
           "type": "string",
           "description": "Source node id (a sibling sub-state, a fanout branch, or a phase)."
         },
+        "from_fanout": {
+          "type": "string",
+          "description": "merge: id of a fanout whose legs (per the manifest) are collected — one row per leg with its terminal state + persisted evidence — into inputs/<as>.json."
+        },
         "as": {
           "type": "string",
           "description": "Alias — the basename under inputs/ the source is materialized as."
         }
-      }
+      },
+      "oneOf": [
+        { "required": ["from"], "not": { "required": ["from_fanout"] } },
+        { "required": ["from_fanout"], "not": { "required": ["from"] } }
+      ]
     },
     "node": {
       "type": "object",
@@ -180,16 +193,65 @@
         },
         "branches": {
           "type": "array",
-          "description": "fanout: the parallel legs.",
+          "description": "fanout (static): the parallel legs. Exactly one of 'branches' or 'expand'+'each' must be set.",
           "items": { "$ref": "#/definitions/branch" }
+        },
+        "expand": {
+          "type": "object",
+          "description": "fanout (dynamic): a trusted hook that expands into per-leg items. Exactly one of 'branches' or 'expand'+'each' must be set.",
+          "additionalProperties": false,
+          "required": ["hook", "as", "id_from", "max_legs"],
+          "properties": {
+            "hook": {
+              "type": "string",
+              "description": "Expander id. Resolved to expand/<hook> or expand/<hook>.* in the protocol dir (extension-agnostic) unless 'exec' is given."
+            },
+            "exec": {
+              "type": "string",
+              "description": "Explicit path (relative to the protocol dir) to the expander executable, overriding the expand/<hook> lookup."
+            },
+            "as": {
+              "type": "string",
+              "description": "Alias each expanded item is materialized/staged under for its leg."
+            },
+            "id_from": {
+              "type": "string",
+              "pattern": "^\\$\\.",
+              "description": "JSONPath-ish expression into each item selecting the value the leg id/key is derived from."
+            },
+            "max_legs": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 256,
+              "description": "Hard cap on expanded legs; the expander fails loud if the item count exceeds it."
+            },
+            "matrix_fields": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "description": "Optional: which item keys are inlined into matrix.leg.inputs for the agent. Unset = the full item. The full item is always persisted on the state branch; this only trims what rides the GHA matrix (large re-fetchable fields stay out)."
+            }
+          }
+        },
+        "each": {
+          "type": "object",
+          "description": "fanout (dynamic): the leg template applied per expanded item — a flat leg (workflow) XOR a sub-pipeline (states), like a 'branch' without 'id'."
         },
         "of": {
           "type": "string",
           "description": "join: the id of the sibling fanout this join is an AND-barrier for."
         },
+        "policy": {
+          "type": "string",
+          "pattern": "^(all|any|quorum:(\\d+|\\d+(\\.\\d+)?%))$",
+          "description": "join: the AND-barrier policy — 'all' (default), 'any', or 'quorum:<N|P%>'."
+        },
         "questions_from": {
           "type": "string",
           "description": "gate: makes this a DATA gate — names a sibling node whose evidence carries the questions to ask (answered via the command's /answer prefix). Omit for a human-APPROVAL gate."
+        },
+        "channel": {
+          "enum": ["comment", "issue"],
+          "description": "gate: where to ask. 'comment' (default) posts on the PR; 'issue' opens a dedicated GitHub issue (for ref/UI-keyed runs with no PR) and routes the answer back via a marker in the issue body."
         },
         "approve_excludes_author": {
           "type": "boolean",
@@ -207,7 +269,7 @@
         },
         {
           "if": { "properties": { "kind": { "const": "fanout" } } },
-          "then": { "required": ["branches", "next"] }
+          "then": { "required": ["next"] }
         },
         {
           "if": { "properties": { "kind": { "const": "join" } } },

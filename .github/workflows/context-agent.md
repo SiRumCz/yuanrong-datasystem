@@ -33,19 +33,17 @@ steps:
   - uses: actions/checkout@v5
     with: { persist-credentials: false }
   - name: Prefetch PR + locate transcript + parse parts
-    env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}", PR: "${{ fromJSON(github.event.inputs.aw_context || '{}').pr }}", REPO: "${{ github.repository }}", PROTO_DIR: "${{ fromJSON(github.event.inputs.aw_context || '{}').protocol_dir }}" }
+    env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}", PR: "${{ fromJSON(github.event.inputs.aw_context || '{}').pr }}", REPO: "${{ github.repository }}" }
     run: |
       set -euo pipefail
-      # Resolve THIS protocol's scripts/ (aw_context.protocol_dir); fall back to code-review.
-      BASE="${PROTO_DIR:-.github/agent-factory/protocols/code-review}"
       mkdir -p /tmp/gh-aw/agent /tmp/gh-aw/agent/transcripts
       gh pr view "$PR" --repo "$REPO" --json number,title,author,files,baseRefName,headRefName,headRefOid > /tmp/gh-aw/agent/pr.json
-      REPO="$REPO" node "$BASE/scripts/context/locate.js" /tmp/gh-aw/agent/pr.json /tmp/gh-aw/agent/transcripts || true
+      REPO="$REPO" node .github/agent-factory/protocols/code-review/scripts/context/locate.js /tmp/gh-aw/agent/pr.json /tmp/gh-aw/agent/transcripts || true
       if ls /tmp/gh-aw/agent/transcripts/*.jsonl >/dev/null 2>&1; then
         # gh-aw can order setup actions after custom steps. Install Bun inline while
         # the trusted pre-agent step still has network access.
         command -v bun >/dev/null 2>&1 || { npm install -g bun >/dev/null 2>&1 && export PATH="$(npm prefix -g)/bin:$PATH"; } || true
-        ( cd "$BASE/scripts/context/parts-driver" \
+        ( cd .github/agent-factory/protocols/code-review/scripts/context/parts-driver \
           && (bun install --frozen-lockfile || bun install) \
           && bun driver.ts /tmp/gh-aw/agent/transcripts /tmp/gh-aw/agent/parts.json ) || true
       fi
@@ -60,18 +58,10 @@ steps:
 post-steps:
   - name: Assemble SessionExport
     if: always()
-    env:
-      PROTO_DIR: "${{ fromJSON(github.event.inputs.aw_context || '{}').protocol_dir }}"
-    run: |
-      BASE="${PROTO_DIR:-.github/agent-factory/protocols/code-review}"
-      node "$BASE/scripts/context/assemble.js" /tmp/gh-aw/agent/parts.json /tmp/gh-aw/agent/phases.jsonl /tmp/gh-aw/agent/pr.json > /tmp/gh-aw/session-export.json
+    run: node .github/agent-factory/protocols/code-review/scripts/context/assemble.js /tmp/gh-aw/agent/parts.json /tmp/gh-aw/agent/phases.jsonl /tmp/gh-aw/agent/pr.json > /tmp/gh-aw/session-export.json
   - name: Derive engine evidence
     if: always()
-    env:
-      PROTO_DIR: "${{ fromJSON(github.event.inputs.aw_context || '{}').protocol_dir }}"
-    run: |
-      BASE="${PROTO_DIR:-.github/agent-factory/protocols/code-review}"
-      python3 "$BASE/scripts/context/to-evidence.py" /tmp/gh-aw/session-export.json /tmp/gh-aw/evidence.json
+    run: python3 .github/agent-factory/protocols/code-review/scripts/context/to-evidence.py /tmp/gh-aw/session-export.json /tmp/gh-aw/evidence.json
   - name: Upload session export
     if: always()
     uses: actions/upload-artifact@v4

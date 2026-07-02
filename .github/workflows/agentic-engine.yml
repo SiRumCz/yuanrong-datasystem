@@ -37,7 +37,7 @@ jobs:
       github.event_name == 'repository_dispatch' ||
       github.event_name == 'workflow_dispatch' ||
       github.event_name == 'pull_request' ||
-      (github.event_name == 'issue_comment' && github.event.issue.pull_request != null)
+      github.event_name == 'issue_comment'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -58,6 +58,7 @@ jobs:
       override_actor: ${{ steps.ctx.outputs.override_actor }}
       override_reason: ${{ steps.ctx.outputs.override_reason }}
       checkout_ref: ${{ steps.ctx.outputs.checkout_ref }}
+      is_pr_run: ${{ steps.ctx.outputs.is_pr_run }}
     steps:
       - uses: actions/checkout@v5
       - id: ctx
@@ -98,8 +99,16 @@ jobs:
             repository_dispatch)
               INSTANCE="$DISPATCH_INSTANCE"
               [ -n "$INSTANCE" ] || { echo "[ctx] repository_dispatch with empty instance" >&2; exit 1; }
-              # PR-keyed instances carry a pr; ref-keyed ones (ref-*/ui-*) do not.
-              case "$INSTANCE" in pr-*) PR="${INSTANCE#pr-}" ;; *) PR="" ;; esac
+              # PR-keyed instances carry a pr; issue-keyed carry the issue number
+              # (for commenting/labeling); ref-keyed ones (ref-*/ui-*) have neither.
+              # Without the issue-* arm, an iterate/continue dispatch for an
+              # issue-keyed run (e.g. impl-feature-auto) would set PR="" and the
+              # agent's issue prefetch would fail ("invalid issue format").
+              case "$INSTANCE" in
+                pr-*)    PR="${INSTANCE#pr-}" ;;
+                issue-*) PR="${INSTANCE#issue-}" ;;
+                *)       PR="" ;;
+              esac
               case "$DISPATCH_TYPE" in
                 protocol-continue) CMD="continue"; NODE_PATH="$DISPATCH_PATH" ;;
                 *) echo "[ctx] unknown repository_dispatch type: $DISPATCH_TYPE" >&2; exit 1 ;;
@@ -109,9 +118,18 @@ jobs:
               INSTANCE="pr-$PR"
               CMD=$(python3 .github/agent-factory/engine/lib.py match-trigger "$PROTO" pull_request "$PR_EVENT_ACTION" "") ;;
             issue_comment)
-              PR="${{ github.event.issue.number }}"
-              INSTANCE="pr-$PR"
-              CMD=$(python3 .github/agent-factory/engine/lib.py match-trigger "$PROTO" issue_comment "" "$COMMENT_BODY")
+              N="${{ github.event.issue.number }}"
+              IS_PR="${{ github.event.issue.pull_request != null }}"
+              if [ "$IS_PR" = "true" ]; then
+                PR="$N"; INSTANCE="pr-$N"
+              else
+                # Plain-issue protocol (impl-feature-auto): key issue-<N>, comment on
+                # issue #N (PR=$N is numeric), analyze the DEFAULT branch (no PR head;
+                # the feature branch is created later by the implement agent).
+                PR="$N"; INSTANCE="issue-$N"
+                CHECKOUT_REF="${{ github.event.repository.default_branch }}"
+              fi
+              CMD=$(python3 .github/agent-factory/engine/lib.py match-trigger "$PROTO" issue_comment "" "$COMMENT_BODY" "$IS_PR")
               if [ "$CMD" = "override" ]; then
                 # Authorize from TRUSTED fields only (login from the event, repo
                 # permission from the API) — never from the comment body. The body
@@ -173,31 +191,41 @@ jobs:
               fi
               ;;
           esac
-          # PR-targeted runs check out the PR head; if ctx didn't already set a
-          # checkout ref (the ref-target case did), default to the PR merge ref.
-          [ -n "$CHECKOUT_REF" ] || { [ -n "$PR" ] && CHECKOUT_REF="refs/pull/$PR/head"; }
+          # A "PR-head run" is any instance keyed pr-<N> (PR/issue-on-PR comment, or a
+          # pr-keyed repository_dispatch continue) — the head step then resolves the SHA
+          # from the PR head. A plain-issue run (issue-<N>) has a numeric PR for
+          # commenting but NO PR head: its SHA comes from CHECKOUT_REF (default branch).
+          case "$INSTANCE" in pr-*) IS_PR_RUN=true ;; *) IS_PR_RUN="" ;; esac
+          # PR-head runs check out the PR head; if ctx didn't already set a checkout
+          # ref (the ref-target / plain-issue cases did), default to the PR merge ref.
+          [ -n "$CHECKOUT_REF" ] || { [ "$IS_PR_RUN" = "true" ] && CHECKOUT_REF="refs/pull/$PR/head"; }
           echo "pr=$PR" >> "$GITHUB_OUTPUT"
           echo "instance=$INSTANCE" >> "$GITHUB_OUTPUT"
           echo "command=$CMD" >> "$GITHUB_OUTPUT"
           echo "node_path=$NODE_PATH" >> "$GITHUB_OUTPUT"
           echo "checkout_ref=$CHECKOUT_REF" >> "$GITHUB_OUTPUT"
+          echo "is_pr_run=$IS_PR_RUN" >> "$GITHUB_OUTPUT"
       - id: head
         if: steps.ctx.outputs.command != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR: ${{ steps.ctx.outputs.pr }}
+          IS_PR_RUN: ${{ steps.ctx.outputs.is_pr_run }}
           CHECKOUT_REF: ${{ steps.ctx.outputs.checkout_ref }}
           INSTANCE: ${{ steps.ctx.outputs.instance }}
           PROTO: ${{ inputs.protocol }}
           REPO: ${{ github.repository }}
         run: |
           # The analyzed commit SHA, resolved per target kind:
-          #  - PR run: the PR head commit.
-          #  - ref-target START (workflow_dispatch): the requested ref/branch tip.
+          #  - PR-head run (pr-<N>): the PR head commit.
+          #  - ref-target START (workflow_dispatch) OR plain-issue run (issue-<N>):
+          #    the requested ref / default-branch tip (CHECKOUT_REF). A plain-issue
+          #    run has a numeric PR (for commenting) but NO PR head, so it must NOT
+          #    take the `gh pr view` path.
           #  - ref-target CONTINUE/JOIN (repository_dispatch carries no ref, and a
           #    ui-keyed instance has no ref to recover): read the SHA already pinned
           #    in the instance state at start — the source of truth across all hops.
-          if [ -n "$PR" ]; then
+          if [ -n "$PR" ] && [ "$IS_PR_RUN" = "true" ]; then
             SHA=$(gh pr view "$PR" --repo "$REPO" --json headRefOid --jq .headRefOid)
           elif [ -n "$CHECKOUT_REF" ]; then
             SHA=$(gh api "repos/$REPO/commits/$CHECKOUT_REF" --jq .sha)
@@ -224,6 +252,15 @@ jobs:
           # download each leg's mm-tree artifact by run_id. The job already holds
           # this PAT via STATE_REMOTE/GH_TOKEN, so this grants no new privilege.
           PUBLISH_TOKEN: ${{ secrets.POC_DISPATCH_TOKEN }}
+          # The ACTIONS token for completing the aggregate check-run: a terminal
+          # `merge` finalizes here (plan job), but a classic PAT (PUBLISH_TOKEN)
+          # cannot create/complete the github-actions[bot] check-run created at
+          # pipeline start. GITHUB_TOKEN (the job grants it `checks: write`) can.
+          # set_check_run prefers CHECK_RUN_TOKEN over PUBLISH_TOKEN.
+          CHECK_RUN_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Read-only token for the expander subprocess (lib.run_expander scopes the
+          # expander to THIS token only; the broad PAT above never reaches it).
+          EXPANDER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           HEAD_SHA: ${{ steps.head.outputs.sha }}
           PROTO: ${{ inputs.protocol }}
@@ -344,6 +381,7 @@ jobs:
           NODE_PATH: ${{ matrix.leg.path }}
           LEG_WORKFLOW: ${{ matrix.leg.workflow }}
           INPUTS_JSON: ${{ needs.plan.outputs.inputs_json }}
+          LEG_INPUTS: ${{ toJSON(matrix.leg.inputs) }}
           CHECKOUT_REF: ${{ needs.plan.outputs.checkout_ref }}
           SHA: ${{ needs.plan.outputs.head_sha }}
         run: |
@@ -352,22 +390,23 @@ jobs:
           LEGTOK=$(printf '%s' "$NODE_PATH" | tr '.' '-')
           [ -n "$LEGTOK" ] || LEGTOK="agent"
           CID="${{ github.run_id }}-${{ github.run_attempt }}-${LEGTOK}"
-          INPUTS="$INPUTS_JSON"; [ -n "$INPUTS" ] || INPUTS='{}'
+          # Prefer this leg's per-leg runtime item (dynamic fanout); fall back to the
+          # shared declared-inputs blob (static). LEG_INPUTS is 'null' when absent.
+          if [ -n "$LEG_INPUTS" ] && [ "$LEG_INPUTS" != "null" ]; then
+            INPUTS="$LEG_INPUTS"
+          else
+            INPUTS="$INPUTS_JSON"; [ -n "$INPUTS" ] || INPUTS='{}'
+          fi
           # ref/sha let an agent check out the analyzed code for either target kind.
           # Prefer the explicit checkout ref (PR head ref, or the ref a ref-target
           # START requested); fall back to the resolved SHA for ref-target CONTINUE
           # hops, where the dispatch carries no ref (the SHA is pinned in state).
           REF="${CHECKOUT_REF:-$SHA}"
-          # Protocol dir (dirname of the routed protocol.json) so a shared agent can
-          # resolve ITS protocol's scripts/ instead of a hardcoded code-review path.
-          # PROTO is engine-controlled (read from env, never interpolated into a run body).
-          PROTO_DIR=$(dirname "$PROTO")
           CTX=$(jq -nc \
             --arg pr "$PR" --arg iteration "$ITERATION" --arg feedback "$FEEDBACK" \
             --argjson sabotage "$SABOTAGE" --arg cid "$CID" \
             --argjson inputs "$INPUTS" --arg ref "$REF" --arg sha "$SHA" \
-            --arg protocol_dir "$PROTO_DIR" \
-            '{pr: $pr, iteration: $iteration, feedback: $feedback, sabotage: $sabotage, cid: $cid, inputs: $inputs, ref: $ref, sha: $sha, protocol_dir: $protocol_dir}')
+            '{pr: $pr, iteration: $iteration, feedback: $feedback, sabotage: $sabotage, cid: $cid, inputs: $inputs, ref: $ref, sha: $sha}')
           # Workflow comes from the matrix leg (next.py emits it in legs[]); read
           # via env var (never interpolated) to keep the security invariant.
           NAME="$LEG_WORKFLOW"
@@ -436,12 +475,16 @@ jobs:
       - name: Fetch independent ground truth
         env:
           PR: ${{ needs.plan.outputs.pr }}
+          IS_PR_RUN: ${{ needs.plan.outputs.is_pr_run }}
         run: |
           # PR-targeted runs: independently re-fetch the PR diff (the checks' ground
-          # truth, never trusting agent output). Ref-targeted runs (UI/workflow_dispatch)
-          # have no PR — write empty diff/files; those protocols' checks verify
-          # evidence manifests, not a diff.
-          if [ -n "$PR" ]; then
+          # truth, never trusting agent output). Ref-targeted (UI/workflow_dispatch)
+          # AND issue-keyed (e.g. impl-feature-auto) runs have no PR — write empty
+          # diff/files; those protocols' checks verify evidence, not a diff. Gate on
+          # IS_PR_RUN, not `-n PR`: an issue-keyed run carries PR=<issue-number> (for
+          # commenting/labeling), which is NOT a resolvable pull request — `gh pr diff`
+          # on it fails ("Could not resolve to a PullRequest").
+          if [ "$IS_PR_RUN" = "true" ]; then
             gh pr diff "$PR" --repo "${{ github.repository }}" > /tmp/diff.txt
             gh pr diff "$PR" --repo "${{ github.repository }}" --name-only > /tmp/files.txt
           else
@@ -530,7 +573,8 @@ jobs:
         env:
           STATE_REMOTE: https://x-access-token:${{ secrets.POC_DISPATCH_TOKEN }}@github.com/${{ github.repository }}.git
           GH_TOKEN: ${{ secrets.POC_DISPATCH_TOKEN }}
-          # T6: conclude-fix pushes to the PR head + closes issues -> needs the write-capable PAT.
+          # conclude-fix pushes to the PR head + closes issues; publish-review opens issues.
+          # Needs contents:write + issues:write — use the write-capable PAT, not GITHUB_TOKEN.
           PUBLISH_TOKEN: ${{ secrets.POC_DISPATCH_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           PR: ${{ needs.plan.outputs.pr }}

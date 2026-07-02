@@ -38,10 +38,9 @@ def _nested_join(dir_, instance, proto_path, pid):
         return
 
     fanout_node = paths.node_at_path(protocol, fanout_path)
-    branches = [b["id"] for b in (fanout_node.get("branches", []) if fanout_node else [])]
+    branches = lib.resolve_leg_ids(dir_, pid, instance, fanout_path, fanout_node)
 
     all_terminal = True
-    all_done = True
     for b in branches:
         # A flat fanout child's terminal IS its leg file; a sub-pipeline child's
         # terminal is its branch-cursor file. state_path routes either tree path
@@ -57,7 +56,7 @@ def _nested_join(dir_, instance, proto_path, pid):
         if st == "done":
             pass
         elif st == "failed":
-            all_done = False
+            pass
         else:
             all_terminal = False
 
@@ -71,7 +70,28 @@ def _nested_join(dir_, instance, proto_path, pid):
     cursor_sf = lib.state_file(dir_, pid, instance,
                                path=lib.state_path(protocol, parent_path))
 
-    if not all_done:
+    # Count `done` legs and resolve this fanout's join state + policy up front.
+    done_count = 0
+    for b in branches:
+        sf = lib.state_file(dir_, pid, instance,
+                            path=lib.state_path(protocol, fanout_path + [b]))
+        if os.path.isfile(sf):
+            try:
+                if (lib.load_yaml(sf).get("state") or "") == "done":
+                    done_count += 1
+            except Exception:
+                pass
+
+    fo_id = fanout_path[-1]
+    join_state = None
+    for st in protocol.get("states", []) + paths.children(protocol, parent_path):
+        if st.get("kind") == "join" and st.get("of") == fo_id:
+            join_state = st
+            break
+    policy = (join_state or {}).get("policy", "all")
+    policy_ok = lib.join_policy_satisfied(policy, done_count, len(branches))
+
+    if not policy_ok:
         # AND-barrier failure: mark the nested marker joined-with-failure, set the
         # enclosing sub-pipeline cursor failed, and fire the ENCLOSING fanout's
         # join (path-keyed if itself nested, path-less if it is the TOP fanout).
@@ -90,13 +110,7 @@ def _nested_join(dir_, instance, proto_path, pid):
         lib._gh_dispatch("protocol-join", fields)
         return
 
-    # All done → find this fanout's join state and the sub-state it advances to.
-    fo_id = fanout_path[-1]
-    join_state = None
-    for st in protocol.get("states", []) + paths.children(protocol, parent_path):
-        if st.get("kind") == "join" and st.get("of") == fo_id:
-            join_state = st
-            break
+    # Policy satisfied → advance to the sub-state the join's `.next` names.
     nxt = (join_state or {}).get("next")
 
     lib.write_join(dir_, pid, instance, marker_file_path, {"joined": True})
@@ -179,11 +193,11 @@ def main():
                 fanout_state = st
                 break
 
-    branches = [b["id"] for b in (fanout_state.get("branches", []) if fanout_state else [])]
+    fo_tree_path = [fanout_state["id"]] if fanout_state else []
+    branches = lib.resolve_leg_ids(dir_, pid, instance, fo_tree_path, fanout_state)
     phase_for_path = cursor_phase if (multiphase and cursor_phase) else None
 
     all_terminal = True
-    all_done = True
     for b in branches:
         # NOTE: a sub-pipeline branch's terminal state lives in its CURSOR file
         # (review.<b>.yaml), written by advance.py only when the LAST sub-state is
@@ -200,7 +214,7 @@ def main():
         if st == "done":
             pass
         elif st == "failed":
-            all_done = False
+            pass
         else:
             all_terminal = False
 
@@ -208,19 +222,33 @@ def main():
         sys.stderr.write(f"[join] {pid}/{instance} not all terminal yet; waiting\n")
         sys.exit(0)
 
-    if all_done:
-        # Find the join state for this fanout.
-        join_state = None
-        fo_id = fanout_state.get("id") if fanout_state else None
+    # Count legs whose terminal state is `done` (policy operates on this).
+    done_count = 0
+    for b in branches:
+        sf = lib.state_file(dir_, pid, instance, b, phase=phase_for_path)
+        if os.path.isfile(sf):
+            try:
+                if (lib.load_yaml(sf).get("state") or "") == "done":
+                    done_count += 1
+            except Exception:
+                pass
+
+    # Resolve the join state + policy up front (needed for the policy decision).
+    join_state = None
+    fo_id = fanout_state.get("id") if fanout_state else None
+    for st in protocol.get("states", []):
+        if st.get("kind") == "join" and st.get("of") == fo_id:
+            join_state = st
+            break
+    if join_state is None:
         for st in protocol.get("states", []):
-            if st.get("kind") == "join" and st.get("of") == fo_id:
+            if st.get("kind") == "join":
                 join_state = st
                 break
-        if join_state is None:
-            for st in protocol.get("states", []):
-                if st.get("kind") == "join":
-                    join_state = st
-                    break
+    policy = (join_state or {}).get("policy", "all")
+    policy_ok = lib.join_policy_satisfied(policy, done_count, len(branches))
+
+    if policy_ok:
         nxt = (join_state or {}).get("next")
         # Only advance when .next names a real state in this protocol.
         # deep-fanout has `next: done` where "done" is a sentinel, not a real state —
@@ -240,7 +268,8 @@ def main():
     else:
         concl = "failure"
         title = "Review incomplete"
-        summary = "A review branch could not complete; merge is gated."
+        summary = (f"Join policy '{policy}' not met "
+                   f"({done_count}/{len(branches)} legs done); merge is gated.")
 
     lib.set_check_run(pid, sha, "completed", concl, title, summary)
 

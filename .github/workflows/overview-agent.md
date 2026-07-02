@@ -39,16 +39,6 @@ steps:
       mkdir -p /tmp/gh-aw/agent
       gh pr view "$PR" --repo "$REPO" --json number,title,body,files,headRefOid > /tmp/gh-aw/agent/pr.json
       gh pr diff "$PR" --repo "$REPO" > /tmp/gh-aw/agent/pr.diff || true
-      # A large PR diff (600KB+) can exceed an agent Read tool's per-file size/line cap, so the
-      # agent sees no diff and produces empty evidence. Split it into line-bounded chunks the
-      # agent reads in order, and write a manifest listing them (empty when the diff is empty).
-      rm -f /tmp/gh-aw/agent/pr.diff.part.*
-      : > /tmp/gh-aw/agent/pr.diff.parts.txt
-      if [ -s /tmp/gh-aw/agent/pr.diff ]; then
-        split -l 1200 /tmp/gh-aw/agent/pr.diff /tmp/gh-aw/agent/pr.diff.part.
-        ls -1 /tmp/gh-aw/agent/pr.diff.part.* > /tmp/gh-aw/agent/pr.diff.parts.txt
-      fi
-      echo "diff chunk manifest:"; cat /tmp/gh-aw/agent/pr.diff.parts.txt
   - name: Materialize task context
     env:
       CTX: ${{ github.event.inputs.aw_context }}
@@ -80,13 +70,9 @@ the `conclude-overview` hook (a port of score.js/diffusion.js) from your breakin
 `risk_band` HINT, but it is advisory only — the computed band wins.
 
 1. Read `/tmp/gh-aw/agent/pr.json` (changed files: `files[].path`, `additions`, `deletions`;
-   plus `title`, `body`, `headRefOid`). Then read the PR diff, which is **chunked** to fit the
-   Read tool's size limit: first read the manifest `/tmp/gh-aw/agent/pr.diff.parts.txt` (a list
-   of chunk file paths, one per line), then Read **each** listed chunk file in order and treat
-   their concatenation as the complete unified diff. (An empty or absent manifest means the diff
-   is empty — do not read `/tmp/gh-aw/agent/pr.diff` directly; on a large PR it exceeds the Read
-   limit.) Also read `/tmp/gh-aw/task-context.json` (`pr`, `iteration`, `feedback` — fold any
-   prior `feedback` into this pass; `inputs` carries upstream evidence when present).
+   plus `title`, `body`, `headRefOid`), `/tmp/gh-aw/agent/pr.diff`, and
+   `/tmp/gh-aw/task-context.json` (`pr`, `iteration`, `feedback` — fold any prior `feedback`
+   into this pass; `inputs` carries upstream evidence when present).
 
 2. **Split the change into one or more INDEPENDENT CHANGE COHORTS — groups of related work
    that can each be understood on their own. A small PR may be a single cohort.** Every changed

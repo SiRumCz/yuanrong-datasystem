@@ -129,6 +129,12 @@ def _kind(node):
 
 def _node_children(node):
     if node.get("kind") == "fanout":
+        # Dynamic fanout: no static branches[] — show the `each` template as the
+        # single (runtime-replicated) leg shape so the tree isn't empty.
+        if node.get("expand"):
+            each = dict(node.get("each", {}))
+            each.setdefault("id", f"«each ×{node['expand'].get('id_from','?')}»")
+            return [each]
         return node.get("branches", [])
     if isinstance(node.get("states"), list):
         return node["states"]
@@ -369,7 +375,8 @@ def _render_parallel(fanout, join):
     """A fan-out as a fork/join lane: a fork bar, each leg stacked inside a left
     rail (separated by a ∥ divider), then the join bar. Legs that are
     sub-pipelines recurse; nested fan-outs nest the rail."""
-    legs = fanout.get("branches", []) or []
+    legs = fanout.get("branches", []) or (
+        [dict(fanout.get("each", {}), id=f"«each»")] if fanout.get("expand") else [])
     inner = []
     for idx, br in enumerate(legs):
         if idx > 0:

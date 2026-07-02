@@ -2,7 +2,9 @@
 """Engine shared library. Importable by the engine scripts AND a thin CLI
 (`python3 lib.py <subcommand> ...`) for helpers the orchestrator calls inline."""
 import glob
+import hashlib
 import json
+import math
 import os
 import shutil
 import subprocess
@@ -103,6 +105,182 @@ def write_join(d, pid, instance, fanout_path, data):
     f = join_marker_file(d, pid, instance, fanout_path)
     os.makedirs(os.path.dirname(f), exist_ok=True)
     dump_yaml(f, data)
+
+
+def manifest_file(d, pid, instance, tree_path):
+    """Path to a dynamic fanout's manifest. Unlike leg/join files this is a NEW
+    file with no legacy byte-identity constraint, so it keys by the FULL tree
+    path (never dropped by state_path) — always unique and non-empty, for the
+    top fanout (['review'] -> review.__manifest.yaml) and nested alike."""
+    base = f"{d}/{pid}/{instance}"
+    return f"{base}/{'.'.join(tree_path)}.__manifest.yaml"
+
+
+def read_manifest(d, pid, instance, tree_path):
+    """Read the manifest dict, or {} if it does not exist yet."""
+    f = manifest_file(d, pid, instance, tree_path)
+    return load_yaml(f) if os.path.isfile(f) else {}
+
+
+def write_manifest(d, pid, instance, tree_path, data):
+    f = manifest_file(d, pid, instance, tree_path)
+    os.makedirs(os.path.dirname(f), exist_ok=True)
+    dump_yaml(f, data)
+
+
+def resolve_leg_ids(dir_, pid, instance, tree_path, fanout_node):
+    """The leg-id list for a fanout: the persisted manifest's ids when dynamic
+    (expand present), else the static branches[] ids. The single seam that lets
+    join.py treat dynamic and static fanouts uniformly."""
+    if fanout_node and fanout_node.get("expand"):
+        man = read_manifest(dir_, pid, instance, tree_path)
+        return [leg["id"] for leg in man.get("legs", [])]
+    return [b["id"] for b in (fanout_node.get("branches", []) if fanout_node else [])]
+
+
+def collect_fanout_evidence(dir_, pid, instance, tree_path, fanout_node, proto=None):
+    """Assemble the reduce input for a `merge` with from_fanout: one row per leg
+    in the manifest, carrying its terminal state + persisted evidence (or None).
+    Reads from the state branch, never job outputs — resilient to matrix clobber.
+
+    `tree_path` is the fanout's TREE path (e.g. ['review'] for the top fanout, or
+    ['review', '<fileleg>', 'findings'] for a nested findings fanout). When `proto`
+    is given, each leg is resolved by its FULL tree path (tree_path + [lid]) via
+    state_path — nested-aware. If the fanout's `each` is itself a sub-pipeline
+    (has `states`), the leg's real OUTPUT evidence lives one level deeper, at its
+    terminal sub-state (tree_path + [lid, <last each.states id>]) — the leg
+    cursor file at tree_path + [lid] is just the sequence cursor and carries no
+    evidence. A flat leg fanout (`each` has no `states`) or a static fanout
+    (`branches:`, no `each`) is unaffected. When `proto` is None (back-compat),
+    legs are resolved FLAT (branch=leg-id, no path prefix), matching the
+    historical single-phase file layout used before nested from_fanout support."""
+    man = read_manifest(dir_, pid, instance, tree_path)
+    each = (fanout_node or {}).get("each", {})
+    out_sub = each["states"][-1]["id"] if isinstance(each, dict) and each.get("states") else None
+    rows = []
+    for leg in man.get("legs", []):
+        lid = leg["id"]
+        if proto is not None:
+            leg_fp = state_path(proto, list(tree_path) + [lid])
+            sf = state_file(dir_, pid, instance, path=leg_fp)          # leg SEQUENCE CURSOR
+            evid_tree = list(tree_path) + [lid] + ([out_sub] if out_sub else [])
+            evid_fp = state_path(proto, evid_tree)
+            evid_path = output_artifact_path(dir_, pid, instance, path=evid_fp)
+        else:
+            sf = state_file(dir_, pid, instance, lid)          # single-phase leg file
+            evid_path = output_artifact_path(dir_, pid, instance, branch=lid, kind="evidence")
+        state = ""
+        if os.path.isfile(sf):
+            try:
+                state = load_yaml(sf).get("state", "") or ""
+            except Exception:
+                state = ""
+        evidence = None
+        if os.path.isfile(evid_path):
+            try:
+                with open(evid_path) as f:
+                    evidence = json.load(f)
+            except (json.JSONDecodeError, ValueError):
+                evidence = None
+        rows.append({"leg_id": lid, "key": leg.get("key"), "state": state, "evidence": evidence})
+    return rows
+
+
+def leg_id(raw_key):
+    """Stable, filesystem-safe leg id from an item's raw id_from value.
+    A short sha1 hex is alnum by construction (no sanitizing needed)."""
+    return hashlib.sha1(str(raw_key).encode("utf-8")).hexdigest()[:8]
+
+
+def extract_key(item, id_from):
+    """Resolve a simple JSONPath (`$.a.b`) against an item dict. Only the
+    dotted-`$.`-rooted form is supported (YAGNI — no wildcards/filters)."""
+    if not id_from.startswith("$."):
+        raise ValueError(f"id_from must start with '$.', got {id_from!r}")
+    cur = item
+    for seg in id_from[2:].split("."):
+        if not isinstance(cur, dict) or seg not in cur:
+            raise ValueError(f"id_from {id_from!r} did not resolve on item {item!r}")
+        cur = cur[seg]
+    return cur
+
+
+def build_manifest(items, id_from, max_legs):
+    """Turn the expander's items list into a manifest dict. Fails loud on
+    over-cap (> max_legs) and on duplicate leg keys."""
+    if len(items) > max_legs:
+        raise ValueError(f"expander emitted {len(items)} items > max_legs {max_legs}")
+    legs, seen = [], {}
+    for item in items:
+        key = extract_key(item, id_from)
+        lid = leg_id(key)
+        if lid in seen:
+            raise ValueError(f"two items map to leg id '{lid}' (keys {seen[lid]!r} and {key!r})")
+        seen[lid] = key
+        legs.append({"id": lid, "key": key, "item": item})
+    return {"count": len(legs), "legs": legs}
+
+
+def run_expander(dir_, pid, instance, proto_path, fanout_node):
+    """Run a dynamic fanout's trusted expander hook and return its items list.
+    Resolved from <protocol-dir>/expand/<hook>. Raises ValueError (fail loud) on
+    unresolved / non-executable / nonzero / non-JSON / missing-`items` output.
+
+    Runs in zone 1 (plan); the hook re-fetches the diff itself and is handed only
+    a read token via a strict env allowlist (ENFORCED, not aspirational — the
+    plan job's full env, including STATE_REMOTE / PUBLISH_TOKEN / the broad
+    dispatch PAT, is never forwarded). Under ENGINE_LOCAL the stub reads a
+    fixture file instead."""
+    pdir = os.path.dirname(os.path.abspath(proto_path))
+    expand = fanout_node.get("expand", {})
+    res = resolve_executable(f"{pdir}/expand", expand.get("hook", ""), pdir, expand.get("exec", ""))
+    kind, path = res.split("\t", 1)
+    if kind == "ERR" or not os.access(path, os.X_OK):
+        raise ValueError(f"expander '{expand.get('hook')}' unresolved/not-exec: {path}")
+    # SECURITY (spec §5): scope the expander to a read-only token. Build the env
+    # from a strict ALLOWLIST — never the plan job's full env — so STATE_REMOTE /
+    # PUBLISH_TOKEN / the broad dispatch PAT are dropped by default (a future added
+    # plan-job env var cannot leak). The expander gets only a read token to fetch
+    # the diff.
+    _ALLOW = ("PATH", "HOME", "LANG", "LC_ALL", "PR", "ENGINE_LOCAL", "GITHUB_REPOSITORY")
+    env = {k: os.environ[k] for k in _ALLOW if k in os.environ}
+    env.setdefault("PR", instance[len("pr-"):] if instance.startswith("pr-") else instance)
+    tok = os.environ.get("EXPANDER_TOKEN")
+    if tok:
+        env["GH_TOKEN"] = tok                       # read-only; never the state/publish PAT
+    env["EXPAND_PARAMS"] = json.dumps(fanout_node.get("expand", {}))
+    # Nested-fanout live wiring: surface the enclosing sub-pipeline's PREDECESSOR
+    # sub-state evidence path (e.g. `main-review` for a `findings` fanout) so an
+    # expander that derives items from a prior phase's evidence can read it. Best
+    # effort, nested-only, and only when the evidence actually exists — a top-level
+    # fanout (NODE_PATH of length 1) or a missing predecessor leaves it unset. This
+    # is a computed PATH, not a secret, so it does not weaken the token allowlist.
+    node_path_str = os.environ.get("NODE_PATH", "")
+    if node_path_str and "." in node_path_str:
+        try:
+            with open(proto_path) as _pf:
+                _proto = json.load(_pf)
+            tp = node_path_str.split(".")
+            seq_node = _paths.node_at_path(_proto, tp[:-1])
+            sub_ids = [s["id"] for s in (seq_node.get("states", []) if seq_node else [])]
+            if tp[-1] in sub_ids and sub_ids.index(tp[-1]) > 0:
+                prev_id = sub_ids[sub_ids.index(tp[-1]) - 1]
+                prev_ev = output_artifact_path(dir_, pid, instance,
+                                               path=state_path(_proto, tp[:-1] + [prev_id]))
+                if os.path.isfile(prev_ev):
+                    env["EXPAND_PRIOR_EVIDENCE_PATH"] = prev_ev
+        except Exception:
+            pass  # best effort; the expander fails loud if it genuinely needs this
+    r = subprocess.run([path, dir_, instance], text=True, capture_output=True, env=env)
+    if r.returncode != 0:
+        raise ValueError(f"expander '{expand.get('hook')}' failed (exit {r.returncode}): {r.stderr.strip()}")
+    try:
+        parsed = json.loads(r.stdout.strip())
+    except (json.JSONDecodeError, ValueError):
+        raise ValueError(f"expander '{expand.get('hook')}' returned non-JSON: {r.stdout[:200]!r}")
+    if not isinstance(parsed, dict) or not isinstance(parsed.get("items"), list):
+        raise ValueError(f"expander '{expand.get('hook')}' output missing 'items' array")
+    return parsed["items"]
 
 
 def state_by_id(protocol, state_id):
@@ -294,15 +472,17 @@ def is_multiphase(protocol):
     return len(phase_states(protocol)) > 1
 
 
-def match_trigger(protocol, event_name, action="", comment_body=""):
+def match_trigger(protocol, event_name, action="", comment_body="", is_pr_comment=True):
     """Map an ENTRY GitHub event to an engine command via protocol["triggers"].
-    Returns the command ("start"/"reset"/...) or "" if nothing matches (the
-    workflow then no-ops). Internal re-entry dispatches (protocol-continue /
-    protocol-join) are generic and NOT handled here."""
+    For issue_comment, a trigger's `target` (default "pr") must match whether the
+    comment is on a PR (is_pr_comment True) or a plain issue (False)."""
     for t in protocol.get("triggers", []):
         if t.get("on") != event_name:
             continue
         if event_name == "issue_comment":
+            want = "pr" if is_pr_comment else "issue"
+            if t.get("target", "pr") != want:
+                continue
             prefix = t.get("comment_prefix", "")
             if not prefix or comment_body.startswith(prefix):
                 return t.get("command", "")
@@ -372,21 +552,21 @@ def route(protocols_dir, event_name, action="", comment_body="",
         protocol NAME (advance.py sends pid; protocol-join.yml rebuilds the path
         the same way), so reconstruct <protocols_dir>/<name>/protocol.json — the
         engine needs a path to open. No scan; command re-derived from the type.
-      - issue_comment on a non-PR issue: skip (the engine ignores these anyway).
-      - entry event (pull_request / PR issue_comment): glob protocols in sorted
-        order, run match_trigger on each; 0 matches -> skip, exactly 1 -> route,
-        >=2 -> raise ValueError (ambiguous; the router job then fails loudly).
+      - entry event (pull_request / issue_comment): glob protocols in sorted
+        order, run match_trigger on each (forwarding is_pr_comment so a comment's
+        trigger `target` pr/issue must match a PR vs a plain issue); 0 matches ->
+        skip, exactly 1 -> route, >=2 -> raise ValueError (ambiguous; the router
+        job then fails loudly).
     """
     if dispatch_protocol:
         return {"protocol": os.path.join(protocols_dir, dispatch_protocol, "protocol.json"),
                 "command": "", "skip": False}
-    if event_name == "issue_comment" and not is_pr_comment:
-        return {"protocol": "", "command": "", "skip": True}
     matches = []
     for path in sorted(glob.glob(os.path.join(protocols_dir, "*", "protocol.json"))):
         with open(path) as f:
             proto = json.load(f)
-        cmd = match_trigger(proto, event_name, action, comment_body)
+        cmd = match_trigger(proto, event_name, action, comment_body,
+                            is_pr_comment=is_pr_comment)
         if cmd:
             matches.append((path, cmd))
     if not matches:
@@ -410,20 +590,50 @@ def route(protocols_dir, event_name, action="", comment_body="",
     return {"protocol": path, "command": cmd, "skip": False}
 
 
+def pr_from_instance(instance):
+    """Derive the PR/issue NUMBER from an instance key.
+    pr-<N> and issue-<N> -> <N> (the GitHub thread number, numeric so the engine
+    can comment/label on it). ref-*/ui-* and any other shape pass through verbatim
+    (no numeric thread)."""
+    for prefix in ("pr-", "issue-"):
+        if instance.startswith(prefix):
+            return instance[len(prefix):]
+    return instance
+
+
 def instance_file(d, pid, instance):
     """instance_file <dir> <protocol-id> <instance-key> — shared per-instance bookkeeping."""
     return f"{d}/{pid}/{instance}/_instance.yaml"
 
 
+def issue_question_body(pid, instance, gate_id, questions):
+    """The body of an interactive-gate question issue: a machine marker (so the
+    answer comment can be routed back to this run) + a parseable YAML block of the
+    questions (for a UI to render) + the /answer instructions."""
+    marker = f"<!-- agentic-mm: protocol={pid} instance={instance} gate={gate_id} -->"
+    qlines = "\n".join(f"  - id: {q['id']}\n    text: {json.dumps(q['text'])}" for q in questions)
+    eg = questions[0]["id"] if questions else "q1"
+    return (
+        f"{marker}\n\n"
+        f"## Open questions — answer to resume mental-model recovery (`{instance}`)\n\n"
+        f"```yaml\nquestions:\n{qlines}\n```\n\n"
+        f"Reply with one or more `/answer <id>: <value>` lines in a single comment, "
+        f"e.g. `/answer {eg}: …`. The run resumes automatically and this issue is "
+        f"closed once every question is answered."
+    )
+
+
 def open_gate(dir_, pid, instance, proto_path, gate_id, sha, pr, branch=None, questions=None,
-              phase=None, path=None):
+              phase=None, path=None, channel="comment"):
     """Seed a gate state file (gates.state=open), emit the awaiting check-run, and
     refresh the status comment. `branch` scopes the gate to a sub-pipeline leg.
     `phase` qualifies the path for multi-phase fan-out legs (e.g. review.B.clarify.yaml).
     `path` is the canonical FILE-NAMING path (already converted via state_path); when
     given it takes precedence over branch/phase/gate_id for the state file and check-run
     name. `questions` (a list of {id,text}) turns this into a data-carrying gate whose
-    comment lists them with the /answer syntax. Caller owns the cursor + cas_push."""
+    comment lists them with the /answer syntax. `channel="issue"` opens a dedicated
+    GitHub issue (for ref/UI-keyed runs that have no PR) instead of posting to `pr`,
+    and records its number on `gates.issue`. Caller owns the cursor + cas_push."""
     if path is not None:
         sf = state_file(dir_, pid, instance, path=path)
         # Build check-run name from path segments: pid + path elements joined by "/"
@@ -438,6 +648,19 @@ def open_gate(dir_, pid, instance, proto_path, gate_id, sha, pr, branch=None, qu
     gates = {"state": "open", "history": []}
     if questions:
         gates["questions"] = questions
+    if questions and channel == "issue":
+        # Interactive (no-PR) gate: open a dedicated question issue; the answer
+        # comment is routed back via the marker in its body (mm-interactive-resume.yml).
+        num = create_issue(f"Mental model — open questions ({instance})",
+                           issue_question_body(pid, instance, gate_id, questions))
+        gates["channel"] = "issue"
+        if num:
+            gates["issue"] = num
+        dump_yaml(sf, {"protocol": pid, "instance": instance, "state": gate_id,
+                       "head_sha": sha, "gates": gates})
+        set_check_run(cr_name, sha, "in_progress", "", "Awaiting answers",
+                      f"Answer the questions on issue #{num or '(created)'} with `/answer <id>: <value>`.")
+        return
     dump_yaml(sf, {
         "protocol": pid, "instance": instance, "state": gate_id,
         "head_sha": sha, "gates": gates,
@@ -560,10 +783,17 @@ def set_check_run(name, sha, status, conclusion, title, summary):
     if conclusion:
         args += ["-f", f"conclusion={conclusion}"]
     repo = os.environ.get("GITHUB_REPOSITORY", "")
-    publish_token = os.environ.get("PUBLISH_TOKEN", "")
+    # Check-runs must be created by the ACTIONS token (github-actions[bot]) — a
+    # classic PAT cannot create/supersede an Actions-app check-run. Prefer a
+    # dedicated CHECK_RUN_TOKEN (the workflow's GITHUB_TOKEN, which the job grants
+    # `checks: write`); fall back to PUBLISH_TOKEN for callers whose PUBLISH_TOKEN
+    # already IS the Actions token (advance/join jobs). This matters for a protocol
+    # that finalizes at a terminal `merge` in the plan job, where PUBLISH_TOKEN is
+    # the dispatch PAT (which can post the review but cannot complete the check-run).
+    check_token = os.environ.get("CHECK_RUN_TOKEN") or os.environ.get("PUBLISH_TOKEN", "")
     env = dict(os.environ)
-    if publish_token:
-        env["GH_TOKEN"] = publish_token
+    if check_token:
+        env["GH_TOKEN"] = check_token
     result = subprocess.run(
         ["gh", "api", "-X", "POST", f"repos/{repo}/check-runs"] + args,
         text=True, capture_output=True, env=env
@@ -571,7 +801,7 @@ def set_check_run(name, sha, status, conclusion, title, summary):
     if result.returncode != 0:
         sys.stderr.write(
             "[engine] check-run create failed (needs checks:write + Actions token; "
-            "merge-gating needs branch protection)\n"
+            f"merge-gating needs branch protection): {result.stderr.strip()}\n"
         )
 
 
@@ -632,6 +862,8 @@ def _ensure_and_add_label(text, pr):
     if os.environ.get("ENGINE_LOCAL", "0") == "1":
         sys.stderr.write(f"[ENGINE_LOCAL] add-label pr={pr}: {text}\n")
         return
+    if not str(pr).isdigit():   # ref-/UI-targeted run: no PR to label
+        return
     # gh pr edit --add-label errors on a nonexistent label, so create-first.
     _gh_label_cmd(["label", "create", text, "--color", PHASE_LABEL_COLOR, "--force"])
     ok, err = _gh_label_cmd(["pr", "edit", str(pr), "--add-label", text])
@@ -645,6 +877,8 @@ def remove_pr_label(pr, label):
         return
     if os.environ.get("ENGINE_LOCAL", "0") == "1":
         sys.stderr.write(f"[ENGINE_LOCAL] remove-label pr={pr}: {label}\n")
+        return
+    if not str(pr).isdigit():   # ref-/UI-targeted run: no PR to label
         return
     _gh_label_cmd(["pr", "edit", str(pr), "--remove-label", label])
 
@@ -704,6 +938,34 @@ def match_run_by_cid(runs_json, cid):
         if needle in title:
             return str(run["databaseId"])
     return ""
+
+
+def join_policy_satisfied(policy, done, total):
+    """Is a dynamic join's barrier satisfied given `done` legs out of `total`?
+      all (default) : every leg done (vacuously true when total==0)
+      any           : >=1 leg done (false when total==0)
+      quorum:N      : >=N done, N an int count OR a percentage of total ('80%')
+    Raises ValueError on an unparseable quorum."""
+    policy = (policy or "all").strip()
+    if policy == "all":
+        return done == total
+    if policy == "any":
+        return done >= 1
+    if policy.startswith("quorum:"):
+        spec = policy[len("quorum:"):].strip()
+        if spec.endswith("%"):
+            try:
+                pct = float(spec[:-1])
+            except ValueError:
+                raise ValueError(f"unparseable quorum percentage: {policy!r}")
+            need = math.ceil(total * pct / 100.0)
+        else:
+            try:
+                need = int(spec)
+            except ValueError:
+                raise ValueError(f"unparseable quorum count: {policy!r}")
+        return done >= need
+    raise ValueError(f"unknown join policy: {policy!r}")
 
 
 def decide(results, iterations_remaining):
@@ -805,6 +1067,51 @@ def post_pr_comment(pr, body):
         sys.stderr.write(f"[engine] pr comment post failed (needs issues:write): {result.stderr.strip()}\n")
 
 
+def _gh_env():
+    env = dict(os.environ)
+    tok = os.environ.get("PUBLISH_TOKEN", "")
+    if tok:
+        env["GH_TOKEN"] = tok
+    return env
+
+
+def create_issue(title, body):
+    """Open a GitHub issue; return its number as a string (or "" on failure).
+    Used by interactive (no-PR) question gates. Best-effort; ENGINE_LOCAL → log +
+    return a stub number so the gate still records an issue locally."""
+    if os.environ.get("ENGINE_LOCAL", "0") == "1":
+        sys.stderr.write(f"[ENGINE_LOCAL] create issue: {title}\n")
+        return "0"
+    repo = os.environ.get("GITHUB_REPOSITORY", "")
+    r = subprocess.run(
+        ["gh", "api", f"repos/{repo}/issues", "-f", f"title={title}",
+         "-f", f"body={body}", "--jq", ".number"],
+        text=True, capture_output=True, env=_gh_env(),
+    )
+    if r.returncode != 0:
+        sys.stderr.write(f"[engine] create issue failed (needs issues:write): {r.stderr.strip()}\n")
+        return ""
+    return r.stdout.strip()
+
+
+def close_issue(number, comment=""):
+    """Comment (optional) then close an issue. Best-effort; ENGINE_LOCAL → log."""
+    if not str(number).strip():
+        return
+    if os.environ.get("ENGINE_LOCAL", "0") == "1":
+        sys.stderr.write(f"[ENGINE_LOCAL] close issue #{number}: {comment}\n")
+        return
+    repo = os.environ.get("GITHUB_REPOSITORY", "")
+    env = _gh_env()
+    if comment:
+        subprocess.run(["gh", "api", f"repos/{repo}/issues/{number}/comments",
+                        "-f", f"body={comment}"], text=True, capture_output=True, env=env)
+    r = subprocess.run(["gh", "api", "-X", "PATCH", f"repos/{repo}/issues/{number}",
+                        "-f", "state=closed"], text=True, capture_output=True, env=env)
+    if r.returncode != 0:
+        sys.stderr.write(f"[engine] close issue failed (needs issues:write): {r.stderr.strip()}\n")
+
+
 def finalize_superseded_comment(pr, cid, body):
     """One-time edit of an ABANDONED status comment on reset: PATCH the comment
     `cid` to `body` (a superseded banner prepended above its frozen final state),
@@ -842,12 +1149,22 @@ def render_fanout_status_body(dir_, pid, instance, proto):
 
     protocol = load_yaml(proto)
 
-    # Find the fanout state and its branches
+    # Find the fanout state and its legs. Static: the declared branches[]. Dynamic
+    # (expand present): synthesize one leg per persisted manifest entry so the human
+    # status comment renders dynamic legs (check-run gating already uses the manifest).
     branches = []
     for state in protocol.get("states", []):
         if state.get("kind") == "fanout":
-            for b in state.get("branches", []):
-                branches.append(b)
+            fo_id = state.get("id")
+            if state.get("expand"):
+                each = state.get("each", {})
+                man = read_manifest(dir_, pid, instance, [fo_id])
+                for leg in man.get("legs", []):
+                    branches.append({"id": leg["id"],
+                                     "max_iterations": each.get("max_iterations", "?")})
+            else:
+                for b in state.get("branches", []):
+                    branches.append(b)
             break
 
     sections = ""
@@ -936,6 +1253,23 @@ def _validate_sequence(states, path_hint):
     Rule 3 — gate.questions_from nonexistent sibling
         A gate's `questions_from` (when set) must refer to another state id in
         the same enclosing sequence.
+
+    Rule 4 — fanout branches[] XOR expand+each (dynamic fan-out)
+        A fanout has exactly one of a static `branches[]` or a dynamic
+        `expand`+`each` pair. `expand` must carry hook/as/id_from/max_legs
+        (max_legs an int in [1,256]); `expand.matrix_fields`, when present, must
+        be an array of non-empty strings (the subset of item keys inlined into
+        matrix.leg.inputs — unset means the full item, see project_matrix_item).
+        `each` is a flat leg (`workflow`) XOR a sub-pipeline (`states`),
+        validated recursively like a static branch.
+
+    Rule 5 — join.policy must parse
+        A join's optional `policy` must be accepted by `join_policy_satisfied`
+        ('all', 'any', or 'quorum:<N|P%>').
+
+    Rule 6 — merge input from_fanout unknown fanout in scope
+        A merge input's `from_fanout` (when present) must name a fanout
+        sibling in the SAME sequence, mirroring Rule 1.
     """
     # Collect ids and fanout ids visible in this sequence for rule 1.
     sibling_ids = {s.get("id") for s in states if s.get("id")}
@@ -952,7 +1286,7 @@ def _validate_sequence(states, path_hint):
                 f"key to the '{sid}' state"
             )
 
-        # Rule 1 — join references unknown fanout
+        # Rule 1 — join references unknown fanout (+ policy validity)
         if kind == "join":
             of = st.get("of", "")
             if of and of not in fanout_ids:
@@ -960,6 +1294,15 @@ def _validate_sequence(states, path_hint):
                     f"join '{sid}' references unknown fanout of='{of}' — "
                     f"make sure a fanout with id='{of}' exists as a sibling of '{sid}'"
                 )
+            pol = st.get("policy")
+            if pol is not None:
+                try:
+                    join_policy_satisfied(pol, 0, 0)  # parse-check only
+                except ValueError:
+                    raise ValueError(
+                        f"join '{sid}' has invalid policy='{pol}' — use "
+                        f"'all', 'any', or 'quorum:<N|P%>'"
+                    )
 
         # Rule 3 — gate.questions_from nonexistent sibling
         if kind == "gate":
@@ -970,20 +1313,64 @@ def _validate_sequence(states, path_hint):
                     f"with id='{qf}' exists — add the source state or correct the name"
                 )
 
-        # Recurse into fanout branches
+        # Rule 6 — merge.from_fanout must name a fanout in scope
+        if kind == "merge":
+            for inp in st.get("inputs", []) or []:
+                ff = inp.get("from_fanout")
+                if ff and ff not in fanout_ids:
+                    raise ValueError(
+                        f"merge '{sid}' input from_fanout='{ff}' names no fanout in scope — "
+                        f"make sure a fanout with id='{ff}' exists as a sibling of '{sid}'"
+                    )
+
+        # Recurse into fanout branches / validate dynamic expand+each
         if kind == "fanout":
-            for br in st.get("branches", []):
-                bid = br.get("id", "<unnamed>")
-                if br.get("states"):
-                    # sub-pipeline branch — recurse into its states
-                    _validate_sequence(br["states"], path_hint + [bid])
-                else:
-                    # flat branch (implicit agent) — must have workflow (Rule 2b)
-                    if not br.get("workflow"):
+            has_static = bool(st.get("branches"))
+            has_dynamic = bool(st.get("expand")) or bool(st.get("each"))
+            if has_static == has_dynamic:
+                raise ValueError(
+                    f"fanout '{sid}' must have exactly one of branches[] (static) "
+                    f"or expand+each (dynamic) — not both, not neither"
+                )
+            if has_dynamic:
+                exp = st.get("expand") or {}
+                for req in ("hook", "as", "id_from", "max_legs"):
+                    if not exp.get(req) and exp.get(req) != 0:
                         raise ValueError(
-                            f"agent node '{bid}' missing 'workflow' — add a "
-                            f"\"workflow\": \"<name>\" key to the '{bid}' branch"
+                            f"fanout '{sid}' expand missing '{req}' — expand needs "
+                            f"hook, as, id_from, and max_legs"
                         )
+                ml = exp.get("max_legs")
+                if not isinstance(ml, int) or isinstance(ml, bool) or not (1 <= ml <= 256):
+                    raise ValueError(
+                        f"fanout '{sid}' expand.max_legs must be an int in [1,256], got {ml!r}"
+                    )
+                mf = exp.get("matrix_fields")
+                if mf is not None and (not isinstance(mf, list) or not all(isinstance(x, str) and x for x in mf)):
+                    raise ValueError(
+                        f"fanout '{sid}' expand.matrix_fields must be an array of non-empty strings"
+                    )
+                each = st.get("each") or {}
+                if bool(each.get("states")) == bool(each.get("workflow")):
+                    raise ValueError(
+                        f"fanout '{sid}' each must be a flat leg (workflow) XOR a "
+                        f"sub-pipeline (states) — not both, not neither"
+                    )
+                if each.get("states"):
+                    _validate_sequence(each["states"], path_hint + [sid, "each"])
+            else:
+                for br in st.get("branches", []):
+                    bid = br.get("id", "<unnamed>")
+                    if br.get("states"):
+                        # sub-pipeline branch — recurse into its states
+                        _validate_sequence(br["states"], path_hint + [bid])
+                    else:
+                        # flat branch (implicit agent) — must have workflow (Rule 2b)
+                        if not br.get("workflow"):
+                            raise ValueError(
+                                f"agent node '{bid}' missing 'workflow' — add a "
+                                f"\"workflow\": \"<name>\" key to the '{bid}' branch"
+                            )
 
 
 def validate_protocol(proto):
@@ -994,6 +1381,7 @@ def validate_protocol(proto):
       - join.of references a fanout not in scope (same sequence)
       - agent node (top-level or flat fanout branch) missing 'workflow'
       - gate.questions_from names a nonexistent sibling sub-state
+      - merge input's from_fanout references a fanout not in scope (same sequence)
 
     Intentionally does NOT validate: check file existence, schema references,
     trigger syntax, or anything that requires disk access — those belong in
@@ -1263,20 +1651,96 @@ def materialize_inputs(resolved, target_dir):
     return manifest
 
 
-def run_merge_hook(dir_, pid, instance, proto_path, merge_state):
+def stage_item(dir_, pid, instance, file_path, as_, item):
+    """Persist a dynamic leg's item beside its state file as
+    <...>.<as>.item.json, so the dispatch/materialize step can surface it as
+    inputs/<as>.json for the leg's agent. Keyed by the leg's file-naming path."""
+    dst = output_artifact_path(dir_, pid, instance, path=file_path, kind=f"{as_}.item")
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    with open(dst, "w") as f:
+        json.dump(item, f)
+
+
+def project_matrix_item(item, matrix_fields):
+    """Subset a dynamic leg's item to the keys that ride the GHA matrix.
+    matrix_fields None/unset -> the full item (backward-compatible). Absent keys
+    are skipped. The FULL item always stays durable on the state branch (stage_item);
+    this only trims what is inlined into matrix.leg.inputs."""
+    if not matrix_fields:
+        return item
+    return {k: item[k] for k in matrix_fields if k in item}
+
+
+# GHA strategy.matrix / $GITHUB_OUTPUT practical ceiling; keep well under 1 MB.
+_MATRIX_BYTES_CAP = 900_000
+
+
+def check_matrix_size(legs):
+    """Fail loud if the serialized matrix legs would exceed the GHA output/matrix
+    cap. A protocol author who forgot `matrix_fields` gets a clear error, never a
+    silent truncation (same discipline as max_legs over-cap)."""
+    n = len(json.dumps(legs))
+    if n > _MATRIX_BYTES_CAP:
+        raise ValueError(
+            f"matrix legs serialize to {n} bytes (> {_MATRIX_BYTES_CAP}); "
+            f"set the fanout's expand.matrix_fields to inline only small keys "
+            f"(large fields stay on the state branch; the agent re-fetches them)")
+
+
+def run_merge_hook(dir_, pid, instance, proto_path, merge_state, consuming_path=None):
     """Resolve+materialize a merge state's inputs and run its trusted reduce hook.
-    Returns {conclusion, summary}; neutral fallback on any resolution/exec error."""
+    Returns {conclusion, summary}; neutral fallback on any resolution/exec error.
+
+    `consuming_path` is the merge node's TREE path. For a NESTED merge (a per-file
+    `reduce` inside a sub-pipeline leg — path length > 1), a `from_fanout` resolves
+    RELATIVE to that path: the fanout is the merge's sibling in the same
+    (sub-)sequence, i.e. `consuming_path[:-1] + [fanout_id]`; plain `from` inputs
+    resolve path-aware from the same scope. For the TOP merge (consuming_path None
+    or length 1) resolution is byte-identical to the pre-nesting behavior: the
+    fanout is the top-level `[fanout_id]` and plain inputs use the legacy 3-case
+    resolver (consuming_path suppressed)."""
     pdir = os.path.dirname(os.path.abspath(proto_path))
     with open(proto_path) as f:
         proto = json.load(f)
     fo = _fanout_state(proto)
     phase = fo["id"] if (fo and is_multiphase(proto)) else None
+    merge_inputs = merge_state.get("inputs", [])
+    # A nested merge (its tree path has more than one element) resolves inputs
+    # relative to its own scope; a top merge (None or length 1) stays legacy.
+    nested = bool(consuming_path) and len(consuming_path) > 1
+    cp_for_inputs = consuming_path if nested else None
+    # from_fanout inputs have no `from` key — resolve_inputs only understands
+    # `from`, so keep them out of that call and handle them in the loop below.
+    plain_inputs = [inp for inp in merge_inputs if "from" in inp]
     # Branch-id refs resolve against branch leg outputs (Plan 2 resolve_inputs).
     resolved = resolve_inputs(proto, dir_, pid, instance,
                               consuming_branch=None, consuming_phase=phase,
-                              inputs=merge_state.get("inputs", []))
+                              inputs=plain_inputs, consuming_path=cp_for_inputs)
     workdir = tempfile.mkdtemp(prefix="merge-")
     materialize_inputs(resolved, workdir)
+    for inp in merge_inputs:
+        if inp.get("from_fanout"):
+            fo_id = inp["from_fanout"]
+            # Resolve the fanout RELATIVE TO the merge's node-path: it is the
+            # merge's sibling in the same (sub-)sequence → parent-of-merge + fanout
+            # id. Top merge → the top fanout ([fo_id]).
+            if nested:
+                fo_tree_path = list(consuming_path[:-1]) + [fo_id]
+            else:
+                fo_tree_path = [fo_id]
+            # A nested fanout is NOT a top-level state, so state_by_id() would miss
+            # it — address it by full tree path.
+            fo_node = _paths.node_at_path(proto, fo_tree_path)
+            if fo_node is None or not os.path.isfile(manifest_file(dir_, pid, instance, fo_tree_path)):
+                raise ValueError(
+                    f"merge from_fanout='{fo_id}': no manifest at {'.'.join(fo_tree_path)} "
+                    f"(fanout not materialized or misnamed)"
+                )
+            rows = collect_fanout_evidence(dir_, pid, instance, fo_tree_path, fo_node, proto=proto)
+            inputs_dir = os.path.join(workdir, "inputs")
+            os.makedirs(inputs_dir, exist_ok=True)
+            with open(os.path.join(inputs_dir, f"{inp['as']}.json"), "w") as f:
+                json.dump(rows, f)
     res = resolve_executable(f"{pdir}/publish", merge_state.get("hook", ""), pdir, "")
     kind, path = res.split("\t", 1)
     if kind == "ERR" or not os.access(path, os.X_OK):
@@ -1345,13 +1809,16 @@ def _cli(argv):
         # ensure-status-comment <state_dir> <pid> <instance> <protocol.json> <pr>
         ensure_status_comment(args[0], args[1], args[2], args[3], args[4])
     elif cmd == "match-trigger":
-        # match-trigger <protocol.json> <event_name> <action> <comment_body>
+        # match-trigger <protocol.json> <event_name> <action> <comment_body> [is_pr_comment]
+        # The 5th positional defaults to "true" (back-compat for 4-arg callers);
+        # only "false" flips it (a comment on a plain issue, not a PR).
         with open(args[0]) as f:
             proto = json.load(f)
         ev = args[1] if len(args) > 1 else ""
         act = args[2] if len(args) > 2 else ""
         body = args[3] if len(args) > 3 else ""
-        print(match_trigger(proto, ev, act, body))
+        ispr = args[4] if len(args) > 4 else "true"
+        print(match_trigger(proto, ev, act, body, is_pr_comment=(ispr.lower() != "false")))
     elif cmd == "agent-workflow":
         # agent-workflow <protocol.json> <phase> <branch> [substate]
         with open(args[0]) as f:

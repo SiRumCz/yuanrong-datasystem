@@ -60,7 +60,6 @@ post-steps:
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
 timeout-minutes: 10
-source: golivax/agentic-protocol-poc/.github/workflows/docs-coherence-agent.md@6e591f728eedbcf694b79c435dc5e6147c1d882c
 ---
 
 # Docs-Updated-Appropriately — are the docs the change touches updated appropriately?

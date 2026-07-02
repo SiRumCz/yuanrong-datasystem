@@ -38,7 +38,13 @@ def node_at_path(proto, path):
             container = cur_children if cur is None else cur.get("states", [])
             cur = _child_by_id(container, seg)
         elif cur.get("kind") == "fanout":
-            cur = _child_by_id(cur.get("branches", []), seg)
+            if cur.get("expand"):
+                # dynamic fanout: any runtime leg id maps to the `each` template
+                # (a flat unit or a sub-pipeline sequence). The next loop iteration
+                # then descends into `each["states"]` for a sub-pipeline each.
+                cur = cur.get("each")
+            else:
+                cur = _child_by_id(cur.get("branches", []), seg)
         else:
             return None  # tried to descend into a leaf
         if cur is None:
@@ -150,6 +156,11 @@ def path_depth(path):
 def _leg_paths(proto, prefix, node):
     """Yield every leaf leg path under `node` (for static depth)."""
     if node.get("kind") == "fanout":
+        if node.get("expand"):
+            # dynamic fanout: no static branches — count the `each` template as
+            # one representative leg so its subtree contributes to static depth.
+            each = node.get("each") or {}
+            return _leg_paths(proto, prefix + ["<each>"], each)
         out = []
         for b in node.get("branches", []):
             out += _leg_paths(proto, prefix + [b["id"]], b)

@@ -4,7 +4,7 @@ name: Agentic Orchestrator
 # runs a read-only `route` job to pick the matching protocol, then calls the
 # generic engine. run-name + concurrency live HERE (the caller), github.event-based,
 # never `inputs` (which would startup_failure a workflow_call workflow).
-run-name: "agentic · ${{ github.event.inputs.instance || github.event.client_payload.instance || format('pr-{0}', github.event.issue.number || github.event.pull_request.number) }} @ ${{ github.event.client_payload.path || 'entry' }}"
+run-name: "agentic · ${{ github.event.inputs.instance || github.event.client_payload.instance || (github.event.issue.pull_request != null && format('pr-{0}', github.event.issue.number)) || (github.event.issue.number && format('issue-{0}', github.event.issue.number)) || format('pr-{0}', github.event.pull_request.number) }} @ ${{ github.event.client_payload.path || 'entry' }}"
 
 on:
   # No protocol auto-triggers on pull_request anymore — code-review is /review-only
@@ -44,7 +44,7 @@ concurrency:
   # Static prefix + instance + path. Protocol is unknown at concurrency-eval
   # time, so all protocols share this namespace (fine for one-pipeline-per-repo).
   # path is the NODE_PATH coordinate (e.g. "review.grumpy"); empty for entry events.
-  group: agentic-${{ github.event.inputs.instance || github.event.client_payload.instance || format('pr-{0}', github.event.issue.number || github.event.pull_request.number) }}-${{ github.event.client_payload.path }}
+  group: agentic-${{ github.event.inputs.instance || github.event.client_payload.instance || (github.event.issue.pull_request != null && format('pr-{0}', github.event.issue.number)) || (github.event.issue.number && format('issue-{0}', github.event.issue.number)) || format('pr-{0}', github.event.pull_request.number) }}-${{ github.event.client_payload.path }}
   cancel-in-progress: false
 
 jobs:
@@ -55,7 +55,7 @@ jobs:
       github.event_name == 'repository_dispatch' ||
       github.event_name == 'workflow_dispatch' ||
       github.event_name == 'pull_request' ||
-      (github.event_name == 'issue_comment' && github.event.issue.pull_request != null)
+      github.event_name == 'issue_comment'
     runs-on: ubuntu-latest
     outputs:
       protocol: ${{ steps.r.outputs.protocol }}

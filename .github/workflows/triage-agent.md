@@ -56,7 +56,6 @@ post-steps:
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
 timeout-minutes: 10
-source: golivax/agentic-protocol-poc/.github/workflows/triage-agent.md@6e591f728eedbcf694b79c435dc5e6147c1d882c
 ---
 
 # Review Triage — cluster, dedup & rank the five reviews' findings
