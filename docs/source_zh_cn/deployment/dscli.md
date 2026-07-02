@@ -18,6 +18,7 @@
 - [命令行参数说明](#命令行参数说明)
     - [dscli start](#dscli-start)
     - [dscli stop](#dscli-stop)
+    - [dscli status](#dscli-status)
     - [dscli up](#dscli-up)
     - [dscli down](#dscli-down)
     - [dscli runscript](#dscli-runscript)
@@ -605,6 +606,17 @@ dscli collect_log --cluster_config_path ./cluster_config.json
 `dscli stop` 会先向 worker 发送 `SIGTERM`，等待超时后再发送 `SIGKILL`。等待超时时间按以下公式动态计算（单位：秒）：
 
 `180 + shared_memory_size_mb / data_migrate_rate_limit_mb`
+
+### dscli status
+
+`dscli status` 是一个只读命令，用于列出本机上当前正在运行的 datasystem worker 服务，无需任何参数。它复用了 `dscli stop` 的进程发现方式：通过扫描命令行中的 `-worker_address=` 参数来识别 worker，并列出所有匹配的进程（而非要求唯一匹配）。
+
+输出为 worker 地址（IP:PORT）与对应的进程 PID；若本机没有运行中的 worker，则给出相应提示。
+
+例子：
+```bash
+dscli status
+```
 
 ### dscli up
 
