@@ -26,7 +26,7 @@
       "id": "overview",
       "kind": "agent",
       "label": "guided overview + risk",
-      "workflow": "overview-agent",
+      "workflow": "overview-agent-claude",
       "evidence": "overview.evidence.schema.json",
       "max_iterations": 2,
       "params": {
