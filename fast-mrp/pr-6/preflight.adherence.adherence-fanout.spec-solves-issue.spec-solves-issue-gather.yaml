@@ -1,7 +1,13 @@
 protocol: fast-mrp
 instance: pr-6
 state: adherence-fanout
-iteration: 1
+iteration: 2
 gates: {}
 head_sha: 09251b3b05e5a081527e702280377d8e28108e81
-history: []
+history:
+- iteration: 1
+  agent_run_id: '28560776848'
+  checks:
+    evidence-present: pass
+    spec-solves-issue-coverage: fail
+  feedback: 'issue fetch failed for #574 (cannot verify coverage)'
