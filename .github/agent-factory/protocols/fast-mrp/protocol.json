@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "min_engine_version": "1.0.0",
   "max_depth": 6,
-  "_note": "The mrp (Merge-Readiness Pack) dependency closure carved out of `code-review`, so the mrp agent receives ALL five of its upstream inputs (preflight, mm-compliance, overview, triage, context) populated with real evidence and produces a meaningful pack. Wiring: preflight fanout(4 clusters: adherence[spec-solves-issue||plan-implements-spec||code-implements-plan]->adherence-rollup, mm-compliance[gather->judge], consistency[docs||tests]->consistency-rollup, security[gather->judge]) -> join-preflight -> preflight-gate -> overview(+risk) -> review fanout(5 dims) -> join-review -> triage -> context -> mrp -> done. This is code-review MINUS the `fix` phase and MINUS the post-fix `mm` branch (mm-updater->mm-gate) — neither feeds an mrp input, so both are pruned; `context` (which mrp DOES consume) is promoted from a post-fix fanout leg to a standalone phase between triage and mrp. Two DELIBERATE deviations from code-review so a demo run always reaches mrp: preflight-gate and overview keep their `conclude` hooks (conclude-preflight/conclude-overview still compute the authoritative rollup + risk bands mrp needs) but DROP `on_blocked:halt`, so an adherence gap or a garbled risk run advances instead of halting for /override. Triggered by /fast-mrp to avoid colliding with code-review's /review. mrp still emits the merge-readiness-pack artifact via conclude-mrp + the deterministic scripts/mrp assemble/to-evidence post-steps (per-cohort bands re-derived via the shared _risk_score). The now-unused fix/mm support files (publish/conclude-fix.py, publish/_apply_fixes.py, checks/fix-schema-valid.py, checks/mm-questions-present.py, checks/answers-coverage.py, fix.evidence.schema.json, mm-updater.evidence.schema.json) were pruned from this dir since the pruned pipeline references none of them. Agent workflows are shared and live in .github/workflows/.",
+  "_note": "The mrp (Merge-Readiness Pack) dependency closure carved out of `code-review`, so the mrp agent receives ALL five of its upstream inputs (preflight, mm-compliance, overview, triage, context) populated with real evidence and produces a meaningful pack. Wiring: preflight fanout(4 clusters: adherence[spec-solves-issue||plan-implements-spec||code-implements-plan]->adherence-rollup, mm-compliance[gather->judge], consistency[docs||tests]->consistency-rollup, security[gather->judge]) -> join-preflight -> preflight-gate -> overview(+risk) -> review fanout(5 dims) -> join-review -> triage -> context -> mrp -> done. This is code-review MINUS the `fix` phase and MINUS the post-fix `mm` branch (mm-updater->mm-gate) — neither feeds an mrp input, so both are pruned; `context` (which mrp DOES consume) is promoted from a post-fix fanout leg to a standalone phase between triage and mrp. Three DELIBERATE deviations from code-review so a demo run always reaches mrp: (1) preflight-gate and overview keep their `conclude` hooks (conclude-preflight/conclude-overview still compute the authoritative rollup + risk bands mrp needs) but DROP `on_blocked:halt`, so an adherence gap or a garbled risk run advances instead of halting for /override; (2) EVERY check in the whole preflight fanout subtree AND the preflight-gate node is set `on_fail:advisory` (they were `iterate` in code-review), so a failing preflight check — e.g. spec-solves-issue-coverage fail-closing because the linked issue can't be fetched (a demo PR whose `Fixes #NNN` points at an upstream issue absent from this repo) — is recorded but never fails the leg, fails the fanout join, or blocks the pipeline; the leg still produces its evidence so mrp's preflight/mm-compliance inputs stay populated. overview/review/triage/context checks are UNCHANGED (still iterate). Triggered by /fast-mrp to avoid colliding with code-review's /review. mrp still emits the merge-readiness-pack artifact via conclude-mrp + the deterministic scripts/mrp assemble/to-evidence post-steps (per-cohort bands re-derived via the shared _risk_score). The now-unused fix/mm support files (publish/conclude-fix.py, publish/_apply_fixes.py, checks/fix-schema-valid.py, checks/mm-questions-present.py, checks/answers-coverage.py, fix.evidence.schema.json, mm-updater.evidence.schema.json) were pruned from this dir since the pruned pipeline references none of them. Agent workflows are shared and live in .github/workflows/.",
   "triggers": [
     { "on": "issue_comment", "comment_prefix": "/fast-mrp", "command": "start" }
   ],
@@ -23,7 +23,7 @@
               "evidence": "cluster-intro.evidence.schema.json",
               "max_iterations": 2,
               "params": { "require": ["examined"] },
-              "checks": [ { "run": "evidence-present", "on_fail": "iterate" } ]
+              "checks": [ { "run": "evidence-present", "on_fail": "advisory" } ]
             },
             {
               "id": "adherence-fanout",
@@ -41,8 +41,8 @@
                       "max_iterations": 2,
                       "params": { "require": ["verdict", "examined"] },
                       "checks": [
-                        { "run": "evidence-present",           "on_fail": "iterate" },
-                        { "run": "spec-solves-issue-coverage", "on_fail": "iterate" }
+                        { "run": "evidence-present",           "on_fail": "advisory" },
+                        { "run": "spec-solves-issue-coverage", "on_fail": "advisory" }
                       ]
                     },
                     {
@@ -53,7 +53,7 @@
                       "max_iterations": 2,
                       "inputs": [ { "from": "spec-solves-issue-gather", "as": "gather" } ],
                       "params": { "leg": "spec-solves-issue", "mode": "spec-solves" },
-                      "checks": [ { "run": "judge-coverage", "on_fail": "iterate" } ]
+                      "checks": [ { "run": "judge-coverage", "on_fail": "advisory" } ]
                     }
                   ]
                 },
@@ -68,8 +68,8 @@
                       "max_iterations": 2,
                       "params": { "require": ["verdict", "examined"] },
                       "checks": [
-                        { "run": "evidence-present",   "on_fail": "iterate" },
-                        { "run": "plan-spec-coverage", "on_fail": "iterate" }
+                        { "run": "evidence-present",   "on_fail": "advisory" },
+                        { "run": "plan-spec-coverage", "on_fail": "advisory" }
                       ]
                     },
                     {
@@ -80,7 +80,7 @@
                       "max_iterations": 2,
                       "inputs": [ { "from": "plan-implements-spec-gather", "as": "gather" } ],
                       "params": { "leg": "plan-implements-spec", "mode": "plan-spec" },
-                      "checks": [ { "run": "judge-coverage", "on_fail": "iterate" } ]
+                      "checks": [ { "run": "judge-coverage", "on_fail": "advisory" } ]
                     }
                   ]
                 },
@@ -95,9 +95,9 @@
                       "max_iterations": 2,
                       "params": { "require": ["verdict", "examined"] },
                       "checks": [
-                        { "run": "evidence-present",     "on_fail": "iterate" },
-                        { "run": "code-plan-coverage",   "on_fail": "iterate" },
-                        { "run": "traces-exist-in-diff", "on_fail": "iterate" }
+                        { "run": "evidence-present",     "on_fail": "advisory" },
+                        { "run": "code-plan-coverage",   "on_fail": "advisory" },
+                        { "run": "traces-exist-in-diff", "on_fail": "advisory" }
                       ]
                     },
                     {
@@ -108,7 +108,7 @@
                       "max_iterations": 2,
                       "inputs": [ { "from": "code-implements-plan-gather", "as": "gather" } ],
                       "params": { "leg": "code-implements-plan", "mode": "code-plan" },
-                      "checks": [ { "run": "judge-coverage", "on_fail": "iterate" } ]
+                      "checks": [ { "run": "judge-coverage", "on_fail": "advisory" } ]
                     }
                   ]
                 }
@@ -127,7 +127,7 @@
                 { "from": "code-implements-plan", "as": "code-implements-plan" }
               ],
               "params": { "legs": ["spec-solves-issue", "plan-implements-spec", "code-implements-plan"] },
-              "checks": [ { "run": "cluster-coverage", "on_fail": "iterate" } ]
+              "checks": [ { "run": "cluster-coverage", "on_fail": "advisory" } ]
             }
           ]
         },
@@ -142,7 +142,7 @@
               "max_iterations": 2,
               "params": { "require": ["verdict"] },
               "checks": [
-                { "run": "evidence-present", "on_fail": "iterate" }
+                { "run": "evidence-present", "on_fail": "advisory" }
               ]
             },
             {
@@ -153,7 +153,7 @@
               "max_iterations": 2,
               "inputs": [ { "from": "mm-compliance-gather", "as": "gather" } ],
               "params": { "leg": "mm-compliance", "mode": "mm" },
-              "checks": [ { "run": "judge-coverage", "on_fail": "iterate" } ]
+              "checks": [ { "run": "judge-coverage", "on_fail": "advisory" } ]
             }
           ]
         },
@@ -167,7 +167,7 @@
               "evidence": "cluster-intro.evidence.schema.json",
               "max_iterations": 2,
               "params": { "require": ["examined"] },
-              "checks": [ { "run": "evidence-present", "on_fail": "iterate" } ]
+              "checks": [ { "run": "evidence-present", "on_fail": "advisory" } ]
             },
             {
               "id": "consistency-fanout",
@@ -185,8 +185,8 @@
                       "max_iterations": 2,
                       "params": { "require": ["verdict", "examined"] },
                       "checks": [
-                        { "run": "evidence-present", "on_fail": "iterate" },
-                        { "run": "docs-coverage",    "on_fail": "iterate" }
+                        { "run": "evidence-present", "on_fail": "advisory" },
+                        { "run": "docs-coverage",    "on_fail": "advisory" }
                       ]
                     },
                     {
@@ -197,7 +197,7 @@
                       "max_iterations": 2,
                       "inputs": [ { "from": "docs-updated-appropriately-gather", "as": "gather" } ],
                       "params": { "leg": "docs-updated-appropriately", "mode": "coherence" },
-                      "checks": [ { "run": "judge-coverage", "on_fail": "iterate" } ]
+                      "checks": [ { "run": "judge-coverage", "on_fail": "advisory" } ]
                     }
                   ]
                 },
@@ -212,8 +212,8 @@
                       "max_iterations": 2,
                       "params": { "require": ["verdict", "examined"] },
                       "checks": [
-                        { "run": "evidence-present", "on_fail": "iterate" },
-                        { "run": "tests-coverage",   "on_fail": "iterate" }
+                        { "run": "evidence-present", "on_fail": "advisory" },
+                        { "run": "tests-coverage",   "on_fail": "advisory" }
                       ]
                     },
                     {
@@ -224,7 +224,7 @@
                       "max_iterations": 2,
                       "inputs": [ { "from": "tests-updated-appropriately-gather", "as": "gather" } ],
                       "params": { "leg": "tests-updated-appropriately", "mode": "coherence" },
-                      "checks": [ { "run": "judge-coverage", "on_fail": "iterate" } ]
+                      "checks": [ { "run": "judge-coverage", "on_fail": "advisory" } ]
                     }
                   ]
                 }
@@ -242,7 +242,7 @@
                 { "from": "tests-updated-appropriately", "as": "tests-updated-appropriately" }
               ],
               "params": { "legs": ["docs-updated-appropriately", "tests-updated-appropriately"] },
-              "checks": [ { "run": "cluster-coverage", "on_fail": "iterate" } ]
+              "checks": [ { "run": "cluster-coverage", "on_fail": "advisory" } ]
             }
           ]
         },
@@ -256,8 +256,8 @@
               "evidence": "security-gather.evidence.schema.json",
               "max_iterations": 2,
               "checks": [
-                { "run": "evidence-present",        "on_fail": "iterate" },
-                { "run": "security-gather-coverage", "on_fail": "iterate" }
+                { "run": "evidence-present",        "on_fail": "advisory" },
+                { "run": "security-gather-coverage", "on_fail": "advisory" }
               ]
             },
             {
@@ -268,7 +268,7 @@
               "max_iterations": 2,
               "inputs": [ { "from": "security-gather", "as": "gather" } ],
               "params": { "leg": "security", "mode": "security" },
-              "checks": [ { "run": "judge-coverage", "on_fail": "iterate" } ]
+              "checks": [ { "run": "judge-coverage", "on_fail": "advisory" } ]
             }
           ]
         }
@@ -291,7 +291,7 @@
       ],
       "params": { "legs": ["spec-solves-issue", "plan-implements-spec", "code-implements-plan", "mm-compliance", "docs-updated-appropriately", "tests-updated-appropriately", "security"] },
       "checks": [
-        { "run": "preflight-gate-coverage", "on_fail": "iterate"  },
+        { "run": "preflight-gate-coverage", "on_fail": "advisory"  },
         { "run": "local-review-evidence",   "on_fail": "advisory" }
       ],
       "conclude": "conclude-preflight",
