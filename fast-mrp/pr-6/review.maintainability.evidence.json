@@ -1,0 +1,15 @@
+{
+  "dimension": "maintainability",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": "src/datasystem/common/log/log_sampler_proto.cpp",
+      "line": 60,
+      "severity": "medium",
+      "category": "maintainability",
+      "title": "Snapshot publication logic is duplicated across config paths",
+      "impact": "The proto update path manually rebuilds SampleRate objects, allocates a LogSamplerSnapshot, exchanges the atomic pointer, retires the old snapshot, and stores samplerEnabled. The flag path in log_sampler.cpp has a second hand-written version of the same publication sequence. Future changes to snapshot ownership, added sampling dimensions, or memory-ordering rules will need to be mirrored in both places, making this central concurrency-adjacent configuration code easy to drift.",
+      "fix": "Extract a shared helper that takes an effective LogSampleConfig or ppm triple, builds thresholds, publishes the snapshot, retires the old snapshot, and updates samplerEnabled. Have both UpdateConfigFromProto() and BuildAndPublishSnapshot() use that helper."
+    }
+  ]
+}
