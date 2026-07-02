@@ -1,0 +1,102 @@
+{
+  "scope": {
+    "code_changed": true
+  },
+  "items": [
+    {
+      "path": "tests/ut/common/log/log_sampler_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Covers core LogSampler rate normalization, derivation, threshold sampling, event distribution, fatal bypass, disabled fast path, and concurrent config/hot-path reads."
+    },
+    {
+      "path": "tests/ut/common/log/log_sampler_config_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Covers proto and flag config update behavior, invalid-config retention, disabled/full-rate folding, ppm boundaries, and request-only derivation."
+    },
+    {
+      "path": "tests/ut/common/log/log_sampler_integration_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Covers LOG/PLOG macro integration, payload suppression, diagnostic supplement sampling, fatal/check bypass, VLOG behavior, and background bypass."
+    },
+    {
+      "path": "tests/ut/common/log/log_sampler_access_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Covers access sampling, request-sampled-in force-retention, REQUEST_OUT bypass, per-event access sampling, access type mapping, and logSampled formatting."
+    },
+    {
+      "path": "tests/ut/common/log/log_access_facade_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Covers the new typed AccessRecorder facades, deferred providers, sampled-out provider skipping, stream/request-out recorders, and key lifetime cases."
+    },
+    {
+      "path": "tests/ut/common/rpc/zmq_trace_sampling_meta_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Covers MetaPb log_sample_state propagation for sampler-disabled, full-rate, zero-rate, random decisions, and undecided receiver behavior."
+    },
+    {
+      "path": "tests/st/common/log/log_sampler_st_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Adds system coverage for worker-to-client sampler config delivery and cross-process request sampling consistency through KV operations."
+    },
+    {
+      "path": "tests/ut/common/log/log_performance_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Adds hot-path performance guardrails for 4000 QPS request sampling, sampled-out payload suppression, access sampling, and sampler-only decision cost."
+    },
+    {
+      "path": "tests/ut/common/log/spdlog/log_message_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Updates log message tests from LogRateLimiter to LogSampler and checks sampled-in and rejected request stream-expression evaluation."
+    },
+    {
+      "path": "tests/ut/common/log/logging_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Updates access-log sampled marker assertions for the new sampler-enabled and sampler-disabled request semantics."
+    },
+    {
+      "path": "tests/ut/common/flags/flags_test.cpp",
+      "status": "inadequate",
+      "reason": "Touched but does not exercise new sampler flag dynamic update paths, including batch validation, rollback on invalid sampler rates, and explicit-state behavior in Flags::UpdateFlagParameter."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/modules/quality/tests-and-reproduction.md",
+    ".repo_context/modules/quality/test-suite-design.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md",
+    "src/datasystem/common/log/log_sampler.cpp",
+    "src/datasystem/common/log/log_sampler.h",
+    "src/datasystem/common/log/log_sampler_proto.cpp",
+    "src/datasystem/common/log/access_recorder.cpp",
+    "src/datasystem/common/log/access_recorder.h",
+    "src/datasystem/common/log/log.h",
+    "src/datasystem/common/log/logging.cpp",
+    "src/datasystem/common/log/spdlog/log_message_impl.cpp",
+    "src/datasystem/common/util/gflag/flags.cpp",
+    "src/datasystem/common/util/gflag/common_gflags_validate.cpp",
+    "src/datasystem/common/rpc/zmq/zmq_common.h",
+    "src/datasystem/protos/meta_zmq.proto",
+    "src/datasystem/protos/share_memory.proto",
+    "tests/ut/common/log/log_sampler_test.cpp",
+    "tests/ut/common/log/log_sampler_config_test.cpp",
+    "tests/ut/common/log/log_sampler_integration_test.cpp",
+    "tests/ut/common/log/log_sampler_access_test.cpp",
+    "tests/ut/common/log/log_access_facade_test.cpp",
+    "tests/ut/common/rpc/zmq_trace_sampling_meta_test.cpp",
+    "tests/st/common/log/log_sampler_st_test.cpp",
+    "tests/ut/common/log/log_performance_test.cpp",
+    "tests/ut/common/log/spdlog/log_message_test.cpp",
+    "tests/ut/common/log/logging_test.cpp",
+    "tests/ut/common/flags/flags_test.cpp"
+  ]
+}
