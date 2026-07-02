@@ -25,4 +25,14 @@ history:
     `summary`; key `cohorts` is empty; key `summary` is empty; overview schema invalid:
     `cohorts` must be a non-empty array; cohort partition incomplete: `cohorts` is
     missing or not an array'
+- iteration: 2
+  agent_run_id: '28556715804'
+  checks:
+    evidence-present: fail
+    overview-schema-valid: fail
+    cohort-partition-complete: fail
+  feedback: 'evidence shape: missing required key `cohorts`; missing required key
+    `summary`; key `cohorts` is empty; key `summary` is empty; overview schema invalid:
+    `cohorts` must be a non-empty array; cohort partition incomplete: `cohorts` is
+    missing or not an array'
 status_comment_id: 4860930098
