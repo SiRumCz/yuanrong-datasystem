@@ -165,46 +165,81 @@ def _git(args, cwd, token=None):
                           text=True, capture_output=True)
 
 
+def _scrub(s, token):
+    """Redact the token from captured output + truncate. The diag is pushed to
+    agentic-state (git) — it must NEVER contain the token."""
+    s = (s or "").strip()
+    if token:
+        s = s.replace(token, "<TOK>")
+    return s[:400]
+
+
+def _write_diag(diag, token):
+    """Write a token-scrubbed diag into CONCLUDE_STATE_DIR so the engine's cas_push
+    carries it to agentic-state (git-readable). No-op if the state dir is absent."""
+    d = os.environ.get("CONCLUDE_STATE_DIR", "")
+    if not d or not os.path.isdir(d):
+        return
+    try:
+        with open(os.path.join(d, "_fix_diag.json"), "w") as fh:
+            json.dump(diag, fh, indent=2)
+    except OSError:
+        pass
+
+
 def _apply_commit_close(evidence):
     """Apply fixes to the PR head, push a commit, close resolved issues.
     Returns a report dict. ENGINE_LOCAL short-circuits to APPLY_WORKDIR/APPLY_OUT."""
     fixes = evidence.get("fixes") if isinstance(evidence.get("fixes"), list) else []
     report = {"applied": 0, "skipped": [], "pushed": False, "close": []}
-    if not fixes:
-        _write_apply(report)
-        return report
-
     local = os.environ.get("ENGINE_LOCAL", "0") == "1"
     repo = os.environ.get("GITHUB_REPOSITORY", "")
     pr = os.environ.get("PR", "")
     token = os.environ.get("GH_TOKEN") or os.environ.get("PUBLISH_TOKEN")
+    diag = {"local": local, "n_fixes": len(fixes),
+            "env": {"repo": repo, "pr": pr, "has_token": bool(token)}}
+    if not fixes:
+        diag["stop"] = "no fixes"
+        _write_diag(diag, token)
+        _write_apply(report)
+        return report
 
     if local:
         workdir = os.environ.get("APPLY_WORKDIR")
         results = _apply_fixes.apply_all(workdir, fixes) if workdir else []
     else:
         if not repo or not pr or not token:
+            diag["stop"] = "env missing"
             report["diag"] = f"env missing: repo={bool(repo)} pr={bool(pr)} token={bool(token)}"
+            _write_diag(diag, token)
             _post_apply_comment(repo, pr, token, report)
             _write_apply(report)
             return report
         head = _pr_head_ref(repo, pr, token)
+        diag["head"] = head
         if not head:
+            diag["stop"] = "no head (gh pr view failed)"
             report["diag"] = "pr_head_ref empty (gh pr view --json headRefName failed)"
+            _write_diag(diag, token)
             _post_apply_comment(repo, pr, token, report)
             _write_apply(report)
             return report
         workdir = tempfile.mkdtemp(prefix="fix-apply-")
         url = f"https://x-access-token:{token}@github.com/{repo}.git"
         cl = _git(["clone", "--depth", "1", "--branch", head, url, workdir])
+        diag["clone_rc"] = cl.returncode
+        diag["clone_err"] = _scrub(cl.stderr or cl.stdout, token)
         if cl.returncode != 0:
+            diag["stop"] = "clone failed"
             shutil.rmtree(workdir, ignore_errors=True)
-            report["diag"] = f"clone failed (branch={head}): {((cl.stderr or cl.stdout) or '').strip()[:200]}"
+            report["diag"] = "clone failed (branch=%s): %s" % (head, diag["clone_err"])
+            _write_diag(diag, token)
             _post_apply_comment(repo, pr, token, report)
             _write_apply(report)
             return report
         results = _apply_fixes.apply_all(workdir, fixes)
 
+    diag["apply"] = [{"status": r.get("status"), "detail": _scrub(r.get("detail"), token)} for r in results]
     try:
         applied = [r for r in results if r["status"] == "applied"]
         report["applied"] = len(applied)
@@ -213,11 +248,14 @@ def _apply_commit_close(evidence):
             for r in results if r["status"] != "applied"
         ]
         report["close"] = _issue_targets({r["cluster_id"] for r in applied})
+        diag["applied_n"] = len(applied)
 
         if applied and not local:
             paths = sorted({r["path"] for r in applied})
             push = _commit_push(workdir, head, pr, paths, token)
             report["pushed"] = push["ok"]
+            diag["push_ok"] = push["ok"]
+            diag["push_detail"] = _scrub(push.get("detail"), token)
             if not push["ok"]:
                 report["push_error"] = push["detail"]
             if push["ok"]:
@@ -225,8 +263,10 @@ def _apply_commit_close(evidence):
             shutil.rmtree(workdir, ignore_errors=True)
     except Exception as e:
         report["error"] = str(e)
+        diag["exception"] = _scrub(str(e), token)
 
     if not local:
+        _write_diag(diag, token)
         _post_apply_comment(repo, pr, token, report)
     _write_apply(report)
     return report
