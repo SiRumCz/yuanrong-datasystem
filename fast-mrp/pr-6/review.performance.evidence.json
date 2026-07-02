@@ -1,0 +1,15 @@
+{
+  "dimension": "performance",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "src/datasystem/worker/object_cache/service/worker_oc_service_delete_impl.cpp",
+      "line": 64,
+      "severity": "high",
+      "category": "performance",
+      "title": "Batch delete access logging now copies every object key",
+      "impact": "DeleteAllCopy previously logged ObjectKeysToAbbrStr(req.object_keys()), which only needed the first key and count. The new ObjectKeysRef(req.object_keys()) path stores a PROTO_REF, and ObjectKeyState::FillObjectKey materializes it by reserving protoRef->size() and emplacing every key into a std::vector before formatting. With the default access sample rate of 1.0, every sampled-in batch delete pays O(number of keys) heap allocations and string copies on the worker request path, even though the log output is bounded/truncated.",
+      "fix": "Keep this call on a summary path: add/use a protobuf-compatible ObjectKeysSummaryRef or ObjectKeyProvider that formats only the first key and count, and change the PROTO_REF formatter to stream directly from the repeated field instead of copying it into a vector."
+    }
+  ]
+}
