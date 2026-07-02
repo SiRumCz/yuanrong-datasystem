@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "impl-feature-auto · implement evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["summary", "pr_branch"],
+  "properties": {
+    "summary": { "type": "string" },
+    "pr_branch": { "type": "string", "description": "so post-summary can resolve the PR (impl-feature-auto/issue-<N>)" },
+    "run_id": { "type": "string", "description": "design agent's GITHUB_RUN_ID; implement downloads the spec/plan artifacts by it" }
+  }
+}

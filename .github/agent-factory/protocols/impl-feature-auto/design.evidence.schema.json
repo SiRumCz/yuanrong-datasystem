@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "impl-feature-auto · design evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["spec_path", "plan_path", "ledger", "read_these_first"],
+  "properties": {
+    "spec_path": { "type": "string", "description": "path to the spec doc the agent wrote" },
+    "plan_path": { "type": "string", "description": "path to the plan writing-plans produced" },
+    "summary": { "type": "string" },
+    "run_id": { "type": "string", "description": "design agent's GITHUB_RUN_ID; implement downloads the spec/plan artifacts by it" },
+
+    "ledger": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "category", "what", "why", "what_i_did", "confidence", "blast_radius", "reversibility", "revisit_if"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^L[0-9]+$" },
+          "category": { "enum": ["DECISION", "ASSUMPTION", "UNKNOWN", "DEFERRED", "DEVIATION"] },
+          "what": { "type": "string", "minLength": 1 },
+          "why": { "type": "string", "minLength": 1 },
+          "what_i_did": { "type": "string", "minLength": 1 },
+          "confidence": { "enum": ["high", "med", "low"] },
+          "blast_radius": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["level", "why"],
+            "properties": {
+              "level": { "enum": ["low", "medium", "high"] },
+              "why": { "type": "string", "minLength": 1 }
+            }
+          },
+          "reversibility": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["level", "why"],
+            "properties": {
+              "level": { "enum": ["reversible", "costly", "irreversible"] },
+              "why": { "type": "string", "minLength": 1 }
+            }
+          },
+          "revisit_if": { "type": "string", "minLength": 1 },
+          "verified": { "type": "boolean", "description": "required (by ledger-wellformed) when an ASSUMPTION asserts a code fact" }
+        }
+      }
+    },
+
+    "read_these_first": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^L[0-9]+$" },
+      "description": "ledger ids, risk-sorted; checked by read-these-first-consistent"
+    }
+  }
+}
