@@ -1,6 +1,6 @@
 protocol: fast-mrp
 instance: pr-6
-state: adherence-fanout
+state: failed
 sub_state: spec-solves-issue-gather
 iteration: 1
 gates: {}
