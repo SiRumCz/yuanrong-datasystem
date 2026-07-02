@@ -1,0 +1,77 @@
+{
+  "scope": {
+    "code_changed": true
+  },
+  "items": [
+    {
+      "path": "tests/ut/common/log/log_sampler_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "New core sampler tests cover derivation, invalid config rejection, threshold decisions, random distribution, disabled fast path, FATAL pass-through, and concurrent config/hot-path reads."
+    },
+    {
+      "path": "tests/ut/common/log/log_sampler_config_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "New config tests cover LogSampleConfigPb parsing/publication, all-1.0 disable folding, previous-good retention, request-only derivation, and no-arg request sampled-in behavior."
+    },
+    {
+      "path": "tests/ut/common/log/log_sampler_access_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "New access tests cover access/request_out classification, sampled-in OR semantics, sampled-out skips, logSampled marker formatting, and lazy access recorder construction patterns."
+    },
+    {
+      "path": "tests/ut/common/log/log_sampler_integration_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "New macro integration tests exercise LOG/PLOG/VLOG lazy evaluation, diagnostic supplement sampling, sampled-in forced diagnostics, background bypass, and FATAL/CHECK retention."
+    },
+    {
+      "path": "tests/ut/common/rpc/zmq_trace_sampling_meta_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Updated RPC metadata tests cover LOG_SAMPLE_UNDECIDED/ADMIT/REJECT propagation semantics for sampler-enabled and disabled request traces."
+    },
+    {
+      "path": "tests/ut/common/log/log_performance_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Updated performance tests cover 4000 QPS/32-thread request sampling, pass-through overhead, reject fast path, access recorder sampled-out cost, and sampler-only decision latency."
+    },
+    {
+      "path": "tests/ut/common/flags/flags_test.cpp",
+      "status": "inadequate",
+      "reason": "The PR adds transactional dynamic sampler flag handling in Flags::UpdateFlagParameter, but this touched test only changes whitespace and does not cover valid batch commits, invalid rollback, or explicit-state derivation through the flag layer."
+    },
+    {
+      "path": "tests/st/common/log/log_sampler_st_test.cpp",
+      "status": "inadequate",
+      "reason": "The new ST checks register-time config presence but does not exercise the changed heartbeat path that reapplies LogSampleConfigPb on later HeartbeatRspPb updates."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/modules/quality/tests-and-reproduction.md",
+    "src/datasystem/common/log/log_sampler.cpp",
+    "src/datasystem/common/log/access_recorder.cpp",
+    "src/datasystem/common/rpc/zmq/zmq_common.h",
+    "src/datasystem/common/util/gflag/flags.cpp",
+    "src/datasystem/client/client_worker_common_api.cpp",
+    "src/datasystem/worker/worker_service_impl.cpp",
+    "src/datasystem/protos/share_memory.proto",
+    "include/datasystem/utils/embedded_config.h",
+    "tests/ut/common/log/log_sampler_test.cpp",
+    "tests/ut/common/log/log_sampler_config_test.cpp",
+    "tests/ut/common/log/log_sampler_access_test.cpp",
+    "tests/ut/common/log/log_sampler_integration_test.cpp",
+    "tests/ut/common/rpc/zmq_trace_sampling_meta_test.cpp",
+    "tests/ut/common/log/log_performance_test.cpp",
+    "tests/ut/common/flags/flags_test.cpp",
+    "tests/st/common/log/log_sampler_st_test.cpp"
+  ]
+}
