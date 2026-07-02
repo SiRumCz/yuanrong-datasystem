@@ -43,4 +43,12 @@ history:
     cohort-partition-complete: fail
   feedback: 'cohort partition incomplete: 3 changed file(s) in no cohort: src/datasystem/common/util/gflag/CMakeLists.txt,
     tests/ut/CMakeLists.txt, tests/ut/common/log/spdlog/log_message_test.cpp'
+- iteration: 2
+  agent_run_id: '28559725348'
+  checks:
+    evidence-present: pass
+    overview-schema-valid: pass
+    cohort-partition-complete: fail
+  feedback: 'cohort partition incomplete: 3 changed file(s) in no cohort: src/datasystem/common/flags/flag_manager.cpp,
+    src/datasystem/common/util/gflag/CMakeLists.txt, src/datasystem/worker/object_cache/worker_oc_service_impl.h'
 status_comment_id: 4860930098
