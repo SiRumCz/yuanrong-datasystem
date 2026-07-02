@@ -1,0 +1,14 @@
+{
+  "matrix": [],
+  "verdict": "does-not-solve",
+  "scope": {
+    "issue_linked": true,
+    "spec_present": false
+  },
+  "examined": [
+    "scope.json",
+    "issue.txt",
+    "spec.txt",
+    "task-context.json"
+  ]
+}
