@@ -1,0 +1,76 @@
+{
+  "spec_path": "docs/superpowers/specs/2026-07-03-client-lifecycle-dedup-design.md",
+  "plan_path": "docs/superpowers/plans/2026-07-03-client-lifecycle-dedup.md",
+  "summary": "Deduplicate the byte-identical ShutDown()/Init() lifecycle boilerplate shared by KVClient and ObjectClient by extracting two free helpers (ClientShutDown, ClientInit) into the datasystem::object_cache namespace, declared in object_client_impl.h and defined in object_client_impl.cpp, then rewriting the four wrapper methods as one-line delegations. Both wrappers already hold std::shared_ptr<object_cache::ObjectClientImpl> impl_ and depend on the object_client_impl target, so no build-system changes are needed and behaviour is preserved byte-for-byte (including that ShutDown null-checks impl_ while Init does not).",
+  "run_id": "28678288117",
+  "ledger": [
+    {
+      "id": "L1",
+      "category": "DECISION",
+      "what": "Use two free helper functions in datasystem::object_cache rather than a shared base class.",
+      "why": "A base class would alter the hierarchy of two public-API types in include/datasystem/* (larger blast radius, header/ABI churn); both wrappers already share the same std::shared_ptr<ObjectClientImpl> impl_ member and already depend on the object_client_impl target, so free functions are the minimal, surgical fix.",
+      "what_i_did": "Chose free functions ClientShutDown/ClientInit taking const std::shared_ptr<ObjectClientImpl>&.",
+      "confidence": "high",
+      "blast_radius": { "level": "low", "why": "Touches 2 call sites plus 1 header declaration and 1 cpp definition; no public API signatures change." },
+      "reversibility": { "level": "reversible", "why": "Can migrate to a base class later without changing the wrappers' observable behaviour." },
+      "revisit_if": "A third client wrapper appears or the shared lifecycle grows shared state that wants a common owner."
+    },
+    {
+      "id": "L2",
+      "category": "ASSUMPTION",
+      "what": "Both KVClient::impl_ and ObjectClient::impl_ are std::shared_ptr<object_cache::ObjectClientImpl>, and ObjectClientImpl::ShutDown/Init/CompleteHandler are public.",
+      "why": "The helper must accept a shared_ptr<ObjectClientImpl> and invoke these methods from outside the class.",
+      "what_i_did": "Verified against include/datasystem/kv_client.h:415 and include/datasystem/object_client.h:219 (both std::shared_ptr<object_cache::ObjectClientImpl> impl_), and object_client_impl.h:94 (public:), :107 (ShutDown), :125 (Init), :447 (CompleteHandler, above private: at :686).",
+      "confidence": "high",
+      "blast_radius": { "level": "low", "why": "A fact-check underpinning the helper signature; wrong only if the impl type or visibility changes." },
+      "reversibility": { "level": "reversible", "why": "Signature can be adjusted if the impl type changes before implementation." },
+      "revisit_if": "The impl pointer type or the visibility of ShutDown/Init/CompleteHandler changes.",
+      "verified": true
+    },
+    {
+      "id": "L3",
+      "category": "DECISION",
+      "what": "ClientShutDown keeps the impl null-check; ClientInit does NOT null-check and dereferences impl directly.",
+      "why": "Preserve byte-for-byte current behaviour: today's ShutDown guards impl_ and returns Status::OK() when null, while today's Init dereferences impl_->Init unconditionally. Adding a guard to Init would be an out-of-scope behavioural change.",
+      "what_i_did": "Mirrored the exact current asymmetry in the two helpers.",
+      "confidence": "high",
+      "blast_radius": { "level": "low", "why": "Behaviour-preserving; affects only the null-impl edge case of Init, which is unchanged from today." },
+      "reversibility": { "level": "reversible", "why": "A null-check can be added to ClientInit later as a separate, explicitly-scoped change." },
+      "revisit_if": "A decision is made to harden Init against a null impl_."
+    },
+    {
+      "id": "L4",
+      "category": "DECISION",
+      "what": "Declare helpers in object_client_impl.h and define them in object_client_impl.cpp; add no new files and no build-file edits.",
+      "why": "object_cache/BUILD.bazel globs *.cpp into the object_client target, client/kv_cache/BUILD.bazel already deps object_client_impl, and both wrappers already #include object_client_impl.h, so the helpers are reachable from both with zero build wiring.",
+      "what_i_did": "Chose the existing header/cpp as the home for the helpers.",
+      "confidence": "high",
+      "blast_radius": { "level": "low", "why": "No translation units or build targets added; only two existing files gain content." },
+      "reversibility": { "level": "reversible", "why": "Helpers can be relocated to a new file with a small BUILD edit if ever needed." },
+      "revisit_if": "The object_cache target stops globbing *.cpp or the header is split."
+    },
+    {
+      "id": "L5",
+      "category": "DEFERRED",
+      "what": "KVClient::InitEmbedded() (kv_client.cpp:86-95) shares a similar TraceGuard + InitKvMetrics + CompleteHandler shape but is left untouched.",
+      "why": "It is KVClient-only (no duplicated copy to remove) and the issue explicitly scopes the work to ShutDown()/Init(); folding it in would broaden the change beyond the request.",
+      "what_i_did": "Left InitEmbedded out of scope and documented it as deferred.",
+      "confidence": "medium",
+      "blast_radius": { "level": "low", "why": "Deferring it changes nothing; it remains as-is." },
+      "reversibility": { "level": "reversible", "why": "Can be folded into a shared helper later if a second InitEmbedded-shaped path appears." },
+      "revisit_if": "A second InitEmbedded-shaped path appears, creating real duplication."
+    },
+    {
+      "id": "L6",
+      "category": "DECISION",
+      "what": "Do not add a new heavyweight system test; rely on existing ST coverage that drives client Init()/ShutDown().",
+      "why": "No lightweight unit-test harness exists for the KVClient/ObjectClient wrappers (no tests/ut/** references them) and exercising the helpers requires a running worker; the change is a pure behaviour-preserving extraction, so existing STs (embedded_client, client/stream_cache, worker/object_cache) are the correct gate.",
+      "what_i_did": "Chose to gate on build success plus existing ST behaviour rather than author a new ST.",
+      "confidence": "medium",
+      "blast_radius": { "level": "low", "why": "Verification-strategy choice; the refactor itself is behaviour-preserving." },
+      "reversibility": { "level": "reversible", "why": "A dedicated regression or fake-impl unit test can be added later." },
+      "revisit_if": "Review requires a dedicated regression test or a lightweight fake-impl unit harness becomes available."
+    }
+  ],
+  "read_these_first": ["L6", "L5", "L3", "L1", "L4", "L2"]
+}
