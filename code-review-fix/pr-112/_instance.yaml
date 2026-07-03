@@ -1,7 +1,7 @@
 protocol: code-review-fix
 instance: pr-112
 head_sha: 2a2c96fe3ce82a65cbf78ee77b2bcf8925604090
-phase: triage
+phase: fix
 joined: false
-phase_label: triage the review issue (cluster & rank)
+phase_label: propose remediation + commit to the PR
 status_comment_id: 4876785436

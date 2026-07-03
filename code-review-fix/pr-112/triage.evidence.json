@@ -1,0 +1,47 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "--min-rss excludes workers exactly at the requested threshold",
+      "dimension": [
+        "correctness"
+      ],
+      "severity": "medium",
+      "paths": [
+        "cli/top.py"
+      ],
+      "member_findings": [
+        {
+          "dimension": "correctness",
+          "path": "cli/top.py",
+          "line": 154,
+          "severity": "medium",
+          "category": "correctness",
+          "title": "--min-rss excludes workers exactly at the requested threshold",
+          "impact": "The help text and PR contract say workers using at least MB should be shown, but the predicate uses `rss_mb > min_rss_mb`. A worker whose RSS equals `--min-rss` is incorrectly hidden, including `--min-rss 0` hiding readable zero-MiB results.",
+          "fix": "Change the predicate to `rss_mb >= min_rss_mb` so the boundary matches the documented inclusive threshold."
+        }
+      ],
+      "rank": 1
+    }
+  ],
+  "summary": {
+    "present": [
+      "correctness"
+    ],
+    "missing": [
+      "test",
+      "performance",
+      "security",
+      "maintainability"
+    ],
+    "clusters": 1,
+    "total_findings": 1,
+    "by_severity": {
+      "medium": 1
+    },
+    "by_dimension": {
+      "correctness": 1
+    }
+  }
+}
