@@ -1,0 +1,6 @@
+protocol: impl-feature-auto
+instance: issue-150
+head_sha: dfc126aba23dfd859e9861087038b5034361713b
+phase: design
+joined: false
+phase_label: design (spec + ledger + plan)
