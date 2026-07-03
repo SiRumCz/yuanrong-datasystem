@@ -1,7 +1,7 @@
 protocol: fast-mrp
 instance: pr-6
 state: preflight
-sub_state: adherence-intro
+sub_state: adherence-fanout
 iteration: 1
 gates: {}
 history: []
