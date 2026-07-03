@@ -1,0 +1,33 @@
+{
+  "matrix": [
+    {
+      "problem": "If that node goes down, metadata service is interrupted \u2014 there is no way to run multiple Metastore heads for redundancy.",
+      "status": "addressed_by_spec",
+      "spec_quote": "If that node fails, metadata service\nis interrupted. This subcommand adds `dscli metastore_ha`, which takes an existing\n`cluster_config.json` and produces a variant configured for a **highly-available\nMetastore** by electing several worker nodes as Metastore head replicas, so\nmetadata keeps being served if one head fails.",
+      "spec_location": "docs/superpowers/specs/2026-07-03-dscli-metastore-ha-design.md:Summary"
+    },
+    {
+      "problem": "`dscli generate_config` writes a config with a single `metastore_head_node`, and there is no tooling to reconfigure a cluster for a highly-available, multi-head Metastore.",
+      "status": "addressed_by_spec",
+      "spec_quote": "Provide a `Command(BaseCommand)` named `metastore_ha` with `-c` / `--config`\n  (default `./cluster_config.json`), `-r` / `--replicas` (default 3), and `-o` /\n  `--output` (default `./cluster_config_ha.json`) arguments. Its `run()` loads the\n  source config (guarding the path with `util.valid_safe_path`), builds the HA\n  config, writes it to the output path, and returns `SUCCESS`, or `FAILURE` when\n  the source is missing / unreadable / not valid JSON / not an object, or the\n  output cannot be written.",
+      "spec_location": "docs/superpowers/specs/2026-07-03-dscli-metastore-ha-design.md:Requirements R2"
+    },
+    {
+      "problem": "Add a `dscli` subcommand that takes an existing `cluster_config.json` and produces a variant configured for a highly-available Metastore \u2014 electing several worker nodes as Metastore head replicas so metadata keeps being served if one head fails.",
+      "status": "addressed_by_spec",
+      "spec_quote": "This subcommand adds `dscli metastore_ha`, which takes an existing\n`cluster_config.json` and produces a variant configured for a **highly-available\nMetastore** by electing several worker nodes as Metastore head replicas, so\nmetadata keeps being served if one head fails.",
+      "spec_location": "docs/superpowers/specs/2026-07-03-dscli-metastore-ha-design.md:Summary"
+    }
+  ],
+  "verdict": "solves",
+  "scope": {
+    "issue_linked": true,
+    "spec_present": true
+  },
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/issue.txt",
+    "/tmp/gh-aw/agent/spec.txt",
+    "/tmp/gh-aw/task-context.json"
+  ]
+}
