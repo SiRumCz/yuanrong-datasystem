@@ -1,7 +1,7 @@
 protocol: fast-mrp
 instance: pr-6
-state: done
-sub_state: consistency-fanout
+state: preflight
+sub_state: consistency-intro
 iteration: 1
 gates: {}
 history: []
