@@ -1,0 +1,15 @@
+{
+  "dimension": "test",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "cli/top.py",
+      "line": 135,
+      "severity": "medium",
+      "category": "test",
+      "title": "--min-rss boundary behavior is untested",
+      "impact": "The new command documents and implements threshold filtering, but the added tests only cover parse_worker_lines. A worker whose RSS is exactly the threshold is the boundary case for the advertised 'at least MB' behavior, and there is no test that would catch regressions or mismatches in that filtering path.",
+      "fix": "Add a unit test for Command._keep_worker or Command.run with mocked discovery/RSS values that covers below, equal-to, and above --min-rss thresholds, including the empty-result path after filtering."
+    }
+  ]
+}
