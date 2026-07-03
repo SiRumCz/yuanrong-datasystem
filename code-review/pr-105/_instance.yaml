@@ -1,7 +1,6 @@
 protocol: code-review
 instance: pr-105
-head_sha: 8eef0dd6cbdd34022cbbdc8cc2b412a30a86c064
-phase: post-fix
+head_sha: 301954102e1895f66e28aa193475f815ce78518a
+phase: preflight
 joined: false
-phase_label: "context capture \u2225 mental-model update"
-status_comment_id: 4874384776
+phase_label: pre-flight adherence chain
