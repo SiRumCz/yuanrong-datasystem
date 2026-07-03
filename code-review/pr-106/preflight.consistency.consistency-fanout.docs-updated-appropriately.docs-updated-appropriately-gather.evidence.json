@@ -1,0 +1,40 @@
+{
+  "scope": {
+    "code_changed": true
+  },
+  "items": [
+    {
+      "path": "docs/superpowers/specs/2026-07-02-dscli-status-design.md",
+      "status": "updated_appropriately",
+      "reason": "The new design spec in the PR diff describes the added no-argument dscli status command, local worker discovery, output, reporting, and test expectations."
+    },
+    {
+      "path": "docs/superpowers/plans/2026-07-02-dscli-status-command.md",
+      "status": "updated_appropriately",
+      "reason": "The new implementation plan in the PR diff tracks the status command implementation, registration, reporting behavior, and validation steps."
+    },
+    {
+      "path": "docs/source_zh_cn/deployment/dscli.md",
+      "status": "missing",
+      "reason": "This canonical dscli user reference lists commands and per-command parameters, but the PR adds dscli status without adding it to this unchanged doc."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md",
+    "README.md",
+    "docs/source_zh_cn/deployment/dscli.md",
+    "docs/superpowers/specs/2026-07-02-dscli-status-design.md (from pr.diff)",
+    "docs/superpowers/plans/2026-07-02-dscli-status-command.md (from pr.diff)"
+  ]
+}
