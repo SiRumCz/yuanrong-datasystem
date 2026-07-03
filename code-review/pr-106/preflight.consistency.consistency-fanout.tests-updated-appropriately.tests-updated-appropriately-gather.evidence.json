@@ -1,0 +1,15 @@
+{
+  "scope": { "code_changed": true },
+  "items": [
+    { "path": "cli/tests/test_status.py", "status": "inadequate", "reason": "The added tests cover parser/payload helpers but not Command.list_workers pgrep handling, token loading, best-effort HTTP reporting, run() reporting behavior, or command registration." }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "cli/command.py",
+    "cli/stop.py",
+    "cli/tests/test_status.py"
+  ]
+}
