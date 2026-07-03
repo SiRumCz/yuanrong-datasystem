@@ -105,6 +105,11 @@ Analyze ONLY C++ sources under `target/`:
 - Include: `*.cpp`, `*.cc`, `*.cxx`, `*.hpp`, `*.hh`, `*.h`.
 - Exclude: tests (`*_test.*`, `*Test.*`, files under `test/`, `tests/`, `__tests__/`),
   `third_party/`, generated code, and build dirs.
+- Exclude ALL protected / non-code paths — never scan or report them: any top-level
+  dot-folder (e.g. `.repo_context/`, `.github/`, `.codex/`, `.cursor/`, `.skills/`),
+  docs (`docs/`, `*.md`), and config/manifest files. Report duplication in C++ source
+  only, so the downstream fix stays code-only and opens a direct PR (edits under
+  protected paths get routed to a review issue instead of a PR).
 - **Bound the scan to ~40 source files at most.** Pick a focused, high-yield slice —
   files that share a naming/purpose family are the richest duplication source. Good
   starting points here: `src/datasystem/**` (e.g. `pybind_api/pybind_register_*.cpp`,
