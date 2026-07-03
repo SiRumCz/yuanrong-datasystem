@@ -1,0 +1,57 @@
+{
+  "matrix": [
+    {
+      "problem": "there is no way\nto check that an edited cluster config is well-formed before a deploy begins",
+      "status": "addressed_by_spec",
+      "spec_quote": "Add a read-only `dscli validate_config` subcommand that loads a datasystem\n**cluster config** file (the `cluster_config.json` that `generate_config` writes\nand the operator then hand-edits) and reports every structural problem it finds,\nreturning a non-zero exit code when the config is invalid.",
+      "spec_location": "docs/superpowers/specs/2026-07-02-dscli-validate-config-design.md:Summary"
+    },
+    {
+      "problem": "A missing or empty `worker_nodes` list is only discovered mid-deploy",
+      "status": "addressed_by_spec",
+      "spec_quote": "- A **missing or empty `worker_nodes` list** is only discovered mid-deploy,\n  after `start` has begun contacting hosts.",
+      "spec_location": "docs/superpowers/specs/2026-07-02-dscli-validate-config-design.md:Motivation"
+    },
+    {
+      "problem": "An out-of-range or non-integer `worker_port` surfaces as an opaque failure",
+      "status": "addressed_by_spec",
+      "spec_quote": "- An **out-of-range or non-integer `worker_port`** surfaces as an opaque failure\n  deep in the worker launch rather than as a clear config error.",
+      "spec_location": "docs/superpowers/specs/2026-07-02-dscli-validate-config-design.md:Motivation"
+    },
+    {
+      "problem": "Missing SSH credentials (`ssh_auth.ssh_user_name` / `ssh_private_key`) fail\n   late during multi-node fan-out instead of up front.",
+      "status": "addressed_by_spec",
+      "spec_quote": "- **Missing SSH credentials** (`ssh_auth.ssh_user_name` / `ssh_private_key`)\n  fail late during multi-node fan-out instead of up front.",
+      "spec_location": "docs/superpowers/specs/2026-07-02-dscli-validate-config-design.md:Motivation"
+    },
+    {
+      "problem": "Operators need a fast, read-only `dscli` command that validates a cluster config\nfile and reports every problem at once",
+      "status": "addressed_by_spec",
+      "spec_quote": "`validate_config` gives operators a fast, read-only command that validates a\ncluster config file and **reports every problem at once**, so misconfigurations\nare caught before any deploy action runs.",
+      "spec_location": "docs/superpowers/specs/2026-07-02-dscli-validate-config-design.md:Motivation"
+    },
+    {
+      "problem": "Add a `dscli validate_config` subcommand that loads a cluster config JSON and\nreports each structural problem",
+      "status": "addressed_by_spec",
+      "spec_quote": "- A new `validate_config` subcommand that reads one cluster config file and\n  validates its structure.",
+      "spec_location": "docs/superpowers/specs/2026-07-02-dscli-validate-config-design.md:Scope"
+    },
+    {
+      "problem": "returning a non-zero exit code when the config is invalid.",
+      "status": "addressed_by_spec",
+      "spec_quote": "returning a non-zero exit code when the config is invalid.",
+      "spec_location": "docs/superpowers/specs/2026-07-02-dscli-validate-config-design.md:Summary"
+    }
+  ],
+  "verdict": "solves",
+  "scope": {
+    "issue_linked": true,
+    "spec_present": true
+  },
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/issue.txt",
+    "/tmp/gh-aw/agent/spec.txt",
+    "/tmp/gh-aw/task-context.json"
+  ]
+}
