@@ -1,7 +1,7 @@
 protocol: code-review
 instance: pr-105
 head_sha: 8eef0dd6cbdd34022cbbdc8cc2b412a30a86c064
-phase: preflight-gate
+phase: overview
 joined: true
-phase_label: pre-flight adherence gate
+phase_label: guided overview + risk
 status_comment_id: 4874384776

@@ -1,7 +1,13 @@
 protocol: code-review
 instance: pr-105
-state: preflight-gate
+state: done
 iteration: 1
 gates: {}
 head_sha: 8eef0dd6cbdd34022cbbdc8cc2b412a30a86c064
-history: []
+history:
+- iteration: 1
+  agent_run_id: '28650086676'
+  checks:
+    preflight-gate-coverage: pass
+    local-review-evidence: fail
+  feedback: ''
