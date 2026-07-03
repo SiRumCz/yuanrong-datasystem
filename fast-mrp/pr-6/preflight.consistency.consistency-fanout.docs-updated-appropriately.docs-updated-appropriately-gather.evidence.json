@@ -1,0 +1,57 @@
+{
+  "scope": {
+    "code_changed": true
+  },
+  "items": [
+    {
+      "path": "docs/source_zh_cn/appendix/log_guide.md",
+      "status": "inadequate",
+      "reason": "The PR replaces log_rate_limit with three sample-rate knobs, but this doc still says sampling granularity is request-only and claims full backward compatibility despite removing log_rate_limit/client env compatibility."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/design.md",
+      "status": "missing",
+      "reason": "This canonical logging design doc still documents log_rate_limit, DATASYSTEM_LOG_RATE_LIMIT, LogRateLimiter hot-path behavior, and worker-to-client log_rate_limit sync."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/trace-and-context.md",
+      "status": "missing",
+      "reason": "Trace context behavior changed to LogSampler/request_sample_rate semantics, but this doc still says SetRequestTraceUUID and SetTraceContext create decisions through local log_rate_limit and LogRateLimiter."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/access-recorder.md",
+      "status": "missing",
+      "reason": "Access logging now has access_sample_rate pre-drop/facade behavior and updated logSampled semantics, but the existing access recorder doc was not updated."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/plog-slow-request-plan.md",
+      "status": "missing",
+      "reason": "PLOG behavior changed from bypassing request sampling to diagnostic_sample_rate/request sampled-in handling, but this plan still describes the old log_rate_limit bypass design."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md",
+    ".repo_context/modules/infra/logging/README.md",
+    ".repo_context/modules/infra/logging/design.md",
+    ".repo_context/modules/infra/logging/trace-and-context.md",
+    ".repo_context/modules/infra/logging/access-recorder.md",
+    ".repo_context/modules/infra/logging/plog-slow-request-plan.md",
+    "docs/source_zh_cn/appendix/log_guide.md",
+    "docs/source_zh_cn/appendix/client_env_guide.md",
+    "docs/source_zh_cn/deployment/dscli.md",
+    "include/datasystem/utils/embedded_config.h",
+    "cli/deploy/conf/worker_config.json",
+    "k8s/helm_chart/datasystem/values.yaml",
+    "k8s_deployment/helm_chart/worker.config"
+  ]
+}
