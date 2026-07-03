@@ -1,0 +1,13 @@
+{
+  "leg": "plan-implements-spec",
+  "scope": {
+    "code_changed": true,
+    "spec_present": false,
+    "plan_present": false,
+    "spec_path": null,
+    "plan_path": null
+  },
+  "gather_verdict": "underspec",
+  "graded_findings": [],
+  "examined": []
+}
