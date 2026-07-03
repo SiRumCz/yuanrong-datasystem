@@ -1,0 +1,47 @@
+{
+  "legs": [
+    {
+      "leg": "spec-solves-issue",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence cluster evidence was not available, so no source verdict or scope was provided for this leg."
+    },
+    {
+      "leg": "plan-implements-spec",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence cluster evidence was not available, so no source verdict or scope was provided for this leg."
+    },
+    {
+      "leg": "code-implements-plan",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence cluster evidence was not available, so no source verdict or scope was provided for this leg."
+    },
+    {
+      "leg": "mm-compliance",
+      "verdict": "diverges",
+      "scope": {},
+      "summary": "MM compliance gathered verdict is diverges. The input reported 1 divergence finding."
+    },
+    {
+      "leg": "docs-updated-appropriately",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Consistency cluster evidence was not available, so no source verdict or scope was provided for this leg."
+    },
+    {
+      "leg": "tests-updated-appropriately",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Consistency cluster evidence was not available, so no source verdict or scope was provided for this leg."
+    },
+    {
+      "leg": "security",
+      "verdict": "PASS",
+      "scope": {},
+      "summary": "Security gathered verdict is PASS. The input reported no locked security violations."
+    }
+  ],
+  "examined": []
+}
