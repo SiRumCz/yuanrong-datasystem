@@ -1,0 +1,48 @@
+{
+  "leg": "spec-solves-issue",
+  "scope": {
+    "issue_linked": true,
+    "spec_present": true
+  },
+  "gather_verdict": "solves",
+  "graded_findings": [
+    {
+      "ref": "there is no way\nto check that an edited cluster config is well-formed before a deploy begins",
+      "severity": "advisory",
+      "rationale": "This is a substantive operational gap, but the gather evidence shows the spec directly adds a read-only validation command for edited cluster configs. It is therefore worth noting as covered, not a merge-blocking adherence gap."
+    },
+    {
+      "ref": "A missing or empty `worker_nodes` list is only discovered mid-deploy",
+      "severity": "advisory",
+      "rationale": "The issue is meaningful because late discovery can waste deploy time, but the gather evidence shows the spec explicitly requires detecting missing, empty, or blank worker nodes up front. This does not indicate an unresolved adherence blocker."
+    },
+    {
+      "ref": "An out-of-range or non-integer `worker_port` surfaces as an opaque failure",
+      "severity": "advisory",
+      "rationale": "This is a valid config-quality concern, and the gather evidence says the spec covers missing, non-integer, and out-of-range worker ports. Since it is addressed by the spec, it is not blocking."
+    },
+    {
+      "ref": "Missing SSH credentials (`ssh_auth.ssh_user_name` / `ssh_private_key`) fail\n   late during multi-node fan-out instead of up front.",
+      "severity": "advisory",
+      "rationale": "Late SSH credential failure is operationally significant, but the gather evidence shows the spec requires validating `ssh_auth` and both credential fields. The finding is covered rather than an adherence gap."
+    },
+    {
+      "ref": "reports every problem at once",
+      "severity": "advisory",
+      "rationale": "Accumulating all validation errors is useful behavior, and the gather evidence shows the spec explicitly requires a single pass that reports every problem. This is covered and not merge-blocking."
+    },
+    {
+      "ref": "returning a non-zero exit code when the config is invalid",
+      "severity": "advisory",
+      "rationale": "Exit status is important for automation, and the gather evidence shows the spec requires non-zero exits for missing, unreadable, invalid JSON, or invalid configs. The requirement is addressed, so this is not blocking."
+    }
+  ],
+  "examined": [
+    "there is no way\nto check that an edited cluster config is well-formed before a deploy begins",
+    "A missing or empty `worker_nodes` list is only discovered mid-deploy",
+    "An out-of-range or non-integer `worker_port` surfaces as an opaque failure",
+    "Missing SSH credentials (`ssh_auth.ssh_user_name` / `ssh_private_key`) fail\n   late during multi-node fan-out instead of up front.",
+    "reports every problem at once",
+    "returning a non-zero exit code when the config is invalid"
+  ]
+}
