@@ -1,0 +1,114 @@
+{
+  "scope": {
+    "code_changed": true,
+    "plan_present": true,
+    "plan_path": "docs/superpowers/plans/2026-07-02-dscli-validate-config-command.md",
+    "code_files": [
+      "cli/command.py",
+      "cli/validate_config.py"
+    ]
+  },
+  "plan_to_code": [
+    {
+      "plan_item": "- P1: Add `cli/validate_config.py` defining `Command(BaseCommand)` with\n  `name = \"validate_config\"` and a `-c` / `--config` argument (default\n  `./cluster_config.json`), whose `run()` normalizes and safety-checks the path,\n  loads the JSON, and returns FAILURE when the file is missing/unreadable, is not\n  valid JSON, or the config has problems, and SUCCESS otherwise; and register\n  `\"validate_config\"` in the `modules` list of `cli/command.py`. (implements R1)",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- P2: Implement the pure `validate_cluster_config(config)` helper that returns a\n  single \"must be a JSON object\" problem for a non-dict config and otherwise\n  accumulates one problem per violated rule for `worker_nodes` (non-empty list of\n  non-empty hosts), `worker_port` (integer within 1–65535), `ssh_auth`\n  (`ssh_user_name` / `ssh_private_key` non-empty), and `worker_config_path`\n  (non-empty). (implements R2)",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- P3: Add `cli/tests/test_validate_config.py` covering each validation rule, the\n  `run()` SUCCESS and FAILURE paths (valid, invalid, missing, malformed), and\n  that `validate_config` is registered in `cli/command.py`. (implements R3)",
+      "status": "implemented"
+    }
+  ],
+  "files": [
+    {
+      "path": "cli/command.py",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "validate_config"
+          ],
+          "findings": [
+            {
+              "plan_item": "- P1: Add `cli/validate_config.py` defining `Command(BaseCommand)` with\n  `name = \"validate_config\"` and a `-c` / `--config` argument (default\n  `./cluster_config.json`), whose `run()` normalizes and safety-checks the path,\n  loads the JSON, and returns FAILURE when the file is missing/unreadable, is not\n  valid JSON, or the config has problems, and SUCCESS otherwise; and register\n  `\"validate_config\"` in the `modules` list of `cli/command.py`. (implements R1)",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 158,
+              "existing_code": "        \"validate_config\","
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "cli/validate_config.py",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "validate_cluster_config",
+            "Command"
+          ],
+          "findings": [
+            {
+              "plan_item": "- P2: Implement the pure `validate_cluster_config(config)` helper that returns a\n  single \"must be a JSON object\" problem for a non-dict config and otherwise\n  accumulates one problem per violated rule for `worker_nodes` (non-empty list of\n  non-empty hosts), `worker_port` (integer within 1–65535), `ssh_auth`\n  (`ssh_user_name` / `ssh_private_key` non-empty), and `worker_config_path`\n  (non-empty). (implements R2)",
+              "status": "traces",
+              "side": "RIGHT",
+              "start_line": 31,
+              "line": 75,
+              "existing_code": "def validate_cluster_config(config):\n    \"\"\"Validate a parsed cluster config, returning a list of problems.\n\n    Args:\n        config (dict): The parsed contents of a ``cluster_config.json`` file.\n\n    Returns:\n        list[str]: One human-readable message per problem found, in a stable\n            order. An empty list means the config is structurally valid.\n    \"\"\"\n    if not isinstance(config, dict):\n        return [\"cluster config must be a JSON object\"]\n\n    problems = []\n\n    worker_nodes = config.get(\"worker_nodes\")\n    if worker_nodes is None:\n        problems.append(\"worker_nodes is required\")\n    elif not isinstance(worker_nodes, list) or not worker_nodes:\n        problems.append(\"worker_nodes must be a non-empty list\")\n    elif any(not isinstance(node, str) or not node.strip() for node in worker_nodes):\n        problems.append(\"worker_nodes must contain only non-empty host strings\")\n\n    worker_port = config.get(\"worker_port\")\n    if worker_port is None:\n        problems.append(\"worker_port is required\")\n    elif isinstance(worker_port, bool) or not isinstance(worker_port, int):\n        problems.append(\"worker_port must be an integer\")\n    elif not _MIN_PORT <= worker_port <= _MAX_PORT:\n        problems.append(f\"worker_port must be between {_MIN_PORT} and {_MAX_PORT}\")\n\n    worker_config_path = config.get(\"worker_config_path\")\n    if not isinstance(worker_config_path, str) or not worker_config_path.strip():\n        problems.append(\"worker_config_path must be a non-empty string\")\n\n    ssh_auth = config.get(\"ssh_auth\")\n    if not isinstance(ssh_auth, dict):\n        problems.append(\"ssh_auth must be an object with SSH credentials\")\n    else:\n        for key in (\"ssh_user_name\", \"ssh_private_key\"):\n            value = ssh_auth.get(key)\n            if not isinstance(value, str) or not value.strip():\n                problems.append(f\"ssh_auth.{key} must be a non-empty string\")\n\n    return problems"
+            },
+            {
+              "plan_item": "- P1: Add `cli/validate_config.py` defining `Command(BaseCommand)` with\n  `name = \"validate_config\"` and a `-c` / `--config` argument (default\n  `./cluster_config.json`), whose `run()` normalizes and safety-checks the path,\n  loads the JSON, and returns FAILURE when the file is missing/unreadable, is not\n  valid JSON, or the config has problems, and SUCCESS otherwise; and register\n  `\"validate_config\"` in the `modules` list of `cli/command.py`. (implements R1)",
+              "status": "traces",
+              "side": "RIGHT",
+              "start_line": 83,
+              "line": 137,
+              "existing_code": "    name = \"validate_config\"\n    description = \"validate a yuanrong datasystem cluster configuration file\"\n\n    @staticmethod\n    def add_arguments(parser):\n        \"\"\"\n        Add arguments to parser.\n\n        Args:\n            parser (ArgumentParser): Specify parser to which arguments are added.\n        \"\"\"\n        parser.add_argument(\n            \"-c\", \"--config\",\n            default=os.path.join(os.getcwd(), \"cluster_config.json\"),\n            help=\"path to the cluster configuration file to validate, \"\n                 \"default is ./cluster_config.json\"\n        )\n\n    def run(self, args):\n        \"\"\"\n        Execute the validate_config command.\n\n        Args:\n            args (Namespace): Parsed arguments containing the config path.\n\n        Returns:\n            int: BaseCommand.SUCCESS if the config is valid; BaseCommand.FAILURE\n                if it is missing, unreadable, or invalid.\n        \"\"\"\n        config_path = os.path.normpath(os.path.realpath(args.config))\n        try:\n            config_path = util.valid_safe_path(config_path)\n            with open(config_path, \"r\", encoding=\"utf-8\") as config_file:\n                config = json.load(config_file)\n        except FileNotFoundError:\n            self.logger.error(f\"Configuration file not found: {config_path}\")\n            return self.FAILURE\n        except json.JSONDecodeError as e:\n            self.logger.error(f\"Configuration file is not valid JSON: {e}\")\n            return self.FAILURE\n        except (OSError, ValueError) as e:\n            self.logger.error(f\"Failed to read configuration file: {e}\")\n            return self.FAILURE\n\n        problems = validate_cluster_config(config)\n        if problems:\n            self.logger.error(\n                f\"Configuration is invalid: {len(problems)} problem(s) found in {config_path}\"\n            )\n            for problem in problems:\n                self.logger.error(f\"  - {problem}\")\n            return self.FAILURE\n\n        self.logger.info(f\"Configuration is valid: {config_path}\")\n        return self.SUCCESS"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "cli/tests/test_validate_config.py",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "TestValidateClusterConfig",
+            "TestValidateConfigCommandRun",
+            "TestValidateConfigRegistration"
+          ],
+          "findings": [
+            {
+              "plan_item": "- P3: Add `cli/tests/test_validate_config.py` covering each validation rule, the\n  `run()` SUCCESS and FAILURE paths (valid, invalid, missing, malformed), and\n  that `validate_config` is registered in `cli/command.py`. (implements R3)",
+              "status": "traces",
+              "side": "RIGHT",
+              "start_line": 94,
+              "line": 287,
+              "existing_code": "class TestValidateClusterConfig(unittest.TestCase):\n    \"\"\"Tests for the pure validate_config.validate_cluster_config helper.\"\"\"\n\n    def test_valid_config_returns_no_problems(self):\n        self.assertEqual(validate_config.validate_cluster_config(_VALID_CONFIG), [])\n\n    def test_non_dict_config(self):\n        self.assertEqual(\n            validate_config.validate_cluster_config([\"not\", \"a\", \"dict\"]),\n            [\"cluster config must be a JSON object\"],\n        )\n\n    def test_missing_worker_nodes(self):\n        self.assertIn(\n            \"worker_nodes is required\",\n            validate_config.validate_cluster_config(_config_without(\"worker_nodes\")),\n        )\n\n    def test_empty_worker_nodes(self):\n        cfg = copy.deepcopy(_VALID_CONFIG)\n        cfg[\"worker_nodes\"] = []\n        self.assertIn(\n            \"worker_nodes must be a non-empty list\",\n            validate_config.validate_cluster_config(cfg),\n        )\n\n    def test_worker_nodes_with_blank_host(self):\n        cfg = copy.deepcopy(_VALID_CONFIG)\n        cfg[\"worker_nodes\"] = [\"127.0.0.1\", \"  \"]\n        self.assertIn(\n            \"worker_nodes must contain only non-empty host strings\",\n            validate_config.validate_cluster_config(cfg),\n        )\n\n    def test_worker_nodes_not_a_list(self):\n        cfg = copy.deepcopy(_VALID_CONFIG)\n        cfg[\"worker_nodes\"] = \"127.0.0.1\"  # a bare string, not a list\n        self.assertIn(\n            \"worker_nodes must be a non-empty list\",\n            validate_config.validate_cluster_config(cfg),\n        )\n\n    def test_missing_worker_port(self):\n        self.assertIn(\n            \"worker_port is required\",\n            validate_config.validate_cluster_config(_config_without(\"worker_port\")),\n        )\n\n    def test_worker_port_out_of_range(self):\n        cfg = copy.deepcopy(_VALID_CONFIG)\n        cfg[\"worker_port\"] = 70000\n        self.assertIn(\n            \"worker_port must be between 1 and 65535\",\n            validate_config.validate_cluster_config(cfg),\n        )\n\n    def test_worker_port_not_integer(self):\n        cfg = copy.deepcopy(_VALID_CONFIG)\n        cfg[\"worker_port\"] = \"31501\"\n        self.assertIn(\n            \"worker_port must be an integer\",\n            validate_config.validate_cluster_config(cfg),\n        )\n\n    def test_boolean_worker_port_rejected(self):\n        # bool is a subclass of int; True must not be accepted as a port.\n        cfg = copy.deepcopy(_VALID_CONFIG)\n        cfg[\"worker_port\"] = True\n        self.assertIn(\n            \"worker_port must be an integer\",\n            validate_config.validate_cluster_config(cfg),\n        )\n\n    def test_missing_worker_config_path(self):\n        self.assertIn(\n            \"worker_config_path must be a non-empty string\",\n            validate_config.validate_cluster_config(_config_without(\"worker_config_path\")),\n        )\n\n    def test_missing_ssh_user_name(self):\n        cfg = copy.deepcopy(_VALID_CONFIG)\n        del cfg[\"ssh_auth\"][\"ssh_user_name\"]\n        self.assertIn(\n            \"ssh_auth.ssh_user_name must be a non-empty string\",\n            validate_config.validate_cluster_config(cfg),\n        )\n\n    def test_missing_ssh_private_key(self):\n        cfg = copy.deepcopy(_VALID_CONFIG)\n        del cfg[\"ssh_auth\"][\"ssh_private_key\"]\n        self.assertIn(\n            \"ssh_auth.ssh_private_key must be a non-empty string\",\n            validate_config.validate_cluster_config(cfg),\n        )\n\n    def test_blank_ssh_private_key(self):\n        cfg = copy.deepcopy(_VALID_CONFIG)\n        cfg[\"ssh_auth\"][\"ssh_private_key\"] = \"   \"\n        self.assertIn(\n            \"ssh_auth.ssh_private_key must be a non-empty string\",\n            validate_config.validate_cluster_config(cfg),\n        )\n\n    def test_non_dict_ssh_auth(self):\n        cfg = copy.deepcopy(_VALID_CONFIG)\n        cfg[\"ssh_auth\"] = \"root@host\"\n        self.assertIn(\n            \"ssh_auth must be an object with SSH credentials\",\n            validate_config.validate_cluster_config(cfg),\n        )\n\n    def test_multiple_problems_accumulate(self):\n        cfg = {\"worker_nodes\": [], \"worker_port\": 0}\n        problems = validate_config.validate_cluster_config(cfg)\n        self.assertIn(\"worker_nodes must be a non-empty list\", problems)\n        self.assertIn(\"worker_port must be between 1 and 65535\", problems)\n        self.assertIn(\"worker_config_path must be a non-empty string\", problems)\n        self.assertIn(\"ssh_auth must be an object with SSH credentials\", problems)\n        self.assertEqual(len(problems), 4)\n\n\nclass TestValidateConfigCommandRun(unittest.TestCase):\n    \"\"\"Tests for validate_config.Command.run (file load + return codes).\"\"\"\n\n    def setUp(self):\n        self.tmpdir = tempfile.mkdtemp()\n        self.command = validate_config.Command()\n\n    def tearDown(self):\n        for name in os.listdir(self.tmpdir):\n            os.remove(os.path.join(self.tmpdir, name))\n        os.rmdir(self.tmpdir)\n\n    def _write(self, name, content):\n        path = os.path.join(self.tmpdir, name)\n        with open(path, \"w\", encoding=\"utf-8\") as handle:\n            handle.write(content)\n        return path\n\n    def _run(self, path):\n        return self.command.run(argparse.Namespace(config=path))\n\n    def test_run_valid_config_returns_success(self):\n        path = self._write(\"valid.json\", json.dumps(_VALID_CONFIG))\n        self.assertEqual(self._run(path), validate_config.Command.SUCCESS)\n\n    def test_run_invalid_config_returns_failure(self):\n        cfg = {\"worker_nodes\": [], \"worker_port\": 70000}\n        path = self._write(\"invalid.json\", json.dumps(cfg))\n        self.assertEqual(self._run(path), validate_config.Command.FAILURE)\n\n    def test_run_missing_file_returns_failure(self):\n        path = os.path.join(self.tmpdir, \"does_not_exist.json\")\n        self.assertEqual(self._run(path), validate_config.Command.FAILURE)\n\n    def test_run_unreadable_path_returns_failure(self):\n        # A path that is a directory (not a file) trips the OSError fallback.\n        self.assertEqual(self._run(self.tmpdir), validate_config.Command.FAILURE)\n\n    def test_run_malformed_json_returns_failure(self):\n        path = self._write(\"bad.json\", \"{not valid json\")\n        self.assertEqual(self._run(path), validate_config.Command.FAILURE)\n\n\nclass TestValidateConfigArguments(unittest.TestCase):\n    \"\"\"Tests for validate_config.Command.add_arguments (flag wiring + default).\"\"\"\n\n    @staticmethod\n    def _parse(argv):\n        parser = argparse.ArgumentParser()\n        validate_config.Command.add_arguments(parser)\n        return parser.parse_args(argv)\n\n    def test_config_defaults_to_cwd_cluster_config(self):\n        args = self._parse([])\n        self.assertEqual(\n            args.config, os.path.join(os.getcwd(), \"cluster_config.json\"))\n\n    def test_config_short_flag(self):\n        args = self._parse([\"-c\", \"/tmp/custom.json\"])\n        self.assertEqual(args.config, \"/tmp/custom.json\")\n\n    def test_config_long_flag(self):\n        args = self._parse([\"--config\", \"/tmp/other.json\"])\n        self.assertEqual(args.config, \"/tmp/other.json\")\n\n\nclass TestValidateConfigRegistration(unittest.TestCase):\n    \"\"\"The subcommand must be wired into the CLI entry point.\"\"\"\n\n    def test_command_registered_in_modules(self):\n        with open(_COMMAND_PATH, \"r\", encoding=\"utf-8\") as handle:\n            source = handle.read()\n        self.assertIn('\"validate_config\"', source)"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "verdict": "adheres",
+  "examined": [
+    "scope.json",
+    "plan.txt",
+    "pr.diff",
+    "task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md"
+  ]
+}
