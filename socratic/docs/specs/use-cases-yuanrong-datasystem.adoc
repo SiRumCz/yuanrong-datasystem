@@ -166,10 +166,15 @@ the exact production journeys are *deferred* to the Domain Expert:
 === 3.6 dscli command-line interface
 
 * *Input:* subcommands `start`/`stop`/`up`/`down`/`generate_config`/
-  `generate_helm_chart` dispatched by the CLI
-  [cli/command.py:115, setup.py:269-272].
+  `validate_config`/`generate_helm_chart` dispatched by the CLI
+  [cli/command.py:115, cli/command.py:158, setup.py:269-272].
 * *Processing:* `dscli start` brings up a worker bound to `--worker_address` and
   `--etcd_address` [cli/start.py:29-50].
+* *Processing:* `dscli validate_config` is a read-only operator preflight that
+  loads a cluster config JSON path from `-c`/`--config`, reports every structural
+  problem found, and returns success only for a structurally valid config
+  [cli/validate_config.py:96, cli/validate_config.py:118,
+  cli/validate_config.py:129-141].
 
 == 4. Supplementary Specifications
 
@@ -223,9 +228,13 @@ the exact production journeys are *deferred* to the Domain Expert:
 
 === 4.4 Validation rules
 
-Correctness is enforced by registered flag validators
+Runtime flag correctness is enforced by registered flag validators
 [src/datasystem/common/flag/flags.h:122-375,
-src/datasystem/worker/object_cache/worker_oc_server.cpp:135-139].
+src/datasystem/worker/object_cache/worker_oc_server.cpp:135-139]. Operator-edited
+cluster configuration can also be structurally validated before deployment:
+`validate_config` accumulates problems for `worker_nodes`, `worker_port`,
+`worker_config_path`, and `ssh_auth` rather than stopping at the first invalid
+field [cli/validate_config.py:30-82].
 
 == 5. Acceptance Criteria (Gherkin)
 

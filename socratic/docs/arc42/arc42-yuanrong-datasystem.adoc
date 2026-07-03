@@ -154,9 +154,12 @@ published.
 
 Two modes: process (dscli start/up/stop with `--worker_address` and
 `--etcd_address`) and Kubernetes (a Helm chart deploying a per-node worker
-DaemonSet with ConfigMap/Secret/PVC). ETCD is deployed separately
-[cli/start.py:29-50, cli/up.py, cli/stop.py, cli/generate_helm_chart.py:23-82,
-k8s/helm_chart/datasystem/Chart.yaml:1-7,
+DaemonSet with ConfigMap/Secret/PVC). Operators can generate a cluster config,
+hand-edit it, and run the read-only `dscli validate_config` preflight before a
+process deploy so structural mistakes surface before worker startup. ETCD is
+deployed separately [cli/start.py:29-50, cli/up.py, cli/stop.py,
+cli/generate_config.py, cli/validate_config.py:88-141,
+cli/generate_helm_chart.py:23-82, k8s/helm_chart/datasystem/Chart.yaml:1-7,
 k8s/helm_chart/datasystem/templates/worker_daemonset.yaml,
 k8s/helm_chart/datasystem/templates/configmap.yaml].
 
