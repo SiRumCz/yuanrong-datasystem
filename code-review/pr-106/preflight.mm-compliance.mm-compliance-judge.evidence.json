@@ -1,0 +1,13 @@
+{
+  "leg": "mm-compliance",
+  "scope": {},
+  "gather_verdict": "diverges",
+  "graded_findings": [
+    {
+      "ref": "0",
+      "severity": "blocking",
+      "rationale": "The finding identifies a substantive architectural divergence: the PR introduces a hardcoded external collector and new token/config path outside the documented ETCD-or-Metastore coordination and deployment model. That changes cluster status/coordination and operational surfaces in a way that should stop merge unless the implementation is removed or the mental model is updated first."
+    }
+  ],
+  "examined": ["0"]
+}
