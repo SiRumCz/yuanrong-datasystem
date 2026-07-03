@@ -1,0 +1,92 @@
+{
+  "scope": {
+    "code_changed": true
+  },
+  "items": [
+    {
+      "path": "docs/source_zh_cn/appendix/log_guide.md",
+      "status": "updated_appropriately",
+      "reason": "The logging guide replaces log_rate_limit with request/access/diagnostic sample rates and documents derivation and reject semantics."
+    },
+    {
+      "path": "docs/source_zh_cn/appendix/client_env_guide.md",
+      "status": "updated_appropriately",
+      "reason": "The removed DATASYSTEM_LOG_RATE_LIMIT environment variable is deleted from the client environment reference."
+    },
+    {
+      "path": "docs/source_zh_cn/deployment/dscli.md",
+      "status": "updated_appropriately",
+      "reason": "The dscli config table replaces log_rate_limit with the three new sample-rate flags and their derivation behavior."
+    },
+    {
+      "path": ".repo_context/index.md",
+      "status": "updated_appropriately",
+      "reason": "The repository context index routes logging sampler questions to the new log-sampler design document."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/README.md",
+      "status": "updated_appropriately",
+      "reason": "The logging module overview adds LogSampler responsibilities and links to the new sampler design."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/log-sampler-design.md",
+      "status": "updated_appropriately",
+      "reason": "The new design document covers the LogSampler architecture, config rates, derivation, propagation, and hot-path constraints."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/design.md",
+      "status": "missing",
+      "reason": "This existing logging design still documents log_rate_limit/DATASYSTEM_LOG_RATE_LIMIT and client sync via log_rate_limit, but the PR removes that mechanism."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/trace-and-context.md",
+      "status": "missing",
+      "reason": "This trace context doc still says request sampling is created from local log_rate_limit, which is stale after the new request_sample_rate/LogSampler flow."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/plog-slow-request-plan.md",
+      "status": "missing",
+      "reason": "This PLOG design still frames slow logs as bypassing log_rate_limit sampling instead of the new diagnostic/request sampler semantics."
+    },
+    {
+      "path": ".repo_context/modules/infra/logging/plog-slow-get-implementation-summary.md",
+      "status": "missing",
+      "reason": "This implementation summary still references log_rate_limit request sampling and should be reconciled with the LogSampler behavior."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/modules/infra/logging/README.md",
+    ".repo_context/modules/infra/logging/design.md",
+    ".repo_context/modules/infra/logging/trace-and-context.md",
+    ".repo_context/modules/infra/logging/plog-slow-request-plan.md",
+    ".repo_context/modules/infra/logging/plog-slow-get-implementation-summary.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md",
+    "docs/source_zh_cn/appendix/log_guide.md",
+    "docs/source_zh_cn/appendix/client_env_guide.md",
+    "docs/source_zh_cn/deployment/dscli.md",
+    "include/datasystem/utils/embedded_config.h",
+    "cli/deploy/conf/worker_config.json",
+    "k8s/README.md",
+    "k8s_deployment/README.md",
+    "k8s_deployment/helm_chart/deployment/README.md",
+    "k8s/helm_chart/datasystem/values.yaml",
+    "k8s/helm_chart/datasystem/templates/configmap.yaml",
+    "k8s/helm_chart/datasystem/templates/worker_daemonset.yaml",
+    "k8s_deployment/helm_chart/worker.config",
+    "src/datasystem/common/log/logging.cpp",
+    "src/datasystem/common/util/gflag/flags.cpp",
+    "src/datasystem/protos/meta_zmq.proto",
+    "src/datasystem/protos/share_memory.proto",
+    "src/datasystem/worker/worker_service_impl.cpp"
+  ]
+}
