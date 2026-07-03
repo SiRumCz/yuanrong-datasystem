@@ -1,0 +1,172 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "Reject nested-key length array instead of silently dropping nested refs",
+      "dimension": [
+        "correctness"
+      ],
+      "severity": "high",
+      "paths": [
+        "src/datasystem/c_api/object_client_c_wrapper.cpp"
+      ],
+      "member_findings": [
+        {
+          "dimension": "correctness",
+          "path": "src/datasystem/c_api/object_client_c_wrapper.cpp",
+          "line": 90,
+          "severity": "high",
+          "category": "correctness",
+          "title": "Reject nested-key length array instead of silently dropping nested refs",
+          "impact": "When OCPut is called with cNestedObjectKeys non-null but cNestedObjKeyLenArray null, the new guard skips the loop and sends an empty nestedObjectKeysSet to Put. That can successfully create the object without the caller's requested nested references, leaving incorrect object dependency/reference metadata instead of returning K_INVALID.",
+          "fix": "If cNestedObjectKeys is non-null and cNestedObjectKeysNum is non-zero, validate cNestedObjKeyLenArray and each nested key pointer before building nestedObjectKeysSet; return K_INVALID on malformed input rather than treating it as no nested keys."
+        }
+      ],
+      "rank": 1
+    },
+    {
+      "cluster_id": "c2",
+      "title": "Avoid copying protobuf keys before access-log formatting",
+      "dimension": [
+        "performance"
+      ],
+      "severity": "medium",
+      "paths": [
+        "src/datasystem/common/log/access_recorder.cpp"
+      ],
+      "member_findings": [
+        {
+          "dimension": "performance",
+          "path": "src/datasystem/common/log/access_recorder.cpp",
+          "line": 235,
+          "severity": "medium",
+          "category": "performance",
+          "title": "Avoid copying protobuf keys before access-log formatting",
+          "impact": "When access logs are sampled in, including the default/all-1.0 configuration, protobuf-backed batch paths such as DeleteAllCopy and Exist now allocate and copy every key into a temporary std::vector<std::string> before formatting. Large batch requests pay O(n) extra heap churn on the worker request path even though access_recorder.cpp already adds an objectKeysToString overload for RepeatedPtrField.",
+          "fix": "Format the RepeatedPtrField directly in ObjectKeyState::FillObjectKey/FIllNestedKey by calling objectKeysToString(*protoRef), or preserve a summary-only protobuf path where the old code used ObjectKeysToAbbrStr."
+        }
+      ],
+      "rank": 2
+    },
+    {
+      "cluster_id": "c3",
+      "title": "Access recorder implementation state leaks through the public header",
+      "dimension": [
+        "maintainability"
+      ],
+      "severity": "medium",
+      "paths": [
+        "src/datasystem/common/log/access_recorder.h"
+      ],
+      "member_findings": [
+        {
+          "dimension": "maintainability",
+          "path": "src/datasystem/common/log/access_recorder.h",
+          "line": 136,
+          "severity": "medium",
+          "category": "maintainability",
+          "title": "Access recorder implementation state leaks through the public header",
+          "impact": "The new recorder facade exposes internal helper structs such as FieldEntry, ObjectKeyState, ObjectAccessState, StreamAccessState, and RequestOutState in the datasystem namespace. Future callers can start depending on these storage details, while maintainers must keep the public declarations, cpp fill logic, and fluent setters in sync whenever an access-log field changes.",
+          "fix": "Hide these state/helper types behind the recorder classes, for example as private nested types or an internal detail namespace, and expose only the Object/Stream/RequestOut fluent API that call sites need."
+        }
+      ],
+      "rank": 3
+    },
+    {
+      "cluster_id": "c4",
+      "title": "Add coverage for transactional dynamic sampler flag updates",
+      "dimension": [
+        "test"
+      ],
+      "severity": "medium",
+      "paths": [
+        "src/datasystem/common/util/gflag/flags.cpp"
+      ],
+      "member_findings": [
+        {
+          "dimension": "test",
+          "path": "src/datasystem/common/util/gflag/flags.cpp",
+          "line": 323,
+          "severity": "medium",
+          "category": "test",
+          "title": "Add coverage for transactional dynamic sampler flag updates",
+          "impact": "The new datasystem.config path validates and commits request/access/diagnostic sample-rate flags as a batch, mutates global gflags, rolls them back on failure, and then publishes the LogSampler config. The added tests cover LogSampler::UpdateConfigFromFlags directly, but not this Flags::UpdateFlagParameter transaction path, so regressions such as partial commits after an invalid mixed update or a sampler snapshot diverging from FLAGS_* would not be caught.",
+          "fix": "Add Flags-level tests that call UpdateFlagParameter/ProcessFlagFile with sampler entries: a valid request-only update that proves derived access/diagnostic rates are published, a valid explicit access/diagnostic batch, and an invalid batch where one sampler value is out of range and all FLAGS_* values plus LogSampler's previous-good snapshot remain unchanged."
+        }
+      ],
+      "rank": 4
+    },
+    {
+      "cluster_id": "c5",
+      "title": "Avoid an intermediate string for every formatted access log",
+      "dimension": [
+        "performance"
+      ],
+      "severity": "low",
+      "paths": [
+        "src/datasystem/common/log/access_recorder.cpp"
+      ],
+      "member_findings": [
+        {
+          "dimension": "performance",
+          "path": "src/datasystem/common/log/access_recorder.cpp",
+          "line": 994,
+          "severity": "low",
+          "category": "performance",
+          "title": "Avoid an intermediate string for every formatted access log",
+          "impact": "LogPerformance now calls FormatAccessReqMsg(), which builds or returns a full std::string and then copies it into the final log stream. The previous helper appended directly to the existing stream, so sampled-in/default access logs now pay an extra allocation and copy proportional to the request-message size.",
+          "fix": "Keep FormatAccessReqMsg as an append-style helper that writes directly into the caller's std::ostringstream, or add an overload that appends the sample marker to the existing log stream without materializing an intermediate string."
+        }
+      ],
+      "rank": 5
+    },
+    {
+      "cluster_id": "c6",
+      "title": "Snapshot publication logic is duplicated across config update paths",
+      "dimension": [
+        "maintainability"
+      ],
+      "severity": "low",
+      "paths": [
+        "src/datasystem/common/log/log_sampler_proto.cpp"
+      ],
+      "member_findings": [
+        {
+          "dimension": "maintainability",
+          "path": "src/datasystem/common/log/log_sampler_proto.cpp",
+          "line": 69,
+          "severity": "low",
+          "category": "maintainability",
+          "title": "Snapshot publication logic is duplicated across config update paths",
+          "impact": "UpdateConfigFromProto repeats the same snapshot allocation, rate-to-threshold assignment, exchange, old-snapshot retention, and samplerEnabled update that BuildAndPublishSnapshot performs for flag updates. Changes to snapshot lifetime, memory ordering, or enabled-state normalization now have to be made in multiple places, which makes this concurrency-sensitive component easier to drift.",
+          "fix": "Factor a private helper that publishes an already-normalized request/access/diagnostic ppm tuple, including disabled snapshots, old-snapshot retention, and samplerEnabled publication, then call it from both flag and proto update paths."
+        }
+      ],
+      "rank": 6
+    }
+  ],
+  "summary": {
+    "present": [
+      "correctness",
+      "test",
+      "performance",
+      "maintainability"
+    ],
+    "missing": [
+      "security"
+    ],
+    "clusters": 6,
+    "total_findings": 6,
+    "by_severity": {
+      "high": 1,
+      "medium": 3,
+      "low": 2
+    },
+    "by_dimension": {
+      "correctness": 1,
+      "test": 1,
+      "performance": 2,
+      "maintainability": 2
+    }
+  }
+}
