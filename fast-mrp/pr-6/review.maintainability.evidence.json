@@ -1,0 +1,24 @@
+{
+  "dimension": "maintainability",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": "src/datasystem/common/log/log_sampler_proto.cpp",
+      "line": 65,
+      "severity": "medium",
+      "category": "maintainability",
+      "title": "Snapshot publication logic is duplicated across config update paths",
+      "impact": "The proto update path manually allocates, exchanges, retires old snapshots, and toggles samplerEnabled instead of reusing the same publication path as UpdateConfigFromFlags. Future changes to snapshot ownership, retirement, memory ordering, or enabled-state semantics must be made in multiple places, and this copy has already diverged from the mutex-scoped BuildAndPublishSnapshot flow.",
+      "fix": "Factor snapshot construction/publication/retirement into one helper that accepts the already-normalized ppm values and enabled flag, and call it from both UpdateConfigFromFlags and UpdateConfigFromProto."
+    },
+    {
+      "path": "k8s/helm_chart/datasystem/values.yaml",
+      "line": 150,
+      "severity": "low",
+      "category": "maintainability",
+      "title": "Sample-rate comments are malformed around derivation semantics",
+      "impact": "The new Helm comments say `accessSampleRate or1.0` and `rate.0.0-1.0)`, which obscures the important rule that explicitly setting access or diagnostic rates disables derivation from requestSampleRate. Operators and future maintainers can misconfigure sampling by following the checked-in values documentation.",
+      "fix": "Rewrite the comments to state the exact derivation rule in valid sentences, for example that leaving accessSampleRate/diagnosticSampleRate empty derives them from requestSampleRate, while setting either field explicitly overrides derivation."
+    }
+  ]
+}
