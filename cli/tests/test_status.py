@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit tests for the dscli status command parser."""
+"""Unit tests for the dscli status command parser and report builder."""
 
 import importlib.util
 import os
@@ -29,7 +29,8 @@ def _load_status_module():
     status.py imports ``yr.datasystem.cli.command`` and
     ``yr.datasystem.cli.common.util`` at module load time. Those packages only
     exist in a built/installed tree, so we stub them to exercise the pure
-    ``parse_worker_lines`` helper directly from the source checkout.
+    ``parse_worker_lines`` / ``build_report_payload`` helpers directly from the
+    source checkout.
     """
     for name in ["yr", "yr.datasystem", "yr.datasystem.cli",
                  "yr.datasystem.cli.common"]:
@@ -120,6 +121,25 @@ class TestParseWorkerLines(unittest.TestCase):
             "\n"
         )
         self.assertEqual(status.parse_worker_lines(output), [])
+
+
+class TestBuildReportPayload(unittest.TestCase):
+    """Tests for status.build_report_payload (central collector report body)."""
+
+    def test_payload_shape(self):
+        payload = status.build_report_payload(
+            [(12345, "127.0.0.1:31501"), (12346, "127.0.0.1:31502")],
+            "cluster-token-value",
+        )
+        self.assertEqual(
+            payload["workers"],
+            [
+                {"pid": 12345, "address": "127.0.0.1:31501"},
+                {"pid": 12346, "address": "127.0.0.1:31502"},
+            ],
+        )
+        self.assertEqual(payload["token"], "cluster-token-value")
+        self.assertIn("host", payload)
 
 
 if __name__ == "__main__":
