@@ -11,17 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit tests for the dscli validate_config cluster-config validator."""
+"""Unit tests for the dscli validate_config subcommand."""
 
+import argparse
 import copy
 import importlib.util
+import json
+import logging
 import os
 import sys
+import tempfile
 import types
 import unittest
 
 _CLI_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _VALIDATE_PATH = os.path.join(_CLI_DIR, "validate_config.py")
+_COMMAND_PATH = os.path.join(_CLI_DIR, "command.py")
 
 
 def _load_validate_module():
@@ -29,15 +34,17 @@ def _load_validate_module():
 
     validate_config.py imports ``yr.datasystem.cli.command`` and
     ``yr.datasystem.cli.common.util`` at module load time. Those packages only
-    exist in a built/installed tree, so we stub them to exercise the pure
-    ``validate_cluster_config`` helper directly from the source checkout.
+    exist in a built/installed tree, so we stub them so the pure
+    ``validate_cluster_config`` helper *and* ``Command.run`` can both be
+    exercised directly from the source checkout.
     """
     for name in ["yr", "yr.datasystem", "yr.datasystem.cli",
                  "yr.datasystem.cli.common"]:
         sys.modules.setdefault(name, types.ModuleType(name))
 
-    sys.modules["yr.datasystem.cli.common.util"] = types.ModuleType(
-        "yr.datasystem.cli.common.util")
+    util_mod = types.ModuleType("yr.datasystem.cli.common.util")
+    util_mod.valid_safe_path = lambda path: path  # identity for the tests
+    sys.modules["yr.datasystem.cli.common.util"] = util_mod
 
     command_mod = types.ModuleType("yr.datasystem.cli.command")
 
@@ -46,6 +53,7 @@ def _load_validate_module():
         FAILURE = 1
         name = ""
         description = ""
+        logger = logging.getLogger("dscli-validate-config-test")
 
         def __init__(self):
             pass
@@ -84,7 +92,7 @@ def _config_without(key):
 
 
 class TestValidateClusterConfig(unittest.TestCase):
-    """Tests for validate_config.validate_cluster_config."""
+    """Tests for the pure validate_config.validate_cluster_config helper."""
 
     def test_valid_config_returns_no_problems(self):
         self.assertEqual(validate_config.validate_cluster_config(_VALID_CONFIG), [])
@@ -178,6 +186,54 @@ class TestValidateClusterConfig(unittest.TestCase):
         self.assertIn("worker_config_path must be a non-empty string", problems)
         self.assertIn("ssh_auth must be an object with SSH credentials", problems)
         self.assertEqual(len(problems), 4)
+
+
+class TestValidateConfigCommandRun(unittest.TestCase):
+    """Tests for validate_config.Command.run (file load + return codes)."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.command = validate_config.Command()
+
+    def tearDown(self):
+        for name in os.listdir(self.tmpdir):
+            os.remove(os.path.join(self.tmpdir, name))
+        os.rmdir(self.tmpdir)
+
+    def _write(self, name, content):
+        path = os.path.join(self.tmpdir, name)
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(content)
+        return path
+
+    def _run(self, path):
+        return self.command.run(argparse.Namespace(config=path))
+
+    def test_run_valid_config_returns_success(self):
+        path = self._write("valid.json", json.dumps(_VALID_CONFIG))
+        self.assertEqual(self._run(path), validate_config.Command.SUCCESS)
+
+    def test_run_invalid_config_returns_failure(self):
+        cfg = {"worker_nodes": [], "worker_port": 70000}
+        path = self._write("invalid.json", json.dumps(cfg))
+        self.assertEqual(self._run(path), validate_config.Command.FAILURE)
+
+    def test_run_missing_file_returns_failure(self):
+        path = os.path.join(self.tmpdir, "does_not_exist.json")
+        self.assertEqual(self._run(path), validate_config.Command.FAILURE)
+
+    def test_run_malformed_json_returns_failure(self):
+        path = self._write("bad.json", "{not valid json")
+        self.assertEqual(self._run(path), validate_config.Command.FAILURE)
+
+
+class TestValidateConfigRegistration(unittest.TestCase):
+    """The subcommand must be wired into the CLI entry point."""
+
+    def test_command_registered_in_modules(self):
+        with open(_COMMAND_PATH, "r", encoding="utf-8") as handle:
+            source = handle.read()
+        self.assertIn('"validate_config"', source)
 
 
 if __name__ == "__main__":
