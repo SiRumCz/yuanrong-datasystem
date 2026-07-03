@@ -1,0 +1,42 @@
+{
+  "leg": "spec-solves-issue",
+  "scope": {
+    "issue_linked": true,
+    "spec_present": true
+  },
+  "gather_verdict": "solves",
+  "graded_findings": [
+    {
+      "ref": "The `dscli` CLI has `start`, `stop`, `up`, `down`, and `generate_*` commands, but no way to see which datasystem workers are currently running on a host.",
+      "severity": "noise",
+      "rationale": "This is evidence that the spec covers the issue concern, not an adherence gap that should block merge."
+    },
+    {
+      "ref": "Operators must fall back to raw `pgrep`/`ps`.",
+      "severity": "noise",
+      "rationale": "This is evidence that the spec covers the issue concern, not an adherence gap that should block merge."
+    },
+    {
+      "ref": "This proposes a read-only `dscli status` subcommand to fill that gap.",
+      "severity": "noise",
+      "rationale": "This is evidence that the spec covers the issue concern, not an adherence gap that should block merge."
+    },
+    {
+      "ref": "`start`/`stop` exist, but there's no \"what's running?\" — a common operational need.",
+      "severity": "noise",
+      "rationale": "This is evidence that the spec covers the issue concern, not an adherence gap that should block merge."
+    },
+    {
+      "ref": "The discovery mechanism already exists in-repo: `stop.py` locates a worker by scanning for its `-worker_address=` argument (`cli/stop.py:247`, `get_unique_pid`). This feature reuses that same, proven approach to *list* all workers instead of requiring a single match.",
+      "severity": "noise",
+      "rationale": "This is evidence that the spec covers the issue concern, not an adherence gap that should block merge."
+    }
+  ],
+  "examined": [
+    "The `dscli` CLI has `start`, `stop`, `up`, `down`, and `generate_*` commands, but no way to see which datasystem workers are currently running on a host.",
+    "Operators must fall back to raw `pgrep`/`ps`.",
+    "This proposes a read-only `dscli status` subcommand to fill that gap.",
+    "`start`/`stop` exist, but there's no \"what's running?\" — a common operational need.",
+    "The discovery mechanism already exists in-repo: `stop.py` locates a worker by scanning for its `-worker_address=` argument (`cli/stop.py:247`, `get_unique_pid`). This feature reuses that same, proven approach to *list* all workers instead of requiring a single match."
+  ]
+}
