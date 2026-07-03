@@ -189,7 +189,14 @@ def _write_diag(diag, token):
 
 def _apply_commit_close(evidence):
     """Apply fixes to the PR head, push a commit, close resolved issues.
-    Returns a report dict. ENGINE_LOCAL short-circuits to APPLY_WORKDIR/APPLY_OUT."""
+    Returns a report dict. ENGINE_LOCAL short-circuits to APPLY_WORKDIR/APPLY_OUT.
+
+    The non-local apply body (head resolution, clone, apply_all, commit/push,
+    diag build) runs entirely inside try/except so an uncaught exception can no
+    longer crash the hook invisibly; a `finally` block GUARANTEES exactly one
+    _write_diag + _post_apply_comment before every non-local return (including
+    the "no fixes" branch, which was previously silent). The ENGINE_LOCAL path
+    makes NO network/gh/git-remote calls and posts NO comments."""
     fixes = evidence.get("fixes") if isinstance(evidence.get("fixes"), list) else []
     report = {"applied": 0, "skipped": [], "pushed": False, "close": []}
     local = os.environ.get("ENGINE_LOCAL", "0") == "1"
@@ -198,49 +205,39 @@ def _apply_commit_close(evidence):
     token = os.environ.get("GH_TOKEN") or os.environ.get("PUBLISH_TOKEN")
     diag = {"local": local, "n_fixes": len(fixes),
             "env": {"repo": repo, "pr": pr, "has_token": bool(token)}}
-    if not fixes:
-        diag["stop"] = "no fixes"
-        _write_diag(diag, token)
-        _write_apply(report)
-        return report
-
-    if local:
-        workdir = os.environ.get("APPLY_WORKDIR")
-        results = _apply_fixes.apply_all(workdir, fixes) if workdir else []
-    else:
-        if not repo or not pr or not token:
-            diag["stop"] = "env missing"
-            report["diag"] = f"env missing: repo={bool(repo)} pr={bool(pr)} token={bool(token)}"
-            _write_diag(diag, token)
-            _post_apply_comment(repo, pr, token, report)
-            _write_apply(report)
-            return report
-        head = _pr_head_ref(repo, pr, token)
-        diag["head"] = head
-        if not head:
-            diag["stop"] = "no head (gh pr view failed)"
-            report["diag"] = "pr_head_ref empty (gh pr view --json headRefName failed)"
-            _write_diag(diag, token)
-            _post_apply_comment(repo, pr, token, report)
-            _write_apply(report)
-            return report
-        workdir = tempfile.mkdtemp(prefix="fix-apply-")
-        url = f"https://x-access-token:{token}@github.com/{repo}.git"
-        cl = _git(["clone", "--depth", "1", "--branch", head, url, workdir])
-        diag["clone_rc"] = cl.returncode
-        diag["clone_err"] = _scrub(cl.stderr or cl.stdout, token)
-        if cl.returncode != 0:
-            diag["stop"] = "clone failed"
-            shutil.rmtree(workdir, ignore_errors=True)
-            report["diag"] = "clone failed (branch=%s): %s" % (head, diag["clone_err"])
-            _write_diag(diag, token)
-            _post_apply_comment(repo, pr, token, report)
-            _write_apply(report)
-            return report
-        results = _apply_fixes.apply_all(workdir, fixes)
-
-    diag["apply"] = [{"status": r.get("status"), "detail": _scrub(r.get("detail"), token)} for r in results]
+    workdir = None
     try:
+        if not fixes:
+            diag["stop"] = "no fixes"
+            return report
+
+        if local:
+            workdir = os.environ.get("APPLY_WORKDIR")
+            results = _apply_fixes.apply_all(workdir, fixes) if workdir else []
+        else:
+            if not repo or not pr or not token:
+                diag["stop"] = "env missing"
+                report["diag"] = f"env missing: repo={bool(repo)} pr={bool(pr)} token={bool(token)}"
+                return report
+            head = _pr_head_ref(repo, pr, token)
+            diag["head"] = head
+            if not head:
+                diag["stop"] = "no head (gh pr view failed)"
+                report["diag"] = "pr_head_ref empty (gh pr view --json headRefName failed)"
+                return report
+            workdir = tempfile.mkdtemp(prefix="fix-apply-")
+            url = f"https://x-access-token:{token}@github.com/{repo}.git"
+            cl = _git(["clone", "--depth", "1", "--branch", head, url, workdir],
+                      None, token=token)
+            diag["clone_rc"] = cl.returncode
+            diag["clone_err"] = _scrub(cl.stderr or cl.stdout, token)
+            if cl.returncode != 0:
+                diag["stop"] = "clone failed"
+                report["diag"] = "clone failed (branch=%s): %s" % (head, diag["clone_err"])
+                return report
+            results = _apply_fixes.apply_all(workdir, fixes)
+
+        diag["apply"] = [{"status": r.get("status"), "detail": _scrub(r.get("detail"), token)} for r in results]
         applied = [r for r in results if r["status"] == "applied"]
         report["applied"] = len(applied)
         report["skipped"] = [
@@ -257,19 +254,28 @@ def _apply_commit_close(evidence):
             diag["push_ok"] = push["ok"]
             diag["push_detail"] = _scrub(push.get("detail"), token)
             if not push["ok"]:
-                report["push_error"] = push["detail"]
+                # Scrub before it reaches report — report["push_error"] is
+                # rendered into a PUBLIC PR comment + check-run summary, and git
+                # echoes the tokened clone URL (x-access-token:<PAT>@) on push
+                # failure. (diag["push_detail"] above is already scrubbed.)
+                report["push_error"] = _scrub(push["detail"], token)
             if push["ok"]:
                 _close_issues(repo, report["close"], token)
-            shutil.rmtree(workdir, ignore_errors=True)
+        return report
     except Exception as e:
-        report["error"] = str(e)
+        # Scrub: report["error"] reaches the PUBLIC PR comment + check-run.
+        report["error"] = _scrub(str(e), token)
         diag["exception"] = _scrub(str(e), token)
-
-    if not local:
-        _write_diag(diag, token)
-        _post_apply_comment(repo, pr, token, report)
-    _write_apply(report)
-    return report
+        return report
+    finally:
+        if workdir and not local:
+            shutil.rmtree(workdir, ignore_errors=True)
+        # ALWAYS surface the outcome exactly once. The local path stays offline:
+        # no diag push, no PR comment, no remote calls.
+        if not local:
+            _write_diag(diag, token)
+            _post_apply_comment(repo, pr, token, report)
+        _write_apply(report)
 
 
 def _pr_head_ref(repo, pr, token):
