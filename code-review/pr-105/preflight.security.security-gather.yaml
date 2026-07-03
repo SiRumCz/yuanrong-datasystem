@@ -1,6 +1,6 @@
 protocol: code-review
 instance: pr-105
-state: preflight
+state: done
 iteration: 2
 gates: {}
 head_sha: 301954102e1895f66e28aa193475f815ce78518a
@@ -12,3 +12,9 @@ history:
     security-gather-coverage: fail
   feedback: 'verdict mismatch: evidence says ''n/a'' but recompute from engine_report
     gives ''PASS'''
+- iteration: 2
+  agent_run_id: '28662356850'
+  checks:
+    evidence-present: pass
+    security-gather-coverage: pass
+  feedback: ''
