@@ -1,0 +1,24 @@
+{
+  "dimension": "maintainability",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": "src/datasystem/common/log/access_recorder.h",
+      "line": 136,
+      "severity": "medium",
+      "category": "maintainability",
+      "title": "Access recorder implementation state leaks through the public header",
+      "impact": "The new recorder facade exposes internal helper structs such as FieldEntry, ObjectKeyState, ObjectAccessState, StreamAccessState, and RequestOutState in the datasystem namespace. Future callers can start depending on these storage details, while maintainers must keep the public declarations, cpp fill logic, and fluent setters in sync whenever an access-log field changes.",
+      "fix": "Hide these state/helper types behind the recorder classes, for example as private nested types or an internal detail namespace, and expose only the Object/Stream/RequestOut fluent API that call sites need."
+    },
+    {
+      "path": "src/datasystem/common/log/log_sampler_proto.cpp",
+      "line": 69,
+      "severity": "low",
+      "category": "maintainability",
+      "title": "Snapshot publication logic is duplicated across config update paths",
+      "impact": "UpdateConfigFromProto repeats the same snapshot allocation, rate-to-threshold assignment, exchange, old-snapshot retention, and samplerEnabled update that BuildAndPublishSnapshot performs for flag updates. Changes to snapshot lifetime, memory ordering, or enabled-state normalization now have to be made in multiple places, which makes this concurrency-sensitive component easier to drift.",
+      "fix": "Factor a private helper that publishes an already-normalized request/access/diagnostic ppm tuple, including disabled snapshots, old-snapshot retention, and samplerEnabled publication, then call it from both flag and proto update paths."
+    }
+  ]
+}
