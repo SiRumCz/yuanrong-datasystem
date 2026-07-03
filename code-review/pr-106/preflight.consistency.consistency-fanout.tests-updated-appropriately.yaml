@@ -1,7 +1,7 @@
 protocol: code-review
 instance: pr-106
 state: consistency-fanout
-sub_state: tests-updated-appropriately-gather
+sub_state: tests-updated-appropriately-judge
 iteration: 1
 gates: {}
 history: []
