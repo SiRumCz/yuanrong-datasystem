@@ -1,0 +1,35 @@
+{
+  "leg": "docs-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": "docs/source_zh_cn/deployment/dscli.md",
+      "severity": "blocking",
+      "rationale": "The user-facing dscli command guide omits the newly added status command from its supported subcommands and reference material. That is a real documentation adherence gap for a new CLI surface and should block until documented."
+    },
+    {
+      "ref": ".repo_context/generated/repo_index.md",
+      "severity": "advisory",
+      "rationale": "The shared repository index is stale because it omits the new cli/status.py module. This should be regenerated, but it is secondary navigational context rather than the primary user-facing or design contract."
+    },
+    {
+      "ref": "docs/superpowers/specs/2026-07-02-dscli-status-design.md",
+      "severity": "blocking",
+      "rationale": "The implementation does not satisfy the spec requirement to print a trailing total-count summary. A MUST-level spec/behavior mismatch is substantive and should block until the code or spec is reconciled."
+    },
+    {
+      "ref": "docs/superpowers/plans/2026-07-02-dscli-status-command.md",
+      "severity": "noise",
+      "rationale": "The gather finding says this plan was updated appropriately and accurately reflects the implemented work. There is no adherence gap to grade here."
+    }
+  ],
+  "examined": [
+    "docs/source_zh_cn/deployment/dscli.md",
+    ".repo_context/generated/repo_index.md",
+    "docs/superpowers/specs/2026-07-02-dscli-status-design.md",
+    "docs/superpowers/plans/2026-07-02-dscli-status-command.md"
+  ]
+}
