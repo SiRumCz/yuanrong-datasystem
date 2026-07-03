@@ -708,7 +708,8 @@ def main():
             _conclude = run_conclude_hook(
                 proto_path, proto, agent_state, evid, instance, blocking,
                 dir_=dir_, tree_path=tree_path)
-            hook = run_publish_hook(proto_path, proto, branch, agent_state, evid, instance, pid)
+            hook = run_publish_hook(proto_path, proto, branch, agent_state, evid, instance, pid,
+                                    tree_path=tree_path)
             if _conclude is not None:
                 concl = _conclude.get("conclusion", "neutral")
                 csum = _conclude.get("summary", "")
