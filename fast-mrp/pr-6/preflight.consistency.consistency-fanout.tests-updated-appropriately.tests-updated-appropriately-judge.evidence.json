@@ -1,0 +1,71 @@
+{
+  "leg": "tests-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": "tests/ut/common/log/log_sampler_test.cpp",
+      "severity": "noise",
+      "rationale": "The gather finding describes appropriate core LogSampler coverage rather than an adherence gap. There is no merge-blocking test deficiency in this item."
+    },
+    {
+      "ref": "tests/ut/common/log/log_sampler_config_test.cpp",
+      "severity": "noise",
+      "rationale": "The gather finding reports suitable config validation and retention coverage. It does not identify a missing or weak test obligation."
+    },
+    {
+      "ref": "tests/ut/common/log/log_sampler_access_test.cpp",
+      "severity": "noise",
+      "rationale": "The gather finding describes targeted access/client/request_out sampling coverage. This is positive evidence, not a substantive tests-updated gap."
+    },
+    {
+      "ref": "tests/ut/common/log/log_access_facade_test.cpp",
+      "severity": "noise",
+      "rationale": "The gather finding says the new AccessRecorder facades and sampled-out behavior are covered. No actionable testing deficiency is raised here."
+    },
+    {
+      "ref": "tests/ut/common/log/log_sampler_integration_test.cpp",
+      "severity": "noise",
+      "rationale": "The gather finding identifies integration coverage for logging macros and sampling behavior. This is not a problem finding."
+    },
+    {
+      "ref": "tests/ut/common/log/spdlog/log_message_test.cpp",
+      "severity": "noise",
+      "rationale": "The gather finding says existing macro tests were updated for the sampler semantics. It does not indicate an adherence issue."
+    },
+    {
+      "ref": "tests/ut/common/rpc/zmq_trace_sampling_meta_test.cpp",
+      "severity": "noise",
+      "rationale": "The gather finding reports updated RPC metadata assertions for the new sampling states. This is appropriate coverage rather than a gap."
+    },
+    {
+      "ref": "tests/st/common/log/log_sampler_st_test.cpp",
+      "severity": "noise",
+      "rationale": "The gather finding describes system coverage for cross-process consistency and config delivery. It is positive evidence, not a merge concern."
+    },
+    {
+      "ref": "tests/ut/common/log/log_performance_test.cpp",
+      "severity": "noise",
+      "rationale": "The gather finding describes hot-path throughput and lazy construction coverage. That coverage aligns with the performance-sensitive nature of the change."
+    },
+    {
+      "ref": "tests/ut/common/flags/flags_test.cpp",
+      "severity": "blocking",
+      "rationale": "The gather reports that sampler-specific Flags::UpdateFlagParameter transaction, rollback, and explicit-state behavior changed without assertions in the touched flags test. That is a real regression-test gap for shared configuration behavior and should stop merge until covered or justified."
+    }
+  ],
+  "examined": [
+    "tests/ut/common/log/log_sampler_test.cpp",
+    "tests/ut/common/log/log_sampler_config_test.cpp",
+    "tests/ut/common/log/log_sampler_access_test.cpp",
+    "tests/ut/common/log/log_access_facade_test.cpp",
+    "tests/ut/common/log/log_sampler_integration_test.cpp",
+    "tests/ut/common/log/spdlog/log_message_test.cpp",
+    "tests/ut/common/rpc/zmq_trace_sampling_meta_test.cpp",
+    "tests/st/common/log/log_sampler_st_test.cpp",
+    "tests/ut/common/log/log_performance_test.cpp",
+    "tests/ut/common/flags/flags_test.cpp"
+  ]
+}
