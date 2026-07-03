@@ -764,12 +764,14 @@ def resolve_executable(sdir, name, pdir, ex=""):
 # Engine WRITE calls (comments, check-runs, dispatches) run in ~25 isolated,
 # parallel Actions jobs that share no process memory — so a "current token"
 # pointer cannot be global. Instead every job carries the FULL token pool and
-# fails over LOCALLY: on a 403/429 rate-limit it CYCLES to the next token
-# (first -> _2 -> … -> back to the first), waiting briefly when a full lap finds
-# all exhausted. The pool is PUBLISH_TOKEN + PUBLISH_TOKEN_2 … PUBLISH_TOKEN_9 (each
-# wired in the workflow to a distinct dispatch-PAT secret, e.g. POC_DISPATCH_TOKEN
-# / POC_DISPATCH_TOKEN_2); with only PUBLISH_TOKEN set the behavior is byte-
-# identical to before this change.
+# fails over LOCALLY: on a 403/429 rate-limit it moves to the next token
+# (first -> _2 -> …). Failover is ALWAYS on. When a full lap finds every token
+# exhausted it FAILS FAST by default (GH_ROTATE_MAX_WAIT_S=0); set that > 0 to opt
+# into cycling BACK to the first token with a bounded wait (a token's window
+# resets while we pause). The pool is PUBLISH_TOKEN + PUBLISH_TOKEN_2 …
+# PUBLISH_TOKEN_9 (each wired to a distinct dispatch-PAT secret, e.g.
+# POC_DISPATCH_TOKEN / POC_DISPATCH_TOKEN_2); with only PUBLISH_TOKEN set and the
+# default fail-fast, a rate-limited write behaves as before (one call, then fail/log).
 def _publish_tokens():
     """Ordered write-token pool: PUBLISH_TOKEN, then PUBLISH_TOKEN_2 … PUBLISH_TOKEN_9,
     each wired (in the workflow) to a distinct dispatch-PAT secret. Unset/blank
@@ -788,24 +790,44 @@ def _publish_tokens():
 
 def _looks_rate_limited(result):
     """True when a failed `gh api` result is a GitHub rate-limit (worth rotating).
-    Deliberately narrow: a permission 403 is NOT a rate-limit and must not rotate."""
+    Deliberately narrow: a permission 403 is NOT a rate-limit and must not rotate.
+    Scans stdout too, and matches the legacy "abuse detection" wording."""
     if result is None or result.returncode == 0:
         return False
-    err = (result.stderr or "").lower()
-    return ("rate limit" in err or "secondary rate" in err
-            or "http 429" in err or "429 too many" in err)
+    msg = ((result.stderr or "") + " " + (result.stdout or "")).lower()
+    return ("rate limit" in msg or "secondary rate" in msg
+            or "abuse detection" in msg
+            or "http 429" in msg or "429 too many" in msg)
+
+
+_POOL_ENV_KEYS = ("PUBLISH_TOKEN", "PUBLISH_TOKENS") + tuple(
+    f"PUBLISH_TOKEN_{i}" for i in range(2, 10))
+
+
+def _rotate_float(name, default):
+    """Parse a GH_ROTATE_* seconds value; fall back to `default` for a missing,
+    blank, non-numeric, non-finite, or negative value — so a misconfigured env var
+    can never crash a write or make the wait budget unbounded."""
+    raw = os.environ.get(name)
+    if raw is None or not raw.strip():
+        return default
+    try:
+        val = float(raw)
+    except ValueError:
+        return default
+    return val if math.isfinite(val) and val >= 0 else default
 
 
 def run_gh_rotating(api_args, *, tokens=None, check=False):
     """`gh api <api_args>` that CYCLES the token pool on a rate-limit (403/429):
     PUBLISH_TOKEN -> PUBLISH_TOKEN_2 -> … -> back to the first, and around again.
 
-    When a full lap finds EVERY token rate-limited, it waits `GH_ROTATE_WAIT_S`
-    (default 60s) and laps again — up to `GH_ROTATE_MAX_WAIT_S` total (default
-    600s; set 0 to never wait, i.e. fail fast after one lap). The wait is what
-    makes "switch back to the first token" meaningful: a token's hourly window
-    resets while we pause, so a temporary all-tokens exhaustion PAUSES and retries
-    instead of crashing. A *permission* 403 (not a rate-limit) never rotates.
+    When a full lap finds EVERY token rate-limited it FAILS FAST by default
+    (`GH_ROTATE_MAX_WAIT_S=0`). Set that > 0 to opt into cycling BACK to the first
+    token: it waits `GH_ROTATE_WAIT_S` (default 60s) and laps again, up to
+    `GH_ROTATE_MAX_WAIT_S` total, so a token's hourly window can reset while it
+    pauses. Failover between tokens is always on; a *permission* 403 (not a
+    rate-limit) never rotates.
 
     Each isolated job runs this independently (no shared state). Returns the first
     success (or the last attempt); raises CalledProcessError with check=True if it
@@ -815,14 +837,18 @@ def run_gh_rotating(api_args, *, tokens=None, check=False):
     if not toks:
         toks = [""]  # inherit ambient GH_TOKEN
     n = len(toks)
-    wait_s = float(os.environ.get("GH_ROTATE_WAIT_S", "60"))
-    max_wait_s = float(os.environ.get("GH_ROTATE_MAX_WAIT_S", "600"))
+    wait_s = _rotate_float("GH_ROTATE_WAIT_S", 60.0)
+    max_wait_s = _rotate_float("GH_ROTATE_MAX_WAIT_S", 0.0)  # 0 = fail fast; opt in to waiting
     waited = 0.0
     attempt = 0
     result = None
     while True:
         tok = toks[attempt % n]
+        # Give the child only the token it needs — scrub the sibling pool secrets
+        # from its environment so a `gh` subprocess never sees the other tokens.
         env = dict(os.environ)
+        for _k in _POOL_ENV_KEYS:
+            env.pop(_k, None)
         if tok:
             env["GH_TOKEN"] = tok
         result = subprocess.run(["gh", "api"] + list(api_args),
@@ -1149,14 +1175,6 @@ def post_pr_comment(pr, body):
     result = run_gh_rotating([f"repos/{repo}/issues/{pr}/comments", "-f", f"body={body}"])
     if result.returncode != 0:
         sys.stderr.write(f"[engine] pr comment post failed (needs issues:write): {result.stderr.strip()}\n")
-
-
-def _gh_env():
-    env = dict(os.environ)
-    tok = os.environ.get("PUBLISH_TOKEN", "")
-    if tok:
-        env["GH_TOKEN"] = tok
-    return env
 
 
 def create_issue(title, body):
