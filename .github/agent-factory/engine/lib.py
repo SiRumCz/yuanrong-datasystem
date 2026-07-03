@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import yaml
 import paths as _paths
 
@@ -763,8 +764,9 @@ def resolve_executable(sdir, name, pdir, ex=""):
 # Engine WRITE calls (comments, check-runs, dispatches) run in ~25 isolated,
 # parallel Actions jobs that share no process memory — so a "current token"
 # pointer cannot be global. Instead every job carries the FULL token pool and
-# fails over LOCALLY: on a 403/429 rate-limit it retries the same call with the
-# next token. The pool is PUBLISH_TOKEN + PUBLISH_TOKEN_2 … PUBLISH_TOKEN_9 (each
+# fails over LOCALLY: on a 403/429 rate-limit it CYCLES to the next token
+# (first -> _2 -> … -> back to the first), waiting briefly when a full lap finds
+# all exhausted. The pool is PUBLISH_TOKEN + PUBLISH_TOKEN_2 … PUBLISH_TOKEN_9 (each
 # wired in the workflow to a distinct dispatch-PAT secret, e.g. POC_DISPATCH_TOKEN
 # / POC_DISPATCH_TOKEN_2); with only PUBLISH_TOKEN set the behavior is byte-
 # identical to before this change.
@@ -795,19 +797,31 @@ def _looks_rate_limited(result):
 
 
 def run_gh_rotating(api_args, *, tokens=None, check=False):
-    """`gh api <api_args>` with token-pool failover on rate-limit (403/429).
+    """`gh api <api_args>` that CYCLES the token pool on a rate-limit (403/429):
+    PUBLISH_TOKEN -> PUBLISH_TOKEN_2 -> … -> back to the first, and around again.
 
-    Each isolated job walks its own copy of the pool, so no cross-job state is
-    needed. Returns the CompletedProcess of the first success (or the last
-    attempt); raises CalledProcessError when check=True and every token fails.
-    An empty pool is a single plain `gh api` on the ambient GH_TOKEN — i.e.
-    unchanged behavior when PUBLISH_TOKENS is not configured.
+    When a full lap finds EVERY token rate-limited, it waits `GH_ROTATE_WAIT_S`
+    (default 60s) and laps again — up to `GH_ROTATE_MAX_WAIT_S` total (default
+    600s; set 0 to never wait, i.e. fail fast after one lap). The wait is what
+    makes "switch back to the first token" meaningful: a token's hourly window
+    resets while we pause, so a temporary all-tokens exhaustion PAUSES and retries
+    instead of crashing. A *permission* 403 (not a rate-limit) never rotates.
+
+    Each isolated job runs this independently (no shared state). Returns the first
+    success (or the last attempt); raises CalledProcessError with check=True if it
+    ultimately fails. An empty pool is one plain `gh api` on the ambient GH_TOKEN.
     """
     toks = tokens if tokens is not None else _publish_tokens()
     if not toks:
         toks = [""]  # inherit ambient GH_TOKEN
+    n = len(toks)
+    wait_s = float(os.environ.get("GH_ROTATE_WAIT_S", "60"))
+    max_wait_s = float(os.environ.get("GH_ROTATE_MAX_WAIT_S", "600"))
+    waited = 0.0
+    attempt = 0
     result = None
-    for i, tok in enumerate(toks):
+    while True:
+        tok = toks[attempt % n]
         env = dict(os.environ)
         if tok:
             env["GH_TOKEN"] = tok
@@ -815,11 +829,22 @@ def run_gh_rotating(api_args, *, tokens=None, check=False):
                                 text=True, capture_output=True, env=env)
         if result.returncode == 0:
             return result
-        if _looks_rate_limited(result) and i + 1 < len(toks):
+        if not _looks_rate_limited(result):
+            break  # a real (non-rate-limit) error — do not rotate
+        attempt += 1
+        if attempt % n != 0:
             sys.stderr.write(
-                f"[engine] gh token {i + 1}/{len(toks)} rate-limited; rotating to next\n")
-            continue
-        break
+                f"[engine] gh token rate-limited; switching to token {attempt % n + 1}/{n}\n")
+            continue  # tokens left this lap — try the next one immediately
+        # full lap done: every token is rate-limited right now
+        pause = min(wait_s, max_wait_s - waited) if wait_s > 0 else 0.0
+        if pause <= 0:
+            break  # no (more) wait budget — give up rather than spin
+        sys.stderr.write(
+            f"[engine] all {n} token(s) rate-limited; waiting {pause:.0f}s, "
+            f"then retrying from token 1\n")
+        time.sleep(pause)
+        waited += pause
     if check and (result is None or result.returncode != 0):
         raise subprocess.CalledProcessError(
             result.returncode if result else 1,
