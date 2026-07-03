@@ -156,6 +156,7 @@ def main():
         "generate_docker_entryfile",
         "generate_config",
         "collect_log",
+        "metastore_ha",
     ]
     for m in modules:
         module = import_module(f"yr.datasystem.cli.{m}")
