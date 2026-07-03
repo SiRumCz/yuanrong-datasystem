@@ -1,19 +1,7 @@
 protocol: duplicate-code-remover
 instance: ref-main
-state: failed
-iteration: 2
+state: detect
+iteration: 1
 gates: {}
-head_sha: 3dd9fadd4668e7b14aa052bf86143deac1d3f0c0
-history:
-- iteration: 1
-  agent_run_id: '28667063661'
-  checks:
-    evidence-wellformed: fail
-    anchored-to-real-code: pass
-  feedback: '`scanned` must be a non-empty array of strings (proves the code was read)'
-- iteration: 2
-  agent_run_id: '28668223570'
-  checks:
-    evidence-wellformed: fail
-    anchored-to-real-code: pass
-  feedback: '`scanned` must be a non-empty array of strings (proves the code was read)'
+head_sha: 692835c615b98361d09d41e9f8550992398176d4
+history: []

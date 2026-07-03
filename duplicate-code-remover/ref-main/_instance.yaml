@@ -1,6 +1,6 @@
 protocol: duplicate-code-remover
 instance: ref-main
-head_sha: 3dd9fadd4668e7b14aa052bf86143deac1d3f0c0
+head_sha: 692835c615b98361d09d41e9f8550992398176d4
 phase: detect
 joined: false
-phase_label: "\u274C failed"
+phase_label: detect (C++ duplication scan)
