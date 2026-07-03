@@ -1,0 +1,15 @@
+{
+  "dimension": "maintainability",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": "cli/top.py",
+      "line": 159,
+      "severity": "low",
+      "category": "maintainability",
+      "title": "--min-rss helper documents inclusive semantics but implements exclusive filtering",
+      "impact": "The CLI help and helper docstring say workers using at least the configured RSS are kept, but the implementation returns true only when rss_mb is greater than min_rss_mb. Future readers will have to reconcile two different contracts before changing or debugging this filter, and operator-facing behavior can drift from the documented intent.",
+      "fix": "Make the helper contract and implementation match, preferably by using rss_mb >= min_rss_mb for the documented inclusive threshold or by updating the help/docstring to clearly say the threshold is exclusive."
+    }
+  ]
+}
