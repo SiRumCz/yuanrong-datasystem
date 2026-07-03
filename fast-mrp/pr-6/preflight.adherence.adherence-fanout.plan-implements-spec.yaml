@@ -1,6 +1,6 @@
 protocol: fast-mrp
 instance: pr-6
-state: adherence-fanout
+state: done
 sub_state: plan-implements-spec-judge
 iteration: 1
 gates: {}
