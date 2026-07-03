@@ -1,0 +1,30 @@
+{
+  "leg": "spec-solves-issue",
+  "scope": {
+    "issue_linked": true,
+    "spec_present": true
+  },
+  "gather_verdict": "solves",
+  "graded_findings": [
+    {
+      "ref": "If that node goes down, metadata service is interrupted — there is no way to run multiple Metastore heads for redundancy.",
+      "severity": "advisory",
+      "rationale": "This is a substantive availability requirement, but the gathered evidence shows the spec directly addresses it with multiple Metastore head replicas. It is therefore not a blocking adherence gap."
+    },
+    {
+      "ref": "`dscli generate_config` writes a config with a single `metastore_head_node`, and there is no tooling to reconfigure a cluster for a highly-available, multi-head Metastore.",
+      "severity": "advisory",
+      "rationale": "This identifies a real tooling gap, but the spec explicitly defines a `dscli metastore_ha` command with config, replica, output, and failure-handling behavior. The finding is worth tracking but does not block the spec-solves-issue verdict."
+    },
+    {
+      "ref": "Add a `dscli` subcommand that takes an existing `cluster_config.json` and produces a variant configured for a highly-available Metastore — electing several worker nodes as Metastore head replicas so metadata keeps being served if one head fails.",
+      "severity": "advisory",
+      "rationale": "This is the core requested capability and the gather evidence quotes matching summary coverage in the spec. Because it is addressed by the spec, it is not a blocking issue."
+    }
+  ],
+  "examined": [
+    "If that node goes down, metadata service is interrupted — there is no way to run multiple Metastore heads for redundancy.",
+    "`dscli generate_config` writes a config with a single `metastore_head_node`, and there is no tooling to reconfigure a cluster for a highly-available, multi-head Metastore.",
+    "Add a `dscli` subcommand that takes an existing `cluster_config.json` and produces a variant configured for a highly-available Metastore — electing several worker nodes as Metastore head replicas so metadata keeps being served if one head fails."
+  ]
+}
