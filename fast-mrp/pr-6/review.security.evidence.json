@@ -1,0 +1,15 @@
+{
+  "dimension": "security",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": "src/datasystem/worker/object_cache/service/worker_oc_service_expire_impl.cpp",
+      "line": 69,
+      "severity": "medium",
+      "category": "security",
+      "title": "Expire access log now records tenant-qualified object keys",
+      "impact": "When auth is enabled, ConstructNamespaceUriWithTenantId prefixes each requested key with the tenant id before this access record is filled. The previous code logged req.object_keys() directly, but the new access.ObjectKeysRef(objectKeys) writes tenant-qualified namespace URIs to the access log/exporter, exposing tenant identifiers to log readers and downstream log storage.",
+      "fix": "Keep using tenant-qualified objectKeys for routing, but fill the access recorder from req.object_keys() or strip the tenant prefix with NamespaceUriToObjectKey before calling ObjectKeysRef."
+    }
+  ]
+}
