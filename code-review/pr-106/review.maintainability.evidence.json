@@ -1,0 +1,15 @@
+{
+  "dimension": "maintainability",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": "cli/status.py",
+      "line": 39,
+      "severity": "medium",
+      "category": "maintainability",
+      "title": "Make the status collector endpoint configurable",
+      "impact": "The new command bakes a single collector URL into the CLI while reading only the token from deployment state. Any test, staging, private deployment, or future collector migration now requires editing and rebuilding this command, and future maintainers cannot tell from the code whether the literal endpoint is a placeholder, default, or production dependency.",
+      "fix": "Read the collector URL from an explicit CLI/config/env setting, for example DS_STATUS_COLLECTOR_URL or a deployment config field, and document the default or disabled behavior near the reporting code."
+    }
+  ]
+}
