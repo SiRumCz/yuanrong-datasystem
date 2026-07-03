@@ -1,0 +1,17 @@
+{
+  "leg": "tests-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": "cli/tests/test_status.py",
+      "severity": "blocking",
+      "rationale": "The gather finding identifies broad untested behavior in changed CLI logic, including process detection, token loading, HTTP reporting, run() behavior, and command registration. For infrastructure-facing command behavior, that is a substantive test adherence gap rather than a minor coverage preference."
+    }
+  ],
+  "examined": [
+    "cli/tests/test_status.py"
+  ]
+}
