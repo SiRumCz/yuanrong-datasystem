@@ -1,0 +1,41 @@
+{
+  "scope": {
+    "code_changed": true
+  },
+  "items": [
+    {
+      "path": "docs/superpowers/specs/2026-07-02-dscli-status-design.md",
+      "status": "inadequate",
+      "reason": "The design spec says status MUST print a trailing worker-count summary, but cli/status.py only prints the PID/WORKER_ADDRESS table or empty message."
+    },
+    {
+      "path": "docs/source_zh_cn/deployment/dscli.md",
+      "status": "missing",
+      "reason": "The user-facing dscli command reference lists each shipped subcommand in the TOC and command sections, but the new dscli status command is not documented."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md",
+    ".repo_context/modules/runtime/cluster-management.md",
+    ".repo_context/modules/runtime/worker-runtime.md",
+    "cli/command.py",
+    "cli/status.py",
+    "cli/tests/test_status.py",
+    "docs/superpowers/plans/2026-07-02-dscli-status-command.md",
+    "docs/superpowers/specs/2026-07-02-dscli-status-design.md",
+    "docs/source_zh_cn/deployment/dscli.md",
+    "README.md",
+    "README_EN.md"
+  ]
+}
