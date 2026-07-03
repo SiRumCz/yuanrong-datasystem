@@ -1,0 +1,17 @@
+{
+  "leg": "tests-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "adequate",
+  "graded_findings": [
+    {
+      "ref": "cli/tests/test_validate_config.py",
+      "severity": "advisory",
+      "rationale": "The gather item indicates the new validate_config behavior is covered across config validation, command success/failure paths, argument handling, and CLI registration. This supports the adequate verdict and does not identify a merge-blocking test gap."
+    }
+  ],
+  "examined": [
+    "cli/tests/test_validate_config.py"
+  ]
+}
