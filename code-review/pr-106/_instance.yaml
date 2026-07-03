@@ -1,7 +1,7 @@
 protocol: code-review
 instance: pr-106
 head_sha: b3df3311230021d68562acc0cff99c9ff8799ec9
-phase: overview
+phase: review
 joined: true
-phase_label: guided overview + risk
+phase_label: multi-dimension review
 status_comment_id: 4873796950
