@@ -1,0 +1,167 @@
+{
+  "scope": {
+    "code_changed": true,
+    "plan_present": true,
+    "plan_path": "docs/superpowers/plans/2026-07-03-dscli-metastore-ha-command.md",
+    "code_files": [
+      "cli/command.py",
+      "cli/metastore_ha.py"
+    ]
+  },
+  "plan_to_code": [
+    {
+      "plan_item": "- P1: Add `select_metastore_heads(worker_nodes, replicas)` and\n  `build_ha_metastore_config(config, replicas)` to `cli/metastore_ha.py` — elect the\n  first `replicas` worker nodes (floored at 2, capped at the node count) as\n  Metastore heads and return a new config replacing `metastore_head_node` with a\n  `metastore_head_nodes` list. (implements R1)",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- P2: Add `class Command(BaseCommand)` (`name = \"metastore_ha\"`) to\n  `cli/metastore_ha.py` with `add_arguments` registering `-c`/`--config`,\n  `-r`/`--replicas`, and `-o`/`--output`, and a `run()` that path-guards and loads\n  the source config, builds the HA config, writes the output, and returns\n  `SUCCESS`/`FAILURE`. (implements R2)",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- P3: Register `\"metastore_ha\"` in the `modules` list of `cli/command.py`\n  (after `collect_log`). (implements R3)",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- P4: Add `cli/tests/test_metastore_ha.py` covering the helpers, every `run()`\n  return path, and the registration. (implements R4)",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- P5: Update `docs/source_zh_cn/deployment/dscli.md` (TOC entries, a\n  `### dscli metastore_ha` reference section, and a usage + deployment example),\n  `docs/source_zh_cn/design_document/cluster_management.md` (multi-head Metastore\n  section), and `.repo_context/modules/runtime/cluster-management.md` (the\n  metastore_ha flow). (implements R5)",
+      "status": "implemented"
+    }
+  ],
+  "files": [
+    {
+      "path": "cli/command.py",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "metastore_ha"
+          ],
+          "findings": [
+            {
+              "plan_item": "- P3: Register `\"metastore_ha\"` in the `modules` list of `cli/command.py`\n  (after `collect_log`). (implements R3)",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 159,
+              "existing_code": "        \"metastore_ha\","
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "cli/metastore_ha.py",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "select_metastore_heads",
+            "build_ha_metastore_config",
+            "Command",
+            "add_arguments",
+            "run"
+          ],
+          "findings": [
+            {
+              "plan_item": "- P1: Add `select_metastore_heads(worker_nodes, replicas)` and\n  `build_ha_metastore_config(config, replicas)` to `cli/metastore_ha.py` — elect the\n  first `replicas` worker nodes (floored at 2, capped at the node count) as\n  Metastore heads and return a new config replacing `metastore_head_node` with a\n  `metastore_head_nodes` list. (implements R1)",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 28,
+              "existing_code": "def select_metastore_heads(worker_nodes, replicas):"
+            },
+            {
+              "plan_item": "- P1: Add `select_metastore_heads(worker_nodes, replicas)` and\n  `build_ha_metastore_config(config, replicas)` to `cli/metastore_ha.py` — elect the\n  first `replicas` worker nodes (floored at 2, capped at the node count) as\n  Metastore heads and return a new config replacing `metastore_head_node` with a\n  `metastore_head_nodes` list. (implements R1)",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 42,
+              "existing_code": "    count = max(_MIN_REPLICAS, min(replicas, len(nodes)))"
+            },
+            {
+              "plan_item": "- P1: Add `select_metastore_heads(worker_nodes, replicas)` and\n  `build_ha_metastore_config(config, replicas)` to `cli/metastore_ha.py` — elect the\n  first `replicas` worker nodes (floored at 2, capped at the node count) as\n  Metastore heads and return a new config replacing `metastore_head_node` with a\n  `metastore_head_nodes` list. (implements R1)",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 46,
+              "existing_code": "def build_ha_metastore_config(config, replicas):"
+            },
+            {
+              "plan_item": "- P1: Add `select_metastore_heads(worker_nodes, replicas)` and\n  `build_ha_metastore_config(config, replicas)` to `cli/metastore_ha.py` — elect the\n  first `replicas` worker nodes (floored at 2, capped at the node count) as\n  Metastore heads and return a new config replacing `metastore_head_node` with a\n  `metastore_head_nodes` list. (implements R1)",
+              "status": "traces",
+              "side": "RIGHT",
+              "start_line": 62,
+              "line": 63,
+              "existing_code": "    ha_config.pop(\"metastore_head_node\", None)\n    ha_config[\"metastore_head_nodes\"] = heads"
+            },
+            {
+              "plan_item": "- P2: Add `class Command(BaseCommand)` (`name = \"metastore_ha\"`) to\n  `cli/metastore_ha.py` with `add_arguments` registering `-c`/`--config`,\n  `-r`/`--replicas`, and `-o`/`--output`, and a `run()` that path-guards and loads\n  the source config, builds the HA config, writes the output, and returns\n  `SUCCESS`/`FAILURE`. (implements R2)",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 67,
+              "existing_code": "class Command(BaseCommand):"
+            },
+            {
+              "plan_item": "- P2: Add `class Command(BaseCommand)` (`name = \"metastore_ha\"`) to\n  `cli/metastore_ha.py` with `add_arguments` registering `-c`/`--config`,\n  `-r`/`--replicas`, and `-o`/`--output`, and a `run()` that path-guards and loads\n  the source config, builds the HA config, writes the output, and returns\n  `SUCCESS`/`FAILURE`. (implements R2)",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 72,
+              "existing_code": "    name = \"metastore_ha\""
+            },
+            {
+              "plan_item": "- P2: Add `class Command(BaseCommand)` (`name = \"metastore_ha\"`) to\n  `cli/metastore_ha.py` with `add_arguments` registering `-c`/`--config`,\n  `-r`/`--replicas`, and `-o`/`--output`, and a `run()` that path-guards and loads\n  the source config, builds the HA config, writes the output, and returns\n  `SUCCESS`/`FAILURE`. (implements R2)",
+              "status": "traces",
+              "side": "RIGHT",
+              "start_line": 83,
+              "line": 100,
+              "existing_code": "        parser.add_argument(\n            \"-c\", \"--config\",\n            default=os.path.join(os.getcwd(), \"cluster_config.json\"),\n            help=\"path to the source cluster configuration file, \"\n                 \"default is ./cluster_config.json\"\n        )\n        parser.add_argument(\n            \"-r\", \"--replicas\",\n            type=int,\n            default=_DEFAULT_REPLICAS,\n            help=\"number of Metastore head replicas to run, default is 3\"\n        )\n        parser.add_argument(\n            \"-o\", \"--output\",\n            default=os.path.join(os.getcwd(), \"cluster_config_ha.json\"),\n            help=\"path to write the HA cluster configuration, \"\n                 \"default is ./cluster_config_ha.json\"\n        )"
+            },
+            {
+              "plan_item": "- P2: Add `class Command(BaseCommand)` (`name = \"metastore_ha\"`) to\n  `cli/metastore_ha.py` with `add_arguments` registering `-c`/`--config`,\n  `-r`/`--replicas`, and `-o`/`--output`, and a `run()` that path-guards and loads\n  the source config, builds the HA config, writes the output, and returns\n  `SUCCESS`/`FAILURE`. (implements R2)",
+              "status": "traces",
+              "side": "RIGHT",
+              "start_line": 115,
+              "line": 118,
+              "existing_code": "            config_path = os.path.normpath(os.path.realpath(args.config))\n            config_path = util.valid_safe_path(config_path)\n            with open(config_path, \"r\", encoding=\"utf-8\") as config_file:\n                config = json.load(config_file)"
+            },
+            {
+              "plan_item": "- P2: Add `class Command(BaseCommand)` (`name = \"metastore_ha\"`) to\n  `cli/metastore_ha.py` with `add_arguments` registering `-c`/`--config`,\n  `-r`/`--replicas`, and `-o`/`--output`, and a `run()` that path-guards and loads\n  the source config, builds the HA config, writes the output, and returns\n  `SUCCESS`/`FAILURE`. (implements R2)",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 133,
+              "existing_code": "        ha_config = build_ha_metastore_config(config, args.replicas)"
+            },
+            {
+              "plan_item": "- P2: Add `class Command(BaseCommand)` (`name = \"metastore_ha\"`) to\n  `cli/metastore_ha.py` with `add_arguments` registering `-c`/`--config`,\n  `-r`/`--replicas`, and `-o`/`--output`, and a `run()` that path-guards and loads\n  the source config, builds the HA config, writes the output, and returns\n  `SUCCESS`/`FAILURE`. (implements R2)",
+              "status": "traces",
+              "side": "RIGHT",
+              "start_line": 136,
+              "line": 139,
+              "existing_code": "            output_path = os.path.normpath(os.path.realpath(args.output))\n            output_path = util.valid_safe_path(output_path)\n            with open(output_path, \"w\", encoding=\"utf-8\") as output_file:\n                json.dump(ha_config, output_file, indent=4)"
+            },
+            {
+              "plan_item": "- P2: Add `class Command(BaseCommand)` (`name = \"metastore_ha\"`) to\n  `cli/metastore_ha.py` with `add_arguments` registering `-c`/`--config`,\n  `-r`/`--replicas`, and `-o`/`--output`, and a `run()` that path-guards and loads\n  the source config, builds the HA config, writes the output, and returns\n  `SUCCESS`/`FAILURE`. (implements R2)",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 149,
+              "existing_code": "        return self.SUCCESS"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "verdict": "adheres",
+  "examined": [
+    "scope.json",
+    "plan.txt",
+    "pr.diff",
+    "task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md"
+  ]
+}
