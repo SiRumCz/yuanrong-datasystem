@@ -156,7 +156,7 @@ class Command(BaseCommand):
         Returns:
             bool: True if the worker should be shown.
         """
-        return rss_mb > min_rss_mb
+        return rss_mb >= min_rss_mb
 
     def run(self, args):
         """
