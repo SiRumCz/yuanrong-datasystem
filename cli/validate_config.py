@@ -50,6 +50,14 @@ def validate_cluster_config(config):
         problems.append("worker_nodes must be a non-empty list")
     elif any(not isinstance(node, str) or not node.strip() for node in worker_nodes):
         problems.append("worker_nodes must contain only non-empty host strings")
+    else:
+        for node in worker_nodes:
+            try:
+                util.is_valid_ip(node)
+            except ValueError:
+                problems.append("worker_nodes must contain only valid IP addresses")
+                break
+        problems.append("worker_nodes must contain only non-empty host strings")
 
     worker_port = config.get("worker_port")
     if worker_port is None:
