@@ -1,0 +1,29 @@
+{
+  "leg": "docs-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": "docs/source_zh_cn/deployment/dscli.md",
+      "severity": "blocking",
+      "rationale": "The documentation presents generated metastore_head_nodes as deployable via dscli up, but the gathered evidence says the command only reads a single metastore_head_node. That is a substantive HA deployment mismatch, not a cosmetic docs issue."
+    },
+    {
+      "ref": "docs/source_zh_cn/design_document/cluster_management.md",
+      "severity": "blocking",
+      "rationale": "The design document claims every metastore_head_nodes entry starts a Metastore service while the implementation only enables one node. This misstates the implemented HA semantics and could lead operators to rely on unavailable redundancy."
+    },
+    {
+      "ref": ".repo_context/modules/runtime/cluster-management.md",
+      "severity": "blocking",
+      "rationale": "The repository context records dscli metastore_ha as a multi-head flow without preserving the single-head limitation found in source. Because this shared AI context guides future infrastructure work, the stale claim is a material adherence gap."
+    }
+  ],
+  "examined": [
+    "docs/source_zh_cn/deployment/dscli.md",
+    "docs/source_zh_cn/design_document/cluster_management.md",
+    ".repo_context/modules/runtime/cluster-management.md"
+  ]
+}
