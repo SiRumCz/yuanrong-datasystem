@@ -3,6 +3,12 @@ name: "Impl-Feature-Auto Implement Agent (protocol state: implement)"
 run-name: "Impl-Feature-Auto Implement · cid:[${{ fromJSON(github.event.inputs.aw_context || '{}').cid }}]"
 on:
   workflow_dispatch:
+concurrency:
+  # Per-dispatch (cid) group so fixer instances triggered on DIFFERENT issues run
+  # in PARALLEL (gh-aw's default `gh-aw-${{ github.workflow }}` serializes all runs
+  # of this one workflow). cid is unique per orchestrator dispatch.
+  group: "impl-feature-auto-implement-${{ fromJSON(github.event.inputs.aw_context || '{}').cid }}"
+  cancel-in-progress: false
 strict: false
 sandbox:
   agent: false

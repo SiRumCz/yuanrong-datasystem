@@ -3,6 +3,13 @@ name: "Impl-Feature-Auto Design Agent (protocol state: design)"
 run-name: "Impl-Feature-Auto Design · cid:[${{ fromJSON(github.event.inputs.aw_context || '{}').cid }}]"
 on:
   workflow_dispatch:
+concurrency:
+  # Per-dispatch (cid) group so fixer instances triggered on DIFFERENT issues run
+  # in PARALLEL. gh-aw's default `gh-aw-${{ github.workflow }}` serializes every run
+  # of this one workflow, which made issue-X's design wait on issue-Y's. cid is
+  # unique per orchestrator dispatch, so each issue's design gets its own group.
+  group: "impl-feature-auto-design-${{ fromJSON(github.event.inputs.aw_context || '{}').cid }}"
+  cancel-in-progress: false
 strict: false
 sandbox:
   agent: false
