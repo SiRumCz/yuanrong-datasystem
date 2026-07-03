@@ -1,7 +1,13 @@
 protocol: code-review
 instance: pr-106
 state: adherence-fanout
-iteration: 1
+iteration: 2
 gates: {}
 head_sha: b3df3311230021d68562acc0cff99c9ff8799ec9
-history: []
+history:
+- iteration: 1
+  agent_run_id: '28663339544'
+  checks:
+    evidence-present: pass
+    plan-spec-coverage: fail
+  feedback: 'plan_quote not verbatim in plan: ''- Create: `cli/tests/test_status.py`'''
