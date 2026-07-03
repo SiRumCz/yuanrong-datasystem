@@ -1,0 +1,18 @@
+{
+  "//": "Opt-in conversation capture. Copy this `hooks` block into your OWN",
+  "//opt-in": ".claude/settings.local.json (per-user, git-ignored), then export CONTEXT_CAPTURE=1.",
+  "//note": "This repo git-ignores .claude/, so registration is per-user and never committed.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/scripts/conversations/attach-transcript.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
