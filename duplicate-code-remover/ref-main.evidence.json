@@ -1,0 +1,92 @@
+{
+  "scanned": [
+    "src/datasystem/client/kv_cache/kv_client.cpp",
+    "src/datasystem/client/object_cache/object_client.cpp",
+    "src/datasystem/client/stream_cache/stream_client.cpp",
+    "src/datasystem/client/hetero_cache/hetero_client.cpp",
+    "src/datasystem/client/perf_client/perf_client.cpp",
+    "src/datasystem/client/router_client.cpp",
+    "src/datasystem/pybind_api/pybind_register_kv.cpp",
+    "src/datasystem/pybind_api/pybind_register_object.cpp",
+    "src/datasystem/pybind_api/pybind_register_stream.cpp",
+    "src/datasystem/pybind_api/pybind_register_hetero.cpp",
+    "KVClient::ShutDown",
+    "KVClient::Init",
+    "ObjectClient::ShutDown",
+    "ObjectClient::Init",
+    "StreamClient::ShutDown",
+    "StreamClient::Init",
+    "HeteroClient::ShutDown",
+    "HeteroClient::Init",
+    "ObjectClient::GIncreaseRef",
+    "ObjectClient::GDecreaseRef"
+  ],
+  "patterns": [
+    {
+      "id": "client-shutdown-identical",
+      "name": "Byte-identical client ShutDown() across KV/Object/Stream clients",
+      "severity": "high",
+      "rationale": "KVClient::ShutDown, ObjectClient::ShutDown and StreamClient::ShutDown are byte-for-byte identical: same TraceGuard setup, same impl_ null-check, same ShutDown/CompleteHandler sequence and OK fallback. The recovery-critical shutdown path is copy-pasted three times, so any fix (e.g. changing rollback handling) must be applied in three places or drift silently. Extract a shared helper (e.g. a base-class ShutDownImpl or free function taking impl_).",
+      "locations": [
+        {
+          "path": "src/datasystem/client/kv_cache/kv_client.cpp",
+          "start_line": 56,
+          "end_line": 66,
+          "existing_code": "Status KVClient::ShutDown()\n{\n    TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n    if (impl_) {\n        bool needRollbackState;\n        auto rc = impl_->ShutDown(needRollbackState);\n        impl_->CompleteHandler(rc.IsError(), needRollbackState);\n        return rc;\n    }\n    return Status::OK();\n}"
+        },
+        {
+          "path": "src/datasystem/client/object_cache/object_client.cpp",
+          "start_line": 41,
+          "end_line": 51,
+          "existing_code": "Status ObjectClient::ShutDown()\n{\n    TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n    if (impl_) {\n        bool needRollbackState;\n        auto rc = impl_->ShutDown(needRollbackState);\n        impl_->CompleteHandler(rc.IsError(), needRollbackState);\n        return rc;\n    }\n    return Status::OK();\n}"
+        },
+        {
+          "path": "src/datasystem/client/stream_cache/stream_client.cpp",
+          "start_line": 43,
+          "end_line": 53,
+          "existing_code": "Status StreamClient::ShutDown()\n{\n    TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n    if (impl_) {\n        bool needRollbackState;\n        auto rc = impl_->ShutDown(needRollbackState);\n        impl_->CompleteHandler(rc.IsError(), needRollbackState);\n        return rc;\n    }\n    return Status::OK();\n}"
+        }
+      ]
+    },
+    {
+      "id": "client-init-identical",
+      "name": "Byte-identical client Init() in KV and Object clients",
+      "severity": "medium",
+      "rationale": "KVClient::Init and ObjectClient::Init are byte-for-byte identical, including the (void)metrics::InitKvMetrics() call, needRollbackState flag, impl_->Init(needRollbackState, true) and CompleteHandler sequence. This init/recovery sequence is duplicated verbatim; a shared helper would keep the two clients' startup semantics in lockstep.",
+      "locations": [
+        {
+          "path": "src/datasystem/client/kv_cache/kv_client.cpp",
+          "start_line": 68,
+          "end_line": 76,
+          "existing_code": "Status KVClient::Init()\n{\n    TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n    (void)metrics::InitKvMetrics();\n    bool needRollbackState;\n    auto rc = impl_->Init(needRollbackState, true);\n    impl_->CompleteHandler(rc.IsError(), needRollbackState);\n    return rc;\n}"
+        },
+        {
+          "path": "src/datasystem/client/object_cache/object_client.cpp",
+          "start_line": 53,
+          "end_line": 61,
+          "existing_code": "Status ObjectClient::Init()\n{\n    TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n    (void)metrics::InitKvMetrics();\n    bool needRollbackState;\n    auto rc = impl_->Init(needRollbackState, true);\n    impl_->CompleteHandler(rc.IsError(), needRollbackState);\n    return rc;\n}"
+        }
+      ]
+    },
+    {
+      "id": "object-grefs-record-wrapper",
+      "name": "Near-identical AccessRecorder wrapper in ObjectClient GIncreaseRef/GDecreaseRef",
+      "severity": "medium",
+      "rationale": "ObjectClient::GIncreaseRef and ObjectClient::GDecreaseRef differ only in the impl_ method name and the order of two RequestParam field assignments; the TraceGuard/AccessRecorder/RequestParam/Record boilerplate is otherwise copy-pasted. The same record-and-return wrapper repeats across most ObjectClient methods, making it a strong candidate for a single templated/helper wrapper.",
+      "locations": [
+        {
+          "path": "src/datasystem/client/object_cache/object_client.cpp",
+          "start_line": 82,
+          "end_line": 93,
+          "existing_code": "Status ObjectClient::GIncreaseRef(const std::vector<std::string> &objectKeys,\n                                  std::vector<std::string> &failedObjectKeys, const std::string &remoteClientId)\n{\n    TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n    AccessRecorder accessPoint(AccessRecorderKey::DS_OBJECT_CLIENT_GINCREASEREF);\n    Status rc = impl_->GIncreaseRef(objectKeys, failedObjectKeys, remoteClientId);\n    RequestParam reqParam;\n    reqParam.objectKey = objectKeysToString(objectKeys);\n    reqParam.remoteClientId = remoteClientId;\n    accessPoint.Record(rc.GetCode(), std::to_string(0), reqParam, rc.GetMsg());\n    return rc;\n}"
+        },
+        {
+          "path": "src/datasystem/client/object_cache/object_client.cpp",
+          "start_line": 106,
+          "end_line": 117,
+          "existing_code": "Status ObjectClient::GDecreaseRef(const std::vector<std::string> &objectKeys,\n                                  std::vector<std::string> &failedObjectKeys, const std::string &remoteClientId)\n{\n    TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n    AccessRecorder accessPoint(AccessRecorderKey::DS_OBJECT_CLIENT_GDECREASEREF);\n    Status rc = impl_->GDecreaseRef(objectKeys, failedObjectKeys, remoteClientId);\n    RequestParam reqParam;\n    reqParam.remoteClientId = remoteClientId;\n    reqParam.objectKey = objectKeysToString(objectKeys);\n    accessPoint.Record(rc.GetCode(), std::to_string(0), reqParam, rc.GetMsg());\n    return rc;\n}"
+        }
+      ]
+    }
+  ]
+}
