@@ -2,6 +2,6 @@ protocol: code-review
 instance: pr-105
 head_sha: 1e550dfb9efb5f01a76bb488fecc7a0d3cd69535
 phase: preflight
-joined: false
-phase_label: pre-flight adherence chain
+joined: true
+phase_label: "\u274C failed"
 status_comment_id: 4873090508
