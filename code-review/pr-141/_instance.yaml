@@ -1,7 +1,7 @@
 protocol: code-review
 instance: pr-141
 head_sha: 3774442a4e60d22e94eabdf585e07bf7f3982515
-phase: preflight
-joined: false
-phase_label: pre-flight adherence chain
+phase: preflight-gate
+joined: true
+phase_label: pre-flight adherence gate
 status_comment_id: 4878160443
