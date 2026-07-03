@@ -1,0 +1,15 @@
+{
+  "dimension": "performance",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": "cli/status.py",
+      "line": 199,
+      "severity": "medium",
+      "category": "performance",
+      "title": "Synchronous collector reporting can stall every status command",
+      "impact": "Every `dscli status` invocation waits for `urlopen` to complete after local discovery, including the empty-worker case. If the collector is slow or unreachable, a command whose primary job is local process inventory can block for up to the 5 second timeout per host, which becomes painful for operator scripts that fan out across many hosts.",
+      "fix": "Keep local status output on the fast path and move collector publishing behind a much shorter timeout, an opt-in flag, or an asynchronous/background best-effort path that cannot delay the command's local result."
+    }
+  ]
+}
