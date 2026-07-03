@@ -1,0 +1,55 @@
+{
+  "spec_path": "docs/superpowers/specs/2026-07-03-fullparam-from-setparam-design.md",
+  "plan_path": "docs/superpowers/plans/2026-07-03-fullparam-from-setparam.md",
+  "summary": "Phase 0 design for issue #150: extract the byte-identical object_cache::FullParam-from-SetParam initialization in KVClient::Create (lines 102-107) and KVClient::MCreate (lines 127-132) into a single file-local static helper MakeFullParam(const SetParam&) in kv_client.cpp, mirroring the existing ReadParamToString static-helper pattern. Behavior-preserving (retains the explicit CAUSAL consistencyType override); no struct/header/public-API changes. Verified both blocks are identical and that FullParam (CreateParam base + writeMode/ttlSecond/existence) is fully covered by the five assignments. Relies on existing KV ST suites for coverage rather than a new dedicated test.",
+  "run_id": "28678292952",
+  "ledger": [
+    {
+      "id": "L1",
+      "category": "DECISION",
+      "what": "Implement as a file-local `static object_cache::FullParam MakeFullParam(const SetParam &param)` inside `namespace datasystem` in kv_client.cpp, returning by value.",
+      "why": "SetParam (public kv_client.h) and object_cache::FullParam (internal object_client_impl.h) are both already in scope in this .cpp; a TU-local static helper mirrors the existing ReadParamToString helper, adds no public API, needs no header edits, and return-by-value is trivially cheap (small struct, NRVO).",
+      "what_i_did": "Chose a TU-local static helper placed just above KVClient::Create; both call sites call it and pass the result unchanged to impl_->Create / impl_->MCreate.",
+      "confidence": "high",
+      "blast_radius": { "level": "low", "why": "One translation unit; the symbol is static (internal linkage) so it cannot affect other TUs or the ABI." },
+      "reversibility": { "level": "reversible", "why": "Pure code-shape change; revertable by restoring the two inline blocks." },
+      "revisit_if": "FullParam construction is needed outside this TU, or a reviewer prefers a member/factory on FullParam/SetParam."
+    },
+    {
+      "id": "L2",
+      "category": "ASSUMPTION",
+      "what": "The Create (lines 102-107) and MCreate (lines 127-132) initialization blocks are character-for-character identical, so one helper preserves both.",
+      "why": "Extraction is only behavior-preserving if the two sites truly match.",
+      "what_i_did": "Read both blocks in kv_client.cpp at commit dfc126a; confirmed identical field set, order, and the CAUSAL literal.",
+      "confidence": "high",
+      "blast_radius": { "level": "low", "why": "Scoped to the two methods in one file." },
+      "reversibility": { "level": "reversible", "why": "Revertable; re-diffing the blocks is cheap." },
+      "revisit_if": "Source changes before implementation lands (re-diff both blocks in Task 1 Step 1).",
+      "verified": true
+    },
+    {
+      "id": "L3",
+      "category": "ASSUMPTION",
+      "what": "FullParam = CreateParam { consistencyType, cacheType } + { writeMode, ttlSecond, existence }; the five assignments cover every member, with consistencyType intentionally overridden to CAUSAL (base default PRAM).",
+      "why": "Confirms no field is left implicitly defaulted differently from the current inline code.",
+      "what_i_did": "Read struct FullParam (object_client_impl.h:85) and its base struct CreateParam (object_client.h:43); the inline code sets all five members and the helper reproduces them exactly.",
+      "confidence": "high",
+      "blast_radius": { "level": "low", "why": "Field coverage is local to the FullParam construction." },
+      "reversibility": { "level": "reversible", "why": "Code-shape change only." },
+      "revisit_if": "FullParam or CreateParam gains a member that Create/MCreate should populate.",
+      "verified": true
+    },
+    {
+      "id": "L4",
+      "category": "DECISION",
+      "what": "Do not add a new dedicated unit test for the helper; rely on the existing KV ST suites that call Create/MCreate.",
+      "why": "The helper is TU-local static and not independently linkable/testable without exposing it (which would enlarge scope and public surface against the surgical-change principle); behavior is unchanged and already exercised end-to-end by the four KV ST test files.",
+      "what_i_did": "Documented reliance on tests/st/client/kv_cache/{kv_cache_client_test,kv_cache_existence_opt_test,kv_client_scale_test,kv_client_write_back_l2_cache_evict_test}.cpp for coverage.",
+      "confidence": "medium",
+      "blast_radius": { "level": "medium", "why": "A mapping regression would only be caught by the broader ST suites, not a targeted assertion on the mapping." },
+      "reversibility": { "level": "reversible", "why": "A focused test can be added later if desired." },
+      "revisit_if": "Reviewer requires a dedicated regression test, or the helper is promoted to a header (then a unit test becomes cheap and should be added)."
+    }
+  ],
+  "read_these_first": ["L4", "L1", "L2", "L3"]
+}
