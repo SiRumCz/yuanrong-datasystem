@@ -1,0 +1,49 @@
+{
+  "verdict": "diverges",
+  "divergences": [
+    {
+      "decision": "System context and deployment are modeled around worker/master coordination plus ETCD or built-in Metastore; observability is provided by the existing logging/metrics stack, not a separate hardcoded central status collector.",
+      "detail": "The PR adds a new external fleet-wide status collector (`https://status-collector.telemetry.example.internal/ingest`) and posts every `dscli status` run to it. The socratic architecture describes external cluster context as ETCD for metadata/health, SDK-worker shared memory, and worker-worker/NPU transport; deployment is process/Kubernetes with separately deployed ETCD; crosscutting observability is logging and metrics. A new central status authority is therefore an architectural addition that is not reflected in the mental model.",
+      "evidence": "cli/status.py:new-file hunk defines `_COLLECTOR_URL` and `report_status()` POSTs inventory to it; _mm/socratic/docs/arc42/arc42-yuanrong-datasystem.adoc sections 3, 7, and 8; _mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-001-master-worker-split.adoc; _mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-002-pluggable-cluster-metadata.adoc",
+      "fix": "Remove central collector reporting from `dscli status`, or implement the fleet view through the existing metadata/observability architecture, or update the mental model with an accepted decision for this new collector, its deployment/configuration, ownership, failure behavior, and HA/security posture."
+    },
+    {
+      "decision": "Security mechanisms in the mental model are AK/SK, optional YuanRong IAM token verification, stream-cache encryption, and TLS under a trusted-cluster posture; new credentials and secret transport need to match that model or be explicitly modeled.",
+      "detail": "The PR introduces `DS_CLUSTER_TOKEN`, reads it from a deployment `.env` file or process environment, embeds it in the JSON request body, and sends it to the new collector. The socratic corpus does not define this token, `.env` as a deployment secret source, or body-carried collector authentication; security posture and mandatory-vs-optional mechanisms are already documented as an open/deferred architecture question, so adding a new credential path without updating the MM diverges from the recorded model.",
+      "evidence": "cli/status.py:new-file hunk defines `_CLUSTER_TOKEN_KEY`, `_ENV_FILE`, `_read_cluster_token()`, and `build_report_payload(..., token)` with a `token` field; _mm/socratic/docs/arc42/arc42-yuanrong-datasystem.adoc section 10.1 Security and section 11 Security risk; _mm/socratic/QUESTION_TREE-yuanrong-datasystem.adoc Q4.6.1/Q4.6.2; _mm/socratic/OPEN_QUESTIONS-yuanrong-datasystem.adoc Q4.6.2",
+      "fix": "Use the repository's existing authentication/configuration mechanisms for any reporting path, avoid transmitting raw tokens in payload bodies, and update the MM if `DS_CLUSTER_TOKEN` and `.env` are intended deployment contracts."
+    }
+  ],
+  "examined": [
+    "/tmp/gh-aw/agent/pr.json",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md",
+    "_mm/METHODS.txt",
+    "_mm/legion-map/CODEBASE.md",
+    "_mm/vibed-codeset/.claude/docs/get_context.py cli/status.py",
+    "_mm/vibed-codeset/.claude/docs/get_context.py cli/command.py",
+    "_mm/socratic/OPEN_QUESTIONS-yuanrong-datasystem.adoc",
+    "_mm/socratic/QUESTION_TREE-yuanrong-datasystem.adoc",
+    "_mm/socratic/docs/arc42/arc42-yuanrong-datasystem.adoc",
+    "_mm/socratic/docs/specs/prd-yuanrong-datasystem.adoc",
+    "_mm/socratic/docs/specs/use-cases-yuanrong-datasystem.adoc",
+    "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-001-master-worker-split.adoc",
+    "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-002-pluggable-cluster-metadata.adoc",
+    "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-003-consistent-hash-ring-placement.adoc",
+    "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-004-performance-first-optional-reliability.adoc",
+    "cli/command.py",
+    "cli/status.py",
+    "cli/tests/test_status.py",
+    "docs/superpowers/plans/2026-07-02-dscli-status-command.md",
+    "docs/superpowers/specs/2026-07-02-dscli-status-design.md",
+    "cli/start.py",
+    "cli/stop.py"
+  ]
+}
