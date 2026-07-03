@@ -2,28 +2,26 @@
   "scanned": [
     "src/datasystem/pybind_api/pybind_register_kv.cpp",
     "src/datasystem/pybind_api/pybind_register_object.cpp",
-    "src/datasystem/pybind_api/pybind_register_hetero.cpp",
     "src/datasystem/pybind_api/pybind_register_stream.cpp",
+    "src/datasystem/pybind_api/pybind_register_hetero.cpp",
     "src/datasystem/pybind_api/pybind_register_perf.cpp",
-    "src/datasystem/pybind_api/pybind_register_common.cpp",
     "src/datasystem/pybind_api/pybind_register_context.cpp",
+    "src/datasystem/pybind_api/pybind_register_common.cpp",
     "src/datasystem/pybind_api/pybind_register_service_discovery.cpp",
-    "ConnectOptions connectOpts{...} designated-initializer blocks",
-    "KVClient::Set/SetValue/MSet buffer-prep preludes"
+    "PybindDefineRegisterer g_pybind_define_f_ObjectClient",
+    "PybindDefineRegisterer g_pybind_define_f_HeteroClient",
+    "PybindDefineRegisterer g_pybind_define_f_StreamClient",
+    "ObjectClientImpl \"KVClient\" py::init lambda",
+    "ConnectOptions connectOpts designated-initializer blocks",
+    "TraceGuard + client.Init() \"init\" binding lambdas"
   ],
   "patterns": [
     {
-      "id": "pybind-connectoptions-client-init-boilerplate",
-      "name": "Duplicated ConnectOptions designated-initializer in pybind client constructors",
+      "id": "pybind-connectoptions-init-block",
+      "name": "Duplicated ConnectOptions construction in pybind client constructors",
       "severity": "medium",
-      "rationale": "The py::init lambda for each pybind-exposed client (KVClient, ObjectClient, HeteroClient) builds a ConnectOptions struct by copying the same constructor arguments (host, port, connectTimeoutMs, requestTimeoutMs, token, clientPublicKey, clientPrivateKey, serverPublicKey, accessKey, secretKey, tenantId, enableCrossNodeConnection, enableExclusiveConnection) into identically-named designated initializers. The blocks are near-identical (13+ shared fields) and differ only by a trailing client-specific field or a hardcoded value. A shared helper that maps the common connection arguments to a ConnectOptions would remove ~15 duplicated lines per client and keep the field list in one place, avoiding drift when ConnectOptions gains a field.",
+      "rationale": "The py::init lambdas for the KV, Object and Hetero pybind clients each hand-build a ConnectOptions struct from the same host/port/timeout/credential/tenant constructor arguments using an identical designated-initializer sequence. The Object and Hetero blocks are byte-for-byte identical except for the trailing enableCrossNodeConnection/enableRemoteH2D fields. This copy-paste means any change to ConnectOptions field wiring (new field, renamed field, default change) must be repeated across every pybind_register_*.cpp, and it is easy to silently diverge (e.g. Object hardcodes enableCrossNodeConnection = false while Hetero/KV thread it through). A shared helper, e.g. MakeConnectOptions(...), would remove the repetition and keep the mapping consistent.",
       "locations": [
-        {
-          "path": "src/datasystem/pybind_api/pybind_register_kv.cpp",
-          "start_line": 201,
-          "end_line": 215,
-          "existing_code": "            ConnectOptions connectOpts{ .host = host,\n                                        .port = port,\n                                        .connectTimeoutMs = connectTimeoutMs,\n                                        .requestTimeoutMs = reqTimeoutMs,\n\n                                        .token = token,\n                                        .clientPublicKey = clientPublicKey,\n                                        .clientPrivateKey = clientPrivateKey,\n                                        .serverPublicKey = serverPublicKey,\n                                        .accessKey = accessKey,\n                                        .secretKey = secretKey,\n                                        .tenantId = tenantId,\n                                        .enableCrossNodeConnection = enableCrossNodeConnection,\n                                        .enableExclusiveConnection = enableExclusiveConnection,\n                                        .fastTransportMemSize = fastTransportMemSize };"
-        },
         {
           "path": "src/datasystem/pybind_api/pybind_register_object.cpp",
           "start_line": 127,
@@ -35,26 +33,32 @@
           "start_line": 107,
           "end_line": 122,
           "existing_code": "            ConnectOptions connectOpts{\n                .host = host,\n                .port = port,\n                .connectTimeoutMs = connectTimeoutMs,\n                .requestTimeoutMs = reqTimeoutMs,\n                .token = token,\n                .clientPublicKey = clientPublicKey,\n                .clientPrivateKey = clientPrivateKey,\n                .serverPublicKey = serverPublicKey,\n                .accessKey = accessKey,\n                .secretKey = secretKey,\n                .tenantId = tenantId,\n                .enableCrossNodeConnection = enableCrossNodeConnection,\n                .enableExclusiveConnection = enableExclusiveConnection,\n                .enableRemoteH2D = enableRemoteH2D\n            };"
+        },
+        {
+          "path": "src/datasystem/pybind_api/pybind_register_kv.cpp",
+          "start_line": 201,
+          "end_line": 215,
+          "existing_code": "            ConnectOptions connectOpts{ .host = host,\n                                        .port = port,\n                                        .connectTimeoutMs = connectTimeoutMs,\n                                        .requestTimeoutMs = reqTimeoutMs,\n\n                                        .token = token,\n                                        .clientPublicKey = clientPublicKey,\n                                        .clientPrivateKey = clientPrivateKey,\n                                        .serverPublicKey = serverPublicKey,\n                                        .accessKey = accessKey,\n                                        .secretKey = secretKey,\n                                        .tenantId = tenantId,\n                                        .enableCrossNodeConnection = enableCrossNodeConnection,\n                                        .enableExclusiveConnection = enableExclusiveConnection,\n                                        .fastTransportMemSize = fastTransportMemSize };"
         }
       ]
     },
     {
-      "id": "kv-mset-buffer-collection-loop",
-      "name": "Duplicated MSet buffer-collection loop in KVClient MSet bindings",
+      "id": "pybind-init-traceguard-lambda",
+      "name": "Duplicated \"init\" binding lambda (TraceGuard + client.Init())",
       "severity": "low",
-      "rationale": "Two MSet-style pybind bindings in pybind_register_kv.cpp contain a byte-identical block that builds an MSetParam and iterates the input buffers to accumulate totalSize and collect StringViews. The loop body (py::buffer_info construction, size accumulation, StringView wrap, emplace_back) is copy-pasted verbatim; extracting it into a small helper would remove the repeated buffer-unpacking logic and keep a single place to update if the buffer handling changes.",
+      "rationale": "The Object and Stream pybind registrations expose an \"init\" method with a byte-for-byte identical lambda body: set a request-scoped TraceGuard then return client.Init(). The Hetero variant is the same plus a py::gil_scoped_release, and the Perf variant is the same with SetTraceUUID instead of SetRequestTraceUUID. This TraceGuard-then-delegate shape is repeated for essentially every bound method in these files; a small wrapper (e.g. a traced() helper that installs the TraceGuard and forwards to the member function) would collapse the boilerplate and guarantee every entry point is traced consistently.",
       "locations": [
         {
-          "path": "src/datasystem/pybind_api/pybind_register_kv.cpp",
-          "start_line": 263,
-          "end_line": 270,
-          "existing_code": "                 MSetParam param{ .writeMode = writeMode, .ttlSecond = ttlSecond, .existence = existenceOpt };\n                 uint64_t totalSize = 0;\n                 for (const auto &val : vals) {\n                     py::buffer_info info(val.request());\n                     totalSize += info.size;\n                     StringView strView(reinterpret_cast<const char *>(info.ptr), info.size);\n                     values.emplace_back(strView);\n                 }"
+          "path": "src/datasystem/pybind_api/pybind_register_object.cpp",
+          "start_line": 145,
+          "end_line": 149,
+          "existing_code": "        .def(\"init\",\n             [](ObjectClient &client) {\n                 TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n                 return client.Init();\n             })"
         },
         {
-          "path": "src/datasystem/pybind_api/pybind_register_kv.cpp",
-          "start_line": 286,
-          "end_line": 293,
-          "existing_code": "                 MSetParam param{ .writeMode = writeMode, .ttlSecond = ttlSecond, .existence = existenceOpt };\n                 uint64_t totalSize = 0;\n                 for (const auto &val : vals) {\n                     py::buffer_info info(val.request());\n                     totalSize += info.size;\n                     StringView strView(reinterpret_cast<const char *>(info.ptr), info.size);\n                     values.emplace_back(strView);\n                 }"
+          "path": "src/datasystem/pybind_api/pybind_register_stream.cpp",
+          "start_line": 56,
+          "end_line": 60,
+          "existing_code": "        .def(\"init\",\n             [](StreamClient &client) {\n                 TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n                 return client.Init();\n             })"
         }
       ]
     }

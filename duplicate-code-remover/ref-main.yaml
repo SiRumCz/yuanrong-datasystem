@@ -1,7 +1,13 @@
 protocol: duplicate-code-remover
 instance: ref-main
-state: detect
+state: done
 iteration: 1
 gates: {}
 head_sha: 5198bdcdbf9741c48302af4c40d82ed5fc918e73
-history: []
+history:
+- iteration: 1
+  agent_run_id: '28672172205'
+  checks:
+    evidence-wellformed: pass
+    anchored-to-real-code: pass
+  feedback: ''
