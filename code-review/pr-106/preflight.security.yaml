@@ -1,7 +1,7 @@
 protocol: code-review
 instance: pr-106
-state: done
-sub_state: security-judge
+state: preflight
+sub_state: security-gather
 iteration: 1
 gates: {}
 history: []
