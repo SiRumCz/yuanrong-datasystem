@@ -1,7 +1,7 @@
 protocol: impl-feature-auto
 instance: issue-142
 head_sha: 5198bdcdbf9741c48302af4c40d82ed5fc918e73
-phase: design
+phase: implement
 joined: false
-phase_label: design (spec + ledger + plan)
+phase_label: implement (TDD + open PR)
 status_comment_id: 4877990108

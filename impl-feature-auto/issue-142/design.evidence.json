@@ -1,0 +1,77 @@
+{
+  "spec_path": "docs/superpowers/specs/2026-07-03-connectoptions-helper-design.md",
+  "plan_path": "docs/superpowers/plans/2026-07-03-connectoptions-helper.md",
+  "summary": "Design for issue #142: deduplicate the identical 13-field ConnectOptions designated-initializer block across the ObjectClient/HeteroClient/KVClient pybind py::init lambdas by extracting a header-only inline MakeConnectOptions(...) helper (new src/datasystem/pybind_api/pybind_register_util.h). Helper sets the 13 common fields; each caller sets its unique trailing field locally (Hetero: enableRemoteH2D; KV: fastTransportMemSize; Object: none, passing enableCrossNodeConnection=false explicitly to preserve today's divergence). Pure refactor, Python binding signatures unchanged; a new tests/ut gtest guards the field mapping and default preservation. 6-task plan.",
+  "run_id": "28672391085",
+  "ledger": [
+    {
+      "id": "L1",
+      "category": "DECISION",
+      "what": "Implement MakeConnectOptions as an inline free function in a new header-only file src/datasystem/pybind_api/pybind_register_util.h.",
+      "why": "All three callers live in the pybind_api module; a header-only inline helper avoids a new translation unit and CMake source-list edits (only BUILD.bazel hdrs needs the new header). Adding it to the generic pybind_register.h would couple that registration header to connection.h.",
+      "what_i_did": "Specced a dedicated small header including datasystem/utils/connection.h, plus a header-only cc_library target so tests can depend on it without the pybind extension.",
+      "confidence": "high",
+      "blast_radius": { "level": "low", "why": "A new file included only by the three pybind sources and one test; nothing else depends on it." },
+      "reversibility": { "level": "reversible", "why": "Helper can be moved to a .cpp or existing header, or inlined back, without behaviour change." },
+      "revisit_if": "Build owners prefer a .cpp/existing header, or another module needs the helper."
+    },
+    {
+      "id": "L2",
+      "category": "DECISION",
+      "what": "MakeConnectOptions takes only the 13 shared fields; per-caller unique fields (enableRemoteH2D for Hetero, fastTransportMemSize for KV) are set by the caller as a single assignment on the returned struct.",
+      "why": "The trailing fields are not duplicated (unique per caller); centralizing only the duplicated 13-field mapping keeps the helper minimal and avoids awkward positional defaults (e.g. KV passing enableRemoteH2D=false just to reach fastTransportMemSize). A single call with defaulted trailing params was rejected as more fragile and coupling the helper to every future unique field.",
+      "what_i_did": "Specced helper + one local assignment at Hetero and KV; none at Object.",
+      "confidence": "high",
+      "blast_radius": { "level": "low", "why": "Only affects how three call sites assemble a local struct; no external interface changes." },
+      "reversibility": { "level": "reversible", "why": "Signature can be widened to include trailing fields later with no behaviour change." },
+      "revisit_if": "A fourth caller shares one of the currently-unique trailing fields, making it worth promoting into the helper."
+    },
+    {
+      "id": "L3",
+      "category": "DECISION",
+      "what": "Preserve the ObjectClient enableCrossNodeConnection = false hardcode; Object passes false explicitly to the helper and gains no new py::init parameter.",
+      "why": "The issue explicitly requests behaviour preservation, and Object's py::init lambda does not accept an enableCrossNodeConnection argument; adding one would change the Python binding arity, which is out of scope and behaviour-affecting.",
+      "what_i_did": "Helper takes enableCrossNodeConnection as an explicit parameter; Object call site passes false.",
+      "confidence": "high",
+      "blast_radius": { "level": "medium", "why": "Touches the Python-facing ObjectClient constructor, but the produced value and binding arity are unchanged." },
+      "reversibility": { "level": "reversible", "why": "The explicit false can later be swapped for a threaded parameter if a follow-up chooses to fix the divergence." },
+      "revisit_if": "A follow-up issue asks to fix (not preserve) the Object enableCrossNodeConnection divergence."
+    },
+    {
+      "id": "L4",
+      "category": "ASSUMPTION",
+      "what": "Fields the helper does not set (enableRemoteH2D, fastTransportMemSize, serviceDiscovery, deviceId) fall back to struct ConnectOptions in-class defaults, matching each current call site.",
+      "why": "Correctness of the refactor hinges on defaults (not zero-init) filling unset members of the returned aggregate.",
+      "what_i_did": "Verified defaults in include/datasystem/utils/connection.h:27 (fastTransportMemSize = 256*1024*1024, enableRemoteH2D = false, enableCrossNodeConnection = false, serviceDiscovery = nullptr, deviceId = \"\"); a returned designated-init aggregate keeps in-class defaults for omitted members. Added a unit test asserting default preservation.",
+      "confidence": "high",
+      "blast_radius": { "level": "medium", "why": "A wrong default would silently change connection behaviour (e.g. transport memory size)." },
+      "reversibility": { "level": "reversible", "why": "Defaults can be set explicitly in the helper if verification ever fails." },
+      "revisit_if": "ConnectOptions field defaults change in connection.h.",
+      "verified": true
+    },
+    {
+      "id": "L5",
+      "category": "DECISION",
+      "what": "Add a standalone gtest under tests/ut/pybind_api asserting MakeConnectOptions field mapping and default preservation, rather than a Python-level test through the compiled extension.",
+      "why": "The pybind extension cannot be unit-tested in isolation without a full python/bazel client build; the helper is header-only and depends only on connection.h, so a pure gtest cheaply and directly guards the field wiring the issue is about.",
+      "what_i_did": "Specced a new ds_cc_test target depending on a header-only connect_options_util library and //tests/ut:ut_common, exercising the Object/Hetero/KV call shapes.",
+      "confidence": "medium",
+      "blast_radius": { "level": "low", "why": "A new test file and BUILD target; no production code depends on it." },
+      "reversibility": { "level": "reversible", "why": "Test can be relocated or removed without affecting production behaviour." },
+      "revisit_if": "No suitable tests/ut BUILD pattern fits, or reviewers prefer a python-level test through the extension."
+    },
+    {
+      "id": "L6",
+      "category": "ASSUMPTION",
+      "what": "The Object/Hetero/KV pybind py::init blocks are the only in-scope instances of this ConnectOptions designated-init-from-constructor-args duplication.",
+      "why": "Determines that updating three files fully resolves the issue.",
+      "what_i_did": "Grepped for ConnectOptions / fastTransportMemSize / enableRemoteH2D; other ConnectOptions constructions exist (client_worker_common_api.cpp, kvtest config, tests) but are not the pybind constructor block and are out of scope.",
+      "confidence": "medium",
+      "blast_radius": { "level": "low", "why": "If another duplicate exists it is simply left un-deduplicated, not broken." },
+      "reversibility": { "level": "reversible", "why": "Any missed site can be migrated to the same helper in a follow-up." },
+      "revisit_if": "A reviewer finds another pybind client with the same construction block.",
+      "verified": true
+    }
+  ],
+  "read_these_first": ["L5", "L6", "L3", "L4", "L1", "L2"]
+}
