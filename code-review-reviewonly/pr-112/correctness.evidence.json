@@ -1,0 +1,24 @@
+{
+  "dimension": "correctness",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "cli/top.py",
+      "line": 91,
+      "severity": "high",
+      "category": "correctness",
+      "title": "--filter is not treated as literal text and can make dscli top fail",
+      "impact": "The option is documented as a substring filter, but the changed line interpolates the raw value into a shell grep command. Inputs that are valid text filters but invalid shell/grep syntax, such as a single quote or an unmatched bracket, make grep/the shell return an error and the command raises instead of producing a filtered list. Regex metacharacters such as '.' also match more workers than the requested literal text, so operators can get a wrong worker set.",
+      "fix": "Avoid shell/grep for this filter. Run pgrep without the operator filter using argv form, parse the worker lines, and apply `if filter_text in cmdline` or equivalent literal matching in Python."
+    },
+    {
+      "path": "cli/top.py",
+      "line": 154,
+      "severity": "medium",
+      "category": "correctness",
+      "title": "--min-rss excludes workers exactly at the requested threshold",
+      "impact": "The help text and PR contract say workers using at least MB should be shown, but the predicate uses `rss_mb > min_rss_mb`. A worker whose RSS equals `--min-rss` is incorrectly hidden, including `--min-rss 0` hiding readable zero-MiB results.",
+      "fix": "Change the predicate to `rss_mb >= min_rss_mb` so the boundary matches the documented inclusive threshold."
+    }
+  ]
+}
