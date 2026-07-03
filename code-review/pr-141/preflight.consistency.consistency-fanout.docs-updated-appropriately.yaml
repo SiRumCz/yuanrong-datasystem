@@ -1,7 +1,7 @@
 protocol: code-review
 instance: pr-141
 state: consistency-fanout
-sub_state: docs-updated-appropriately-gather
+sub_state: docs-updated-appropriately-judge
 iteration: 1
 gates: {}
 history: []
