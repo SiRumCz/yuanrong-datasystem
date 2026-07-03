@@ -1,0 +1,171 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "EmbeddedConfig sample-rate setters have no regression coverage",
+      "dimension": [
+        "test"
+      ],
+      "severity": "medium",
+      "paths": [
+        "src/datasystem/common/flags/embedded_config.cpp"
+      ],
+      "member_findings": [
+        {
+          "dimension": "test",
+          "path": "src/datasystem/common/flags/embedded_config.cpp",
+          "line": 122,
+          "severity": "medium",
+          "category": "test",
+          "title": "EmbeddedConfig sample-rate setters have no regression coverage",
+          "impact": "RequestSampleRate, AccessSampleRate, and DiagnosticSampleRate add the public embedded-worker configuration surface, including range filtering before values enter extraArgs, but no changed test exercises these setters through EmbeddedConfig or ParseCommandLineFlags. A typo in the flag names, invalid-rate handling, or failure to propagate embedded config to the sampler would pass the current sampler-only tests.",
+          "fix": "Add an embedded-config/flag parsing test that builds an EmbeddedConfig with valid and invalid sample rates, parses it through the existing embedded flag path, and asserts the resulting FLAGS_* values and LogSampler effective ppm/derivation behavior."
+        }
+      ],
+      "rank": 1
+    },
+    {
+      "cluster_id": "c2",
+      "title": "Hot access paths now construct a much heavier recorder state even when sampling is off",
+      "dimension": [
+        "performance"
+      ],
+      "severity": "medium",
+      "paths": [
+        "src/datasystem/common/log/access_recorder.h"
+      ],
+      "member_findings": [
+        {
+          "dimension": "performance",
+          "path": "src/datasystem/common/log/access_recorder.h",
+          "line": 416,
+          "severity": "medium",
+          "category": "performance",
+          "title": "Hot access paths now construct a much heavier recorder state even when sampling is off",
+          "impact": "The default all-1.0 configuration disables sampling, but every converted client/worker access path still constructs ObjectAccessRecorder. That now includes ObjectAccessState with many std::string and std::function members before the actual operation starts, adding per-request constructor/destructor/cache footprint on hot paths such as KVClient::Create/Set/Get where the old AccessRecorder only held timing/name/type state and built RequestParam at record time.",
+          "fix": "Keep the facade state out of the unconditional hot-path object, for example by making ObjectAccessRecorder hold an optional/unique state allocated or constructed only after AccessRecorder::ShouldRecordInternal() is true, or by splitting a small fast guard from the heavier lazy field container."
+        }
+      ],
+      "rank": 2
+    },
+    {
+      "cluster_id": "c3",
+      "title": "Snapshot publication logic is duplicated across config update paths",
+      "dimension": [
+        "maintainability"
+      ],
+      "severity": "medium",
+      "paths": [
+        "src/datasystem/common/log/log_sampler_proto.cpp"
+      ],
+      "member_findings": [
+        {
+          "dimension": "maintainability",
+          "path": "src/datasystem/common/log/log_sampler_proto.cpp",
+          "line": 65,
+          "severity": "medium",
+          "category": "maintainability",
+          "title": "Snapshot publication logic is duplicated across config update paths",
+          "impact": "The proto update path manually allocates, exchanges, retires old snapshots, and toggles samplerEnabled instead of reusing the same publication path as UpdateConfigFromFlags. Future changes to snapshot ownership, retirement, memory ordering, or enabled-state semantics must be made in multiple places, and this copy has already diverged from the mutex-scoped BuildAndPublishSnapshot flow.",
+          "fix": "Factor snapshot construction/publication/retirement into one helper that accepts the already-normalized ppm values and enabled flag, and call it from both UpdateConfigFromFlags and UpdateConfigFromProto."
+        }
+      ],
+      "rank": 3
+    },
+    {
+      "cluster_id": "c4",
+      "title": "Dynamic sampler flag transaction is untested",
+      "dimension": [
+        "test"
+      ],
+      "severity": "medium",
+      "paths": [
+        "src/datasystem/common/util/gflag/flags.cpp"
+      ],
+      "member_findings": [
+        {
+          "dimension": "test",
+          "path": "src/datasystem/common/util/gflag/flags.cpp",
+          "line": 326,
+          "severity": "medium",
+          "category": "test",
+          "title": "Dynamic sampler flag transaction is untested",
+          "impact": "The new dynamic update path validates, commits, rolls back, and publishes request/access/diagnostic sampling rates as one transaction, but the diff only tests LogSampler::UpdateConfigFromFlags directly. A regression in UpdateFlagParameter, ValidateAndCommitSamplerFlags, rollback after a bad value, or explicit-state preservation would not be caught, so runtime config changes could silently leave clients/workers with the wrong sampling policy.",
+          "fix": "Add a flags-level test that calls Flags::UpdateFlagParameter with sampler entries, asserts the gflag values and LogSampler snapshot change together, and covers invalid batch rollback plus the request-only derivation/explicit override cases through this production path."
+        }
+      ],
+      "rank": 4
+    },
+    {
+      "cluster_id": "c5",
+      "title": "Expire error path drops its access record",
+      "dimension": [
+        "correctness"
+      ],
+      "severity": "medium",
+      "paths": [
+        "src/datasystem/worker/object_cache/service/worker_oc_service_expire_impl.cpp"
+      ],
+      "member_findings": [
+        {
+          "dimension": "correctness",
+          "path": "src/datasystem/worker/object_cache/service/worker_oc_service_expire_impl.cpp",
+          "line": 113,
+          "severity": "medium",
+          "category": "correctness",
+          "title": "Expire error path drops its access record",
+          "impact": "When ExpireFromMaster returns an error inside the RetryWhenDeadlock callback, the function returns immediately from that branch and never reaches the new access.Result(rc).Record() call. The old code recorded the failed access before returning, so failed Expire requests can now lose their access log and only emit the recorder destructor warning.",
+          "fix": "Record the access result before the rc.IsError() return path as before, or wrap this method's recorder finalization in RAII so every exit path records exactly once."
+        }
+      ],
+      "rank": 5
+    },
+    {
+      "cluster_id": "c6",
+      "title": "Sample-rate comments are malformed around derivation semantics",
+      "dimension": [
+        "maintainability"
+      ],
+      "severity": "low",
+      "paths": [
+        "k8s/helm_chart/datasystem/values.yaml"
+      ],
+      "member_findings": [
+        {
+          "dimension": "maintainability",
+          "path": "k8s/helm_chart/datasystem/values.yaml",
+          "line": 150,
+          "severity": "low",
+          "category": "maintainability",
+          "title": "Sample-rate comments are malformed around derivation semantics",
+          "impact": "The new Helm comments say `accessSampleRate or1.0` and `rate.0.0-1.0)`, which obscures the important rule that explicitly setting access or diagnostic rates disables derivation from requestSampleRate. Operators and future maintainers can misconfigure sampling by following the checked-in values documentation.",
+          "fix": "Rewrite the comments to state the exact derivation rule in valid sentences, for example that leaving accessSampleRate/diagnosticSampleRate empty derives them from requestSampleRate, while setting either field explicitly overrides derivation."
+        }
+      ],
+      "rank": 6
+    }
+  ],
+  "summary": {
+    "present": [
+      "correctness",
+      "test",
+      "performance",
+      "security",
+      "maintainability"
+    ],
+    "missing": [],
+    "clusters": 6,
+    "total_findings": 6,
+    "by_severity": {
+      "medium": 5,
+      "low": 1
+    },
+    "by_dimension": {
+      "correctness": 1,
+      "test": 2,
+      "performance": 1,
+      "security": 0,
+      "maintainability": 2
+    }
+  }
+}
