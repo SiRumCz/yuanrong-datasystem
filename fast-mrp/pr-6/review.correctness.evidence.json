@@ -1,0 +1,15 @@
+{
+  "dimension": "correctness",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "src/datasystem/c_api/object_client_c_wrapper.cpp",
+      "line": 90,
+      "severity": "high",
+      "category": "correctness",
+      "title": "Reject nested-key length array instead of silently dropping nested refs",
+      "impact": "When OCPut is called with cNestedObjectKeys non-null but cNestedObjKeyLenArray null, the new guard skips the loop and sends an empty nestedObjectKeysSet to Put. That can successfully create the object without the caller's requested nested references, leaving incorrect object dependency/reference metadata instead of returning K_INVALID.",
+      "fix": "If cNestedObjectKeys is non-null and cNestedObjectKeysNum is non-zero, validate cNestedObjKeyLenArray and each nested key pointer before building nestedObjectKeysSet; return K_INVALID on malformed input rather than treating it as no nested keys."
+    }
+  ]
+}
