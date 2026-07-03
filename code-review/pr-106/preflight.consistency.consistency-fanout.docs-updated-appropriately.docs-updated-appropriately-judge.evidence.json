@@ -1,0 +1,23 @@
+{
+  "leg": "docs-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": "docs/source_zh_cn/deployment/dscli.md",
+      "severity": "blocking",
+      "rationale": "A newly registered user-facing dscli status command lacking official command index and per-command reference updates is a substantive documentation gap that should stop merge."
+    },
+    {
+      "ref": ".repo_context/generated/repo_index.md",
+      "severity": "blocking",
+      "rationale": "The shared repository context is expected to reflect module structure changes; leaving the generated cli tree stale after adding new command and test files can mislead future maintenance and review work."
+    }
+  ],
+  "examined": [
+    "docs/source_zh_cn/deployment/dscli.md",
+    ".repo_context/generated/repo_index.md"
+  ]
+}
