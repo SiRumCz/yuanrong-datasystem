@@ -1,7 +1,7 @@
 protocol: code-review
 instance: pr-106
 state: preflight
-sub_state: mm-compliance-gather
+sub_state: mm-compliance-judge
 iteration: 1
 gates: {}
 history: []
