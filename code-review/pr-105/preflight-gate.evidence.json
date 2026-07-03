@@ -1,0 +1,47 @@
+{
+  "legs": [
+    {
+      "leg": "spec-solves-issue",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence evidence was not available for spec-solves-issue; no source verdict or scope was provided."
+    },
+    {
+      "leg": "plan-implements-spec",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence evidence was not available for plan-implements-spec; no source verdict or scope was provided."
+    },
+    {
+      "leg": "code-implements-plan",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence evidence was not available for code-implements-plan; no source verdict or scope was provided."
+    },
+    {
+      "leg": "mm-compliance",
+      "verdict": "diverges",
+      "scope": {},
+      "summary": "MM compliance reported verdict diverges with 1 graded divergence(s)."
+    },
+    {
+      "leg": "docs-updated-appropriately",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Consistency evidence was not available for docs-updated-appropriately; no source verdict or scope was provided."
+    },
+    {
+      "leg": "tests-updated-appropriately",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Consistency evidence was not available for tests-updated-appropriately; no source verdict or scope was provided."
+    },
+    {
+      "leg": "security",
+      "verdict": "PASS",
+      "scope": {},
+      "summary": "Security reported verdict PASS with 0 locked violation(s)."
+    }
+  ],
+  "examined": []
+}
