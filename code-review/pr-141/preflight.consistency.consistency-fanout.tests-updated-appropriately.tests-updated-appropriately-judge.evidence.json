@@ -1,0 +1,17 @@
+{
+  "leg": "tests-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "adequate",
+  "graded_findings": [
+    {
+      "ref": "cli/tests/test_metastore_ha.py",
+      "severity": "advisory",
+      "rationale": "The finding describes relevant tests added for the changed CLI behavior, including bounds handling, HA config transformation, command execution paths, and registration. This supports the gather verdict and does not indicate a merge-blocking gap."
+    }
+  ],
+  "examined": [
+    "cli/tests/test_metastore_ha.py"
+  ]
+}
