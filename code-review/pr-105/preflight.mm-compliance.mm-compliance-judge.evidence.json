@@ -1,0 +1,13 @@
+{
+  "leg": "mm-compliance",
+  "scope": {},
+  "gather_verdict": "diverges",
+  "graded_findings": [
+    {
+      "ref": "0",
+      "severity": "blocking",
+      "rationale": "The finding identifies a substantive mismatch between the documented ETCD-vs-Metastore deployment model and the new pre-deploy validator: Metastore head-node constraints can pass validation but fail during deploy. Because this defeats the command's deploy-blocking structural validation purpose, it should stop merge until covered or explicitly scoped out."
+    }
+  ],
+  "examined": ["0"]
+}
