@@ -1,6 +1,6 @@
 protocol: code-review
 instance: pr-94
-state: adherence-fanout
+state: done
 iteration: 2
 gates: {}
 head_sha: a36f5d0f8ba18f57998d165a7ce494c7397a0503
@@ -14,3 +14,9 @@ history:
     in-repo: `stop.py` locates a worker by scanning for its `-worker_address=` argument
     (`cli/stop.py:247`, `get_unique_pid`). This feature reuses that same, proven approach
     to *list* all workers instead of requiring a single match.'']'
+- iteration: 2
+  agent_run_id: '28632774874'
+  checks:
+    evidence-present: pass
+    spec-solves-issue-coverage: pass
+  feedback: ''
