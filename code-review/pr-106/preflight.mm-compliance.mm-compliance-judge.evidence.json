@@ -1,0 +1,21 @@
+{
+  "leg": "mm-compliance",
+  "scope": {},
+  "gather_verdict": "diverges",
+  "graded_findings": [
+    {
+      "ref": "0",
+      "severity": "blocking",
+      "rationale": "The finding identifies a substantive architecture mismatch: the PR introduces a hard-coded external status collector and fleet-wide reporting path not represented in the accepted MM operational model. That creates a new availability and deployment dependency, so it should stop merge until either removed or modeled."
+    },
+    {
+      "ref": "1",
+      "severity": "blocking",
+      "rationale": "The finding identifies a substantive security-model expansion: a new cluster-token credential convention and token transmission path outside the accepted MM mechanisms. Because this changes credential handling and threat boundaries without an MM decision, it should block merge."
+    }
+  ],
+  "examined": [
+    "0",
+    "1"
+  ]
+}
