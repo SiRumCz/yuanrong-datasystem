@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import yaml
 import paths as _paths
 
@@ -759,6 +760,126 @@ def resolve_executable(sdir, name, pdir, ex=""):
         return f"OK\t{matches[0]}"
 
 
+# --- GitHub write helpers: token-pool rotation -----------------------------
+# Engine WRITE calls (comments, check-runs, dispatches) run in ~25 isolated,
+# parallel Actions jobs that share no process memory — so a "current token"
+# pointer cannot be global. Instead every job carries the FULL token pool and
+# fails over LOCALLY: on a 403/429 rate-limit it moves to the next token
+# (first -> _2 -> …). Failover is ALWAYS on. When a full lap finds every token
+# exhausted it FAILS FAST by default (GH_ROTATE_MAX_WAIT_S=0); set that > 0 to opt
+# into cycling BACK to the first token with a bounded wait (a token's window
+# resets while we pause). The pool is PUBLISH_TOKEN + PUBLISH_TOKEN_2 …
+# PUBLISH_TOKEN_9 (each wired to a distinct dispatch-PAT secret, e.g.
+# POC_DISPATCH_TOKEN / POC_DISPATCH_TOKEN_2); with only PUBLISH_TOKEN set and the
+# default fail-fast, a rate-limited write behaves as before (one call, then fail/log).
+def _publish_tokens():
+    """Ordered write-token pool: PUBLISH_TOKEN, then PUBLISH_TOKEN_2 … PUBLISH_TOKEN_9,
+    each wired (in the workflow) to a distinct dispatch-PAT secret. Unset/blank
+    entries are skipped; with only PUBLISH_TOKEN set this is a single token (no
+    rotation), unchanged from before."""
+    toks = []
+    primary = os.environ.get("PUBLISH_TOKEN", "").strip()
+    if primary:
+        toks.append(primary)
+    for i in range(2, 10):  # PUBLISH_TOKEN_2 .. PUBLISH_TOKEN_9
+        val = os.environ.get(f"PUBLISH_TOKEN_{i}", "").strip()
+        if val and val not in toks:
+            toks.append(val)
+    return toks
+
+
+def _looks_rate_limited(result):
+    """True when a failed `gh api` result is a GitHub rate-limit (worth rotating).
+    Deliberately narrow: a permission 403 is NOT a rate-limit and must not rotate.
+    Scans stdout too, and matches the legacy "abuse detection" wording."""
+    if result is None or result.returncode == 0:
+        return False
+    msg = ((result.stderr or "") + " " + (result.stdout or "")).lower()
+    return ("rate limit" in msg or "secondary rate" in msg
+            or "abuse detection" in msg
+            or "http 429" in msg or "429 too many" in msg)
+
+
+_POOL_ENV_KEYS = ("PUBLISH_TOKEN", "PUBLISH_TOKENS") + tuple(
+    f"PUBLISH_TOKEN_{i}" for i in range(2, 10))
+
+
+def _rotate_float(name, default):
+    """Parse a GH_ROTATE_* seconds value; fall back to `default` for a missing,
+    blank, non-numeric, non-finite, or negative value — so a misconfigured env var
+    can never crash a write or make the wait budget unbounded."""
+    raw = os.environ.get(name)
+    if raw is None or not raw.strip():
+        return default
+    try:
+        val = float(raw)
+    except ValueError:
+        return default
+    return val if math.isfinite(val) and val >= 0 else default
+
+
+def run_gh_rotating(api_args, *, tokens=None, check=False):
+    """`gh api <api_args>` that CYCLES the token pool on a rate-limit (403/429):
+    PUBLISH_TOKEN -> PUBLISH_TOKEN_2 -> … -> back to the first, and around again.
+
+    When a full lap finds EVERY token rate-limited it FAILS FAST by default
+    (`GH_ROTATE_MAX_WAIT_S=0`). Set that > 0 to opt into cycling BACK to the first
+    token: it waits `GH_ROTATE_WAIT_S` (default 60s) and laps again, up to
+    `GH_ROTATE_MAX_WAIT_S` total, so a token's hourly window can reset while it
+    pauses. Failover between tokens is always on; a *permission* 403 (not a
+    rate-limit) never rotates.
+
+    Each isolated job runs this independently (no shared state). Returns the first
+    success (or the last attempt); raises CalledProcessError with check=True if it
+    ultimately fails. An empty pool is one plain `gh api` on the ambient GH_TOKEN.
+    """
+    toks = tokens if tokens is not None else _publish_tokens()
+    if not toks:
+        toks = [""]  # inherit ambient GH_TOKEN
+    n = len(toks)
+    wait_s = _rotate_float("GH_ROTATE_WAIT_S", 60.0)
+    max_wait_s = _rotate_float("GH_ROTATE_MAX_WAIT_S", 0.0)  # 0 = fail fast; opt in to waiting
+    waited = 0.0
+    attempt = 0
+    result = None
+    while True:
+        tok = toks[attempt % n]
+        # Give the child only the token it needs — scrub the sibling pool secrets
+        # from its environment so a `gh` subprocess never sees the other tokens.
+        env = dict(os.environ)
+        for _k in _POOL_ENV_KEYS:
+            env.pop(_k, None)
+        if tok:
+            env["GH_TOKEN"] = tok
+        result = subprocess.run(["gh", "api"] + list(api_args),
+                                text=True, capture_output=True, env=env)
+        if result.returncode == 0:
+            return result
+        if not _looks_rate_limited(result):
+            break  # a real (non-rate-limit) error — do not rotate
+        attempt += 1
+        if attempt % n != 0:
+            sys.stderr.write(
+                f"[engine] gh token rate-limited; switching to token {attempt % n + 1}/{n}\n")
+            continue  # tokens left this lap — try the next one immediately
+        # full lap done: every token is rate-limited right now
+        pause = min(wait_s, max_wait_s - waited) if wait_s > 0 else 0.0
+        if pause <= 0:
+            break  # no (more) wait budget — give up rather than spin
+        sys.stderr.write(
+            f"[engine] all {n} token(s) rate-limited; waiting {pause:.0f}s, "
+            f"then retrying from token 1\n")
+        time.sleep(pause)
+        waited += pause
+    if check and (result is None or result.returncode != 0):
+        raise subprocess.CalledProcessError(
+            result.returncode if result else 1,
+            ["gh", "api"] + list(api_args),
+            output=result.stdout if result else "",
+            stderr=result.stderr if result else "")
+    return result
+
+
 def set_check_run(name, sha, status, conclusion, title, summary):
     """
     set_check_run <name> <head_sha> <status> <conclusion-or-empty> <title> <summary>
@@ -790,14 +911,19 @@ def set_check_run(name, sha, status, conclusion, title, summary):
     # already IS the Actions token (advance/join jobs). This matters for a protocol
     # that finalizes at a terminal `merge` in the plan job, where PUBLISH_TOKEN is
     # the dispatch PAT (which can post the review but cannot complete the check-run).
-    check_token = os.environ.get("CHECK_RUN_TOKEN") or os.environ.get("PUBLISH_TOKEN", "")
-    env = dict(os.environ)
+    # Prefer the single Actions CHECK_RUN_TOKEN (only it can create an Actions-app
+    # check-run). When it is absent the caller falls back to the classic-PAT pool,
+    # which rotates so a rate-limited PAT fails over instead of dropping the check.
+    check_token = os.environ.get("CHECK_RUN_TOKEN", "")
     if check_token:
+        env = dict(os.environ)
         env["GH_TOKEN"] = check_token
-    result = subprocess.run(
-        ["gh", "api", "-X", "POST", f"repos/{repo}/check-runs"] + args,
-        text=True, capture_output=True, env=env
-    )
+        result = subprocess.run(
+            ["gh", "api", "-X", "POST", f"repos/{repo}/check-runs"] + args,
+            text=True, capture_output=True, env=env
+        )
+    else:
+        result = run_gh_rotating(["-X", "POST", f"repos/{repo}/check-runs"] + args)
     if result.returncode != 0:
         sys.stderr.write(
             "[engine] check-run create failed (needs checks:write + Actions token; "
@@ -1019,27 +1145,18 @@ def upsert_status_comment(sf, pr, body):
     state = load_yaml(sf)
     cid = state.get("status_comment_id", "") or ""
     repo = os.environ.get("GITHUB_REPOSITORY", "")
-    publish_token = os.environ.get("PUBLISH_TOKEN", "")
-    env = dict(os.environ)
-    if publish_token:
-        env["GH_TOKEN"] = publish_token
 
     if not cid:
-        result = subprocess.run(
-            ["gh", "api", f"repos/{repo}/issues/{pr}/comments",
-             "-f", f"body={body}", "--jq", ".id"],
-            text=True, capture_output=True, env=env, check=True
-        )
+        result = run_gh_rotating(
+            [f"repos/{repo}/issues/{pr}/comments", "-f", f"body={body}", "--jq", ".id"],
+            check=True)
         new_cid = result.stdout.strip()
         state["status_comment_id"] = int(new_cid) if new_cid.isdigit() else new_cid
         dump_yaml(sf, state)
     else:
-        subprocess.run(
-            ["gh", "api", "-X", "PATCH",
-             f"repos/{repo}/issues/comments/{cid}",
-             "-f", f"body={body}"],
-            text=True, capture_output=True, env=env, check=True
-        )
+        run_gh_rotating(
+            ["-X", "PATCH", f"repos/{repo}/issues/comments/{cid}", "-f", f"body={body}"],
+            check=True)
 
 
 def post_pr_comment(pr, body):
@@ -1055,24 +1172,9 @@ def post_pr_comment(pr, body):
     if not str(pr).isdigit():   # ref-/UI-targeted run: no real PR thread
         return
     repo = os.environ.get("GITHUB_REPOSITORY", "")
-    publish_token = os.environ.get("PUBLISH_TOKEN", "")
-    env = dict(os.environ)
-    if publish_token:
-        env["GH_TOKEN"] = publish_token
-    result = subprocess.run(
-        ["gh", "api", f"repos/{repo}/issues/{pr}/comments", "-f", f"body={body}"],
-        text=True, capture_output=True, env=env,
-    )
+    result = run_gh_rotating([f"repos/{repo}/issues/{pr}/comments", "-f", f"body={body}"])
     if result.returncode != 0:
         sys.stderr.write(f"[engine] pr comment post failed (needs issues:write): {result.stderr.strip()}\n")
-
-
-def _gh_env():
-    env = dict(os.environ)
-    tok = os.environ.get("PUBLISH_TOKEN", "")
-    if tok:
-        env["GH_TOKEN"] = tok
-    return env
 
 
 def create_issue(title, body):
@@ -1083,11 +1185,8 @@ def create_issue(title, body):
         sys.stderr.write(f"[ENGINE_LOCAL] create issue: {title}\n")
         return "0"
     repo = os.environ.get("GITHUB_REPOSITORY", "")
-    r = subprocess.run(
-        ["gh", "api", f"repos/{repo}/issues", "-f", f"title={title}",
-         "-f", f"body={body}", "--jq", ".number"],
-        text=True, capture_output=True, env=_gh_env(),
-    )
+    r = run_gh_rotating(
+        [f"repos/{repo}/issues", "-f", f"title={title}", "-f", f"body={body}", "--jq", ".number"])
     if r.returncode != 0:
         sys.stderr.write(f"[engine] create issue failed (needs issues:write): {r.stderr.strip()}\n")
         return ""
@@ -1102,12 +1201,9 @@ def close_issue(number, comment=""):
         sys.stderr.write(f"[ENGINE_LOCAL] close issue #{number}: {comment}\n")
         return
     repo = os.environ.get("GITHUB_REPOSITORY", "")
-    env = _gh_env()
     if comment:
-        subprocess.run(["gh", "api", f"repos/{repo}/issues/{number}/comments",
-                        "-f", f"body={comment}"], text=True, capture_output=True, env=env)
-    r = subprocess.run(["gh", "api", "-X", "PATCH", f"repos/{repo}/issues/{number}",
-                        "-f", "state=closed"], text=True, capture_output=True, env=env)
+        run_gh_rotating([f"repos/{repo}/issues/{number}/comments", "-f", f"body={comment}"])
+    r = run_gh_rotating(["-X", "PATCH", f"repos/{repo}/issues/{number}", "-f", "state=closed"])
     if r.returncode != 0:
         sys.stderr.write(f"[engine] close issue failed (needs issues:write): {r.stderr.strip()}\n")
 
@@ -1125,15 +1221,8 @@ def finalize_superseded_comment(pr, cid, body):
         sys.stderr.write(f"[ENGINE_LOCAL] supersede comment {cid} pr#{pr}: {body}\n")
         return
     repo = os.environ.get("GITHUB_REPOSITORY", "")
-    publish_token = os.environ.get("PUBLISH_TOKEN", "")
-    env = dict(os.environ)
-    if publish_token:
-        env["GH_TOKEN"] = publish_token
-    result = subprocess.run(
-        ["gh", "api", "-X", "PATCH", f"repos/{repo}/issues/comments/{cid}",
-         "-f", f"body={body}"],
-        text=True, capture_output=True, env=env,
-    )
+    result = run_gh_rotating(
+        ["-X", "PATCH", f"repos/{repo}/issues/comments/{cid}", "-f", f"body={body}"])
     if result.returncode != 0:
         sys.stderr.write(f"[engine] supersede comment {cid} failed (non-fatal): {result.stderr.strip()}\n")
 
@@ -1608,7 +1697,7 @@ def _gh_dispatch(event_type, fields):
     if os.environ.get("ENGINE_LOCAL", "0") == "1":
         sys.stderr.write(f"[ENGINE_LOCAL] gh api {' '.join(args)}\n")
         return
-    subprocess.run(["gh", "api"] + args, text=True, capture_output=True)
+    run_gh_rotating(args)
 
 
 def dispatch_continue(pid, instance, branch=None, substate=None, phase="", path=None):

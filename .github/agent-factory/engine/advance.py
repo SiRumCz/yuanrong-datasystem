@@ -90,15 +90,14 @@ def persist_output(ctx, evid, kind="evidence"):
 
 
 def gh_api(*args):
-    """Run 'gh api ...' with ENGINE_LOCAL short-circuit."""
+    """Run 'gh api ...' with ENGINE_LOCAL short-circuit and token-pool rotation.
+    Delegates to lib.run_gh_rotating so a rate-limited dispatch token fails over
+    to the next token in the pool instead of dropping the repository_dispatch."""
     if os.environ.get("ENGINE_LOCAL", "0") == "1":
         sys.stderr.write(f"[ENGINE_LOCAL] gh api {' '.join(args)}\n")
         return
-    result = subprocess.run(
-        ["gh", "api"] + list(args),
-        text=True, capture_output=True
-    )
-    if result.returncode != 0:
+    result = lib.run_gh_rotating(list(args))
+    if result is not None and result.returncode != 0:
         sys.stderr.write(f"[engine] gh api failed: {result.stderr}\n")
 
 
@@ -708,8 +707,7 @@ def main():
             _conclude = run_conclude_hook(
                 proto_path, proto, agent_state, evid, instance, blocking,
                 dir_=dir_, tree_path=tree_path)
-            hook = run_publish_hook(proto_path, proto, branch, agent_state, evid, instance, pid,
-                                    tree_path=tree_path)
+            hook = run_publish_hook(proto_path, proto, branch, agent_state, evid, instance, pid)
             if _conclude is not None:
                 concl = _conclude.get("conclusion", "neutral")
                 csum = _conclude.get("summary", "")
