@@ -1,0 +1,65 @@
+{
+  "leg": "tests-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": "tests/ut/common/log/log_sampler_test.cpp",
+      "severity": "advisory",
+      "rationale": "The gather finding says this test covers core sampler rate derivation, validation, threshold behavior, distribution, disabled fast path, and concurrent config reads. That is substantive coverage for the changed behavior and does not indicate a merge-blocking gap."
+    },
+    {
+      "ref": "tests/ut/common/log/log_sampler_integration_test.cpp",
+      "severity": "advisory",
+      "rationale": "The gather finding reports integration coverage across LOG/PLOG, diagnostic supplement behavior, fatal/check bypass, VLOG sampling, and background-log bypass. This is meaningful coverage rather than a deficiency."
+    },
+    {
+      "ref": "tests/ut/common/log/log_sampler_access_test.cpp",
+      "severity": "advisory",
+      "rationale": "The gather finding identifies focused access-log sampling coverage for the relevant record types, forced retention, markers, and fallback behavior. It supports the change and does not describe an adherence gap."
+    },
+    {
+      "ref": "tests/ut/common/log/log_access_facade_test.cpp",
+      "severity": "advisory",
+      "rationale": "The gather finding says the new typed facades and lazy provider behavior are covered, including sampled-out suppression and field handling. This is useful evidence of appropriate test updates, not a blocker."
+    },
+    {
+      "ref": "tests/ut/common/log/log_sampler_config_test.cpp",
+      "severity": "advisory",
+      "rationale": "The gather finding reports coverage for parsing, validation, previous-good retention, disabled pass-through, proto population, and derived request-only rates. That directly exercises configuration behavior and is not a serious gap."
+    },
+    {
+      "ref": "tests/st/common/log/log_sampler_st_test.cpp",
+      "severity": "advisory",
+      "rationale": "The gather finding says system coverage was added for cross-process sampling consistency and worker-to-client config delivery. This is appropriate broader coverage for distributed configuration behavior."
+    },
+    {
+      "ref": "tests/ut/common/rpc/zmq_trace_sampling_meta_test.cpp",
+      "severity": "advisory",
+      "rationale": "The gather finding reports RPC metadata tests for the new request sampling state semantics, including disabled, full-rate undecided, and zero-rate rejection. That is relevant protocol-facing coverage and not a blocker."
+    },
+    {
+      "ref": "tests/ut/common/log/log_performance_test.cpp",
+      "severity": "advisory",
+      "rationale": "The gather finding identifies performance coverage for sampler hot paths, pass-through overhead, reject fast path, access sampling, and provider suppression. This is important for infrastructure code but is reported as present rather than missing."
+    },
+    {
+      "ref": "tests/ut/common/flags/flags_test.cpp",
+      "severity": "blocking",
+      "rationale": "The gather finding identifies an actual adherence gap: dynamic gflag update handling for request, access, and diagnostic sample rates changed, but this test only has a whitespace change. Missing validation of validate-then-commit and explicit sampler flag updates should stop merge because configuration update correctness is operationally significant."
+    }
+  ],
+  "examined": [
+    "tests/ut/common/log/log_sampler_test.cpp",
+    "tests/ut/common/log/log_sampler_integration_test.cpp",
+    "tests/ut/common/log/log_sampler_access_test.cpp",
+    "tests/ut/common/log/log_access_facade_test.cpp",
+    "tests/ut/common/log/log_sampler_config_test.cpp",
+    "tests/st/common/log/log_sampler_st_test.cpp",
+    "tests/ut/common/rpc/zmq_trace_sampling_meta_test.cpp",
+    "tests/ut/common/log/log_performance_test.cpp",
+    "tests/ut/common/flags/flags_test.cpp"
+  ]
+}
