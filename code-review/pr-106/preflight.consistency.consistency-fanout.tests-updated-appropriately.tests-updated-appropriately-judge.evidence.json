@@ -1,0 +1,17 @@
+{
+  "leg": "tests-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": "cli/tests/test_status.py",
+      "severity": "blocking",
+      "rationale": "The finding identifies missing coverage for the command execution path, token lookup, best-effort HTTP reporting, and CLI registration. Those are the core behaviors introduced or affected, so parser and payload-only tests leave a real adherence gap."
+    }
+  ],
+  "examined": [
+    "cli/tests/test_status.py"
+  ]
+}
