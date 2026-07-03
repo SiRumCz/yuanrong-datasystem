@@ -1,0 +1,77 @@
+{
+  "spec_path": "docs/superpowers/specs/2026-07-03-kvclient-requestparam-dedup-design.md",
+  "plan_path": "docs/superpowers/plans/2026-07-03-kvclient-requestparam-dedup.md",
+  "summary": "Design for issue #151: extract the duplicated RequestParam write-field mapping (objectKey + writeMode/ttlSecond/existence/cacheType) in src/datasystem/client/kv_cache/kv_client.cpp into one file-local static function template, and route the five byte-identical write sites (Create, MCreate, Set(key,val,setParam), MSetTx, MSet) through it. Pure refactor with zero change to logged values; the keyless Set(val,setParam) overload is deliberately excluded because it omits the existence field. Helper has internal linkage (no header/ABI change).",
+  "run_id": "28678294428",
+  "ledger": [
+    {
+      "id": "L1",
+      "category": "DECISION",
+      "what": "Place the mapping helper as a file-local (static/anonymous-namespace) function template inside kv_client.cpp rather than as a shared declaration in common/log/access_recorder.h.",
+      "why": "The mapping depends on public KV types (SetParam/MSetParam); exposing it in access_recorder.h would add a layering dependency from common/log onto the public KV API, and the issue scopes the change to kv_client.cpp. A file-local helper matches the existing ReadParamToString convention in this file.",
+      "what_i_did": "Chose a file-local, internally-linked function template defined near the top of kv_client.cpp, before its first use.",
+      "confidence": "high",
+      "blast_radius": { "level": "low", "why": "Internal linkage, single translation unit, no ABI or header change." },
+      "reversibility": { "level": "reversible", "why": "Promoting to a shared header helper later is mechanical." },
+      "revisit_if": "The same block must also be deduped in java_api/pybind_api, which would justify a shared header helper."
+    },
+    {
+      "id": "L2",
+      "category": "DEFERRED",
+      "what": "The keyless Set(val, setParam) overload (lines ~242-245) sets only four fields and omits reqParam.existence, unlike every other write site.",
+      "why": "Applying the helper there would newly populate existence in that access-record log line, an observable behaviour change that conflicts with the issue's preserve-behaviour mandate.",
+      "what_i_did": "Excluded that overload from the dedup; left its four inline assignments unchanged and documented the exclusion.",
+      "confidence": "medium",
+      "blast_radius": { "level": "low", "why": "Affects only one overload's access-record log line." },
+      "reversibility": { "level": "reversible", "why": "Folding it in is a one-line addition if the omission is confirmed a bug." },
+      "revisit_if": "An owner confirms the existence omission in Set(val, setParam) is a bug rather than intentional."
+    },
+    {
+      "id": "L3",
+      "category": "DECISION",
+      "what": "Apply the helper to all five sites that produce a byte-identical field set (Create, MCreate, Set(key,val,setParam), MSetTx, MSet), not only the two lines named in the issue.",
+      "why": "The issue's requested change says to update all call sites; these five produce identical field strings, so including them removes the duplication fully with zero behaviour change.",
+      "what_i_did": "Scoped the five identical sites and excluded the divergent Set(val,setParam) overload (see L2).",
+      "confidence": "high",
+      "blast_radius": { "level": "low", "why": "Same translation unit, pure textual substitution with identical output." },
+      "reversibility": { "level": "reversible", "why": "Reverting any site to inline assignments is trivial." },
+      "revisit_if": "A reviewer wants the change minimized to exactly the two named locations."
+    },
+    {
+      "id": "L4",
+      "category": "ASSUMPTION",
+      "what": "SetParam and MSetParam both expose writeMode (WriteMode), ttlSecond (uint32_t), existence (ExistenceOpt), cacheType (CacheType) with matching names and types, so one function template serves both.",
+      "why": "The helper is a template parameterized on the write-param type and accesses those four fields.",
+      "what_i_did": "Verified against include/datasystem/kv_client.h (SetParam lines 48-53, MSetParam lines 56-62); confirmed identical field names and types.",
+      "confidence": "high",
+      "blast_radius": { "level": "low", "why": "Compile-time template instantiation; a mismatch would fail to build, not misbehave." },
+      "reversibility": { "level": "reversible", "why": "The template can be specialized or split if the structs diverge." },
+      "revisit_if": "Either struct's mapped field set diverges in the future.",
+      "verified": true
+    },
+    {
+      "id": "L5",
+      "category": "DECISION",
+      "what": "Do not add a new dedicated unit test; verify via diff review plus compile plus existing worker-backed system tests.",
+      "why": "These paths are covered only by system tests (not cheap units); the helper has internal linkage and is not externally callable; the extraction reproduces each expression verbatim, so a diff review proves equivalence.",
+      "what_i_did": "Planned verification as line-by-line equivalence review, build of the translation unit, and existing ST (e.g. embedded_client_test).",
+      "confidence": "medium",
+      "blast_radius": { "level": "low", "why": "Affects test-coverage breadth, not runtime behaviour." },
+      "reversibility": { "level": "reversible", "why": "The helper can be promoted to a testable internally-linked form if coverage is required." },
+      "revisit_if": "A reviewer requires explicit unit coverage of the mapping."
+    },
+    {
+      "id": "L6",
+      "category": "ASSUMPTION",
+      "what": "The original block casts writeMode/existence/cacheType via static_cast<int> but passes ttlSecond directly to std::to_string with no cast; the helper must reproduce this asymmetry exactly.",
+      "why": "Any deviation (e.g. casting ttlSecond) could change the produced string and break behaviour equivalence.",
+      "what_i_did": "Verified ttlSecond is uint32_t (has a std::to_string overload) and the other three are enums; the helper keeps the same cast/no-cast pattern.",
+      "confidence": "high",
+      "blast_radius": { "level": "low", "why": "Single-field formatting concern within one helper." },
+      "reversibility": { "level": "reversible", "why": "The helper body is one edit to correct if the pattern changes." },
+      "revisit_if": "The mapped field types change.",
+      "verified": true
+    }
+  ],
+  "read_these_first": ["L2", "L5", "L1", "L3", "L4", "L6"]
+}
