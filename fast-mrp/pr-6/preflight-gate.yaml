@@ -1,7 +1,13 @@
 protocol: fast-mrp
 instance: pr-6
-state: preflight-gate
+state: done
 iteration: 1
 gates: {}
 head_sha: 09251b3b05e5a081527e702280377d8e28108e81
-history: []
+history:
+- iteration: 1
+  agent_run_id: '28634065286'
+  checks:
+    preflight-gate-coverage: pass
+    local-review-evidence: pass
+  feedback: ''
