@@ -227,6 +227,29 @@ class TestValidateConfigCommandRun(unittest.TestCase):
         self.assertEqual(self._run(path), validate_config.Command.FAILURE)
 
 
+class TestValidateConfigArguments(unittest.TestCase):
+    """Tests for validate_config.Command.add_arguments (flag wiring + default)."""
+
+    @staticmethod
+    def _parse(argv):
+        parser = argparse.ArgumentParser()
+        validate_config.Command.add_arguments(parser)
+        return parser.parse_args(argv)
+
+    def test_config_defaults_to_cwd_cluster_config(self):
+        args = self._parse([])
+        self.assertEqual(
+            args.config, os.path.join(os.getcwd(), "cluster_config.json"))
+
+    def test_config_short_flag(self):
+        args = self._parse(["-c", "/tmp/custom.json"])
+        self.assertEqual(args.config, "/tmp/custom.json")
+
+    def test_config_long_flag(self):
+        args = self._parse(["--config", "/tmp/other.json"])
+        self.assertEqual(args.config, "/tmp/other.json")
+
+
 class TestValidateConfigRegistration(unittest.TestCase):
     """The subcommand must be wired into the CLI entry point."""
 
