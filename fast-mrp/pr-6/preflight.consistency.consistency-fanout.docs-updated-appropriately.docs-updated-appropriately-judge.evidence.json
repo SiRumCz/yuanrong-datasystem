@@ -1,0 +1,41 @@
+{
+  "leg": "docs-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": "docs/source_zh_cn/appendix/log_guide.md",
+      "severity": "blocking",
+      "rationale": "This user-facing logging guide still describes the removed log_rate_limit model and backward compatibility that no longer holds. That is a material documentation mismatch for changed operational configuration."
+    },
+    {
+      "ref": ".repo_context/modules/infra/logging/design.md",
+      "severity": "blocking",
+      "rationale": "The canonical logging design documentation still centers the removed log_rate_limit and LogRateLimiter behavior. For an infrastructure logging change, stale canonical design docs can mislead future maintenance and review."
+    },
+    {
+      "ref": ".repo_context/modules/infra/logging/trace-and-context.md",
+      "severity": "blocking",
+      "rationale": "Trace context sampling semantics changed, but this doc still describes decisions through the old local log_rate_limit path. That is a substantive mismatch in shared tracing behavior."
+    },
+    {
+      "ref": ".repo_context/modules/infra/logging/access-recorder.md",
+      "severity": "blocking",
+      "rationale": "Access logging behavior now includes access_sample_rate pre-drop and facade semantics, but the module doc was not updated. This is a real adherence gap for an operationally relevant logging path."
+    },
+    {
+      "ref": ".repo_context/modules/infra/logging/plog-slow-request-plan.md",
+      "severity": "blocking",
+      "rationale": "The PLOG sampling behavior changed from the documented bypass design to diagnostic_sample_rate/request sampled-in handling. Leaving the plan with the old design is a substantive inconsistency for diagnostic logging behavior."
+    }
+  ],
+  "examined": [
+    "docs/source_zh_cn/appendix/log_guide.md",
+    ".repo_context/modules/infra/logging/design.md",
+    ".repo_context/modules/infra/logging/trace-and-context.md",
+    ".repo_context/modules/infra/logging/access-recorder.md",
+    ".repo_context/modules/infra/logging/plog-slow-request-plan.md"
+  ]
+}
