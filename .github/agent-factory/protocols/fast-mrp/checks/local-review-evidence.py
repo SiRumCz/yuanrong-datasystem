@@ -9,39 +9,56 @@ Two ways (custody's demo thesis):
     /approve). Fetched here via _review_fetch using the checks job's read-only
     token (GITHUB_REPOSITORY + PR env) — the same way the job re-fetches the diff;
     the engine never prefetches this, so it stays protocol-agnostic.
-  - custody-way: a committed agent-conversation transcript for this PR
-    (`.conversations/*.jsonl`, detected from the changed-files — this repo commits
-    the transcript IN the PR head, cf. context phase), or a `Reviewed-by:` trailer
-    in the PR body (read from PR_BODY).
+  - custody-way: a captured agent-conversation transcript for this PR on the
+    `conversations` branch (<owner>/<repo>/pr-<N>/*.jsonl — the storage convention;
+    transcripts are no longer committed into the PR, cf. context phase), or a
+    `Reviewed-by:` trailer in the PR body (read from PR_BODY).
 
 Usage: local-review-evidence.py <evidence.json> <diff.txt> <changed-files.txt>;
 reads GITHUB_REPOSITORY + PR (to fetch review activity) and PR_BODY env."""
 import json
 import os
 import re
+import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import _paths  # noqa: E402
 import _review_fetch  # noqa: E402
 
 TRAILER = re.compile(r"(^|\n)\s*reviewed-by:\s*\S", re.I)
 APPROVE = re.compile(r"(^|\s)/?(lgtm|approve)\b", re.I)
 SUBMISSION = re.compile(r"COMMENTED|APPROVED|CHANGES_REQUESTED", re.I)
 APPROVED = re.compile(r"APPROVED", re.I)
-CONVERSATION = re.compile(r"(^|/)\.conversations/.+\.jsonl$", re.I)
+
+
+def _conversation_on_branch(repo, pr):
+    """True if a captured transcript for this PR exists on the `conversations` branch at
+    <owner>/<repo>/pr-<N>/*.jsonl — the storage convention. Transcripts are NO LONGER
+    committed into the PR itself (the obsolete `.conversations/` in-PR layout), so we probe
+    the branch instead of the changed-files. Best-effort: any error/absence -> False."""
+    if not repo or not str(pr).isdigit():
+        return False
+    try:
+        out = subprocess.run(
+            ["gh", "api", f"repos/{repo}/contents/{repo}/pr-{pr}?ref=conversations",
+             "--jq", '[.[] | select(.name | endswith(".jsonl"))] | length'],
+            capture_output=True, text=True)
+    except OSError:
+        return False
+    n = (out.stdout or "").strip()
+    return out.returncode == 0 and n.isdigit() and int(n) > 0
 
 
 def main():
     review = _review_fetch.fetch(os.environ.get("GITHUB_REPOSITORY", ""),
                                  os.environ.get("PR", ""))
     body = os.environ.get("PR_BODY", "") or ""
-    files = _paths.read_changed_files(sys.argv[3] if len(sys.argv) > 3 else "")
 
     review_comments = review.get("reviewComments") or []
     reviews = review.get("reviews") or []
     issue_comments = review.get("issueComments") or []
-    conversation = any(CONVERSATION.search(f) for f in files)
+    conversation = _conversation_on_branch(os.environ.get("GITHUB_REPOSITORY", ""),
+                                           os.environ.get("PR", ""))
     trailer = bool(TRAILER.search(body))
 
     findings = len(review_comments)
