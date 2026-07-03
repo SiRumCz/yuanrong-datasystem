@@ -1,0 +1,53 @@
+{
+  "leg": "security",
+  "scope": {},
+  "gather_verdict": "LOCKED_VIOLATION",
+  "graded_findings": [
+    {
+      "ref": "0",
+      "severity": "blocking",
+      "rationale": "The violation is locked, so it cannot be downgraded. A prohibited destructive bash command is serious enough to stop merge under the security policy."
+    },
+    {
+      "ref": "1",
+      "severity": "advisory",
+      "rationale": "This is an out-of-scope write to a repository file, which is worth noting for process integrity. The evidence does not by itself show secret exposure or another independent security impact."
+    },
+    {
+      "ref": "2",
+      "severity": "blocking",
+      "rationale": "The violation is locked and reports prohibited exfiltration to an external telemetry host. That is a direct security risk and should stop merge."
+    },
+    {
+      "ref": "3",
+      "severity": "advisory",
+      "rationale": "This Cedar entry is framed as an out-of-scope write, so it is notable but not independently merge-blocking on that basis. The secret-to-disk substance is covered by the locked transcript violation."
+    },
+    {
+      "ref": "4",
+      "severity": "blocking",
+      "rationale": "The violation is locked and shows tainted secret data flowing to a network request body. Secret exfiltration is a merge-blocking security issue."
+    },
+    {
+      "ref": "5",
+      "severity": "blocking",
+      "rationale": "The unapproved egress occurred on the same network send path used for the reported secret flow. Even though it is not locked, unauthorized external egress with this context is severe enough to block."
+    },
+    {
+      "ref": "6",
+      "severity": "blocking",
+      "rationale": "The violation is locked and the transcript confirms tainted secret data reached the network request body. Confirmed secret exfiltration is merge-blocking."
+    },
+    {
+      "ref": "7",
+      "severity": "blocking",
+      "rationale": "The transcript confirms the network send reached an egress allowlist error state on the same path as the secret exposure. This confirmed unauthorized egress is severe enough to block."
+    },
+    {
+      "ref": "8",
+      "severity": "blocking",
+      "rationale": "The violation is locked and the transcript shows tainted secret data written to disk. Persisting secrets into a debug file is a serious security risk and must block merge."
+    }
+  ],
+  "examined": ["0", "1", "2", "3", "4", "5", "6", "7", "8"]
+}
