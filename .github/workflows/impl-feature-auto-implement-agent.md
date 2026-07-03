@@ -11,6 +11,10 @@ features:
 engine:
   id: claude
   model: claude-sonnet-4-6
+  # GitHub Actions IS the sandbox — grant wide permissions so the agent is never
+  # blocked on a permission prompt (which, under `claude --print`, can't be answered
+  # and returns "requires approval"). bypassPermissions == --dangerously-skip-permissions.
+  permission-mode: bypassPermissions
   env:
     ANTHROPIC_BASE_URL: https://bmc-bz1.tail22da2e.ts.net
     ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -21,17 +25,7 @@ permissions:
 tools:
   cli-proxy: true
   edit: true
-  bash:
-    - "git *"
-    - "gh run download *"
-    - "gh issue view *"
-    - "cat:*"
-    - "ls:*"
-    - "mkdir:*"
-    - "cp:*"
-    - "python3 *"
-    - "pytest *"
-    - "uv *"
+  bash: [":*"]
 safe-outputs:
   threat-detection: false
   create-pull-request:
@@ -85,16 +79,9 @@ post-steps:
 timeout-minutes: 60
 ---
 
-<!-- BOOTSTRAP: gh-aw runs `claude --print`, where the SessionStart hook may not
-fire, so we inline the using-superpowers bootstrap to make the model reliably
-reach for the staged skills. -->
+{{#runtime-import .github/workflows/shared/skill-preamble.md}}
 
-You have superpowers. Skills live under `.claude/skills/` (staged as PROJECT
-skills, so they are BARE-NAMED — `executing-plans`, not
-`superpowers:executing-plans`). Before any creative work, check whether a skill
-applies and use it.
-
-# Implement Agent — execute the plan with TDD, then open ONE PR.
+# Implement Agent
 
 **Working directory: the repository ROOT** — gh-aw has already checked out the full
 repo (default branch) at the current directory (`$GITHUB_WORKSPACE`). Do ALL your
@@ -113,10 +100,14 @@ spec + plan.
 ## 2. Create the feature branch
 In the repo root: `git checkout -b impl-feature-auto/issue-<N>` (N = the issue number).
 
-## 3. Execute the plan (TDD)
-Use `executing-plans` / `subagent-driven-development` to implement the plan
-task-by-task under RED-GREEN-REFACTOR. Run the project's tests. Any mid-implementation
-ledger appends go into the spec doc that ships in the PR.
+## 3. Implement the plan — via a skill, invoked with the Skill tool
+The plan tells you to use `subagent-driven-development` (recommended) or
+`executing-plans`. You MUST invoke that skill with the **`Skill` tool** using its
+**bare name** — e.g. `Skill(subagent-driven-development)`. The plan may write it as
+`superpowers:subagent-driven-development`; the `superpowers:` prefix does NOT resolve
+here, so drop it. Do NOT hand the work to the `Workflow` or `Task` tools, and do NOT
+inline the plan yourself — both bypass the skill. Any mid-implementation ledger
+appends go into the spec doc that ships in the PR.
 
 ## 4. Finish the branch + open the PR
 Use `finishing-a-development-branch`. Commit spec + plan + code + tests **in the root

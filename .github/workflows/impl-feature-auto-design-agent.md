@@ -11,6 +11,10 @@ features:
 engine:
   id: claude
   model: claude-sonnet-4-6
+  # GitHub Actions IS the sandbox — grant wide permissions so the agent is never
+  # blocked on a permission prompt (which, under `claude --print`, can't be answered
+  # and returns "requires approval"). bypassPermissions == --dangerously-skip-permissions.
+  permission-mode: bypassPermissions
   env:
     ANTHROPIC_BASE_URL: https://bmc-bz1.tail22da2e.ts.net
     ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -21,13 +25,7 @@ permissions:
 tools:
   cli-proxy: true
   edit: true
-  bash:
-    - "gh issue view *"
-    - "git *"
-    - "cat:*"
-    - "ls:*"
-    - "mkdir:*"
-    - "cp:*"
+  bash: [":*"]
 safe-outputs:
   # The design agent produces NO GitHub writes — its only output is the evidence
   # artifact (post-steps). But gh-aw auto-injects a default `create-issue` (a per-run
@@ -58,7 +56,7 @@ pre-agent-steps:
   - name: Stage superpowers skills (pinned release tag)
     run: |
       set -euo pipefail
-      SP_VERSION="v6.0.3"; DEST="$GITHUB_WORKSPACE/target/.claude/skills"
+      SP_VERSION="v6.0.3"; DEST="$GITHUB_WORKSPACE/.claude/skills"
       mkdir -p "$DEST"
       curl -fsSL "https://github.com/obra/superpowers/archive/refs/tags/${SP_VERSION}.tar.gz" -o /tmp/sp.tgz
       tar -xzf /tmp/sp.tgz --strip-components=2 -C "$DEST" "superpowers-${SP_VERSION#v}/skills"
@@ -98,13 +96,7 @@ post-steps:
 timeout-minutes: 30
 ---
 
-<!-- BOOTSTRAP: gh-aw runs `claude --print`, where the SessionStart hook may not
-fire, so we inline the using-superpowers bootstrap to make the model reliably
-reach for the staged skills. -->
-
-You have superpowers. Skills live under `.claude/skills/` (staged as PROJECT
-skills, so they are BARE-NAMED — `writing-plans`, not `superpowers:writing-plans`).
-Before any creative work, check whether a skill applies and use it.
+{{#runtime-import .github/workflows/shared/skill-preamble.md}}
 
 # Design Agent — Phase 0 only (spec + Accountability Ledger + plan). NO CODE, NO PR.
 
