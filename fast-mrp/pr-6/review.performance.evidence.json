@@ -1,0 +1,24 @@
+{
+  "dimension": "performance",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": "src/datasystem/common/log/access_recorder.cpp",
+      "line": 235,
+      "severity": "medium",
+      "category": "performance",
+      "title": "Avoid copying protobuf keys before access-log formatting",
+      "impact": "When access logs are sampled in, including the default/all-1.0 configuration, protobuf-backed batch paths such as DeleteAllCopy and Exist now allocate and copy every key into a temporary std::vector<std::string> before formatting. Large batch requests pay O(n) extra heap churn on the worker request path even though access_recorder.cpp already adds an objectKeysToString overload for RepeatedPtrField.",
+      "fix": "Format the RepeatedPtrField directly in ObjectKeyState::FillObjectKey/FIllNestedKey by calling objectKeysToString(*protoRef), or preserve a summary-only protobuf path where the old code used ObjectKeysToAbbrStr."
+    },
+    {
+      "path": "src/datasystem/common/log/access_recorder.cpp",
+      "line": 994,
+      "severity": "low",
+      "category": "performance",
+      "title": "Avoid an intermediate string for every formatted access log",
+      "impact": "LogPerformance now calls FormatAccessReqMsg(), which builds or returns a full std::string and then copies it into the final log stream. The previous helper appended directly to the existing stream, so sampled-in/default access logs now pay an extra allocation and copy proportional to the request-message size.",
+      "fix": "Keep FormatAccessReqMsg as an append-style helper that writes directly into the caller's std::ostringstream, or add an overload that appends the sample marker to the existing log stream without materializing an intermediate string."
+    }
+  ]
+}
