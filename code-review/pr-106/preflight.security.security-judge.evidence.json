@@ -1,0 +1,27 @@
+{
+  "leg": "security",
+  "scope": {},
+  "gather_verdict": "LOCKED_VIOLATION",
+  "graded_findings": [
+    {
+      "ref": "0",
+      "severity": "blocking",
+      "rationale": "The violation is locked:true, so it cannot be downgraded below blocking. Destructive command execution denied by policy is merge-blocking security substance."
+    },
+    {
+      "ref": "1",
+      "severity": "blocking",
+      "rationale": "The violation is locked:true, so it cannot be downgraded below blocking. Secret-tainted data flowing to a network send is a genuine exfiltration risk."
+    },
+    {
+      "ref": "2",
+      "severity": "blocking",
+      "rationale": "Unauthorized network egress reached the allowlist automaton error state on a network send. Even though it is not locked, this is a serious merge-blocking security risk."
+    }
+  ],
+  "examined": [
+    "0",
+    "1",
+    "2"
+  ]
+}
