@@ -1,13 +1,12 @@
 'use strict'
-// Locate the committed Claude transcript(s) for a SPECIFIC PR from the PR's OWN
-// `.conversations/` directory — the transcript is committed into the PR and read at the
-// PR head commit. Pure, DI-tested core + a gh-api-backed CLI. Fail-loud: distinguishes an
-// errored probe/read from a clean absence (never infers "missing").
+// Locate the Claude transcript(s) for a SPECIFIC PR from the dedicated `conversations`
+// branch at <owner>/<repo>/pr-<N>/*.jsonl. Pure, DI-tested core + a gh-api-backed CLI.
+// Fail-loud: distinguishes an errored probe/read from a clean absence (never infers "missing").
 //
-// Layout (in the PR head tree): .conversations/<session>.jsonl  (flat; one PR may commit
-// several session files). locate returns ALL of them, ordered chronologically (earliest
-// record first). A PR with no `.conversations/` simply yields no transcript (clean absence).
-const CONVERSATIONS_DIR = process.env.CONVERSATIONS_DIR || '.conversations'
+// Layout (on the conversations branch): <owner>/<repo>/pr-<N>/<session>.jsonl (flat; one PR may
+// have several session files). locate returns ALL of them, ordered chronologically (earliest
+// record first). A PR with no committed transcript simply yields none (clean absence). There is
+// NO in-PR `.conversations/` fallback — the conversations branch is the sole source.
 
 // Smallest record timestamp in a transcript (for ordering sessions). Infinity when none,
 // so untimestamped sessions sort last but deterministically (the caller tie-breaks by path).
@@ -39,7 +38,7 @@ async function locateTranscripts({ prDir } = {}, { probe, readFile } = {}) {
   return { found: true, sessions: sessions.map(({ path, text }) => ({ path, text })), evidence: [`${sessions.length} session(s)`], searched }
 }
 
-module.exports = { locateTranscripts, earliestTimestamp, CONVERSATIONS_DIR }
+module.exports = { locateTranscripts, earliestTimestamp }
 
 // ---- CLI: REPO=<owner/name> node locate.js <pr.json> <out-dir> ----
 if (require.main === module) {
@@ -48,17 +47,15 @@ if (require.main === module) {
   const [prPath, outDir] = process.argv.slice(2)
   const repo = process.env.REPO
   const pr = JSON.parse(fs.readFileSync(prPath, 'utf8'))
-  // Where the transcript lives is configurable:
-  //   - default: IN the PR — its `.conversations/` at the PR head commit (headRefOid is
-  //     commit-pinned; fall back to the branch name). pr.json comes from
-  //     `gh pr view --json …,headRefName,headRefOid` in the workflow's prefetch step.
-  //   - CONVERSATIONS_REF (+ CONVERSATIONS_DIR): read from a dedicated branch instead,
-  //     e.g. CONVERSATIONS_REF=conversations with CONVERSATIONS_DIR=<owner>/<repo>/pr-<N>.
-  const ref = process.env.CONVERSATIONS_REF || pr.headRefOid || pr.headRefName
-  const dir = CONVERSATIONS_DIR
+  // The transcript lives on the dedicated `conversations` branch at <owner>/<repo>/pr-<N>/.
+  // Defaults derive that location from REPO + pr.number; CONVERSATIONS_REF/DIR only override
+  // them (e.g. for tests or a differently-named branch). There is NO in-PR `.conversations/`
+  // fallback — a missing conversations-branch dir is a clean absence, not a retry elsewhere.
+  const ref = process.env.CONVERSATIONS_REF || 'conversations'
+  const dir = process.env.CONVERSATIONS_DIR || `${repo}/pr-${pr.number}`
   const gh = (args) => execFileSync('gh', args, { encoding: 'utf8', maxBuffer: 128 * 1024 * 1024 })
   const isNotFound = (err) => /Not Found|HTTP 404/i.test(String(err.message || err))
-  // List the PR's `.conversations/` (one level); session .jsonl files live directly inside it.
+  // List the PR's transcript dir on the conversations branch; session .jsonl files live inside.
   const probe = async (d) => {
     let arr
     try { arr = JSON.parse(gh(['api', `repos/${repo}/contents/${d}?ref=${ref}`])) }
