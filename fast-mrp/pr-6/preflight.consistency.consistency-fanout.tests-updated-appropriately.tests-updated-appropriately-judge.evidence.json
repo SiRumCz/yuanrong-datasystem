@@ -1,0 +1,17 @@
+{
+  "leg": "tests-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": "tests/ut/common/util/flags_test.cpp",
+      "severity": "blocking",
+      "rationale": "The changed dynamic sampler flag update and rollback behavior is runtime configuration logic in shared infrastructure. Missing coverage for request/access/diagnostic_sample_rate updates leaves a real regression risk in transaction safety and rollback correctness, so this should stop merge."
+    }
+  ],
+  "examined": [
+    "tests/ut/common/util/flags_test.cpp"
+  ]
+}
