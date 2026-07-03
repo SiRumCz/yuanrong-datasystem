@@ -1,0 +1,30 @@
+{
+  "leg": "spec-solves-issue",
+  "scope": {
+    "issue_linked": true,
+    "spec_present": true
+  },
+  "gather_verdict": "solves",
+  "graded_findings": [
+    {
+      "ref": "When a cluster uses the built-in Metastore backend, cluster metadata is served by a single head node (`metastore_head_node` in `cluster_config.json`). If that node goes down, metadata service is interrupted",
+      "severity": "advisory",
+      "rationale": "The gather evidence says this issue element is explicitly addressed by the cited spec text, so it does not indicate a merge-blocking adherence gap. It remains useful context for coverage review."
+    },
+    {
+      "ref": "there is no tooling to reconfigure a cluster for a highly-available, multi-head Metastore",
+      "severity": "advisory",
+      "rationale": "The gather evidence says this issue element is explicitly addressed by the cited spec text, so it does not indicate a merge-blocking adherence gap. It remains useful context for coverage review."
+    },
+    {
+      "ref": "Add a `dscli` subcommand that takes an existing `cluster_config.json` and produces a variant configured for a highly-available Metastore — electing several worker nodes as Metastore head replicas so metadata keeps being served if one head fails.",
+      "severity": "advisory",
+      "rationale": "The gather evidence says this issue element is explicitly addressed by the cited spec text, so it does not indicate a merge-blocking adherence gap. It remains useful context for coverage review."
+    }
+  ],
+  "examined": [
+    "When a cluster uses the built-in Metastore backend, cluster metadata is served by a single head node (`metastore_head_node` in `cluster_config.json`). If that node goes down, metadata service is interrupted",
+    "there is no tooling to reconfigure a cluster for a highly-available, multi-head Metastore",
+    "Add a `dscli` subcommand that takes an existing `cluster_config.json` and produces a variant configured for a highly-available Metastore — electing several worker nodes as Metastore head replicas so metadata keeps being served if one head fails."
+  ]
+}
