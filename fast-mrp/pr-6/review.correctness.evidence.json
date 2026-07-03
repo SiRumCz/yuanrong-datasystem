@@ -1,0 +1,15 @@
+{
+  "dimension": "correctness",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": "src/datasystem/worker/object_cache/service/worker_oc_service_expire_impl.cpp",
+      "line": 113,
+      "severity": "medium",
+      "category": "correctness",
+      "title": "Expire error path drops its access record",
+      "impact": "When ExpireFromMaster returns an error inside the RetryWhenDeadlock callback, the function returns immediately from that branch and never reaches the new access.Result(rc).Record() call. The old code recorded the failed access before returning, so failed Expire requests can now lose their access log and only emit the recorder destructor warning.",
+      "fix": "Record the access result before the rc.IsError() return path as before, or wrap this method's recorder finalization in RAII so every exit path records exactly once."
+    }
+  ]
+}
