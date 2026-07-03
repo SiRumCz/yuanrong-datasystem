@@ -1,7 +1,7 @@
 protocol: code-review
 instance: pr-105
 head_sha: 8eef0dd6cbdd34022cbbdc8cc2b412a30a86c064
-phase: review
-joined: false
-phase_label: multi-dimension review
+phase: triage
+joined: true
+phase_label: review triage (cluster & rank)
 status_comment_id: 4874384776
