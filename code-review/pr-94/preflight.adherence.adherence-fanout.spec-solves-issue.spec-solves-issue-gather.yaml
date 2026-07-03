@@ -1,7 +1,16 @@
 protocol: code-review
 instance: pr-94
 state: adherence-fanout
-iteration: 1
+iteration: 2
 gates: {}
 head_sha: a36f5d0f8ba18f57998d165a7ce494c7397a0503
-history: []
+history:
+- iteration: 1
+  agent_run_id: '28632509543'
+  checks:
+    evidence-present: pass
+    spec-solves-issue-coverage: fail
+  feedback: 'problem(s) with no matrix cell: [''The discovery mechanism already exists
+    in-repo: `stop.py` locates a worker by scanning for its `-worker_address=` argument
+    (`cli/stop.py:247`, `get_unique_pid`). This feature reuses that same, proven approach
+    to *list* all workers instead of requiring a single match.'']'
