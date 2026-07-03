@@ -1,0 +1,17 @@
+{
+  "leg": "tests-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "adequate",
+  "graded_findings": [
+    {
+      "ref": "cli/tests/test_metastore_ha.py",
+      "severity": "noise",
+      "rationale": "The gather evidence says the PR added focused coverage for the changed HA CLI behavior, including head selection, config transformation, success/error command paths, and module-list registration. This does not identify an adherence gap, so there is nothing merge-blocking to grade."
+    }
+  ],
+  "examined": [
+    "cli/tests/test_metastore_ha.py"
+  ]
+}
