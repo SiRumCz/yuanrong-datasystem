@@ -125,6 +125,14 @@ class TestValidateClusterConfig(unittest.TestCase):
             validate_config.validate_cluster_config(cfg),
         )
 
+    def test_worker_nodes_not_a_list(self):
+        cfg = copy.deepcopy(_VALID_CONFIG)
+        cfg["worker_nodes"] = "127.0.0.1"  # a bare string, not a list
+        self.assertIn(
+            "worker_nodes must be a non-empty list",
+            validate_config.validate_cluster_config(cfg),
+        )
+
     def test_missing_worker_port(self):
         self.assertIn(
             "worker_port is required",
@@ -167,6 +175,22 @@ class TestValidateClusterConfig(unittest.TestCase):
         del cfg["ssh_auth"]["ssh_user_name"]
         self.assertIn(
             "ssh_auth.ssh_user_name must be a non-empty string",
+            validate_config.validate_cluster_config(cfg),
+        )
+
+    def test_missing_ssh_private_key(self):
+        cfg = copy.deepcopy(_VALID_CONFIG)
+        del cfg["ssh_auth"]["ssh_private_key"]
+        self.assertIn(
+            "ssh_auth.ssh_private_key must be a non-empty string",
+            validate_config.validate_cluster_config(cfg),
+        )
+
+    def test_blank_ssh_private_key(self):
+        cfg = copy.deepcopy(_VALID_CONFIG)
+        cfg["ssh_auth"]["ssh_private_key"] = "   "
+        self.assertIn(
+            "ssh_auth.ssh_private_key must be a non-empty string",
             validate_config.validate_cluster_config(cfg),
         )
 
@@ -221,6 +245,10 @@ class TestValidateConfigCommandRun(unittest.TestCase):
     def test_run_missing_file_returns_failure(self):
         path = os.path.join(self.tmpdir, "does_not_exist.json")
         self.assertEqual(self._run(path), validate_config.Command.FAILURE)
+
+    def test_run_unreadable_path_returns_failure(self):
+        # A path that is a directory (not a file) trips the OSError fallback.
+        self.assertEqual(self._run(self.tmpdir), validate_config.Command.FAILURE)
 
     def test_run_malformed_json_returns_failure(self):
         path = self._write("bad.json", "{not valid json")
