@@ -1,7 +1,14 @@
 protocol: code-review
 instance: pr-106
-state: review
+state: done
 iteration: 1
 gates: {}
-history: []
+history:
+- iteration: 1
+  agent_run_id: '28647304747'
+  checks:
+    evidence-present: pass
+    review-schema-valid: pass
+    review-findings-anchored: pass
+  feedback: ''
 head_sha: b3df3311230021d68562acc0cff99c9ff8799ec9
