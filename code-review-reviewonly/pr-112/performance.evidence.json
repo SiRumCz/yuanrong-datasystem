@@ -1,0 +1,15 @@
+{
+  "dimension": "performance",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": "cli/top.py",
+      "line": 129,
+      "severity": "low",
+      "category": "performance",
+      "title": "RSS lookup rescans /proc for every worker",
+      "impact": "On hosts with many processes and multiple datasystem workers, each worker RSS lookup walks every /proc entry before opening one status file, making the command O(workers * host_processes) and allocating a fresh directory listing per worker. This can make the operator command noticeably slower on busy production hosts.",
+      "fix": "Open /proc/<pid>/status directly for the known pid and handle OSError/ProcessLookupError, avoiding os.listdir('/proc') and the per-worker full-process scan."
+    }
+  ]
+}
