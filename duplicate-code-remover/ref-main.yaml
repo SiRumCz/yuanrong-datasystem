@@ -1,0 +1,7 @@
+protocol: duplicate-code-remover
+instance: ref-main
+state: detect
+iteration: 1
+gates: {}
+head_sha: 3dd9fadd4668e7b14aa052bf86143deac1d3f0c0
+history: []
