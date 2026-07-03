@@ -1,0 +1,51 @@
+{
+  "leg": "plan-implements-spec",
+  "scope": {
+    "code_changed": true,
+    "spec_present": true,
+    "plan_present": true,
+    "spec_path": "docs/superpowers/specs/2026-07-02-dscli-validate-config-design.md",
+    "plan_path": "docs/superpowers/plans/2026-07-02-dscli-validate-config-command.md"
+  },
+  "gather_verdict": "adheres",
+  "graded_findings": [
+    {
+      "ref": "- R1: `validate_config` MUST be a new read-only `dscli` subcommand that reads a\n  cluster config file from a `-c` / `--config` argument (default\n  `./cluster_config.json`), and MUST return a non-zero exit code when the file is\n  missing or unreadable, is not valid JSON, or describes an invalid config, and a\n  zero exit code only when the config has no problems.",
+      "severity": "noise",
+      "rationale": "The plan directly covers the new read-only command, config argument/default, registration, JSON loading, and success/failure return behavior. No substantive adherence gap is present in this finding."
+    },
+    {
+      "ref": "- R2: The validator MUST return a single \"must be a JSON object\" problem for a\n  non-object config, and otherwise MUST report — accumulating every problem in a\n  single pass — a missing, empty, or blank-entry `worker_nodes`; a `worker_port`\n  that is missing or is not an integer within 1–65535; a missing or non-object\n  `ssh_auth` or a blank `ssh_auth.ssh_user_name` / `ssh_auth.ssh_private_key`; and\n  a missing or blank `worker_config_path`.",
+      "severity": "noise",
+      "rationale": "The plan specifies the pure validator and enumerates the same non-object, accumulation, worker_nodes, worker_port, ssh_auth, and worker_config_path rules. This is direct coverage, not a merge-blocking issue."
+    },
+    {
+      "ref": "- R3: Unit tests MUST cover each validation rule, the command's SUCCESS and\n  FAILURE return paths, and that `validate_config` is registered in the CLI entry\n  point.",
+      "severity": "noise",
+      "rationale": "The plan calls for tests covering validation rules, success and failure paths including valid, invalid, missing, and malformed cases, plus CLI registration. The finding identifies coverage rather than a gap."
+    },
+    {
+      "ref": "- P1: Add `cli/validate_config.py` defining `Command(BaseCommand)` with\n  `name = \"validate_config\"` and a `-c` / `--config` argument (default\n  `./cluster_config.json`), whose `run()` normalizes and safety-checks the path,\n  loads the JSON, and returns FAILURE when the file is missing/unreadable, is not\n  valid JSON, or the config has problems, and SUCCESS otherwise; and register\n  `\"validate_config\"` in the `modules` list of `cli/command.py`. (implements R1)",
+      "severity": "noise",
+      "rationale": "This plan item traces to the corresponding command behavior required by R1, including the config path option, default, error handling, exit status, and registration. It does not add unsupported scope."
+    },
+    {
+      "ref": "- P2: Implement the pure `validate_cluster_config(config)` helper that returns a\n  single \"must be a JSON object\" problem for a non-dict config and otherwise\n  accumulates one problem per violated rule for `worker_nodes` (non-empty list of\n  non-empty hosts), `worker_port` (integer within 1–65535), `ssh_auth`\n  (`ssh_user_name` / `ssh_private_key` non-empty), and `worker_config_path`\n  (non-empty). (implements R2)",
+      "severity": "noise",
+      "rationale": "This plan item is limited to the validator rules required by R2 and matches the specified field coverage and accumulation behavior. There is no substantive overreach or omission in the gather evidence."
+    },
+    {
+      "ref": "- P3: Add `cli/tests/test_validate_config.py` covering each validation rule, the\n  `run()` SUCCESS and FAILURE paths (valid, invalid, missing, malformed), and\n  that `validate_config` is registered in `cli/command.py`. (implements R3)",
+      "severity": "noise",
+      "rationale": "This plan item traces cleanly to R3's test requirements and includes both command return paths and CLI registration. The finding is not an adherence concern."
+    }
+  ],
+  "examined": [
+    "- R1: `validate_config` MUST be a new read-only `dscli` subcommand that reads a\n  cluster config file from a `-c` / `--config` argument (default\n  `./cluster_config.json`), and MUST return a non-zero exit code when the file is\n  missing or unreadable, is not valid JSON, or describes an invalid config, and a\n  zero exit code only when the config has no problems.",
+    "- R2: The validator MUST return a single \"must be a JSON object\" problem for a\n  non-object config, and otherwise MUST report — accumulating every problem in a\n  single pass — a missing, empty, or blank-entry `worker_nodes`; a `worker_port`\n  that is missing or is not an integer within 1–65535; a missing or non-object\n  `ssh_auth` or a blank `ssh_auth.ssh_user_name` / `ssh_auth.ssh_private_key`; and\n  a missing or blank `worker_config_path`.",
+    "- R3: Unit tests MUST cover each validation rule, the command's SUCCESS and\n  FAILURE return paths, and that `validate_config` is registered in the CLI entry\n  point.",
+    "- P1: Add `cli/validate_config.py` defining `Command(BaseCommand)` with\n  `name = \"validate_config\"` and a `-c` / `--config` argument (default\n  `./cluster_config.json`), whose `run()` normalizes and safety-checks the path,\n  loads the JSON, and returns FAILURE when the file is missing/unreadable, is not\n  valid JSON, or the config has problems, and SUCCESS otherwise; and register\n  `\"validate_config\"` in the `modules` list of `cli/command.py`. (implements R1)",
+    "- P2: Implement the pure `validate_cluster_config(config)` helper that returns a\n  single \"must be a JSON object\" problem for a non-dict config and otherwise\n  accumulates one problem per violated rule for `worker_nodes` (non-empty list of\n  non-empty hosts), `worker_port` (integer within 1–65535), `ssh_auth`\n  (`ssh_user_name` / `ssh_private_key` non-empty), and `worker_config_path`\n  (non-empty). (implements R2)",
+    "- P3: Add `cli/tests/test_validate_config.py` covering each validation rule, the\n  `run()` SUCCESS and FAILURE paths (valid, invalid, missing, malformed), and\n  that `validate_config` is registered in `cli/command.py`. (implements R3)"
+  ]
+}
