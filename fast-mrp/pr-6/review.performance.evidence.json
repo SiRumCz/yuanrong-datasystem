@@ -1,0 +1,15 @@
+{
+  "dimension": "performance",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": "src/datasystem/common/log/access_recorder.h",
+      "line": 416,
+      "severity": "medium",
+      "category": "performance",
+      "title": "Hot access paths now construct a much heavier recorder state even when sampling is off",
+      "impact": "The default all-1.0 configuration disables sampling, but every converted client/worker access path still constructs ObjectAccessRecorder. That now includes ObjectAccessState with many std::string and std::function members before the actual operation starts, adding per-request constructor/destructor/cache footprint on hot paths such as KVClient::Create/Set/Get where the old AccessRecorder only held timing/name/type state and built RequestParam at record time.",
+      "fix": "Keep the facade state out of the unconditional hot-path object, for example by making ObjectAccessRecorder hold an optional/unique state allocated or constructed only after AccessRecorder::ShouldRecordInternal() is true, or by splitting a small fast guard from the heavier lazy field container."
+    }
+  ]
+}
