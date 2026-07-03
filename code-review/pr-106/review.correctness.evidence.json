@@ -1,0 +1,15 @@
+{
+  "dimension": "correctness",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "cli/status.py",
+      "line": 138,
+      "severity": "high",
+      "category": "correctness",
+      "title": "Handle status discovery failures instead of crashing the CLI",
+      "impact": "When pgrep is missing, times out, or exits with any error other than no matches, list_workers() raises RuntimeError. run() calls it without a try/except, and the existing CLI dispatcher only checks the returned status code, so `dscli status` terminates with an uncaught traceback instead of returning BaseCommand.FAILURE with the intended clear error. This makes the new subcommand crash on supported error paths.",
+      "fix": "Wrap the body of Command.run() in the same exception handling pattern used by the other CLI commands: log `Status failed: ...` and return BaseCommand.FAILURE for discovery/reporting exceptions that should not escape the command entrypoint."
+    }
+  ]
+}
