@@ -1,0 +1,15 @@
+{
+  "dimension": "security",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "cli/top.py",
+      "line": 87,
+      "severity": "high",
+      "category": "security",
+      "title": "--filter is interpolated into a shell command",
+      "impact": "When dscli top is invoked with a filter containing shell metacharacters or quotes, that text is embedded directly in a shell pipeline and then executed with shell=True. Any local caller, script, or higher-level tool that forwards filter text can run arbitrary commands as the dscli user instead of only narrowing the worker list.",
+      "fix": "Avoid shell=True and pass argv lists to subprocess, e.g. run pgrep with [\"pgrep\", \"-fa\", \"--\", _WORKER_ADDRESS_ARG], then apply the optional substring filter in Python; alternatively pass grep arguments as an argv list without a shell."
+    }
+  ]
+}
