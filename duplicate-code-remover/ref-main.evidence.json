@@ -1,64 +1,80 @@
 {
   "scanned": [
+    "src/datasystem/client/kv_cache/kv_client.cpp",
+    "src/datasystem/client/object_cache/object_client.cpp",
+    "src/datasystem/client/stream_cache/stream_client.cpp",
+    "src/datasystem/client/hetero_cache/hetero_client.cpp",
+    "src/datasystem/client/perf_client/perf_client.cpp",
+    "src/datasystem/pybind_api/pybind_register_common.cpp",
+    "src/datasystem/pybind_api/pybind_register_context.cpp",
     "src/datasystem/pybind_api/pybind_register_kv.cpp",
     "src/datasystem/pybind_api/pybind_register_object.cpp",
-    "src/datasystem/pybind_api/pybind_register_stream.cpp",
-    "src/datasystem/pybind_api/pybind_register_hetero.cpp",
-    "src/datasystem/pybind_api/pybind_register_perf.cpp",
-    "src/datasystem/pybind_api/pybind_register_context.cpp",
-    "src/datasystem/pybind_api/pybind_register_common.cpp",
-    "src/datasystem/pybind_api/pybind_register_service_discovery.cpp",
-    "PybindDefineRegisterer g_pybind_define_f_ObjectClient",
-    "PybindDefineRegisterer g_pybind_define_f_HeteroClient",
-    "PybindDefineRegisterer g_pybind_define_f_StreamClient",
-    "ObjectClientImpl \"KVClient\" py::init lambda",
-    "ConnectOptions connectOpts designated-initializer blocks",
-    "TraceGuard + client.Init() \"init\" binding lambdas"
+    "KVClient::ShutDown",
+    "KVClient::Init",
+    "KVClient::Create",
+    "KVClient::MCreate",
+    "ObjectClient::ShutDown",
+    "ObjectClient::Init",
+    "ObjectClient::Create"
   ],
   "patterns": [
     {
-      "id": "pybind-connectoptions-init-block",
-      "name": "Duplicated ConnectOptions construction in pybind client constructors",
-      "severity": "medium",
-      "rationale": "The py::init lambdas for the KV, Object and Hetero pybind clients each hand-build a ConnectOptions struct from the same host/port/timeout/credential/tenant constructor arguments using an identical designated-initializer sequence. The Object and Hetero blocks are byte-for-byte identical except for the trailing enableCrossNodeConnection/enableRemoteH2D fields. This copy-paste means any change to ConnectOptions field wiring (new field, renamed field, default change) must be repeated across every pybind_register_*.cpp, and it is easy to silently diverge (e.g. Object hardcodes enableCrossNodeConnection = false while Hetero/KV thread it through). A shared helper, e.g. MakeConnectOptions(...), would remove the repetition and keep the mapping consistent.",
+      "id": "client-shutdown-init-duplicated-across-clients",
+      "name": "Identical ShutDown()/Init() lifecycle methods across KVClient and ObjectClient",
+      "severity": "high",
+      "rationale": "KVClient::ShutDown and ObjectClient::ShutDown have byte-identical bodies (TraceGuard + impl_ null-check + ShutDown + CompleteHandler), and their Init() bodies are likewise identical (TraceGuard + InitKvMetrics + Init + CompleteHandler). The two client wrappers delegate to the same ObjectClientImpl, so this lifecycle boilerplate is copy-pasted per client. A shared helper or common base would remove the duplication and prevent the two copies from drifting.",
       "locations": [
         {
-          "path": "src/datasystem/pybind_api/pybind_register_object.cpp",
-          "start_line": 127,
-          "end_line": 141,
-          "existing_code": "            ConnectOptions connectOpts{\n                .host = host,\n                .port = port,\n                .connectTimeoutMs = connectTimeoutMs,\n                .requestTimeoutMs = reqTimeoutMs,\n                .token = token,\n                .clientPublicKey = clientPublicKey,\n                .clientPrivateKey = clientPrivateKey,\n                .serverPublicKey = serverPublicKey,\n                .accessKey = accessKey,\n                .secretKey = secretKey,\n                .tenantId = tenantId,\n                .enableCrossNodeConnection = false,\n                .enableExclusiveConnection = enableExclusiveConnection,\n            };"
+          "path": "src/datasystem/client/kv_cache/kv_client.cpp",
+          "start_line": 56,
+          "end_line": 66,
+          "existing_code": "Status KVClient::ShutDown()\n{\n    TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n    if (impl_) {\n        bool needRollbackState;\n        auto rc = impl_->ShutDown(needRollbackState);\n        impl_->CompleteHandler(rc.IsError(), needRollbackState);\n        return rc;\n    }\n    return Status::OK();\n}"
         },
         {
-          "path": "src/datasystem/pybind_api/pybind_register_hetero.cpp",
-          "start_line": 107,
-          "end_line": 122,
-          "existing_code": "            ConnectOptions connectOpts{\n                .host = host,\n                .port = port,\n                .connectTimeoutMs = connectTimeoutMs,\n                .requestTimeoutMs = reqTimeoutMs,\n                .token = token,\n                .clientPublicKey = clientPublicKey,\n                .clientPrivateKey = clientPrivateKey,\n                .serverPublicKey = serverPublicKey,\n                .accessKey = accessKey,\n                .secretKey = secretKey,\n                .tenantId = tenantId,\n                .enableCrossNodeConnection = enableCrossNodeConnection,\n                .enableExclusiveConnection = enableExclusiveConnection,\n                .enableRemoteH2D = enableRemoteH2D\n            };"
-        },
-        {
-          "path": "src/datasystem/pybind_api/pybind_register_kv.cpp",
-          "start_line": 201,
-          "end_line": 215,
-          "existing_code": "            ConnectOptions connectOpts{ .host = host,\n                                        .port = port,\n                                        .connectTimeoutMs = connectTimeoutMs,\n                                        .requestTimeoutMs = reqTimeoutMs,\n\n                                        .token = token,\n                                        .clientPublicKey = clientPublicKey,\n                                        .clientPrivateKey = clientPrivateKey,\n                                        .serverPublicKey = serverPublicKey,\n                                        .accessKey = accessKey,\n                                        .secretKey = secretKey,\n                                        .tenantId = tenantId,\n                                        .enableCrossNodeConnection = enableCrossNodeConnection,\n                                        .enableExclusiveConnection = enableExclusiveConnection,\n                                        .fastTransportMemSize = fastTransportMemSize };"
+          "path": "src/datasystem/client/object_cache/object_client.cpp",
+          "start_line": 41,
+          "end_line": 51,
+          "existing_code": "Status ObjectClient::ShutDown()\n{\n    TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n    if (impl_) {\n        bool needRollbackState;\n        auto rc = impl_->ShutDown(needRollbackState);\n        impl_->CompleteHandler(rc.IsError(), needRollbackState);\n        return rc;\n    }\n    return Status::OK();\n}"
         }
       ]
     },
     {
-      "id": "pybind-init-traceguard-lambda",
-      "name": "Duplicated \"init\" binding lambda (TraceGuard + client.Init())",
-      "severity": "low",
-      "rationale": "The Object and Stream pybind registrations expose an \"init\" method with a byte-for-byte identical lambda body: set a request-scoped TraceGuard then return client.Init(). The Hetero variant is the same plus a py::gil_scoped_release, and the Perf variant is the same with SetTraceUUID instead of SetRequestTraceUUID. This TraceGuard-then-delegate shape is repeated for essentially every bound method in these files; a small wrapper (e.g. a traced() helper that installs the TraceGuard and forwards to the member function) would collapse the boilerplate and guarantee every entry point is traced consistently.",
+      "id": "kv-fullparam-setup-create-mcreate",
+      "name": "Duplicated object_cache::FullParam initialization in KVClient::Create and KVClient::MCreate",
+      "severity": "medium",
+      "rationale": "The six-line FullParam initializer (writeMode/ttlSecond/consistencyType=CAUSAL/cacheType/existence copied from SetParam) is identical in Create and MCreate. Any new SetParam field must be added in both places; a single helper that builds a FullParam from a SetParam would centralize it.",
       "locations": [
         {
-          "path": "src/datasystem/pybind_api/pybind_register_object.cpp",
-          "start_line": 145,
-          "end_line": 149,
-          "existing_code": "        .def(\"init\",\n             [](ObjectClient &client) {\n                 TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n                 return client.Init();\n             })"
+          "path": "src/datasystem/client/kv_cache/kv_client.cpp",
+          "start_line": 102,
+          "end_line": 107,
+          "existing_code": "    object_cache::FullParam creatParam;\n    creatParam.writeMode = param.writeMode;\n    creatParam.ttlSecond = param.ttlSecond;\n    creatParam.consistencyType = ConsistencyType::CAUSAL;\n    creatParam.cacheType = param.cacheType;\n    creatParam.existence = param.existence;"
         },
         {
-          "path": "src/datasystem/pybind_api/pybind_register_stream.cpp",
-          "start_line": 56,
-          "end_line": 60,
-          "existing_code": "        .def(\"init\",\n             [](StreamClient &client) {\n                 TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n                 return client.Init();\n             })"
+          "path": "src/datasystem/client/kv_cache/kv_client.cpp",
+          "start_line": 127,
+          "end_line": 132,
+          "existing_code": "    object_cache::FullParam creatParam;\n    creatParam.writeMode = param.writeMode;\n    creatParam.ttlSecond = param.ttlSecond;\n    creatParam.consistencyType = ConsistencyType::CAUSAL;\n    creatParam.cacheType = param.cacheType;\n    creatParam.existence = param.existence;"
+        }
+      ]
+    },
+    {
+      "id": "kv-reqparam-access-recorder-mapping",
+      "name": "Duplicated RequestParam field mapping for AccessRecorder in KVClient",
+      "severity": "medium",
+      "rationale": "The RequestParam mapping block (objectKey substr + writeMode/ttlSecond/existence/cacheType to_string casts) is repeated verbatim in Create and MCreate (and closely echoed in the Set variants). This access-record population is copy-pasted rather than factored into a helper that fills a RequestParam from a SetParam/FullParam.",
+      "locations": [
+        {
+          "path": "src/datasystem/client/kv_cache/kv_client.cpp",
+          "start_line": 112,
+          "end_line": 116,
+          "existing_code": "    reqParam.objectKey = key.substr(0, LOG_OBJECT_KEY_SIZE_LIMIT);\n    reqParam.writeMode = std::to_string(static_cast<int>(param.writeMode));\n    reqParam.ttlSecond = std::to_string(param.ttlSecond);\n    reqParam.existence = std::to_string(static_cast<int>(param.existence));\n    reqParam.cacheType = std::to_string(static_cast<int>(param.cacheType));"
+        },
+        {
+          "path": "src/datasystem/client/kv_cache/kv_client.cpp",
+          "start_line": 138,
+          "end_line": 142,
+          "existing_code": "    reqParam.objectKey = key.substr(0, LOG_OBJECT_KEY_SIZE_LIMIT);\n    reqParam.writeMode = std::to_string(static_cast<int>(param.writeMode));\n    reqParam.ttlSecond = std::to_string(param.ttlSecond);\n    reqParam.existence = std::to_string(static_cast<int>(param.existence));\n    reqParam.cacheType = std::to_string(static_cast<int>(param.cacheType));"
         }
       ]
     }
