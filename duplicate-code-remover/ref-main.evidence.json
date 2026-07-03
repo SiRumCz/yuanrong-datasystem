@@ -1,44 +1,41 @@
 {
   "scanned": [
-    "src/datasystem/client/kv_cache/kv_client.cpp",
-    "src/datasystem/client/object_cache/object_client.cpp",
-    "src/datasystem/client/stream_cache/stream_client.cpp",
-    "src/datasystem/client/hetero_cache/hetero_client.cpp",
-    "src/datasystem/client/perf_client/perf_client.cpp",
-    "src/datasystem/client/router_client.cpp",
     "src/datasystem/pybind_api/pybind_register_kv.cpp",
     "src/datasystem/pybind_api/pybind_register_object.cpp",
     "src/datasystem/pybind_api/pybind_register_stream.cpp",
+    "src/datasystem/pybind_api/pybind_register_perf.cpp",
     "src/datasystem/pybind_api/pybind_register_hetero.cpp",
-    "KVClient::ShutDown",
-    "KVClient::Init",
+    "src/datasystem/client/object_cache/object_client.cpp",
+    "src/datasystem/client/kv_cache/kv_client.cpp",
+    "src/datasystem/client/stream_cache/stream_client.cpp",
+    "src/datasystem/client/perf_client/perf_client.cpp",
+    "src/datasystem/client/router_client.cpp",
+    "src/datasystem/client/hetero_cache/hetero_client.cpp",
     "ObjectClient::ShutDown",
-    "ObjectClient::Init",
+    "KVClient::ShutDown",
     "StreamClient::ShutDown",
-    "StreamClient::Init",
-    "HeteroClient::ShutDown",
-    "HeteroClient::Init",
-    "ObjectClient::GIncreaseRef",
-    "ObjectClient::GDecreaseRef"
+    "ObjectClient::Init",
+    "KVClient::Init",
+    "pybind_register_kv Set/SetValue lambdas"
   ],
   "patterns": [
     {
-      "id": "client-shutdown-identical",
-      "name": "Byte-identical client ShutDown() across KV/Object/Stream clients",
+      "id": "client-shutdown-boilerplate",
+      "name": "Identical client ShutDown() lifecycle boilerplate across cache clients",
       "severity": "high",
-      "rationale": "KVClient::ShutDown, ObjectClient::ShutDown and StreamClient::ShutDown are byte-for-byte identical: same TraceGuard setup, same impl_ null-check, same ShutDown/CompleteHandler sequence and OK fallback. The recovery-critical shutdown path is copy-pasted three times, so any fix (e.g. changing rollback handling) must be applied in three places or drift silently. Extract a shared helper (e.g. a base-class ShutDownImpl or free function taking impl_).",
+      "rationale": "ObjectClient::ShutDown, KVClient::ShutDown and StreamClient::ShutDown have byte-identical bodies (trace guard, impl_ null-check, impl_->ShutDown/CompleteHandler, return). This lifecycle teardown logic is copy-pasted verbatim into every client; a change to shutdown/rollback semantics must be edited in three (and growing) places, and divergence risks inconsistent failover/rollback behavior. Extract into a shared helper (e.g. a common base or free function templated on the impl).",
       "locations": [
-        {
-          "path": "src/datasystem/client/kv_cache/kv_client.cpp",
-          "start_line": 56,
-          "end_line": 66,
-          "existing_code": "Status KVClient::ShutDown()\n{\n    TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n    if (impl_) {\n        bool needRollbackState;\n        auto rc = impl_->ShutDown(needRollbackState);\n        impl_->CompleteHandler(rc.IsError(), needRollbackState);\n        return rc;\n    }\n    return Status::OK();\n}"
-        },
         {
           "path": "src/datasystem/client/object_cache/object_client.cpp",
           "start_line": 41,
           "end_line": 51,
           "existing_code": "Status ObjectClient::ShutDown()\n{\n    TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n    if (impl_) {\n        bool needRollbackState;\n        auto rc = impl_->ShutDown(needRollbackState);\n        impl_->CompleteHandler(rc.IsError(), needRollbackState);\n        return rc;\n    }\n    return Status::OK();\n}"
+        },
+        {
+          "path": "src/datasystem/client/kv_cache/kv_client.cpp",
+          "start_line": 56,
+          "end_line": 66,
+          "existing_code": "Status KVClient::ShutDown()\n{\n    TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n    if (impl_) {\n        bool needRollbackState;\n        auto rc = impl_->ShutDown(needRollbackState);\n        impl_->CompleteHandler(rc.IsError(), needRollbackState);\n        return rc;\n    }\n    return Status::OK();\n}"
         },
         {
           "path": "src/datasystem/client/stream_cache/stream_client.cpp",
@@ -49,42 +46,42 @@
       ]
     },
     {
-      "id": "client-init-identical",
-      "name": "Byte-identical client Init() in KV and Object clients",
+      "id": "client-init-boilerplate",
+      "name": "Identical client Init() boilerplate between ObjectClient and KVClient",
       "severity": "medium",
-      "rationale": "KVClient::Init and ObjectClient::Init are byte-for-byte identical, including the (void)metrics::InitKvMetrics() call, needRollbackState flag, impl_->Init(needRollbackState, true) and CompleteHandler sequence. This init/recovery sequence is duplicated verbatim; a shared helper would keep the two clients' startup semantics in lockstep.",
+      "rationale": "ObjectClient::Init and KVClient::Init are byte-identical (trace guard, InitKvMetrics, impl_->Init(needRollbackState, true), CompleteHandler, return). The same init/rollback sequence is duplicated verbatim; changes to metrics init or rollback handling must be kept in sync manually across clients. Shares the same root cause as the ShutDown duplication and should be factored into a common client lifecycle helper.",
       "locations": [
-        {
-          "path": "src/datasystem/client/kv_cache/kv_client.cpp",
-          "start_line": 68,
-          "end_line": 76,
-          "existing_code": "Status KVClient::Init()\n{\n    TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n    (void)metrics::InitKvMetrics();\n    bool needRollbackState;\n    auto rc = impl_->Init(needRollbackState, true);\n    impl_->CompleteHandler(rc.IsError(), needRollbackState);\n    return rc;\n}"
-        },
         {
           "path": "src/datasystem/client/object_cache/object_client.cpp",
           "start_line": 53,
           "end_line": 61,
           "existing_code": "Status ObjectClient::Init()\n{\n    TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n    (void)metrics::InitKvMetrics();\n    bool needRollbackState;\n    auto rc = impl_->Init(needRollbackState, true);\n    impl_->CompleteHandler(rc.IsError(), needRollbackState);\n    return rc;\n}"
+        },
+        {
+          "path": "src/datasystem/client/kv_cache/kv_client.cpp",
+          "start_line": 68,
+          "end_line": 76,
+          "existing_code": "Status KVClient::Init()\n{\n    TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n    (void)metrics::InitKvMetrics();\n    bool needRollbackState;\n    auto rc = impl_->Init(needRollbackState, true);\n    impl_->CompleteHandler(rc.IsError(), needRollbackState);\n    return rc;\n}"
         }
       ]
     },
     {
-      "id": "object-grefs-record-wrapper",
-      "name": "Near-identical AccessRecorder wrapper in ObjectClient GIncreaseRef/GDecreaseRef",
+      "id": "pybind-set-buffer-record",
+      "name": "Near-identical Set/SetValue pybind lambdas (buffer request + AccessRecorder plumbing)",
       "severity": "medium",
-      "rationale": "ObjectClient::GIncreaseRef and ObjectClient::GDecreaseRef differ only in the impl_ method name and the order of two RequestParam field assignments; the TraceGuard/AccessRecorder/RequestParam/Record boilerplate is otherwise copy-pasted. The same record-and-return wrapper repeats across most ObjectClient methods, making it a strong candidate for a single templated/helper wrapper.",
+      "rationale": "The Set and SetValue lambdas registered in pybind_register_kv.cpp share an almost identical copy-pasted body: trace guard, py::buffer_info request, StringView construction, SetParam init, AccessRecorder(DS_KV_CLIENT_SET), RequestParam population (objectKey/writeMode/ttlSecond) and Record call. Only the exact client.Set overload and the key handling differ. This buffer-to-StringView + access-recording preamble recurs across several .def bindings and should be pulled into a shared helper to avoid drift in the recorded request metadata.",
       "locations": [
         {
-          "path": "src/datasystem/client/object_cache/object_client.cpp",
-          "start_line": 82,
-          "end_line": 93,
-          "existing_code": "Status ObjectClient::GIncreaseRef(const std::vector<std::string> &objectKeys,\n                                  std::vector<std::string> &failedObjectKeys, const std::string &remoteClientId)\n{\n    TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n    AccessRecorder accessPoint(AccessRecorderKey::DS_OBJECT_CLIENT_GINCREASEREF);\n    Status rc = impl_->GIncreaseRef(objectKeys, failedObjectKeys, remoteClientId);\n    RequestParam reqParam;\n    reqParam.objectKey = objectKeysToString(objectKeys);\n    reqParam.remoteClientId = remoteClientId;\n    accessPoint.Record(rc.GetCode(), std::to_string(0), reqParam, rc.GetMsg());\n    return rc;\n}"
+          "path": "src/datasystem/pybind_api/pybind_register_kv.cpp",
+          "start_line": 226,
+          "end_line": 241,
+          "existing_code": "        .def(\"Set\",\n             [](ObjectClientImpl &client, const std::string &key, const py::buffer &val, WriteMode writeMode,\n                uint32_t ttlSecond) {\n                 TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n                 py::buffer_info info(val.request());\n                 StringView strView(reinterpret_cast<const char *>(info.ptr), info.size);\n                 SetParam param{ .writeMode = writeMode, .ttlSecond = ttlSecond };\n                 AccessRecorder accessPoint(AccessRecorderKey::DS_KV_CLIENT_SET);\n                 Status rc = client.Set(key, strView, param);\n                 RequestParam reqParam;\n                 reqParam.objectKey = key.substr(0, LOG_TOTAL_KEYS_SIZE_LIMIT);\n                 reqParam.writeMode = std::to_string(static_cast<int>(writeMode));\n                 reqParam.ttlSecond = std::to_string(ttlSecond);\n                 accessPoint.Record(rc.GetCode(), std::to_string(info.size), reqParam, rc.GetMsg());\n                 return rc;\n             })"
         },
         {
-          "path": "src/datasystem/client/object_cache/object_client.cpp",
-          "start_line": 106,
-          "end_line": 117,
-          "existing_code": "Status ObjectClient::GDecreaseRef(const std::vector<std::string> &objectKeys,\n                                  std::vector<std::string> &failedObjectKeys, const std::string &remoteClientId)\n{\n    TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n    AccessRecorder accessPoint(AccessRecorderKey::DS_OBJECT_CLIENT_GDECREASEREF);\n    Status rc = impl_->GDecreaseRef(objectKeys, failedObjectKeys, remoteClientId);\n    RequestParam reqParam;\n    reqParam.remoteClientId = remoteClientId;\n    reqParam.objectKey = objectKeysToString(objectKeys);\n    accessPoint.Record(rc.GetCode(), std::to_string(0), reqParam, rc.GetMsg());\n    return rc;\n}"
+          "path": "src/datasystem/pybind_api/pybind_register_kv.cpp",
+          "start_line": 242,
+          "end_line": 257,
+          "existing_code": "        .def(\"SetValue\",\n             [](ObjectClientImpl &client, const py::buffer &val, WriteMode writeMode, uint32_t ttlSecond) {\n                 TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n                 py::buffer_info info(val.request());\n                 StringView strView(reinterpret_cast<const char *>(info.ptr), info.size);\n                 SetParam param{ .writeMode = writeMode, .ttlSecond = ttlSecond };\n                 AccessRecorder accessPoint(AccessRecorderKey::DS_KV_CLIENT_SET);\n                 std::string key;\n                 auto rc = client.Set(strView, param, key);\n                 RequestParam reqParam;\n                 reqParam.objectKey = key.substr(0, LOG_TOTAL_KEYS_SIZE_LIMIT);\n                 reqParam.writeMode = std::to_string(static_cast<int>(writeMode));\n                 reqParam.ttlSecond = std::to_string(ttlSecond);\n                 accessPoint.Record(rc.GetCode(), std::to_string(info.size), reqParam);\n                 return key;\n             })"
         }
       ]
     }
