@@ -1,0 +1,1 @@
+{"summary":"Extracted duplicate ShutDown()/Init() lifecycle boilerplate into two free helpers (ClientShutDown, ClientInit) in datasystem::object_cache; four wrapper methods now delegate in one line each","pr_branch":"impl-feature-auto/issue-149","run_id":"28678590139"}
