@@ -1,0 +1,25 @@
+{
+  "scope": { "code_changed": true },
+  "items": [
+    {
+      "path": "cli/tests/test_metastore_ha.py",
+      "status": "updated_appropriately",
+      "reason": "New CLI unit tests cover head selection bounds, HA config transformation, Command.run success and error paths, and command registration."
+    }
+  ],
+  "verdict": "adequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    "cli/metastore_ha.py",
+    "cli/command.py",
+    "cli/tests/test_metastore_ha.py",
+    "cli/up.py",
+    ".repo_context/modules/quality/tests-and-reproduction.md",
+    ".repo_context/modules/quality/test-suite-design.md",
+    ".repo_context/playbooks/features/quality/test-implementation.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md"
+  ]
+}
