@@ -1,0 +1,63 @@
+{
+  "matrix": [
+    {
+      "problem": "there is no way\nto check that an edited cluster config is well-formed before a deploy begins",
+      "status": "addressed_by_spec",
+      "spec_quote": "reports every structural problem before a deploy runs",
+      "spec_location": "docs/superpowers/specs/2026-07-02-dscli-validate-config-design.md:introduction"
+    },
+    {
+      "problem": "A missing or empty `worker_nodes` list",
+      "status": "addressed_by_spec",
+      "spec_quote": "a missing, empty, or blank-entry `worker_nodes`",
+      "spec_location": "docs/superpowers/specs/2026-07-02-dscli-validate-config-design.md:Requirements"
+    },
+    {
+      "problem": "An out-of-range or non-integer `worker_port`",
+      "status": "addressed_by_spec",
+      "spec_quote": "`worker_port`\n  that is missing or is not an integer within 1–65535",
+      "spec_location": "docs/superpowers/specs/2026-07-02-dscli-validate-config-design.md:Requirements"
+    },
+    {
+      "problem": "Missing SSH credentials (`ssh_auth.ssh_user_name` / `ssh_private_key`)",
+      "status": "addressed_by_spec",
+      "spec_quote": "a missing or non-object\n  `ssh_auth` or a blank `ssh_auth.ssh_user_name` / `ssh_auth.ssh_private_key`",
+      "spec_location": "docs/superpowers/specs/2026-07-02-dscli-validate-config-design.md:Requirements"
+    },
+    {
+      "problem": "fast, read-only `dscli` command",
+      "status": "addressed_by_spec",
+      "spec_quote": "`dscli validate_config` is a read-only subcommand",
+      "spec_location": "docs/superpowers/specs/2026-07-02-dscli-validate-config-design.md:introduction"
+    },
+    {
+      "problem": "loads a cluster config JSON",
+      "status": "addressed_by_spec",
+      "spec_quote": "reads a\n  cluster config file from a `-c` / `--config` argument",
+      "spec_location": "docs/superpowers/specs/2026-07-02-dscli-validate-config-design.md:Requirements"
+    },
+    {
+      "problem": "reports every problem at once",
+      "status": "addressed_by_spec",
+      "spec_quote": "accumulating every problem in a\n  single pass",
+      "spec_location": "docs/superpowers/specs/2026-07-02-dscli-validate-config-design.md:Requirements"
+    },
+    {
+      "problem": "returning a non-zero exit code when the config is invalid",
+      "status": "addressed_by_spec",
+      "spec_quote": "MUST return a non-zero exit code when the file is\n  missing or unreadable, is not valid JSON, or describes an invalid config",
+      "spec_location": "docs/superpowers/specs/2026-07-02-dscli-validate-config-design.md:Requirements"
+    }
+  ],
+  "verdict": "solves",
+  "scope": {
+    "issue_linked": true,
+    "spec_present": true
+  },
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/issue.txt",
+    "/tmp/gh-aw/agent/spec.txt",
+    "/tmp/gh-aw/task-context.json"
+  ]
+}
