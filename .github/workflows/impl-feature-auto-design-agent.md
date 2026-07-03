@@ -10,7 +10,7 @@ features:
   dangerously-disable-sandbox-agent: "POC custom Anthropic endpoint cannot be expressed in AWF static egress allowlist; agent stays read-only and never holds the state PAT"
 engine:
   id: claude
-  model: claude-sonnet-4-6
+  model: claude-opus-4-8
   # GitHub Actions IS the sandbox — grant wide permissions so the agent is never
   # blocked on a permission prompt (which, under `claude --print`, can't be answered
   # and returns "requires approval"). bypassPermissions == --dangerously-skip-permissions.
@@ -46,6 +46,19 @@ pre-agent-steps:
       if [ -z "$CTX" ]; then CTX='{}'; fi
       printf '%s' "$CTX" > /tmp/gh-aw/task-context.json
       cat /tmp/gh-aw/task-context.json
+  - name: Materialize the design evidence schema
+    run: |
+      set -uo pipefail
+      mkdir -p /tmp/gh-aw/agent
+      # The evidence contract ships with the protocol in the workflow repo, which
+      # gh-aw already checked out at $GITHUB_WORKSPACE (before pre-agent-steps). Copy
+      # it to a fixed /tmp path so the prompt can point the agent straight at it —
+      # same pattern as issue.json / task-context.json.
+      SRC="$GITHUB_WORKSPACE/.github/agent-factory/protocols/impl-feature-auto/design.evidence.schema.json"
+      cp "$SRC" /tmp/gh-aw/agent/design.evidence.schema.json \
+        && echo "materialized design.evidence.schema.json" \
+        || echo "WARN: schema not found at $SRC"
+      cat /tmp/gh-aw/agent/design.evidence.schema.json 2>/dev/null || true
   - name: Checkout target ref
     uses: actions/checkout@v5
     with:
@@ -103,7 +116,7 @@ timeout-minutes: 30
 Working directory: `target/` (the analyzed codebase, checked out at the default branch).
 
 ## 1. Read the request
-Read `/tmp/gh-aw/agent/issue.json` (the feature request: title + body). Read
+Read `/tmp/gh-aw/agent/issue.json` (issue title and description). Read
 `/tmp/gh-aw/task-context.json` (`pr` = issue number, `iteration`, `feedback`).
 On iteration > 1, fold the `feedback` (failed ledger/spec/plan checks) into this pass.
 
@@ -115,7 +128,7 @@ EXACTLY these sections (the `spec-present` check requires all five headings):
 
 Fill gaps yourself (this is autonomous). For every gap you fill, add a ledger entry.
 The **Accountability Ledger** records each gap: category (DECISION | ASSUMPTION |
-UNKNOWN | DEFERRED | DEVIATION), what / why / what-I-did, confidence (high|med|low),
+UNKNOWN | DEFERRED | DEVIATION), what / why / what-I-did, confidence (high|medium|low),
 **blast radius** (level low|medium|high + WHY), **reversibility** (level
 reversible|costly|irreversible + WHY), and a revisit-if condition. An ASSUMPTION
 that asserts a fact about the code MUST be verified against the codebase and marked
@@ -127,7 +140,8 @@ Use the `writing-plans` skill on the spec to write a plan to
 `target/docs/superpowers/plans/<YYYY-MM-DD>-<topic>.md`.
 
 ## 4. Emit evidence — then STOP (do not implement)
-Write `/tmp/gh-aw/evidence.json` as ONE JSON object matching design.evidence.schema.json:
+Read the evidence contract at `/tmp/gh-aw/agent/design.evidence.schema.json` first, then
+write `/tmp/gh-aw/evidence.json` as ONE JSON object matching it:
 `{"spec_path","plan_path","summary","run_id","ledger":[…],"read_these_first":[…]}`
 - `spec_path`/`plan_path`: the repo-relative paths under `target/` you just wrote
   (e.g. `docs/superpowers/specs/…-design.md`).
