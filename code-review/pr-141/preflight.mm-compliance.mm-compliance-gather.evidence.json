@@ -1,0 +1,44 @@
+{
+  "verdict": "diverges",
+  "divergences": [
+    {
+      "decision": "ADR-002: Pluggable cluster-metadata backend - ETCD is the production-HA metadata posture; built-in Metastore is a quick-deployment/resource-constrained mode concentrated on Worker 0 and is not an HA posture.",
+      "detail": "The PR adds `dscli metastore_ha` and documents it as producing a highly-available built-in Metastore by electing multiple active head replicas. That contradicts the mental model, which explicitly treats Metastore as a single Worker-0 coordination dependency with no documented automatic failover and directs HA/production-critical metadata deployments to ETCD. The current source also only consumes a singular `metastore_head_node`/`metastore_address` and starts Metastore on the one node where `start_metastore_service` is true; no runtime code consumes the new `metastore_head_nodes` list or implements multi-head replication/failover.",
+      "evidence": "/tmp/gh-aw/agent/pr.diff:40-81, /tmp/gh-aw/agent/pr.diff:398-422; _mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-002-pluggable-cluster-metadata.adoc:14-29; docs/source_zh_cn/design_document/cluster_management.md:46,120-128; cli/up.py:233-263,315-327; src/datasystem/worker/worker_oc_server.cpp:938-944",
+      "fix": "Either implement and document a real multi-head Metastore architecture and update the mental model/ADRs after maintainer approval, or keep the CLI aligned with the existing model by generating the supported single `metastore_head_node` configuration and avoid presenting Metastore as HA; for HA metadata, guide operators to ETCD."
+    },
+    {
+      "decision": "ADR-001: Keep a single metadata/placement authority distinct from the data plane, backed by ETCD or the Worker-0 Metastore, to preserve a consistent source of truth for placement, liveness, and failover reasoning.",
+      "detail": "The PR's helper removes the existing singular `metastore_head_node` and replaces it with `metastore_head_nodes`, describing the selected workers as active head replicas. That introduces a multi-authority Metastore topology at the configuration/documentation layer without any corresponding source-level consensus, leader election, replication, or failover design, diverging from the accepted single-authority coordination model.",
+      "evidence": "/tmp/gh-aw/agent/pr.diff:46-81; _mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-001-master-worker-split.adoc:14-29; _mm/socratic/docs/arc42/arc42-yuanrong-datasystem.adoc:190-199; cli/up.py:233-263,315-327; src/datasystem/worker/worker_oc_server.cpp:868-883",
+      "fix": "Preserve the single metadata-authority contract unless the PR also supplies a reviewed architecture for Metastore consensus/replication and updates the MM; otherwise emit the supported single-head config field."
+    }
+  ],
+  "examined": [
+    "/tmp/gh-aw/agent/pr.json",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-001-master-worker-split.adoc",
+    "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-002-pluggable-cluster-metadata.adoc",
+    "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-003-consistent-hash-ring-placement.adoc",
+    "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-004-performance-first-optional-reliability.adoc",
+    "_mm/socratic/docs/arc42/arc42-yuanrong-datasystem.adoc",
+    "_mm/socratic/docs/specs/prd-yuanrong-datasystem.adoc",
+    "_mm/socratic/docs/specs/use-cases-yuanrong-datasystem.adoc",
+    "_mm/socratic/OPEN_QUESTIONS-yuanrong-datasystem.adoc",
+    "_mm/socratic/QUESTION_TREE-yuanrong-datasystem.adoc",
+    "_mm/legion-map/CODEBASE.md",
+    "_mm/vibed-codeset/.claude/docs/get_context.py cli/command.py",
+    "_mm/vibed-codeset/.claude/docs/get_context.py cli/metastore_ha.py",
+    "_mm/vibed-codeset/.claude/docs/get_context.py docs/source_zh_cn/deployment/dscli.md",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md",
+    "cli/up.py",
+    "src/datasystem/worker/worker_oc_server.cpp",
+    "docs/source_zh_cn/design_document/cluster_management.md"
+  ]
+}
