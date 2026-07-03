@@ -1,0 +1,83 @@
+{
+  "scope": {},
+  "cedar": {
+    "status": "ok",
+    "flags": [
+      {
+        "tool": "Bash",
+        "action": "RunCommand",
+        "resource": "bash",
+        "context": {
+          "touched_secret": false,
+          "external_host": false,
+          "destructive": true,
+          "in_changed_set": true,
+          "in_repo": false,
+          "allowed_hosts": [],
+          "host": ""
+        },
+        "determining_id": "locked.no-destructive",
+        "locked": true
+      }
+    ]
+  },
+  "guardians": {
+    "ok": false,
+    "violations": [
+      {
+        "name": "no_secret_exfiltration",
+        "kind": "taint",
+        "locked": true,
+        "evidence": "Tainted data from 'read_secret' flows to 'network_send.body'",
+        "step": "step2_network_send"
+      },
+      {
+        "name": "egress_allowlist",
+        "kind": "automaton",
+        "locked": false,
+        "evidence": "Security automaton 'egress_allowlist' reached error state 'error' on tool call 'network_send'",
+        "step": "step2_network_send"
+      }
+    ],
+    "warnings": []
+  },
+  "engine_report": {
+    "violations": [
+      {
+        "engine": "cedar",
+        "name": "locked.no-destructive",
+        "locked": true,
+        "severity": "critical",
+        "evidence": "Agent RunCommand on bash denied by policy locked.no-destructive (tool: Bash).",
+        "ref": "bash"
+      },
+      {
+        "engine": "guardians",
+        "name": "no_secret_exfiltration",
+        "locked": true,
+        "severity": "critical",
+        "evidence": "Tainted data from 'read_secret' flows to 'network_send.body'",
+        "ref": "step2_network_send"
+      },
+      {
+        "engine": "guardians",
+        "name": "egress_allowlist",
+        "locked": false,
+        "severity": "high",
+        "evidence": "Security automaton 'egress_allowlist' reached error state 'error' on tool call 'network_send'",
+        "ref": "step2_network_send"
+      }
+    ],
+    "summary": {
+      "critical": 2,
+      "high": 1,
+      "medium": 0
+    }
+  },
+  "verdict": "LOCKED_VIOLATION",
+  "examined": [
+    "locked.no-destructive",
+    "no_secret_exfiltration",
+    "egress_allowlist"
+  ]
+}
