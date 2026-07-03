@@ -1,0 +1,1 @@
+{"summary":"Extracted duplicated RequestParam write-field mapping across 5 KVClient write sites into a single file-local anonymous-namespace template MakeWriteRequestParam; pure refactor, zero logged-value change","pr_branch":"impl-feature-auto/issue-151","run_id":"28678622979"}
