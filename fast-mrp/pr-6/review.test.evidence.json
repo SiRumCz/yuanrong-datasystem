@@ -1,0 +1,15 @@
+{
+  "dimension": "test",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "src/datasystem/common/util/gflag/flags.cpp",
+      "line": 323,
+      "severity": "medium",
+      "category": "test",
+      "title": "Add coverage for transactional dynamic sampler flag updates",
+      "impact": "The new datasystem.config path validates and commits request/access/diagnostic sample-rate flags as a batch, mutates global gflags, rolls them back on failure, and then publishes the LogSampler config. The added tests cover LogSampler::UpdateConfigFromFlags directly, but not this Flags::UpdateFlagParameter transaction path, so regressions such as partial commits after an invalid mixed update or a sampler snapshot diverging from FLAGS_* would not be caught.",
+      "fix": "Add Flags-level tests that call UpdateFlagParameter/ProcessFlagFile with sampler entries: a valid request-only update that proves derived access/diagnostic rates are published, a valid explicit access/diagnostic batch, and an invalid batch where one sampler value is out of range and all FLAGS_* values plus LogSampler's previous-good snapshot remain unchanged."
+    }
+  ]
+}
