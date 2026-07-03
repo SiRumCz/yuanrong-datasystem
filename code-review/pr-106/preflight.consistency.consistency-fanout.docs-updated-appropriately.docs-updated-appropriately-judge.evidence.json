@@ -1,0 +1,35 @@
+{
+  "leg": "docs-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": "docs/superpowers/plans/2026-07-02-dscli-status-command.md",
+      "severity": "noise",
+      "rationale": "The gather evidence says this new implementation plan matches the diff's status command, registration, tests, and collector reporting behavior. There is no adherence gap to grade for this item."
+    },
+    {
+      "ref": "docs/superpowers/specs/2026-07-02-dscli-status-design.md",
+      "severity": "noise",
+      "rationale": "The gather evidence says this new design spec describes the added no-argument status command, local discovery, table output, and collector reporting. That makes this item a non-issue rather than a merge concern."
+    },
+    {
+      "ref": "docs/source_zh_cn/deployment/dscli.md",
+      "severity": "blocking",
+      "rationale": "A new user-facing dscli status command was added, but the existing dscli user guide and command reference still omit its usage and options. That is a substantive documentation gap for an exposed CLI feature."
+    },
+    {
+      "ref": ".repo_context/generated/repo_index.md",
+      "severity": "advisory",
+      "rationale": "The generated repo index is stale because it does not list the new cli/status.py entrypoint. This should be corrected for AI context accuracy, but it is secondary to the missing user-facing command documentation."
+    }
+  ],
+  "examined": [
+    "docs/superpowers/plans/2026-07-02-dscli-status-command.md",
+    "docs/superpowers/specs/2026-07-02-dscli-status-design.md",
+    "docs/source_zh_cn/deployment/dscli.md",
+    ".repo_context/generated/repo_index.md"
+  ]
+}
