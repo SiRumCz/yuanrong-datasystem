@@ -1,0 +1,47 @@
+{
+  "leg": "code-implements-plan",
+  "scope": {
+    "code_changed": true,
+    "plan_present": true,
+    "plan_path": "docs/superpowers/plans/2026-07-03-dscli-metastore-ha-command.md",
+    "code_files": [
+      "cli/command.py",
+      "cli/metastore_ha.py"
+    ]
+  },
+  "gather_verdict": "adheres",
+  "graded_findings": [
+    {
+      "ref": "- P1: Add `select_metastore_heads(worker_nodes, replicas)` and\n  `build_ha_metastore_config(config, replicas)` to `cli/metastore_ha.py` — elect the\n  first `replicas` worker nodes (floored at 2, capped at the node count) as\n  Metastore heads and return a new config replacing `metastore_head_node` with a\n  `metastore_head_nodes` list. (implements R1)",
+      "severity": "noise",
+      "rationale": "The gather evidence marks this plan item as implemented and provides trace support, so it does not identify an adherence gap. No merge-blocking or advisory issue is present for this item."
+    },
+    {
+      "ref": "- P2: Add `class Command(BaseCommand)` (`name = \"metastore_ha\"`) to\n  `cli/metastore_ha.py` with `add_arguments` registering `-c`/`--config`,\n  `-r`/`--replicas`, and `-o`/`--output`, and a `run()` that path-guards and loads\n  the source config, builds the HA config, writes the output, and returns\n  `SUCCESS`/`FAILURE`. (implements R2)",
+      "severity": "noise",
+      "rationale": "The gather evidence marks this plan item as implemented and provides trace support, so it does not identify an adherence gap. No merge-blocking or advisory issue is present for this item."
+    },
+    {
+      "ref": "- P3: Register `\"metastore_ha\"` in the `modules` list of `cli/command.py`\n  (after `collect_log`). (implements R3)",
+      "severity": "noise",
+      "rationale": "The gather evidence marks this plan item as implemented and provides trace support, so it does not identify an adherence gap. No merge-blocking or advisory issue is present for this item."
+    },
+    {
+      "ref": "- P4: Add `cli/tests/test_metastore_ha.py` covering the helpers, every `run()`\n  return path, and the registration. (implements R4)",
+      "severity": "noise",
+      "rationale": "The gather evidence marks this plan item as implemented and provides trace support, so it does not identify an adherence gap. No merge-blocking or advisory issue is present for this item."
+    },
+    {
+      "ref": "- P5: Update `docs/source_zh_cn/deployment/dscli.md` (TOC entries, a\n  `### dscli metastore_ha` reference section, and a usage + deployment example),\n  `docs/source_zh_cn/design_document/cluster_management.md` (multi-head Metastore\n  section), and `.repo_context/modules/runtime/cluster-management.md` (the\n  metastore_ha flow). (implements R5)",
+      "severity": "noise",
+      "rationale": "The gather evidence marks this plan item as implemented and provides trace support, so it does not identify an adherence gap. No merge-blocking or advisory issue is present for this item."
+    }
+  ],
+  "examined": [
+    "- P1: Add `select_metastore_heads(worker_nodes, replicas)` and\n  `build_ha_metastore_config(config, replicas)` to `cli/metastore_ha.py` — elect the\n  first `replicas` worker nodes (floored at 2, capped at the node count) as\n  Metastore heads and return a new config replacing `metastore_head_node` with a\n  `metastore_head_nodes` list. (implements R1)",
+    "- P2: Add `class Command(BaseCommand)` (`name = \"metastore_ha\"`) to\n  `cli/metastore_ha.py` with `add_arguments` registering `-c`/`--config`,\n  `-r`/`--replicas`, and `-o`/`--output`, and a `run()` that path-guards and loads\n  the source config, builds the HA config, writes the output, and returns\n  `SUCCESS`/`FAILURE`. (implements R2)",
+    "- P3: Register `\"metastore_ha\"` in the `modules` list of `cli/command.py`\n  (after `collect_log`). (implements R3)",
+    "- P4: Add `cli/tests/test_metastore_ha.py` covering the helpers, every `run()`\n  return path, and the registration. (implements R4)",
+    "- P5: Update `docs/source_zh_cn/deployment/dscli.md` (TOC entries, a\n  `### dscli metastore_ha` reference section, and a usage + deployment example),\n  `docs/source_zh_cn/design_document/cluster_management.md` (multi-head Metastore\n  section), and `.repo_context/modules/runtime/cluster-management.md` (the\n  metastore_ha flow). (implements R5)"
+  ]
+}
