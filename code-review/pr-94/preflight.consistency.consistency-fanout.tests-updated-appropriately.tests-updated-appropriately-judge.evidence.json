@@ -1,0 +1,23 @@
+{
+  "leg": "tests-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": "cli/tests/test_status.py",
+      "severity": "noise",
+      "rationale": "This item reports adequate parser coverage rather than an adherence gap. It does not identify a merge-blocking problem."
+    },
+    {
+      "ref": "cli/tests/test_status.py",
+      "severity": "blocking",
+      "rationale": "The finding identifies untested new Command.list_workers subprocess paths, Command.run empty/non-empty behavior, and command registration. Those are concrete behavior surfaces for the change, so the test gap should stop merge."
+    }
+  ],
+  "examined": [
+    "cli/tests/test_status.py",
+    "cli/tests/test_status.py"
+  ]
+}
