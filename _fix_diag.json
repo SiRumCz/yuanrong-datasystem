@@ -1,0 +1,21 @@
+{
+  "local": false,
+  "n_fixes": 1,
+  "env": {
+    "repo": "SiRumCz/yuanrong-datasystem",
+    "pr": "105",
+    "has_token": true
+  },
+  "head": "feat/dscli-validate-config",
+  "clone_rc": 0,
+  "clone_err": "Cloning into '/tmp/fix-apply-1rkex_3i'...",
+  "apply": [
+    {
+      "status": "applied",
+      "detail": ""
+    }
+  ],
+  "applied_n": 1,
+  "push_ok": true,
+  "push_detail": ""
+}
