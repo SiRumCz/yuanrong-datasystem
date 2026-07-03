@@ -1,7 +1,15 @@
 protocol: duplicate-code-remover
 instance: ref-main
 state: detect
-iteration: 1
+iteration: 2
 gates: {}
 head_sha: 5198bdcdbf9741c48302af4c40d82ed5fc918e73
-history: []
+history:
+- iteration: 1
+  agent_run_id: '28669960871'
+  checks:
+    evidence-wellformed: pass
+    anchored-to-real-code: fail
+  feedback: '[pybind-connectoptions-client-init-boilerplate] existing_code does not
+    match ''src/datasystem/pybind_api/pybind_register_kv.cpp'' lines 201-215 (claimed
+    16 lines, file span 15 lines)'
