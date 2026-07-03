@@ -109,15 +109,35 @@ def _existing_fingerprints(repo):
     return found
 
 
+def _ensure_labels(repo, labels):
+    """Best-effort: make sure each label exists so issue creation doesn't fail on
+    a repo that hasn't defined them (portability — a target repo won't have our
+    labels). Idempotent via --force (create or update). Non-fatal: _create_issue
+    also falls back to creating the issue with no labels if this couldn't run."""
+    for name in labels:
+        subprocess.run(
+            ["gh", "label", "create", name, "--repo", repo, "--force",
+             "--color", "ededed", "--description", "duplicate-code-remover"],
+            text=True, capture_output=True, env=_gh_env(),
+        )
+
+
 def _create_issue(repo, title, body, labels):
-    r = subprocess.run(
-        ["gh", "issue", "create", "--repo", repo, "--title", title,
-         "--body", body, "--label", ",".join(labels)],
-        text=True, capture_output=True, env=_gh_env(),
-    )
+    def _run(extra):
+        return subprocess.run(
+            ["gh", "issue", "create", "--repo", repo, "--title", title,
+             "--body", body, *extra],
+            text=True, capture_output=True, env=_gh_env(),
+        )
+    r = _run(["--label", ",".join(labels)] if labels else [])
     if r.returncode != 0:
-        sys.stderr.write(f"[file-issues] create failed: {r.stderr.strip()}\n")
-        return ""
+        # Most likely the labels don't exist / can't be applied. Retry WITHOUT
+        # labels so the issue (and its /impl-feature-auto trigger) still lands.
+        sys.stderr.write(f"[file-issues] create with labels failed ({r.stderr.strip()}); retrying without labels\n")
+        r = _run([])
+        if r.returncode != 0:
+            sys.stderr.write(f"[file-issues] create failed: {r.stderr.strip()}\n")
+            return ""
     # gh prints the issue URL; extract the trailing number
     m = re.search(r"/issues/(\d+)", r.stdout.strip())
     return m.group(1) if m else ""
@@ -182,6 +202,7 @@ def _main():
             "summary": f"dedupe query failed; skipped issue creation to avoid duplicates ({instance})",
         }))
         return
+    _ensure_labels(repo, labels)
     created, skipped = [], 0
     for p in patterns:
         fp = fingerprint(p)
