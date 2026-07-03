@@ -122,6 +122,13 @@ safe-outputs to capture them). Open ONE pull request via safe-outputs. The PR bo
 MUST carry the Accountability Ledger and the READ-THESE-FIRST list (from the design
 spec) so the PR is self-describing, and reference the issue (`Closes #<N>`).
 
+**Keep the change CODE-ONLY.** Do NOT modify protected paths — any top-level
+dot-folder (`.repo_context/`, `.github/`, …) or protected files (README/CLAUDE/
+DESIGN/CODEOWNERS/manifests). safe-outputs routes any change touching a protected
+path to a `request_review` issue instead of a direct PR. Limit your commit to source
+code + its unit tests + the build wiring needed to compile them; do not update docs
+under protected folders (put any rationale in the PR body / ledger instead).
+
 ## 5. Emit evidence
 Write `/tmp/gh-aw/evidence.json` as ONE JSON object:
 `{"summary":"<one line>","pr_branch":"impl-feature-auto/issue-<N>","run_id":"<GITHUB_RUN_ID>"}`
