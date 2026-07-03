@@ -1,0 +1,17 @@
+{
+  "leg": "docs-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": "docs/source_zh_cn/deployment/dscli.md",
+      "severity": "blocking",
+      "rationale": "The finding identifies a user-facing CLI addition that is omitted from the dscli manual command list and parameter section. That is a substantive documentation adherence gap for a new command and should stop merge until documented."
+    }
+  ],
+  "examined": [
+    "docs/source_zh_cn/deployment/dscli.md"
+  ]
+}
