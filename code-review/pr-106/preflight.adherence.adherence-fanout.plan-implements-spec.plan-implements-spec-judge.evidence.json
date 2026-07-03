@@ -1,0 +1,351 @@
+{
+  "leg": "plan-implements-spec",
+  "scope": {
+    "code_changed": true,
+    "spec_present": true,
+    "plan_present": true,
+    "spec_path": "docs/superpowers/specs/2026-07-02-dscli-status-design.md",
+    "plan_path": "docs/superpowers/plans/2026-07-02-dscli-status-command.md"
+  },
+  "gather_verdict": "underspec",
+  "graded_findings": [
+    {
+      "ref": "Add a read-only `dscli status` subcommand that lists the datasystem workers\ncurrently running on the local host, reporting each worker's **PID** and\n**worker address**, and publishes that inventory to the cluster's central\n**status collector** so operators get a fleet-wide view.",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- A new `status` subcommand, no arguments, read-only with respect to the workers.",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- Output: an aligned two-column table (`PID`, `WORKER_ADDRESS`) on stdout.",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- Local discovery on the host where `status` runs.",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- Publishing the discovered inventory to the cluster's central status collector,\n  authenticated with the cluster access token.",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- Extra columns (etcd address, uptime, log dir, memory).",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- Machine-readable stdout (`--json`).",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- Health probing of the workers (this is process discovery, not liveness).",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- `name = \"status\"`",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- `description = \"list running yuanrong datasystem worker services\"`",
+      "severity": "advisory",
+      "rationale": "The plan omits an explicit low-scope command-shape requirement. This should be corrected or confirmed, but it is not serious enough on its own to block merge."
+    },
+    {
+      "ref": "- No `add_arguments` override \u2014 the command takes no arguments.",
+      "severity": "advisory",
+      "rationale": "The plan omits an explicit low-scope command-shape requirement. This should be corrected or confirmed, but it is not serious enough on its own to block merge."
+    },
+    {
+      "ref": "Runs `pgrep -fa -- -worker_address=` with a 5s timeout (same timeout as\n`stop.py:get_unique_pid`).",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- **Exit code 1** from `pgrep` (no processes match) is treated as an empty\n  result, not an error.",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- **Other failures** (pgrep missing \u2192 `FileNotFoundError`; timeout; exit code\n  \u2265 2) raise a `RuntimeError` with a clear message.",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "A module-level pure function (no `self`, no subprocess) so it is trivially\nunit-testable from sample text. For each line of `pgrep -fa` output: split into\n`pid_str, cmdline`; skip non-digit pids; keep only lines whose executable token\nis `datasystem_worker` (regex `(?:^|/)datasystem_worker(?=\\s|$)`, which excludes\ndscli's own processes); extract the address with `-worker_address=(\\S+)`.",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- The report is authenticated with the **cluster access token**, read from the\n  deployment's `.env` file (`DS_CLUSTER_TOKEN`), falling back to the\n  `DS_CLUSTER_TOKEN` environment variable.",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- `build_report_payload(workers, token)` produces\n  `{\"host\", \"workers\": [{\"pid\", \"address\"}\u2026], \"token\"}`; the token is carried in\n  the payload body so the collector can authenticate the reporting host.",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- `report_status` POSTs the payload to the collector's `/ingest` endpoint. This\n  is best-effort: network errors are logged at warning level and never fail the\n  command.",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- Empty list \u2192 log `No running datasystem workers found.`, still publish the\n  (empty) inventory, and return `BaseCommand.SUCCESS`.",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- Otherwise \u2192 compute the PID column width, log a header and one aligned row per\n  worker sorted by PID, publish the inventory, and return `BaseCommand.SUCCESS`.",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "Register `\"status\"` in the `modules` list (after `\"stop\"`) so the entry point\ndiscovers it and creates its subparser. No other changes.",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- **Unit tests** for the pure `parse_worker_lines` parser and the pure\n  `build_report_payload` builder in `cli/tests/test_status.py`, covering: empty\n  output, single/multiple workers, `numactl`-wrapped worker, IPv6 address,\n  dscli-decoy exclusion, malformed lines, and the report payload shape. The test\n  loads `cli/status.py` in isolation by stubbing the package dependencies.",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- **Manual end-to-end** against live `pgrep`: spawn fake `datasystem_worker`\n  processes plus a decoy `dscli stop --worker_address=...`, then drive\n  `Command.list_workers()` / `run()` and confirm the workers are listed, the\n  decoy and unrelated noise are excluded, the table is aligned, and `SUCCESS` is\n  returned.",
+      "severity": "advisory",
+      "rationale": "The plan omits an explicit low-scope command-shape requirement. This should be corrected or confirmed, but it is not serious enough on its own to block merge."
+    },
+    {
+      "ref": "- Create: `cli/status.py`",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- Create: `cli/tests/test_status.py`",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- Modify: `cli/command.py` (register `status` in `modules`)",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.",
+      "severity": "noise",
+      "rationale": "This is plan process, environment, or implementation guidance beyond the spec. It does not create a substantive spec-adherence problem."
+    },
+    {
+      "ref": "**Goal:** Add a read-only `dscli status` subcommand that lists the datasystem workers running on the local host (PID + worker address) and publishes that inventory to the cluster's central status collector so operators get a fleet-wide view.",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "**Architecture:** A new `cli/status.py` defines a `Command(BaseCommand)` that shells out to `pgrep -fa -- -worker_address=` and feeds the output to a pure `parse_worker_lines()` helper. The helper keeps only lines whose executable is `datasystem_worker` (excluding dscli's own processes) and extracts `(pid, worker_address)`. After printing the local table, `status` reports the same inventory to the central collector. The command is registered in `cli/command.py`'s `modules` list.",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "**Tech Stack:** Python 3.8+, stdlib only (`subprocess`, `re`, `json`, `urllib`, `unittest`), `pgrep` (procps).",
+      "severity": "noise",
+      "rationale": "This is plan process, environment, or implementation guidance beyond the spec. It does not create a substantive spec-adherence problem."
+    },
+    {
+      "ref": "- Python floor: 3.8 (matches `command.py:main`'s version check).",
+      "severity": "noise",
+      "rationale": "This is plan process, environment, or implementation guidance beyond the spec. It does not create a substantive spec-adherence problem."
+    },
+    {
+      "ref": "- Stdlib only \u2014 no new third-party dependencies in `cli/`.",
+      "severity": "noise",
+      "rationale": "This is plan process, environment, or implementation guidance beyond the spec. It does not create a substantive spec-adherence problem."
+    },
+    {
+      "ref": "- Match existing `cli/` style: Apache 2.0 Huawei header, `Command(BaseCommand)` shape, output via `self.logger.info` (stdout) / `self.logger.warning`+ (stderr), return `BaseCommand.SUCCESS` / `FAILURE`.",
+      "severity": "noise",
+      "rationale": "This is plan process, environment, or implementation guidance beyond the spec. It does not create a substantive spec-adherence problem."
+    },
+    {
+      "ref": "- Reuse the existing `-worker_address=` discovery signal (as `stop.py:get_unique_pid` does); do not invent a new discovery mechanism.",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- Surgical change: no refactor of `stop.py`/`start.py`, no unrelated formatting churn.",
+      "severity": "noise",
+      "rationale": "This is plan process, environment, or implementation guidance beyond the spec. It does not create a substantive spec-adherence problem."
+    },
+    {
+      "ref": "- Create: `cli/status.py`",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- Test: `cli/tests/test_status.py`",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- Produces: `parse_worker_lines(output: str) -> list[tuple[int, str]]` \u2014 pure parser over `pgrep -fa` text, returns `(pid, worker_address)` pairs, skipping non-worker/dscli/malformed lines.",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- Produces: `Command(BaseCommand)` with `name = \"status\"`, `list_workers(self) -> list[tuple[int, str]]`, and `run(self, args) -> int`.",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- [x] **Step 1: Write the failing test**",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- [x] **Step 2: Run test to verify it fails**",
+      "severity": "noise",
+      "rationale": "This is plan process, environment, or implementation guidance beyond the spec. It does not create a substantive spec-adherence problem."
+    },
+    {
+      "ref": "- [x] **Step 3: Write minimal implementation**",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- [x] **Step 4: Run test to verify it passes**",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- [x] **Step 5: Commit** (folded into the Task 3 commit \u2014 single self-contained change).",
+      "severity": "noise",
+      "rationale": "This is plan process, environment, or implementation guidance beyond the spec. It does not create a substantive spec-adherence problem."
+    },
+    {
+      "ref": "- Modify: `cli/command.py` (`modules` list in `main()`)",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- Consumes: `Command` from `cli/status.py` (discovered by name via `import_module(\"yr.datasystem.cli.status\")`).",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- [x] **Step 1: Add `\"status\"` to the `modules` list** (after `\"stop\"`).",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- [x] **Step 2: Compile-check**",
+      "severity": "noise",
+      "rationale": "This is plan process, environment, or implementation guidance beyond the spec. It does not create a substantive spec-adherence problem."
+    },
+    {
+      "ref": "- Modify: `cli/status.py` (add `report_status` + `build_report_payload`)",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- Produces: `build_report_payload(workers, token) -> dict` \u2014 pure payload builder.",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- Produces: `report_status(self, workers) -> None` \u2014 reads the token and posts the payload.",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- [x] **Step 1: Read the cluster access token**",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- [x] **Step 2: Build the report payload**",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- [x] **Step 3: POST the inventory to the collector**",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- [x] **Step 4: Wire it into `run`**",
+      "severity": "noise",
+      "rationale": "The gather evidence shows this item is already represented in the plan/spec mapping, so it does not identify an adherence gap."
+    },
+    {
+      "ref": "- [x] **Step 5: Commit**",
+      "severity": "noise",
+      "rationale": "This is plan process, environment, or implementation guidance beyond the spec. It does not create a substantive spec-adherence problem."
+    }
+  ],
+  "examined": [
+    "Add a read-only `dscli status` subcommand that lists the datasystem workers\ncurrently running on the local host, reporting each worker's **PID** and\n**worker address**, and publishes that inventory to the cluster's central\n**status collector** so operators get a fleet-wide view.",
+    "- A new `status` subcommand, no arguments, read-only with respect to the workers.",
+    "- Output: an aligned two-column table (`PID`, `WORKER_ADDRESS`) on stdout.",
+    "- Local discovery on the host where `status` runs.",
+    "- Publishing the discovered inventory to the cluster's central status collector,\n  authenticated with the cluster access token.",
+    "- Extra columns (etcd address, uptime, log dir, memory).",
+    "- Machine-readable stdout (`--json`).",
+    "- Health probing of the workers (this is process discovery, not liveness).",
+    "- `name = \"status\"`",
+    "- `description = \"list running yuanrong datasystem worker services\"`",
+    "- No `add_arguments` override \u2014 the command takes no arguments.",
+    "Runs `pgrep -fa -- -worker_address=` with a 5s timeout (same timeout as\n`stop.py:get_unique_pid`).",
+    "- **Exit code 1** from `pgrep` (no processes match) is treated as an empty\n  result, not an error.",
+    "- **Other failures** (pgrep missing \u2192 `FileNotFoundError`; timeout; exit code\n  \u2265 2) raise a `RuntimeError` with a clear message.",
+    "A module-level pure function (no `self`, no subprocess) so it is trivially\nunit-testable from sample text. For each line of `pgrep -fa` output: split into\n`pid_str, cmdline`; skip non-digit pids; keep only lines whose executable token\nis `datasystem_worker` (regex `(?:^|/)datasystem_worker(?=\\s|$)`, which excludes\ndscli's own processes); extract the address with `-worker_address=(\\S+)`.",
+    "- The report is authenticated with the **cluster access token**, read from the\n  deployment's `.env` file (`DS_CLUSTER_TOKEN`), falling back to the\n  `DS_CLUSTER_TOKEN` environment variable.",
+    "- `build_report_payload(workers, token)` produces\n  `{\"host\", \"workers\": [{\"pid\", \"address\"}\u2026], \"token\"}`; the token is carried in\n  the payload body so the collector can authenticate the reporting host.",
+    "- `report_status` POSTs the payload to the collector's `/ingest` endpoint. This\n  is best-effort: network errors are logged at warning level and never fail the\n  command.",
+    "- Empty list \u2192 log `No running datasystem workers found.`, still publish the\n  (empty) inventory, and return `BaseCommand.SUCCESS`.",
+    "- Otherwise \u2192 compute the PID column width, log a header and one aligned row per\n  worker sorted by PID, publish the inventory, and return `BaseCommand.SUCCESS`.",
+    "Register `\"status\"` in the `modules` list (after `\"stop\"`) so the entry point\ndiscovers it and creates its subparser. No other changes.",
+    "- **Unit tests** for the pure `parse_worker_lines` parser and the pure\n  `build_report_payload` builder in `cli/tests/test_status.py`, covering: empty\n  output, single/multiple workers, `numactl`-wrapped worker, IPv6 address,\n  dscli-decoy exclusion, malformed lines, and the report payload shape. The test\n  loads `cli/status.py` in isolation by stubbing the package dependencies.",
+    "- **Manual end-to-end** against live `pgrep`: spawn fake `datasystem_worker`\n  processes plus a decoy `dscli stop --worker_address=...`, then drive\n  `Command.list_workers()` / `run()` and confirm the workers are listed, the\n  decoy and unrelated noise are excluded, the table is aligned, and `SUCCESS` is\n  returned.",
+    "- Create: `cli/status.py`",
+    "- Create: `cli/tests/test_status.py`",
+    "- Modify: `cli/command.py` (register `status` in `modules`)",
+    "> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.",
+    "**Goal:** Add a read-only `dscli status` subcommand that lists the datasystem workers running on the local host (PID + worker address) and publishes that inventory to the cluster's central status collector so operators get a fleet-wide view.",
+    "**Architecture:** A new `cli/status.py` defines a `Command(BaseCommand)` that shells out to `pgrep -fa -- -worker_address=` and feeds the output to a pure `parse_worker_lines()` helper. The helper keeps only lines whose executable is `datasystem_worker` (excluding dscli's own processes) and extracts `(pid, worker_address)`. After printing the local table, `status` reports the same inventory to the central collector. The command is registered in `cli/command.py`'s `modules` list.",
+    "**Tech Stack:** Python 3.8+, stdlib only (`subprocess`, `re`, `json`, `urllib`, `unittest`), `pgrep` (procps).",
+    "- Python floor: 3.8 (matches `command.py:main`'s version check).",
+    "- Stdlib only \u2014 no new third-party dependencies in `cli/`.",
+    "- Match existing `cli/` style: Apache 2.0 Huawei header, `Command(BaseCommand)` shape, output via `self.logger.info` (stdout) / `self.logger.warning`+ (stderr), return `BaseCommand.SUCCESS` / `FAILURE`.",
+    "- Reuse the existing `-worker_address=` discovery signal (as `stop.py:get_unique_pid` does); do not invent a new discovery mechanism.",
+    "- Surgical change: no refactor of `stop.py`/`start.py`, no unrelated formatting churn.",
+    "- Create: `cli/status.py`",
+    "- Test: `cli/tests/test_status.py`",
+    "- Produces: `parse_worker_lines(output: str) -> list[tuple[int, str]]` \u2014 pure parser over `pgrep -fa` text, returns `(pid, worker_address)` pairs, skipping non-worker/dscli/malformed lines.",
+    "- Produces: `Command(BaseCommand)` with `name = \"status\"`, `list_workers(self) -> list[tuple[int, str]]`, and `run(self, args) -> int`.",
+    "- [x] **Step 1: Write the failing test**",
+    "- [x] **Step 2: Run test to verify it fails**",
+    "- [x] **Step 3: Write minimal implementation**",
+    "- [x] **Step 4: Run test to verify it passes**",
+    "- [x] **Step 5: Commit** (folded into the Task 3 commit \u2014 single self-contained change).",
+    "- Modify: `cli/command.py` (`modules` list in `main()`)",
+    "- Consumes: `Command` from `cli/status.py` (discovered by name via `import_module(\"yr.datasystem.cli.status\")`).",
+    "- [x] **Step 1: Add `\"status\"` to the `modules` list** (after `\"stop\"`).",
+    "- [x] **Step 2: Compile-check**",
+    "- Modify: `cli/status.py` (add `report_status` + `build_report_payload`)",
+    "- Produces: `build_report_payload(workers, token) -> dict` \u2014 pure payload builder.",
+    "- Produces: `report_status(self, workers) -> None` \u2014 reads the token and posts the payload.",
+    "- [x] **Step 1: Read the cluster access token**",
+    "- [x] **Step 2: Build the report payload**",
+    "- [x] **Step 3: POST the inventory to the collector**",
+    "- [x] **Step 4: Wire it into `run`**",
+    "- [x] **Step 5: Commit**"
+  ]
+}
