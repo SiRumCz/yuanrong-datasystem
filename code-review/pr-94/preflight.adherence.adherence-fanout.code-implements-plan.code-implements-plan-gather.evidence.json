@@ -1,0 +1,178 @@
+{
+  "scope": {
+    "code_changed": true,
+    "plan_present": true,
+    "plan_path": "docs/superpowers/plans/2026-07-02-dscli-status-command.md",
+    "code_files": [
+      "cli/command.py",
+      "cli/status.py"
+    ]
+  },
+  "plan_to_code": [
+    {
+      "plan_item": "- [x] **Step 1: Write the failing test**",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- [x] **Step 2: Run test to verify it fails**",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- [x] **Step 3: Write minimal implementation**",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- [x] **Step 4: Run test to verify it passes**",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- [x] **Step 5: Commit** (folded into the Task 2 commit \u2014 single self-contained change).",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- [x] **Step 1: Add `\"status\"` to the `modules` list**",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- [x] **Step 2: Compile-check**",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- [x] **Step 3: Manual end-to-end verification against live `pgrep`**",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "- [x] **Step 4: Commit**",
+      "status": "implemented"
+    }
+  ],
+  "files": [
+    {
+      "path": "cli/command.py",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "status"
+          ],
+          "findings": [
+            {
+              "plan_item": "- [x] **Step 1: Add `\"status\"` to the `modules` list**",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 151,
+              "existing_code": "        \"status\","
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "cli/status.py",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "parse_worker_lines",
+            "Command",
+            "list_workers"
+          ],
+          "findings": [
+            {
+              "plan_item": "- [x] **Step 3: Write minimal implementation**",
+              "status": "traces",
+              "side": "RIGHT",
+              "start_line": 16,
+              "line": 19,
+              "existing_code": "import re\nimport subprocess\n\nfrom yr.datasystem.cli.command import BaseCommand"
+            },
+            {
+              "plan_item": "- [x] **Step 3: Write minimal implementation**",
+              "status": "traces",
+              "side": "RIGHT",
+              "start_line": 24,
+              "line": 35,
+              "existing_code": "_WORKER_ADDRESS_ARG = \"-worker_address=\"\n\n# Positive filter to keep only real worker processes. A worker always execs the\n# absolute path .../datasystem_worker (optionally wrapped by ums_run/numactl),\n# so the executable token is preceded by \"/\" or the start of the command line.\n# This naturally excludes dscli's own processes (e.g. a concurrent\n# `dscli stop --worker_address=...`), mirroring stop.py's \"pid_name != dscli\"\n# guard without depending on the process comm name.\n_WORKER_BIN_RE = re.compile(r\"(?:^|/)datasystem_worker(?=\\s|$)\")\n_WORKER_ADDRESS_RE = re.compile(r\"-worker_address=(\\S+)\")\n\n_PGREP_TIMEOUT_S = 5"
+            },
+            {
+              "plan_item": "- [x] **Step 3: Write minimal implementation**",
+              "status": "traces",
+              "side": "RIGHT",
+              "start_line": 38,
+              "line": 68,
+              "existing_code": "def parse_worker_lines(output):\n    \"\"\"Parse ``pgrep -fa`` output into a list of running workers.\n\n    Args:\n        output (str): Combined ``pgrep -fa -- -worker_address=`` output, one\n            ``<pid> <full command line>`` record per line.\n\n    Returns:\n        list[tuple[int, str]]: ``(pid, worker_address)`` pairs, in the order the\n            records appear. Non-worker lines (e.g. dscli), lines without a\n            parseable pid, and lines without a ``-worker_address=`` value are\n            skipped.\n    \"\"\"\n    workers = []\n    for line in output.strip().splitlines():\n        line = line.strip()\n        if not line:\n            continue\n        parts = line.split(\" \", 1)\n        if len(parts) != 2:\n            continue\n        pid_str, cmdline = parts\n        if not pid_str.isdigit():\n            continue\n        if not _WORKER_BIN_RE.search(cmdline):\n            continue\n        match = _WORKER_ADDRESS_RE.search(cmdline)\n        if not match:\n            continue\n        workers.append((int(pid_str), match.group(1)))\n    return workers"
+            },
+            {
+              "plan_item": "- [x] **Step 3: Write minimal implementation**",
+              "status": "traces",
+              "side": "RIGHT",
+              "start_line": 71,
+              "line": 98,
+              "existing_code": "class Command(BaseCommand):\n    \"\"\"\n    List running yuanrong datasystem worker services on the local host.\n    \"\"\"\n\n    name = \"status\"\n    description = \"list running yuanrong datasystem worker services\"\n\n    def run(self, args):\n        \"\"\"\n        Execute the status command.\n\n        Args:\n            args (Namespace): parsed arguments (unused; status takes none).\n\n        Returns:\n            int: BaseCommand.SUCCESS on success.\n        \"\"\"\n        workers = self.list_workers()\n        if not workers:\n            self.logger.info(\"No running datasystem workers found.\")\n            return BaseCommand.SUCCESS\n\n        pid_width = max(len(\"PID\"), *(len(str(pid)) for pid, _ in workers))\n        self.logger.info(f\"{'PID':<{pid_width}}  WORKER_ADDRESS\")\n        for pid, address in sorted(workers, key=lambda worker: worker[0]):\n            self.logger.info(f\"{str(pid):<{pid_width}}  {address}\")\n        return BaseCommand.SUCCESS"
+            },
+            {
+              "plan_item": "- [x] **Step 3: Write minimal implementation**",
+              "status": "traces",
+              "side": "RIGHT",
+              "start_line": 100,
+              "line": 132,
+              "existing_code": "    def list_workers(self):\n        \"\"\"\n        Discover running datasystem workers on the local host.\n\n        Returns:\n            list[tuple[int, str]]: ``(pid, worker_address)`` pairs.\n\n        Raises:\n            RuntimeError: If pgrep is unavailable, times out, or fails for a\n                reason other than \"no matching process\".\n        \"\"\"\n        cmd = [\"pgrep\", \"-fa\", \"--\", _WORKER_ADDRESS_ARG]\n        try:\n            output = subprocess.check_output(\n                cmd, stderr=subprocess.STDOUT, timeout=_PGREP_TIMEOUT_S, text=True\n            )\n        except subprocess.CalledProcessError as e:\n            # pgrep exits 1 when nothing matches: an empty result, not an error.\n            if e.returncode == 1:\n                return []\n            raise RuntimeError(\n                f\"Failed to scan for datasystem workers: {e.output}\"\n            ) from e\n        except FileNotFoundError as e:\n            raise RuntimeError(\n                \"pgrep command not found; cannot list datasystem workers\"\n            ) from e\n        except subprocess.TimeoutExpired as e:\n            raise RuntimeError(\n                \"Timed out while scanning for datasystem workers\"\n            ) from e\n\n        return parse_worker_lines(output)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "cli/tests/test_status.py",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "TestParseWorkerLines",
+            "test_skips_dscli_process"
+          ],
+          "findings": [
+            {
+              "plan_item": "- [x] **Step 1: Write the failing test**",
+              "status": "traces",
+              "side": "RIGHT",
+              "start_line": 16,
+              "line": 23,
+              "existing_code": "import importlib.util\nimport os\nimport sys\nimport types\nimport unittest\n\n_CLI_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))\n_STATUS_PATH = os.path.join(_CLI_DIR, \"status.py\")"
+            },
+            {
+              "plan_item": "- [x] **Step 1: Write the failing test**",
+              "status": "traces",
+              "side": "RIGHT",
+              "start_line": 26,
+              "line": 59,
+              "existing_code": "def _load_status_module():\n    \"\"\"Load cli/status.py in isolation.\n\n    status.py imports ``yr.datasystem.cli.command`` and\n    ``yr.datasystem.cli.common.util`` at module load time. Those packages only\n    exist in a built/installed tree, so we stub them to exercise the pure\n    ``parse_worker_lines`` helper directly from the source checkout.\n    \"\"\"\n    for name in [\"yr\", \"yr.datasystem\", \"yr.datasystem.cli\",\n                 \"yr.datasystem.cli.common\"]:\n        sys.modules.setdefault(name, types.ModuleType(name))\n\n    sys.modules[\"yr.datasystem.cli.common.util\"] = types.ModuleType(\n        \"yr.datasystem.cli.common.util\")\n\n    command_mod = types.ModuleType(\"yr.datasystem.cli.command\")\n\n    class BaseCommand:\n        SUCCESS = 0\n        FAILURE = 1\n        name = \"\"\n        description = \"\"\n\n        def __init__(self):\n            pass\n\n    command_mod.BaseCommand = BaseCommand\n    sys.modules[\"yr.datasystem.cli.command\"] = command_mod\n\n    spec = importlib.util.spec_from_file_location(\n        \"ds_status_under_test\", _STATUS_PATH)\n    module = importlib.util.module_from_spec(spec)\n    spec.loader.exec_module(module)\n    return module"
+            },
+            {
+              "plan_item": "- [x] **Step 1: Write the failing test**",
+              "status": "traces",
+              "side": "RIGHT",
+              "start_line": 65,
+              "line": 122,
+              "existing_code": "class TestParseWorkerLines(unittest.TestCase):\n    \"\"\"Tests for status.parse_worker_lines (pgrep -fa output parser).\"\"\"\n\n    def test_empty_output_returns_empty_list(self):\n        self.assertEqual(status.parse_worker_lines(\"\"), [])\n        self.assertEqual(status.parse_worker_lines(\"   \\n  \\n\"), [])\n\n    def test_single_worker(self):\n        output = \"12345 /opt/ds/datasystem_worker --worker_address=127.0.0.1:31501 --etcd_address=127.0.0.1:2379\"\n        self.assertEqual(\n            status.parse_worker_lines(output),\n            [(12345, \"127.0.0.1:31501\")],\n        )\n\n    def test_multiple_workers(self):\n        output = (\n            \"12345 /opt/ds/datasystem_worker --worker_address=127.0.0.1:31501\\n\"\n            \"12346 /opt/ds/datasystem_worker --worker_address=127.0.0.1:31502 --log_dir=/var/log\\n\"\n        )\n        self.assertEqual(\n            status.parse_worker_lines(output),\n            [(12345, \"127.0.0.1:31501\"), (12346, \"127.0.0.1:31502\")],\n        )\n\n    def test_worker_wrapped_by_numactl(self):\n        output = (\"777 numactl --cpunodebind=0 /opt/ds/datasystem_worker \"\n                  \"--worker_address=10.0.0.5:9000\")\n        self.assertEqual(\n            status.parse_worker_lines(output),\n            [(777, \"10.0.0.5:9000\")],\n        )\n\n    def test_skips_dscli_process(self):\n        # A concurrent `dscli stop --worker_address=...` also matches the pgrep\n        # pattern but must not be reported as a running worker.\n        output = (\n            \"12345 /opt/ds/datasystem_worker --worker_address=127.0.0.1:31501\\n\"\n            \"20001 python3 /usr/local/bin/dscli stop --worker_address=127.0.0.1:31501\\n\"\n        )\n        self.assertEqual(\n            status.parse_worker_lines(output),\n            [(12345, \"127.0.0.1:31501\")],\n        )\n\n    def test_ipv6_address(self):\n        output = \"42 /opt/ds/datasystem_worker --worker_address=[::1]:31501\"\n        self.assertEqual(\n            status.parse_worker_lines(output),\n            [(42, \"[::1]:31501\")],\n        )\n\n    def test_skips_malformed_lines(self):\n        output = (\n            \"not_a_pid /opt/ds/datasystem_worker --worker_address=127.0.0.1:31501\\n\"\n            \"88888 /opt/ds/datasystem_worker --other_flag=1\\n\"\n            \"\\n\"\n        )\n        self.assertEqual(status.parse_worker_lines(output), [])"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "verdict": "adheres",
+  "examined": [
+    "scope.json",
+    "plan.txt",
+    "pr.diff",
+    "task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md"
+  ]
+}
