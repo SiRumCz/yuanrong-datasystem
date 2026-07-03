@@ -1,7 +1,0 @@
-protocol: fast-mrp
-instance: pr-6
-state: adherence-fanout
-sub_state: plan-implements-spec-judge
-iteration: 1
-gates: {}
-history: []
