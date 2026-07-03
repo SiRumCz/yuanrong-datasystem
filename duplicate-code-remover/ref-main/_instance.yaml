@@ -3,4 +3,4 @@ instance: ref-main
 head_sha: 5198bdcdbf9741c48302af4c40d82ed5fc918e73
 phase: detect
 joined: false
-phase_label: detect (C++ duplication scan)
+phase_label: "\u2705 done"

@@ -2,86 +2,59 @@
   "scanned": [
     "src/datasystem/pybind_api/pybind_register_kv.cpp",
     "src/datasystem/pybind_api/pybind_register_object.cpp",
+    "src/datasystem/pybind_api/pybind_register_hetero.cpp",
     "src/datasystem/pybind_api/pybind_register_stream.cpp",
     "src/datasystem/pybind_api/pybind_register_perf.cpp",
-    "src/datasystem/pybind_api/pybind_register_hetero.cpp",
-    "src/datasystem/client/object_cache/object_client.cpp",
-    "src/datasystem/client/kv_cache/kv_client.cpp",
-    "src/datasystem/client/stream_cache/stream_client.cpp",
-    "src/datasystem/client/perf_client/perf_client.cpp",
-    "src/datasystem/client/router_client.cpp",
-    "src/datasystem/client/hetero_cache/hetero_client.cpp",
-    "ObjectClient::ShutDown",
-    "KVClient::ShutDown",
-    "StreamClient::ShutDown",
-    "ObjectClient::Init",
-    "KVClient::Init",
-    "pybind_register_kv Set/SetValue lambdas"
+    "src/datasystem/pybind_api/pybind_register_common.cpp",
+    "src/datasystem/pybind_api/pybind_register_context.cpp",
+    "src/datasystem/pybind_api/pybind_register_service_discovery.cpp",
+    "ConnectOptions connectOpts{...} designated-initializer blocks",
+    "KVClient::Set/SetValue/MSet buffer-prep preludes"
   ],
   "patterns": [
     {
-      "id": "client-shutdown-boilerplate",
-      "name": "Identical client ShutDown() lifecycle boilerplate across cache clients",
-      "severity": "high",
-      "rationale": "ObjectClient::ShutDown, KVClient::ShutDown and StreamClient::ShutDown have byte-identical bodies (trace guard, impl_ null-check, impl_->ShutDown/CompleteHandler, return). This lifecycle teardown logic is copy-pasted verbatim into every client; a change to shutdown/rollback semantics must be edited in three (and growing) places, and divergence risks inconsistent failover/rollback behavior. Extract into a shared helper (e.g. a common base or free function templated on the impl).",
+      "id": "pybind-connectoptions-client-init-boilerplate",
+      "name": "Duplicated ConnectOptions designated-initializer in pybind client constructors",
+      "severity": "medium",
+      "rationale": "The py::init lambda for each pybind-exposed client (KVClient, ObjectClient, HeteroClient) builds a ConnectOptions struct by copying the same constructor arguments (host, port, connectTimeoutMs, requestTimeoutMs, token, clientPublicKey, clientPrivateKey, serverPublicKey, accessKey, secretKey, tenantId, enableCrossNodeConnection, enableExclusiveConnection) into identically-named designated initializers. The blocks are near-identical (13+ shared fields) and differ only by a trailing client-specific field or a hardcoded value. A shared helper that maps the common connection arguments to a ConnectOptions would remove ~15 duplicated lines per client and keep the field list in one place, avoiding drift when ConnectOptions gains a field.",
       "locations": [
         {
-          "path": "src/datasystem/client/object_cache/object_client.cpp",
-          "start_line": 41,
-          "end_line": 51,
-          "existing_code": "Status ObjectClient::ShutDown()\n{\n    TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n    if (impl_) {\n        bool needRollbackState;\n        auto rc = impl_->ShutDown(needRollbackState);\n        impl_->CompleteHandler(rc.IsError(), needRollbackState);\n        return rc;\n    }\n    return Status::OK();\n}"
+          "path": "src/datasystem/pybind_api/pybind_register_kv.cpp",
+          "start_line": 201,
+          "end_line": 215,
+          "existing_code": "            ConnectOptions connectOpts{ .host = host,\n                                        .port = port,\n                                        .connectTimeoutMs = connectTimeoutMs,\n                                        .requestTimeoutMs = reqTimeoutMs,\n\n                                        .token = token,\n                                        .clientPublicKey = clientPublicKey,\n                                        .clientPrivateKey = clientPrivateKey,\n                                        .serverPublicKey = serverPublicKey,\n                                        .accessKey = accessKey,\n                                        .secretKey = secretKey,\n                                        .tenantId = tenantId,\n                                        .enableCrossNodeConnection = enableCrossNodeConnection,\n                                        .enableExclusiveConnection = enableExclusiveConnection,\n                                        .fastTransportMemSize = fastTransportMemSize };"
         },
         {
-          "path": "src/datasystem/client/kv_cache/kv_client.cpp",
-          "start_line": 56,
-          "end_line": 66,
-          "existing_code": "Status KVClient::ShutDown()\n{\n    TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n    if (impl_) {\n        bool needRollbackState;\n        auto rc = impl_->ShutDown(needRollbackState);\n        impl_->CompleteHandler(rc.IsError(), needRollbackState);\n        return rc;\n    }\n    return Status::OK();\n}"
+          "path": "src/datasystem/pybind_api/pybind_register_object.cpp",
+          "start_line": 127,
+          "end_line": 141,
+          "existing_code": "            ConnectOptions connectOpts{\n                .host = host,\n                .port = port,\n                .connectTimeoutMs = connectTimeoutMs,\n                .requestTimeoutMs = reqTimeoutMs,\n                .token = token,\n                .clientPublicKey = clientPublicKey,\n                .clientPrivateKey = clientPrivateKey,\n                .serverPublicKey = serverPublicKey,\n                .accessKey = accessKey,\n                .secretKey = secretKey,\n                .tenantId = tenantId,\n                .enableCrossNodeConnection = false,\n                .enableExclusiveConnection = enableExclusiveConnection,\n            };"
         },
         {
-          "path": "src/datasystem/client/stream_cache/stream_client.cpp",
-          "start_line": 43,
-          "end_line": 53,
-          "existing_code": "Status StreamClient::ShutDown()\n{\n    TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n    if (impl_) {\n        bool needRollbackState;\n        auto rc = impl_->ShutDown(needRollbackState);\n        impl_->CompleteHandler(rc.IsError(), needRollbackState);\n        return rc;\n    }\n    return Status::OK();\n}"
+          "path": "src/datasystem/pybind_api/pybind_register_hetero.cpp",
+          "start_line": 107,
+          "end_line": 122,
+          "existing_code": "            ConnectOptions connectOpts{\n                .host = host,\n                .port = port,\n                .connectTimeoutMs = connectTimeoutMs,\n                .requestTimeoutMs = reqTimeoutMs,\n                .token = token,\n                .clientPublicKey = clientPublicKey,\n                .clientPrivateKey = clientPrivateKey,\n                .serverPublicKey = serverPublicKey,\n                .accessKey = accessKey,\n                .secretKey = secretKey,\n                .tenantId = tenantId,\n                .enableCrossNodeConnection = enableCrossNodeConnection,\n                .enableExclusiveConnection = enableExclusiveConnection,\n                .enableRemoteH2D = enableRemoteH2D\n            };"
         }
       ]
     },
     {
-      "id": "client-init-boilerplate",
-      "name": "Identical client Init() boilerplate between ObjectClient and KVClient",
-      "severity": "medium",
-      "rationale": "ObjectClient::Init and KVClient::Init are byte-identical (trace guard, InitKvMetrics, impl_->Init(needRollbackState, true), CompleteHandler, return). The same init/rollback sequence is duplicated verbatim; changes to metrics init or rollback handling must be kept in sync manually across clients. Shares the same root cause as the ShutDown duplication and should be factored into a common client lifecycle helper.",
-      "locations": [
-        {
-          "path": "src/datasystem/client/object_cache/object_client.cpp",
-          "start_line": 53,
-          "end_line": 61,
-          "existing_code": "Status ObjectClient::Init()\n{\n    TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n    (void)metrics::InitKvMetrics();\n    bool needRollbackState;\n    auto rc = impl_->Init(needRollbackState, true);\n    impl_->CompleteHandler(rc.IsError(), needRollbackState);\n    return rc;\n}"
-        },
-        {
-          "path": "src/datasystem/client/kv_cache/kv_client.cpp",
-          "start_line": 68,
-          "end_line": 76,
-          "existing_code": "Status KVClient::Init()\n{\n    TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n    (void)metrics::InitKvMetrics();\n    bool needRollbackState;\n    auto rc = impl_->Init(needRollbackState, true);\n    impl_->CompleteHandler(rc.IsError(), needRollbackState);\n    return rc;\n}"
-        }
-      ]
-    },
-    {
-      "id": "pybind-set-buffer-record",
-      "name": "Near-identical Set/SetValue pybind lambdas (buffer request + AccessRecorder plumbing)",
-      "severity": "medium",
-      "rationale": "The Set and SetValue lambdas registered in pybind_register_kv.cpp share an almost identical copy-pasted body: trace guard, py::buffer_info request, StringView construction, SetParam init, AccessRecorder(DS_KV_CLIENT_SET), RequestParam population (objectKey/writeMode/ttlSecond) and Record call. Only the exact client.Set overload and the key handling differ. This buffer-to-StringView + access-recording preamble recurs across several .def bindings and should be pulled into a shared helper to avoid drift in the recorded request metadata.",
+      "id": "kv-mset-buffer-collection-loop",
+      "name": "Duplicated MSet buffer-collection loop in KVClient MSet bindings",
+      "severity": "low",
+      "rationale": "Two MSet-style pybind bindings in pybind_register_kv.cpp contain a byte-identical block that builds an MSetParam and iterates the input buffers to accumulate totalSize and collect StringViews. The loop body (py::buffer_info construction, size accumulation, StringView wrap, emplace_back) is copy-pasted verbatim; extracting it into a small helper would remove the repeated buffer-unpacking logic and keep a single place to update if the buffer handling changes.",
       "locations": [
         {
           "path": "src/datasystem/pybind_api/pybind_register_kv.cpp",
-          "start_line": 226,
-          "end_line": 241,
-          "existing_code": "        .def(\"Set\",\n             [](ObjectClientImpl &client, const std::string &key, const py::buffer &val, WriteMode writeMode,\n                uint32_t ttlSecond) {\n                 TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n                 py::buffer_info info(val.request());\n                 StringView strView(reinterpret_cast<const char *>(info.ptr), info.size);\n                 SetParam param{ .writeMode = writeMode, .ttlSecond = ttlSecond };\n                 AccessRecorder accessPoint(AccessRecorderKey::DS_KV_CLIENT_SET);\n                 Status rc = client.Set(key, strView, param);\n                 RequestParam reqParam;\n                 reqParam.objectKey = key.substr(0, LOG_TOTAL_KEYS_SIZE_LIMIT);\n                 reqParam.writeMode = std::to_string(static_cast<int>(writeMode));\n                 reqParam.ttlSecond = std::to_string(ttlSecond);\n                 accessPoint.Record(rc.GetCode(), std::to_string(info.size), reqParam, rc.GetMsg());\n                 return rc;\n             })"
+          "start_line": 263,
+          "end_line": 270,
+          "existing_code": "                 MSetParam param{ .writeMode = writeMode, .ttlSecond = ttlSecond, .existence = existenceOpt };\n                 uint64_t totalSize = 0;\n                 for (const auto &val : vals) {\n                     py::buffer_info info(val.request());\n                     totalSize += info.size;\n                     StringView strView(reinterpret_cast<const char *>(info.ptr), info.size);\n                     values.emplace_back(strView);\n                 }"
         },
         {
           "path": "src/datasystem/pybind_api/pybind_register_kv.cpp",
-          "start_line": 242,
-          "end_line": 257,
-          "existing_code": "        .def(\"SetValue\",\n             [](ObjectClientImpl &client, const py::buffer &val, WriteMode writeMode, uint32_t ttlSecond) {\n                 TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n                 py::buffer_info info(val.request());\n                 StringView strView(reinterpret_cast<const char *>(info.ptr), info.size);\n                 SetParam param{ .writeMode = writeMode, .ttlSecond = ttlSecond };\n                 AccessRecorder accessPoint(AccessRecorderKey::DS_KV_CLIENT_SET);\n                 std::string key;\n                 auto rc = client.Set(strView, param, key);\n                 RequestParam reqParam;\n                 reqParam.objectKey = key.substr(0, LOG_TOTAL_KEYS_SIZE_LIMIT);\n                 reqParam.writeMode = std::to_string(static_cast<int>(writeMode));\n                 reqParam.ttlSecond = std::to_string(ttlSecond);\n                 accessPoint.Record(rc.GetCode(), std::to_string(info.size), reqParam);\n                 return key;\n             })"
+          "start_line": 286,
+          "end_line": 293,
+          "existing_code": "                 MSetParam param{ .writeMode = writeMode, .ttlSecond = ttlSecond, .existence = existenceOpt };\n                 uint64_t totalSize = 0;\n                 for (const auto &val : vals) {\n                     py::buffer_info info(val.request());\n                     totalSize += info.size;\n                     StringView strView(reinterpret_cast<const char *>(info.ptr), info.size);\n                     values.emplace_back(strView);\n                 }"
         }
       ]
     }
