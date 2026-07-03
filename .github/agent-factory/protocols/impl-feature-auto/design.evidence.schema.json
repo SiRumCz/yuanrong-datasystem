@@ -3,7 +3,7 @@
   "title": "impl-feature-auto · design evidence",
   "type": "object",
   "additionalProperties": false,
-  "required": ["spec_path", "plan_path", "ledger", "read_these_first"],
+  "required": ["spec_path", "plan_path", "run_id", "ledger", "read_these_first"],
   "properties": {
     "spec_path": { "type": "string", "description": "path to the spec doc the agent wrote" },
     "plan_path": { "type": "string", "description": "path to the plan writing-plans produced" },
@@ -23,7 +23,7 @@
           "what": { "type": "string", "minLength": 1 },
           "why": { "type": "string", "minLength": 1 },
           "what_i_did": { "type": "string", "minLength": 1 },
-          "confidence": { "enum": ["high", "med", "low"] },
+          "confidence": { "enum": ["high", "medium", "low"] },
           "blast_radius": {
             "type": "object",
             "additionalProperties": false,

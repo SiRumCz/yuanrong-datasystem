@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _common  # noqa: E402
 
 CATEGORIES = {"DECISION", "ASSUMPTION", "UNKNOWN", "DEFERRED", "DEVIATION"}
-CONF = {"high", "med", "low"}
+CONF = {"high", "medium", "low"}
 BLAST = {"low", "medium", "high"}
 REV = {"reversible", "costly", "irreversible"}
 SCALARS = ("what", "why", "what_i_did", "revisit_if")

@@ -5,7 +5,7 @@ import os
 
 _TRIVIAL = {"", "todo", "tbd", "n/a", "na", "none", "-"}
 
-CONF = {"low": 2, "med": 1, "high": 0}
+CONF = {"low": 2, "medium": 1, "high": 0}
 BLAST = {"high": 2, "medium": 1, "low": 0}
 REV = {"irreversible": 2, "costly": 1, "reversible": 0}
 

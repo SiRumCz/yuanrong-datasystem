@@ -1,0 +1,27 @@
+{
+  "$schema": "../../engine/protocol.schema.json",
+  "name": "duplicate-code-remover",
+  "version": "0.1.0",
+  "min_engine_version": "1.0.0",
+  "triggers": [
+    { "on": "schedule",         "command": "start" },
+    { "on": "workflow_dispatch", "command": "start" }
+  ],
+  "states": [
+    {
+      "id": "detect",
+      "kind": "agent",
+      "label": "detect (C++ duplication scan)",
+      "workflow": "duplicate-code-remover-detect-agent",
+      "evidence": "detect.evidence.schema.json",
+      "max_iterations": 2,
+      "params": { "min_locations": 2, "severities": ["high", "medium", "low"] },
+      "checks": [
+        { "run": "evidence-wellformed",   "on_fail": "iterate" },
+        { "run": "anchored-to-real-code", "on_fail": "iterate" }
+      ],
+      "publish": "file-issues",
+      "next": "done"
+    }
+  ]
+}
