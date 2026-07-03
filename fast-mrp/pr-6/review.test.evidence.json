@@ -1,0 +1,24 @@
+{
+  "dimension": "test",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "src/datasystem/common/util/gflag/flags.cpp",
+      "line": 326,
+      "severity": "medium",
+      "category": "test",
+      "title": "Dynamic sampler flag transaction is untested",
+      "impact": "The new dynamic update path validates, commits, rolls back, and publishes request/access/diagnostic sampling rates as one transaction, but the diff only tests LogSampler::UpdateConfigFromFlags directly. A regression in UpdateFlagParameter, ValidateAndCommitSamplerFlags, rollback after a bad value, or explicit-state preservation would not be caught, so runtime config changes could silently leave clients/workers with the wrong sampling policy.",
+      "fix": "Add a flags-level test that calls Flags::UpdateFlagParameter with sampler entries, asserts the gflag values and LogSampler snapshot change together, and covers invalid batch rollback plus the request-only derivation/explicit override cases through this production path."
+    },
+    {
+      "path": "src/datasystem/common/flags/embedded_config.cpp",
+      "line": 122,
+      "severity": "medium",
+      "category": "test",
+      "title": "EmbeddedConfig sample-rate setters have no regression coverage",
+      "impact": "RequestSampleRate, AccessSampleRate, and DiagnosticSampleRate add the public embedded-worker configuration surface, including range filtering before values enter extraArgs, but no changed test exercises these setters through EmbeddedConfig or ParseCommandLineFlags. A typo in the flag names, invalid-rate handling, or failure to propagate embedded config to the sampler would pass the current sampler-only tests.",
+      "fix": "Add an embedded-config/flag parsing test that builds an EmbeddedConfig with valid and invalid sample rates, parses it through the existing embedded flag path, and asserts the resulting FLAGS_* values and LogSampler effective ppm/derivation behavior."
+    }
+  ]
+}
