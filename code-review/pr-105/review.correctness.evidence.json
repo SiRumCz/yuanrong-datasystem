@@ -1,0 +1,15 @@
+{
+  "dimension": "correctness",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "cli/validate_config.py",
+      "line": 51,
+      "severity": "high",
+      "category": "correctness",
+      "title": "Validator accepts worker nodes that deploy rejects",
+      "impact": "Any non-empty string in worker_nodes is currently treated as valid, so a config such as [\"worker-1\"] passes validate_config. The existing deploy paths call util.is_valid_ip(node) before starting or stopping workers, which raises for non-IP hostnames, so validate_config can return success for a config that dscli up/down will reject.",
+      "fix": "Validate each worker_nodes entry with the same address contract used by deployment, e.g. call util.is_valid_ip for every node and report invalid addresses, or first change the deploy path to support hostnames consistently."
+    }
+  ]
+}
