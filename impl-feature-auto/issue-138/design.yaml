@@ -1,7 +1,18 @@
 protocol: impl-feature-auto
 instance: issue-138
 state: design
-iteration: 1
+iteration: 2
 gates: {}
 head_sha: 5198bdcdbf9741c48302af4c40d82ed5fc918e73
-history: []
+history:
+- iteration: 1
+  agent_run_id: '28670494248'
+  checks:
+    ledger-wellformed: pass
+    ledger-consistent: pass
+    read-these-first-consistent: fail
+    spec-present: fail
+    plan-present: fail
+  feedback: 'read_these_first order is not risk-descending: [(''L3'', 1), (''L4'',
+    1), (''L5'', 0), (''L1'', 0), (''L2'', 0), (''L7'', 0), (''L6'', 1)]; bundled
+    spec.md not found beside evidence.json (cannot cross-reference)'
