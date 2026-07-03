@@ -1,0 +1,35 @@
+{
+  "leg": "docs-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": ".repo_context/modules/infra/logging/design.md",
+      "severity": "blocking",
+      "rationale": "This is a real adherence gap because the design document still presents removed log_rate_limit-era controls as current behavior. That stale current-state guidance would mislead future changes to logging admission and configuration."
+    },
+    {
+      "ref": ".repo_context/modules/infra/logging/trace-and-context.md",
+      "severity": "blocking",
+      "rationale": "This is blocking because the trace/context documentation still assigns sampling decisions and counter ownership to the removed LogRateLimiter path. The mismatch affects shared logging semantics rather than incidental prose."
+    },
+    {
+      "ref": ".repo_context/modules/infra/logging/plog-slow-request-plan.md",
+      "severity": "blocking",
+      "rationale": "This plan remains materially stale by describing slow PLOG retention as bypassing log_rate_limit instead of the new request and diagnostic sampling model. That is a substantive recovery/observability contract mismatch for the changed logging behavior."
+    },
+    {
+      "ref": ".repo_context/modules/infra/logging/plog-slow-get-implementation-summary.md",
+      "severity": "blocking",
+      "rationale": "This summary omits the new diagnostic_sample_rate behavior and still documents the removed bypass relationship to log_rate_limit. Because it summarizes implemented behavior, the stale statement is merger-blocking documentation drift."
+    }
+  ],
+  "examined": [
+    ".repo_context/modules/infra/logging/design.md",
+    ".repo_context/modules/infra/logging/trace-and-context.md",
+    ".repo_context/modules/infra/logging/plog-slow-request-plan.md",
+    ".repo_context/modules/infra/logging/plog-slow-get-implementation-summary.md"
+  ]
+}
