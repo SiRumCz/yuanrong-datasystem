@@ -1,0 +1,42 @@
+{
+  "leg": "spec-solves-issue",
+  "scope": {
+    "issue_linked": true,
+    "spec_present": true
+  },
+  "gather_verdict": "solves",
+  "graded_findings": [
+    {
+      "ref": "The `dscli` CLI has `start`, `stop`, `up`, `down`, and `generate_*` commands, but no way to see which datasystem workers are currently running on a host.",
+      "severity": "advisory",
+      "rationale": "This identifies the operational gap the spec is meant to cover. The gather marks it addressed by the spec, so it is worth noting but not a merge blocker."
+    },
+    {
+      "ref": "Operators must fall back to raw `pgrep`/`ps`.",
+      "severity": "advisory",
+      "rationale": "This is a concrete operator pain point addressed by the proposed status command. It supports the solves verdict but does not indicate an adherence gap."
+    },
+    {
+      "ref": "This proposes a read-only `dscli status` subcommand to fill that gap.",
+      "severity": "advisory",
+      "rationale": "This is the core spec solution identified by the gather. Since the gather verdict is that the spec solves the issue, this is substantive context rather than blocking evidence."
+    },
+    {
+      "ref": "`start`/`stop` exist, but there's no \"what's running?\" — a common operational need.",
+      "severity": "advisory",
+      "rationale": "This restates the same operational need in the spec motivation. It is relevant but duplicative, so it should not block."
+    },
+    {
+      "ref": "The discovery mechanism already exists in-repo: `stop.py` locates a worker by scanning for its `-worker_address=` argument (`cli/stop.py:247`, `get_unique_pid`). This feature reuses that same, proven approach to *list* all workers instead of requiring a single match.",
+      "severity": "advisory",
+      "rationale": "This explains why the proposed implementation path is grounded in existing behavior. It is useful supporting evidence, not a serious unresolved issue."
+    }
+  ],
+  "examined": [
+    "The `dscli` CLI has `start`, `stop`, `up`, `down`, and `generate_*` commands, but no way to see which datasystem workers are currently running on a host.",
+    "Operators must fall back to raw `pgrep`/`ps`.",
+    "This proposes a read-only `dscli status` subcommand to fill that gap.",
+    "`start`/`stop` exist, but there's no \"what's running?\" — a common operational need.",
+    "The discovery mechanism already exists in-repo: `stop.py` locates a worker by scanning for its `-worker_address=` argument (`cli/stop.py:247`, `get_unique_pid`). This feature reuses that same, proven approach to *list* all workers instead of requiring a single match."
+  ]
+}
