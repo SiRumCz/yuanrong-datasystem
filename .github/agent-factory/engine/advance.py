@@ -90,15 +90,14 @@ def persist_output(ctx, evid, kind="evidence"):
 
 
 def gh_api(*args):
-    """Run 'gh api ...' with ENGINE_LOCAL short-circuit."""
+    """Run 'gh api ...' with ENGINE_LOCAL short-circuit and token-pool rotation.
+    Delegates to lib.run_gh_rotating so a rate-limited dispatch token fails over
+    to the next token in the pool instead of dropping the repository_dispatch."""
     if os.environ.get("ENGINE_LOCAL", "0") == "1":
         sys.stderr.write(f"[ENGINE_LOCAL] gh api {' '.join(args)}\n")
         return
-    result = subprocess.run(
-        ["gh", "api"] + list(args),
-        text=True, capture_output=True
-    )
-    if result.returncode != 0:
+    result = lib.run_gh_rotating(list(args))
+    if result is not None and result.returncode != 0:
         sys.stderr.write(f"[engine] gh api failed: {result.stderr}\n")
 
 
