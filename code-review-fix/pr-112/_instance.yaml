@@ -3,5 +3,5 @@ instance: pr-112
 head_sha: 2a2c96fe3ce82a65cbf78ee77b2bcf8925604090
 phase: fix
 joined: false
-phase_label: propose remediation + commit to the PR
+phase_label: "\u2705 done"
 status_comment_id: 4876785436
