@@ -1,0 +1,15 @@
+{
+  "leg": "mm-compliance",
+  "scope": {},
+  "gather_verdict": "diverges",
+  "graded_findings": [
+    {
+      "ref": "0",
+      "severity": "blocking",
+      "rationale": "The finding describes a substantive compliance gap: the PR documents and exposes multi-head Metastore HA while the actual deployment and worker runtime paths remain single-head. That mismatch contradicts the recorded ADR posture and can mislead operators about availability semantics, so it should stop merge until implemented or rescoped."
+    }
+  ],
+  "examined": [
+    "0"
+  ]
+}
