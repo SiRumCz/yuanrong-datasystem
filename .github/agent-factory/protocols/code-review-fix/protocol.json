@@ -1,0 +1,75 @@
+{
+  "$schema": "../../engine/protocol.schema.json",
+  "name": "code-review-fix",
+  "version": "0.1.0",
+  "min_engine_version": "1.0.0",
+  "max_depth": 6,
+  "_note": "Factory-loop demo (issue -> triage -> fix -> commit). Starts from a published [ai-review] issue on a PR: the triage agent reads the PR's open [ai-review] issue and emits a single-cluster triage; the fix agent proposes the remediation; conclude-fix applies it, commits onto the PR head branch, and closes the issue. Two agent states only (triage -> fix); no review fanout, no preflight. Trigger /fixit on a PR comment so the run is keyed pr-<N> and conclude-fix can resolve the head branch via `gh pr view`. Reuses fix-agent + conclude-fix/_apply_fixes/conclude-triage/_derive_gate and the schemas/checks from code-review-factory; the only new agent is fix-triage-agent.",
+  "triggers": [
+    {
+      "on": "issue_comment",
+      "comment_prefix": "/fixit",
+      "command": "start"
+    }
+  ],
+  "states": [
+    {
+      "id": "triage",
+      "kind": "agent",
+      "label": "triage the review issue (cluster & rank)",
+      "workflow": "fix-triage-agent",
+      "evidence": "triage.evidence.schema.json",
+      "max_iterations": 2,
+      "params": {
+        "require": [
+          "clusters",
+          "summary"
+        ]
+      },
+      "checks": [
+        {
+          "run": "evidence-present",
+          "on_fail": "iterate"
+        },
+        {
+          "run": "triage-schema-valid",
+          "on_fail": "iterate"
+        }
+      ],
+      "conclude": "conclude-triage",
+      "next": "fix"
+    },
+    {
+      "id": "fix",
+      "kind": "agent",
+      "label": "propose remediation + commit to the PR",
+      "workflow": "fix-agent",
+      "evidence": "fix.evidence.schema.json",
+      "max_iterations": 2,
+      "inputs": [
+        {
+          "from": "triage",
+          "as": "triage"
+        }
+      ],
+      "params": {
+        "require": [
+          "fixes",
+          "mode"
+        ]
+      },
+      "checks": [
+        {
+          "run": "evidence-present",
+          "on_fail": "iterate"
+        },
+        {
+          "run": "fix-schema-valid",
+          "on_fail": "iterate"
+        }
+      ],
+      "conclude": "conclude-fix",
+      "next": "done"
+    }
+  ]
+}
