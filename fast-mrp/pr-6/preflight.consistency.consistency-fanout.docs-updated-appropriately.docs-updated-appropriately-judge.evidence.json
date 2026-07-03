@@ -1,0 +1,71 @@
+{
+  "leg": "docs-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": "docs/source_zh_cn/appendix/log_guide.md",
+      "severity": "noise",
+      "rationale": "The gather item reports this document was updated appropriately. There is no adherence gap to grade as merge-relevant."
+    },
+    {
+      "ref": "docs/source_zh_cn/appendix/client_env_guide.md",
+      "severity": "noise",
+      "rationale": "The gather item reports this reference removed the obsolete environment variable. This is not a substantive documentation defect."
+    },
+    {
+      "ref": "docs/source_zh_cn/deployment/dscli.md",
+      "severity": "noise",
+      "rationale": "The gather item reports this dscli documentation was reconciled with the new sample-rate flags. No blocking or advisory issue is present for this ref."
+    },
+    {
+      "ref": ".repo_context/index.md",
+      "severity": "noise",
+      "rationale": "The gather item reports the index now routes logging sampler questions to the new design document. This is not a remaining documentation gap."
+    },
+    {
+      "ref": ".repo_context/modules/infra/logging/README.md",
+      "severity": "noise",
+      "rationale": "The gather item reports the logging overview now covers LogSampler responsibilities and links to the design. There is no substantive issue to block on."
+    },
+    {
+      "ref": ".repo_context/modules/infra/logging/log-sampler-design.md",
+      "severity": "noise",
+      "rationale": "The gather item reports the new design document covers the relevant sampler architecture and operational constraints. This positive finding is not an adherence gap."
+    },
+    {
+      "ref": ".repo_context/modules/infra/logging/design.md",
+      "severity": "blocking",
+      "rationale": "This shared logging design still documents the removed log_rate_limit and DATASYSTEM_LOG_RATE_LIMIT mechanism. Leaving stale source-backed design context for a removed config path is a real adherence gap."
+    },
+    {
+      "ref": ".repo_context/modules/infra/logging/trace-and-context.md",
+      "severity": "blocking",
+      "rationale": "This trace context doc still describes request sampling as derived from local log_rate_limit. That conflicts with the new request_sample_rate and LogSampler flow in reusable context."
+    },
+    {
+      "ref": ".repo_context/modules/infra/logging/plog-slow-request-plan.md",
+      "severity": "blocking",
+      "rationale": "This design plan still frames slow logs around bypassing log_rate_limit sampling. The stale semantics can mislead future work on diagnostic and request sampler behavior."
+    },
+    {
+      "ref": ".repo_context/modules/infra/logging/plog-slow-get-implementation-summary.md",
+      "severity": "blocking",
+      "rationale": "This implementation summary still references log_rate_limit request sampling after the sampler behavior changed. That is a substantive repository-context mismatch that should be corrected before merge."
+    }
+  ],
+  "examined": [
+    "docs/source_zh_cn/appendix/log_guide.md",
+    "docs/source_zh_cn/appendix/client_env_guide.md",
+    "docs/source_zh_cn/deployment/dscli.md",
+    ".repo_context/index.md",
+    ".repo_context/modules/infra/logging/README.md",
+    ".repo_context/modules/infra/logging/log-sampler-design.md",
+    ".repo_context/modules/infra/logging/design.md",
+    ".repo_context/modules/infra/logging/trace-and-context.md",
+    ".repo_context/modules/infra/logging/plog-slow-request-plan.md",
+    ".repo_context/modules/infra/logging/plog-slow-get-implementation-summary.md"
+  ]
+}
