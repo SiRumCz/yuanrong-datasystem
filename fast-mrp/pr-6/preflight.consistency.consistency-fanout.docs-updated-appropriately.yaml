@@ -1,6 +1,6 @@
 protocol: fast-mrp
 instance: pr-6
-state: consistency-fanout
+state: done
 sub_state: docs-updated-appropriately-judge
 iteration: 1
 gates: {}
