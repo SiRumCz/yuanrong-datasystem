@@ -29,6 +29,9 @@ lifecycle commands and operators falling back to raw `pgrep`/`ps`.
 - A new `status` subcommand, no arguments, read-only.
 - Output: an aligned two-column table (`PID`, `WORKER_ADDRESS`) on stdout.
 - Local host only (matches how `start`/`stop` operate on the local host).
+- **Worker count summary:** after the table, the command MUST print a
+  trailing summary line stating the total number of running workers found
+  (for example, `Total: 2 running workers`).
 
 **Out of scope (YAGNI — explicitly decided during brainstorming):**
 - Extra columns (etcd address, uptime, log dir, memory).
