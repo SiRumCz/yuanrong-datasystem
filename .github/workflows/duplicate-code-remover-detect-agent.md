@@ -82,7 +82,7 @@ post-steps:
       name: evidence
       path: /tmp/gh-aw/evidence
       if-no-files-found: warn
-timeout-minutes: 20
+timeout-minutes: 40
 ---
 
 # Detect Agent — C++ duplicate-code scan (evidence only; NO issues, NO writes)
@@ -100,19 +100,33 @@ Call `activate_project` with path `${GITHUB_WORKSPACE}/target`. Serena is config
 for C/C++ via clangd. If Serena/clangd is unavailable, fall back to `search_for_pattern`
 + bash (`grep -rn`, `find target -name '*.cpp'`) — still emit valid evidence.
 
-## 3. Scope
+## 3. Scope — BOUNDED (this is a large repo; do NOT scan it all)
 Analyze ONLY C++ sources under `target/`:
 - Include: `*.cpp`, `*.cc`, `*.cxx`, `*.hpp`, `*.hh`, `*.h`.
 - Exclude: tests (`*_test.*`, `*Test.*`, files under `test/`, `tests/`, `__tests__/`),
   `third_party/`, generated code, and build dirs.
-- Focus on recently changed files first (`git -C target log --name-only -20`), then wider.
+- **Bound the scan to ~40 source files at most.** Pick a focused, high-yield slice —
+  files that share a naming/purpose family are the richest duplication source. Good
+  starting points here: `src/datasystem/**` (e.g. `pybind_api/pybind_register_*.cpp`,
+  `*_client.cpp`), and the client examples. Use `find target/src -name '*.cpp'` and
+  `git -C target log --name-only -20` to pick candidates. Do NOT attempt to index or
+  read the whole tree.
+
+## TIME BUDGET — emit evidence promptly (hard requirement)
+You have a limited wall-clock budget and MUST finish by writing `/tmp/gh-aw/evidence.json`.
+- **Prefer `search_for_pattern`** (fast, grep-like) and targeted `get_symbols_overview`
+  on your bounded file set. AVOID `find_referencing_symbols` and whole-repo indexing —
+  they are slow here (no compilation database) and not needed to find duplication.
+- Stop as soon as you have **up to 3 solid patterns** (or have examined ~40 files with
+  none) and write evidence immediately. A prompt, correct, bounded result beats an
+  exhaustive one — an incomplete run that never writes evidence FAILS the check.
 
 ## 4. Detect duplication
-Use Serena semantic tools (`get_symbols_overview`, `find_symbol`,
-`find_referencing_symbols`, `search_for_pattern`) to find true duplication:
-identical/near-identical functions across files, repeated logic blocks (>10 lines or
-3+ occurrences), copy-paste with minor edits. Skip boilerplate, getters/setters, and
-small (<5 line) snippets unless highly repetitive.
+Within your bounded slice, find true duplication with `search_for_pattern` +
+`get_symbols_overview`: identical/near-identical functions across files, repeated logic
+blocks (>10 lines or 3+ occurrences), copy-paste with minor edits (e.g. repeated struct
+initializers / connection-config setup, near-identical client methods). Skip boilerplate,
+getters/setters, and small (<5 line) snippets unless highly repetitive.
 
 ## 5. Emit evidence
 Write `/tmp/gh-aw/evidence.json`:
