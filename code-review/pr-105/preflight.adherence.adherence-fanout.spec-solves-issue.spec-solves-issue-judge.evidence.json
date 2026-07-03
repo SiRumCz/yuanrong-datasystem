@@ -1,0 +1,48 @@
+{
+  "leg": "spec-solves-issue",
+  "scope": {
+    "issue_linked": true,
+    "spec_present": true
+  },
+  "gather_verdict": "solves",
+  "graded_findings": [
+    {
+      "ref": "Today there is no way\nto check that an edited cluster config is well-formed before a deploy begins",
+      "severity": "advisory",
+      "rationale": "The gather evidence marks this requirement as addressed by the spec, so it is useful coverage evidence but not a merge blocker."
+    },
+    {
+      "ref": "A missing or empty `worker_nodes` list is only discovered mid-deploy, after\n   `start` has begun contacting hosts.",
+      "severity": "advisory",
+      "rationale": "The gather evidence marks this requirement as addressed by the spec, so it is useful coverage evidence but not a merge blocker."
+    },
+    {
+      "ref": "An out-of-range or non-integer `worker_port` surfaces as an opaque failure\n   deep in the worker launch rather than as a clear config error.",
+      "severity": "advisory",
+      "rationale": "The gather evidence marks this requirement as addressed by the spec, so it is useful coverage evidence but not a merge blocker."
+    },
+    {
+      "ref": "Missing SSH credentials (`ssh_auth.ssh_user_name` / `ssh_private_key`) fail\n   late during multi-node fan-out instead of up front.",
+      "severity": "advisory",
+      "rationale": "The gather evidence marks this requirement as addressed by the spec, so it is useful coverage evidence but not a merge blocker."
+    },
+    {
+      "ref": "Operators need a fast, read-only `dscli` command that validates a cluster config\nfile and reports every problem at once, so misconfigurations are caught before\nany deploy action runs.",
+      "severity": "advisory",
+      "rationale": "The gather evidence marks this requirement as addressed by the spec, so it is useful coverage evidence but not a merge blocker."
+    },
+    {
+      "ref": "reports each structural problem (missing/empty required fields, wrong types,\nout-of-range port), returning a non-zero exit code when the config is invalid.",
+      "severity": "advisory",
+      "rationale": "The gather evidence marks this requirement as addressed by the spec, so it is useful coverage evidence but not a merge blocker."
+    }
+  ],
+  "examined": [
+    "Today there is no way\nto check that an edited cluster config is well-formed before a deploy begins",
+    "A missing or empty `worker_nodes` list is only discovered mid-deploy, after\n   `start` has begun contacting hosts.",
+    "An out-of-range or non-integer `worker_port` surfaces as an opaque failure\n   deep in the worker launch rather than as a clear config error.",
+    "Missing SSH credentials (`ssh_auth.ssh_user_name` / `ssh_private_key`) fail\n   late during multi-node fan-out instead of up front.",
+    "Operators need a fast, read-only `dscli` command that validates a cluster config\nfile and reports every problem at once, so misconfigurations are caught before\nany deploy action runs.",
+    "reports each structural problem (missing/empty required fields, wrong types,\nout-of-range port), returning a non-zero exit code when the config is invalid."
+  ]
+}
