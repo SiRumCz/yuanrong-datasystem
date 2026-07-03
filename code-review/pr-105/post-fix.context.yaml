@@ -1,7 +1,13 @@
 protocol: code-review
 instance: pr-105
-state: post-fix
+state: done
 iteration: 1
 gates: {}
-history: []
+history:
+- iteration: 1
+  agent_run_id: '28651678156'
+  checks:
+    evidence-present: pass
+    context-schema-valid: pass
+  feedback: ''
 head_sha: 6be173dd5a6345e37cc3ceb94050f93cf49532fc
