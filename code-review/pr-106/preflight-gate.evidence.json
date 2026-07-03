@@ -1,0 +1,47 @@
+{
+  "legs": [
+    {
+      "leg": "spec-solves-issue",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence cluster evidence was not available, so no source verdict or scope was provided for spec-solves-issue."
+    },
+    {
+      "leg": "plan-implements-spec",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence cluster evidence was not available, so no source verdict or scope was provided for plan-implements-spec."
+    },
+    {
+      "leg": "code-implements-plan",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence cluster evidence was not available, so no source verdict or scope was provided for code-implements-plan."
+    },
+    {
+      "leg": "mm-compliance",
+      "verdict": "diverges",
+      "scope": {},
+      "summary": "mm-compliance reported divergence. The provided evidence included 1 graded divergence finding."
+    },
+    {
+      "leg": "docs-updated-appropriately",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Consistency cluster evidence was not available, so no source verdict or scope was provided for docs-updated-appropriately."
+    },
+    {
+      "leg": "tests-updated-appropriately",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Consistency cluster evidence was not available, so no source verdict or scope was provided for tests-updated-appropriately."
+    },
+    {
+      "leg": "security",
+      "verdict": "LOCKED_VIOLATION",
+      "scope": {},
+      "summary": "Security reported LOCKED_VIOLATION. Locked violations were present in the provided evidence, which included 9 graded findings."
+    }
+  ],
+  "examined": []
+}
