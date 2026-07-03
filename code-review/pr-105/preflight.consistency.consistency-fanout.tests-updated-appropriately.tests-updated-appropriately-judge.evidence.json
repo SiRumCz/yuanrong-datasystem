@@ -1,0 +1,23 @@
+{
+  "leg": "tests-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": "cli/tests/test_validate_config.py",
+      "severity": "noise",
+      "rationale": "This finding reports that multiple relevant validation paths were covered by new tests, so it does not identify an adherence gap. It is evidence of appropriate updates, not a merge-stopping issue."
+    },
+    {
+      "ref": "cli/tests/test_validate_config.py",
+      "severity": "blocking",
+      "rationale": "The gather identifies a specific required R2 behavior, missing or blank ssh_auth.ssh_private_key, that remains untested. Because this is a required validation case in the changed surface, the test gap should block merge."
+    }
+  ],
+  "examined": [
+    "cli/tests/test_validate_config.py",
+    "cli/tests/test_validate_config.py"
+  ]
+}
