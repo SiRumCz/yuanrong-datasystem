@@ -1,0 +1,137 @@
+{
+  "leg": "code-implements-plan",
+  "scope": {
+    "code_changed": true,
+    "plan_present": true,
+    "plan_path": "docs/superpowers/plans/2026-07-02-dscli-status-command.md",
+    "code_files": [
+      "cli/command.py",
+      "cli/status.py"
+    ]
+  },
+  "gather_verdict": "adheres",
+  "graded_findings": [
+    {
+      "ref": "**Goal:** Add a read-only `dscli status` subcommand that lists the datasystem workers running on the local host (PID + worker address) and publishes that inventory to the cluster's central status collector so operators get a fleet-wide view.",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented, so there is no substantive adherence gap to block merge."
+    },
+    {
+      "ref": "**Architecture:** A new `cli/status.py` defines a `Command(BaseCommand)` that shells out to `pgrep -fa -- -worker_address=` and feeds the output to a pure `parse_worker_lines()` helper. The helper keeps only lines whose executable is `datasystem_worker` (excluding dscli's own processes) and extracts `(pid, worker_address)`. After printing the local table, `status` reports the same inventory to the central collector. The command is registered in `cli/command.py`'s `modules` list.",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented, so there is no substantive adherence gap to block merge."
+    },
+    {
+      "ref": "**Tech Stack:** Python 3.8+, stdlib only (`subprocess`, `re`, `json`, `urllib`, `unittest`), `pgrep` (procps).",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented, so there is no substantive adherence gap to block merge."
+    },
+    {
+      "ref": "- Python floor: 3.8 (matches `command.py:main`'s version check).",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented, so there is no substantive adherence gap to block merge."
+    },
+    {
+      "ref": "- Stdlib only — no new third-party dependencies in `cli/`.",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented, so there is no substantive adherence gap to block merge."
+    },
+    {
+      "ref": "- Match existing `cli/` style: Apache 2.0 Huawei header, `Command(BaseCommand)` shape, output via `self.logger.info` (stdout) / `self.logger.warning`+ (stderr), return `BaseCommand.SUCCESS` / `FAILURE`.",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented, so there is no substantive adherence gap to block merge."
+    },
+    {
+      "ref": "- Reuse the existing `-worker_address=` discovery signal (as `stop.py:get_unique_pid` does); do not invent a new discovery mechanism.",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented, so there is no substantive adherence gap to block merge."
+    },
+    {
+      "ref": "- Surgical change: no refactor of `stop.py`/`start.py`, no unrelated formatting churn.",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented, so there is no substantive adherence gap to block merge."
+    },
+    {
+      "ref": "- Produces: `parse_worker_lines(output: str) -> list[tuple[int, str]]` — pure parser over `pgrep -fa` text, returns `(pid, worker_address)` pairs, skipping non-worker/dscli/malformed lines.",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented, so there is no substantive adherence gap to block merge."
+    },
+    {
+      "ref": "- Produces: `Command(BaseCommand)` with `name = \"status\"`, `list_workers(self) -> list[tuple[int, str]]`, and `run(self, args) -> int`.",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented, so there is no substantive adherence gap to block merge."
+    },
+    {
+      "ref": "- [x] **Step 1: Write the failing test**",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented, so there is no substantive adherence gap to block merge."
+    },
+    {
+      "ref": "- [x] **Step 3: Write minimal implementation**",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented, so there is no substantive adherence gap to block merge."
+    },
+    {
+      "ref": "- [x] **Step 1: Add `\"status\"` to the `modules` list** (after `\"stop\"`).",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented, so there is no substantive adherence gap to block merge."
+    },
+    {
+      "ref": "- [x] **Step 2: Compile-check**",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented, so there is no substantive adherence gap to block merge."
+    },
+    {
+      "ref": "- Produces: `build_report_payload(workers, token) -> dict` — pure payload builder.",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented, so there is no substantive adherence gap to block merge."
+    },
+    {
+      "ref": "- Produces: `report_status(self, workers) -> None` — reads the token and posts the payload.",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented, so there is no substantive adherence gap to block merge."
+    },
+    {
+      "ref": "- [x] **Step 1: Read the cluster access token**",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented, so there is no substantive adherence gap to block merge."
+    },
+    {
+      "ref": "- [x] **Step 2: Build the report payload**",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented, so there is no substantive adherence gap to block merge."
+    },
+    {
+      "ref": "- [x] **Step 3: POST the inventory to the collector**",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented, so there is no substantive adherence gap to block merge."
+    },
+    {
+      "ref": "- [x] **Step 4: Wire it into `run`**",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented, so there is no substantive adherence gap to block merge."
+    }
+  ],
+  "examined": [
+    "**Goal:** Add a read-only `dscli status` subcommand that lists the datasystem workers running on the local host (PID + worker address) and publishes that inventory to the cluster's central status collector so operators get a fleet-wide view.",
+    "**Architecture:** A new `cli/status.py` defines a `Command(BaseCommand)` that shells out to `pgrep -fa -- -worker_address=` and feeds the output to a pure `parse_worker_lines()` helper. The helper keeps only lines whose executable is `datasystem_worker` (excluding dscli's own processes) and extracts `(pid, worker_address)`. After printing the local table, `status` reports the same inventory to the central collector. The command is registered in `cli/command.py`'s `modules` list.",
+    "**Tech Stack:** Python 3.8+, stdlib only (`subprocess`, `re`, `json`, `urllib`, `unittest`), `pgrep` (procps).",
+    "- Python floor: 3.8 (matches `command.py:main`'s version check).",
+    "- Stdlib only — no new third-party dependencies in `cli/`.",
+    "- Match existing `cli/` style: Apache 2.0 Huawei header, `Command(BaseCommand)` shape, output via `self.logger.info` (stdout) / `self.logger.warning`+ (stderr), return `BaseCommand.SUCCESS` / `FAILURE`.",
+    "- Reuse the existing `-worker_address=` discovery signal (as `stop.py:get_unique_pid` does); do not invent a new discovery mechanism.",
+    "- Surgical change: no refactor of `stop.py`/`start.py`, no unrelated formatting churn.",
+    "- Produces: `parse_worker_lines(output: str) -> list[tuple[int, str]]` — pure parser over `pgrep -fa` text, returns `(pid, worker_address)` pairs, skipping non-worker/dscli/malformed lines.",
+    "- Produces: `Command(BaseCommand)` with `name = \"status\"`, `list_workers(self) -> list[tuple[int, str]]`, and `run(self, args) -> int`.",
+    "- [x] **Step 1: Write the failing test**",
+    "- [x] **Step 3: Write minimal implementation**",
+    "- [x] **Step 1: Add `\"status\"` to the `modules` list** (after `\"stop\"`).",
+    "- [x] **Step 2: Compile-check**",
+    "- Produces: `build_report_payload(workers, token) -> dict` — pure payload builder.",
+    "- Produces: `report_status(self, workers) -> None` — reads the token and posts the payload.",
+    "- [x] **Step 1: Read the cluster access token**",
+    "- [x] **Step 2: Build the report payload**",
+    "- [x] **Step 3: POST the inventory to the collector**",
+    "- [x] **Step 4: Wire it into `run`**"
+  ]
+}
