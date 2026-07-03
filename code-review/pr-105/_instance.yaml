@@ -1,0 +1,6 @@
+protocol: code-review
+instance: pr-105
+head_sha: eeba71817a0bb34cfbf10dd402ca17d60d1e7b35
+phase: preflight
+joined: false
+phase_label: pre-flight adherence chain
