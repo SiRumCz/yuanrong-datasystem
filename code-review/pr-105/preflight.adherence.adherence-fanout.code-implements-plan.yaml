@@ -1,7 +1,0 @@
-protocol: code-review
-instance: pr-105
-state: adherence-fanout
-sub_state: code-implements-plan-judge
-iteration: 1
-gates: {}
-history: []
