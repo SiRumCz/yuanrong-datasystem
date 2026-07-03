@@ -34,5 +34,9 @@ metadata keeps being served if one head fails.
   config-build helpers, every `run()` return path (valid, missing, malformed,
   non-object, unsafe path, unwritable output), and the command's registration.
 
-- R5: Document the command in `docs/source_zh_cn/deployment/dscli.md` (TOC entries,
-  a `### dscli metastore_ha` reference section, and a usage example).
+- R5: Document the command in the user-facing reference
+  (`docs/source_zh_cn/deployment/dscli.md`: TOC entries, a `### dscli metastore_ha`
+  reference section, and a usage + deployment example), and reflect the new
+  multi-head Metastore flow in the deployment design
+  (`docs/source_zh_cn/design_document/cluster_management.md`) and the runtime
+  context (`.repo_context/modules/runtime/cluster-management.md`).

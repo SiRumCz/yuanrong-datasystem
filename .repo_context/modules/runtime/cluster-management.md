@@ -75,6 +75,7 @@ Use this file as the cross-module map. Use the detailed package for source-level
   - `metastore_head_node` identifies the node that starts Metastore service in cluster deployment
   - `cli/up.py` starts the Metastore head node first, then starts the remaining worker nodes in parallel
   - `cli/up.py` validates that `metastore_head_node` is in `worker_nodes` and that `metastore_address` exists in worker config
+  - `cli/metastore_ha.py` (`dscli metastore_ha`) generates a high-availability variant of a cluster config, electing multiple Metastore head replicas into a `metastore_head_nodes` list instead of the single `metastore_head_node`
 - Verified from docs:
   - intended to reduce external dependencies and simplify deployment
 

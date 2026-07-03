@@ -556,6 +556,12 @@ dscli collect_log --cluster_config_path ./cluster_config.json
 dscli metastore_ha -c ./cluster_config.json -r 3 -o ./cluster_config_ha.json
 ```
 
+生成的 `cluster_config_ha.json` 使用 `metastore_head_nodes` 列表替代单个 `metastore_head_node`，可通过 [dscli up](#dscli-up) 部署，使列表中的每个节点均启动 Metastore 服务，从而在单个主节点故障时元数据服务仍可用：
+
+```bash
+dscli up -f ./cluster_config_ha.json
+```
+
 更多关于 dscli metastore_ha 命令的使用请参考：[dscli metastore_ha](#dscli-metastore_ha)。
 
 

@@ -23,5 +23,8 @@ Each plan item implements exactly one specification requirement.
 - P4: Add `cli/tests/test_metastore_ha.py` covering the helpers, every `run()`
   return path, and the registration. (implements R4)
 
-- P5: Update `docs/source_zh_cn/deployment/dscli.md` with TOC entries, a
-  `### dscli metastore_ha` reference section, and a usage example. (implements R5)
+- P5: Update `docs/source_zh_cn/deployment/dscli.md` (TOC entries, a
+  `### dscli metastore_ha` reference section, and a usage + deployment example),
+  `docs/source_zh_cn/design_document/cluster_management.md` (multi-head Metastore
+  section), and `.repo_context/modules/runtime/cluster-management.md` (the
+  metastore_ha flow). (implements R5)
