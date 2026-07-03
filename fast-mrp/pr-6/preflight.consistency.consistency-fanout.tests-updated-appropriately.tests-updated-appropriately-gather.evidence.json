@@ -1,0 +1,83 @@
+{
+  "scope": { "code_changed": true },
+  "items": [
+    {
+      "path": "tests/ut/common/log/log_sampler_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Adds core LogSampler coverage for normalization, hash-threshold decisions, random distribution, disabled fast path, and concurrent config reads."
+    },
+    {
+      "path": "tests/ut/common/log/log_sampler_config_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Covers LogSampleConfigPb validation/population, request-only derivation, explicit override behavior, and previous-good retention."
+    },
+    {
+      "path": "tests/ut/common/log/log_sampler_access_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Covers access/client/request_out sampling decisions, request-sampled access forcing, logSampled marker behavior, and access guard skips."
+    },
+    {
+      "path": "tests/ut/common/log/log_access_facade_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Covers the new Object/Stream/RequestOut AccessRecorder facades, deferred providers, sampled-out no-work behavior, and key formatting edge cases."
+    },
+    {
+      "path": "tests/ut/common/log/log_sampler_integration_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Covers LOG/PLOG/FATAL/CHECK integration, diagnostic supplement sampling, request-sampled diagnostic forcing, and background bypass."
+    },
+    {
+      "path": "tests/ut/common/log/spdlog/log_message_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Updates log macro tests for sampler-based stream evaluation and propagated request rejection behavior."
+    },
+    {
+      "path": "tests/ut/common/rpc/zmq_trace_sampling_meta_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Updates RPC metadata tests for LOG_SAMPLE_UNDECIDED/ADMIT/REJECT semantics under the new request sampler."
+    },
+    {
+      "path": "tests/st/common/log/log_sampler_st_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Adds system coverage for cross-process sampling consistency and worker-to-client LogSampleConfigPb delivery."
+    },
+    {
+      "path": "tests/ut/common/log/log_performance_test.cpp",
+      "status": "updated_appropriately",
+      "reason": "Adds hot-path throughput and lazy access-record construction checks for sampler pass-through, reject, mixed, and sampled-out cases."
+    },
+    {
+      "path": "tests/ut/common/flags/flags_test.cpp",
+      "status": "inadequate",
+      "reason": "The PR changes sampler-specific Flags::UpdateFlagParameter transaction/rollback and explicit-state behavior, but this touched test only changes formatting and adds no assertions for that path."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    ".repo_context/modules/quality/tests-and-reproduction.md",
+    ".repo_context/modules/quality/test-suite-design.md",
+    ".repo_context/playbooks/features/quality/test-implementation.md",
+    "src/datasystem/common/util/gflag/flags.cpp",
+    "src/datasystem/common/util/gflag/flags.h",
+    "src/datasystem/common/log/log_sampler.cpp",
+    "src/datasystem/common/log/log_sampler.h",
+    "src/datasystem/common/log/access_recorder.cpp",
+    "src/datasystem/common/log/access_recorder.h",
+    "src/datasystem/common/rpc/zmq/zmq_common.h",
+    "src/datasystem/worker/worker_service_impl.cpp",
+    "tests/ut/common/log/log_sampler_test.cpp",
+    "tests/ut/common/log/log_sampler_config_test.cpp",
+    "tests/ut/common/log/log_sampler_access_test.cpp",
+    "tests/ut/common/log/log_access_facade_test.cpp",
+    "tests/ut/common/log/log_sampler_integration_test.cpp",
+    "tests/ut/common/log/spdlog/log_message_test.cpp",
+    "tests/ut/common/rpc/zmq_trace_sampling_meta_test.cpp",
+    "tests/st/common/log/log_sampler_st_test.cpp",
+    "tests/ut/common/log/log_performance_test.cpp",
+    "tests/ut/common/flags/flags_test.cpp"
+  ]
+}
