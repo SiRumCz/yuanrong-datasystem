@@ -1,0 +1,65 @@
+{
+  "leg": "tests-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": "tests/ut/common/log/log_sampler_test.cpp",
+      "severity": "noise",
+      "rationale": "This gather item reports that the touched tests were updated appropriately for the related behavior, so it does not identify a merge-blocking adherence gap."
+    },
+    {
+      "ref": "tests/ut/common/log/log_sampler_config_test.cpp",
+      "severity": "noise",
+      "rationale": "This gather item reports that the touched tests were updated appropriately for the related behavior, so it does not identify a merge-blocking adherence gap."
+    },
+    {
+      "ref": "tests/ut/common/log/log_sampler_access_test.cpp",
+      "severity": "noise",
+      "rationale": "This gather item reports that the touched tests were updated appropriately for the related behavior, so it does not identify a merge-blocking adherence gap."
+    },
+    {
+      "ref": "tests/ut/common/log/log_sampler_integration_test.cpp",
+      "severity": "noise",
+      "rationale": "This gather item reports that the touched tests were updated appropriately for the related behavior, so it does not identify a merge-blocking adherence gap."
+    },
+    {
+      "ref": "tests/ut/common/rpc/zmq_trace_sampling_meta_test.cpp",
+      "severity": "noise",
+      "rationale": "This gather item reports that the touched tests were updated appropriately for the related behavior, so it does not identify a merge-blocking adherence gap."
+    },
+    {
+      "ref": "tests/st/common/log/log_sampler_st_test.cpp",
+      "severity": "noise",
+      "rationale": "This gather item reports that the touched tests were updated appropriately for the related behavior, so it does not identify a merge-blocking adherence gap."
+    },
+    {
+      "ref": "tests/ut/common/log/log_performance_test.cpp",
+      "severity": "noise",
+      "rationale": "This gather item reports that the touched tests were updated appropriately for the related behavior, so it does not identify a merge-blocking adherence gap."
+    },
+    {
+      "ref": "tests/ut/common/flags/flags_test.cpp",
+      "severity": "blocking",
+      "rationale": "The gather identifies untested sample-rate gflag validators and transactional dynamic flag update branches. Those are configuration correctness paths, so the missing assertions are a real adherence gap that should block merge."
+    },
+    {
+      "ref": "tests/ut/common/util/watermark_flag_parse_test.cpp",
+      "severity": "blocking",
+      "rationale": "The gather identifies missing coverage for EmbeddedConfig sample-rate setters accepting valid values and rejecting invalid values before parse. That leaves new configuration behavior unverified, which is a substantive test gap."
+    }
+  ],
+  "examined": [
+    "tests/ut/common/log/log_sampler_test.cpp",
+    "tests/ut/common/log/log_sampler_config_test.cpp",
+    "tests/ut/common/log/log_sampler_access_test.cpp",
+    "tests/ut/common/log/log_sampler_integration_test.cpp",
+    "tests/ut/common/rpc/zmq_trace_sampling_meta_test.cpp",
+    "tests/st/common/log/log_sampler_st_test.cpp",
+    "tests/ut/common/log/log_performance_test.cpp",
+    "tests/ut/common/flags/flags_test.cpp",
+    "tests/ut/common/util/watermark_flag_parse_test.cpp"
+  ]
+}
