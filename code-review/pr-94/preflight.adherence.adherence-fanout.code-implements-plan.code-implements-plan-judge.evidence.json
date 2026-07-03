@@ -1,0 +1,71 @@
+{
+  "leg": "code-implements-plan",
+  "scope": {
+    "code_changed": true,
+    "plan_present": true,
+    "plan_path": "docs/superpowers/plans/2026-07-02-dscli-status-command.md",
+    "code_files": [
+      "cli/command.py",
+      "cli/status.py"
+    ]
+  },
+  "gather_verdict": "adheres",
+  "graded_findings": [
+    {
+      "ref": "- [x] **Step 1: Write the failing test**",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented; there is no adherence gap to block merge."
+    },
+    {
+      "ref": "- [x] **Step 2: Run test to verify it fails**",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented; there is no adherence gap to block merge."
+    },
+    {
+      "ref": "- [x] **Step 3: Write minimal implementation**",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented; there is no adherence gap to block merge."
+    },
+    {
+      "ref": "- [x] **Step 4: Run test to verify it passes**",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented; there is no adherence gap to block merge."
+    },
+    {
+      "ref": "- [x] **Step 5: Commit** (folded into the Task 2 commit — single self-contained change).",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented; there is no adherence gap to block merge."
+    },
+    {
+      "ref": "- [x] **Step 1: Add `\"status\"` to the `modules` list**",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented; there is no adherence gap to block merge."
+    },
+    {
+      "ref": "- [x] **Step 2: Compile-check**",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented; there is no adherence gap to block merge."
+    },
+    {
+      "ref": "- [x] **Step 3: Manual end-to-end verification against live `pgrep`**",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented; there is no adherence gap to block merge."
+    },
+    {
+      "ref": "- [x] **Step 4: Commit**",
+      "severity": "noise",
+      "rationale": "Gather evidence marks this plan item implemented; there is no adherence gap to block merge."
+    }
+  ],
+  "examined": [
+    "- [x] **Step 1: Write the failing test**",
+    "- [x] **Step 2: Run test to verify it fails**",
+    "- [x] **Step 3: Write minimal implementation**",
+    "- [x] **Step 4: Run test to verify it passes**",
+    "- [x] **Step 5: Commit** (folded into the Task 2 commit — single self-contained change).",
+    "- [x] **Step 1: Add `\"status\"` to the `modules` list**",
+    "- [x] **Step 2: Compile-check**",
+    "- [x] **Step 3: Manual end-to-end verification against live `pgrep`**",
+    "- [x] **Step 4: Commit**"
+  ]
+}
