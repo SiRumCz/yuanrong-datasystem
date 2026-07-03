@@ -1,0 +1,22 @@
+{
+  "scope": {
+    "code_changed": true
+  },
+  "items": [
+    {
+      "path": "cli/tests/test_validate_config.py",
+      "status": "updated_appropriately",
+      "reason": "Covers validate_cluster_config rules, Command.run success/failure paths, argument defaults/flags, and CLI registration for the new validate_config subcommand."
+    }
+  ],
+  "verdict": "adequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    "cli/command.py",
+    "cli/generate_config.py",
+    "cli/tests/test_validate_config.py"
+  ]
+}
