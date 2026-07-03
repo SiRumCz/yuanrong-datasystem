@@ -1,0 +1,1 @@
+{"summary":"Extracted MakeFullParam static helper in kv_client.cpp to deduplicate FullParam initialization from SetParam across KVClient::Create and KVClient::MCreate","pr_branch":"impl-feature-auto/issue-150","run_id":"28678527108"}
