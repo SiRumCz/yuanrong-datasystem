@@ -1,0 +1,30 @@
+{
+  "scope": { "code_changed": true },
+  "items": [
+    {
+      "path": "cli/tests/test_status.py",
+      "status": "updated_appropriately",
+      "reason": "Covers the new parse_worker_lines parser for empty output, worker rows, multiple rows, wrappers, IPv6, malformed rows, and dscli decoys."
+    },
+    {
+      "path": "cli/tests/test_status.py",
+      "status": "inadequate",
+      "reason": "The new Command.list_workers subprocess paths, Command.run empty/non-empty output behavior, and command registration are not exercised."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    "cli/command.py",
+    "cli/status.py (from PR diff)",
+    "cli/tests/test_status.py (from PR diff)",
+    "cli/start.py",
+    "cli/stop.py",
+    ".repo_context/modules/quality/tests-and-reproduction.md",
+    ".repo_context/playbooks/features/quality/test-implementation.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md"
+  ]
+}
