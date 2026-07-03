@@ -1,7 +1,0 @@
-protocol: code-review
-instance: pr-141
-state: done
-sub_state: plan-implements-spec-judge
-iteration: 1
-gates: {}
-history: []

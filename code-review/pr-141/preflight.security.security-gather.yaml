@@ -1,13 +1,7 @@
 protocol: code-review
 instance: pr-141
-state: done
+state: preflight
 iteration: 1
 gates: {}
-head_sha: 8f3ca069f7bdd845c8a7b3084fbd6974fc564bee
-history:
-- iteration: 1
-  agent_run_id: '28671941987'
-  checks:
-    evidence-present: pass
-    security-gather-coverage: pass
-  feedback: ''
+head_sha: 3774442a4e60d22e94eabdf585e07bf7f3982515
+history: []
