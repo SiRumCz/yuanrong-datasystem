@@ -1,6 +1,6 @@
 protocol: code-review
 instance: pr-105
-state: preflight
+state: done
 sub_state: adherence-fanout
 iteration: 1
 gates: {}
