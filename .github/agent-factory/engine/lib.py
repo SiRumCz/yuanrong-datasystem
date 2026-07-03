@@ -764,13 +764,24 @@ def resolve_executable(sdir, name, pdir, ex=""):
 # parallel Actions jobs that share no process memory — so a "current token"
 # pointer cannot be global. Instead every job carries the FULL token pool and
 # fails over LOCALLY: on a 403/429 rate-limit it retries the same call with the
-# next token. The pool is PUBLISH_TOKENS (newline-/comma-separated); it falls
-# back to the single PUBLISH_TOKEN, so with no pool configured the behavior is
-# byte-identical to before this change.
+# next token. The pool is PUBLISH_TOKEN + PUBLISH_TOKEN_2 … PUBLISH_TOKEN_9 (each
+# wired in the workflow to a distinct dispatch-PAT secret, e.g. POC_DISPATCH_TOKEN
+# / POC_DISPATCH_TOKEN_2); with only PUBLISH_TOKEN set the behavior is byte-
+# identical to before this change.
 def _publish_tokens():
-    """Ordered token pool for engine writes (PUBLISH_TOKENS, else PUBLISH_TOKEN)."""
-    raw = os.environ.get("PUBLISH_TOKENS", "") or os.environ.get("PUBLISH_TOKEN", "")
-    return [t.strip() for t in raw.replace(",", "\n").split("\n") if t.strip()]
+    """Ordered write-token pool: PUBLISH_TOKEN, then PUBLISH_TOKEN_2 … PUBLISH_TOKEN_9,
+    each wired (in the workflow) to a distinct dispatch-PAT secret. Unset/blank
+    entries are skipped; with only PUBLISH_TOKEN set this is a single token (no
+    rotation), unchanged from before."""
+    toks = []
+    primary = os.environ.get("PUBLISH_TOKEN", "").strip()
+    if primary:
+        toks.append(primary)
+    for i in range(2, 10):  # PUBLISH_TOKEN_2 .. PUBLISH_TOKEN_9
+        val = os.environ.get(f"PUBLISH_TOKEN_{i}", "").strip()
+        if val and val not in toks:
+            toks.append(val)
+    return toks
 
 
 def _looks_rate_limited(result):
