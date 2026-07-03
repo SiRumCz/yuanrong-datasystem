@@ -1,0 +1,29 @@
+{
+  "leg": "docs-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": "docs/source_zh_cn/deployment/dscli.md",
+      "severity": "blocking",
+      "rationale": "The command reference remains inconsistent with the new generated metastore_head_nodes configuration while existing dscli up documentation still presents the single-node field. That is a real user-facing deployment documentation gap for the changed behavior."
+    },
+    {
+      "ref": "docs/source_zh_cn/design_document/cluster_management.md",
+      "severity": "blocking",
+      "rationale": "The deployment design still documents a single metastore_head_node and omits the new multi-head metastore_head_nodes model. This leaves the design documentation materially stale for the changed configuration contract."
+    },
+    {
+      "ref": ".repo_context/modules/runtime/cluster-management.md",
+      "severity": "blocking",
+      "rationale": "The shared repo context still maps Metastore deployment to the old single-node configuration and omits the new dscli metastore_ha flow. Because this context guides future infrastructure work, the stale ownership and behavior description is a substantive adherence gap."
+    }
+  ],
+  "examined": [
+    "docs/source_zh_cn/deployment/dscli.md",
+    "docs/source_zh_cn/design_document/cluster_management.md",
+    ".repo_context/modules/runtime/cluster-management.md"
+  ]
+}
