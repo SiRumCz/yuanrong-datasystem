@@ -36,6 +36,11 @@ safe-outputs:
   threat-detection: false
   create-pull-request:
     draft: false
+    # Permit all changes -> open a normal, human-reviewed PR regardless of which
+    # files it touches (gh-aw's default gates top-level dot-folders + manifests to a
+    # request_review artifact; protect_top_level_dot_folders itself is not settable).
+    # Merge is still gated by human review / branch protection.
+    protected-files: allowed
 pre-agent-steps:
   - name: Materialize task context
     env:
@@ -121,13 +126,6 @@ repo** on `impl-feature-auto/issue-<N>` (the changes must be committed here for
 safe-outputs to capture them). Open ONE pull request via safe-outputs. The PR body
 MUST carry the Accountability Ledger and the READ-THESE-FIRST list (from the design
 spec) so the PR is self-describing, and reference the issue (`Closes #<N>`).
-
-**Keep the change CODE-ONLY.** Do NOT modify protected paths — any top-level
-dot-folder (`.repo_context/`, `.github/`, …) or protected files (README/CLAUDE/
-DESIGN/CODEOWNERS/manifests). safe-outputs routes any change touching a protected
-path to a `request_review` issue instead of a direct PR. Limit your commit to source
-code + its unit tests + the build wiring needed to compile them; do not update docs
-under protected folders (put any rationale in the PR body / ledger instead).
 
 ## 5. Emit evidence
 Write `/tmp/gh-aw/evidence.json` as ONE JSON object:
