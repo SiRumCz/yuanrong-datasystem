@@ -174,6 +174,31 @@ struct StatusC ConnectWorker(void *clientPtr);
 void FreeClient(void *clientPtr);
 
 /**
+ * @brief Shared implementation for the kv/object/stream UpdateAkSk C wrappers. Casts the opaque
+ *        handle to the concrete client type, updates the AK/SK, and maps the result to StatusC.
+ * @tparam ClientT The concrete client implementation type the handle wraps.
+ * @param[in] clientPtr The opaque client handle (a std::shared_ptr<ClientT> *).
+ * @param[in] cAccessKey The access key bytes.
+ * @param[in] cAccessKeyLen The access key length.
+ * @param[in] cSecretKey The secret key bytes.
+ * @param[in] cSecretKeyLen The secret key length.
+ * @return C style status: K_OK on success, otherwise the mapped error.
+ */
+template <typename ClientT>
+StatusC UpdateAkSkImpl(void *clientPtr, const char *cAccessKey, size_t cAccessKeyLen, const char *cSecretKey,
+                       size_t cSecretKeyLen)
+{
+    auto client = reinterpret_cast<std::shared_ptr<ClientT> *>(clientPtr);
+    std::string accessKey(cAccessKey, cAccessKeyLen);
+    datasystem::SensitiveValue secretKey(cSecretKey, cSecretKeyLen);
+    datasystem::Status rc = (*client)->UpdateAkSk(accessKey, secretKey);
+    if (rc.IsError()) {
+        return ToStatusC(rc);
+    }
+    return StatusC{ datasystem::K_OK, {} };
+}
+
+/**
  * @brief Construct the objKeys of the std::vector<std::string> type based on the parameters transferred from Go.
  * @param[in] cObjKeys Array of ObjKeys to get values
  * @param[in] cObjKeysLen Length of each objectKey.

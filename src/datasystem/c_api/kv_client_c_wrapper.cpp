@@ -60,15 +60,8 @@ struct StatusC SCConnectWorker(KVClient_p clientPtr)
 struct StatusC SCUpdateAkSk(KVClient_p clientPtr, const char *cAccessKey, size_t cAccessKeyLen, const char *cSecretKey,
                             size_t cSecretKeyLen)
 {
-    auto client = reinterpret_cast<std::shared_ptr<datasystem::object_cache::ObjectClientImpl> *>(clientPtr);
-    std::string accessKey(cAccessKey, cAccessKeyLen);
-    accessKey.assign(cAccessKey, cAccessKeyLen);
-    datasystem::SensitiveValue secretKey(cSecretKey, cSecretKeyLen);
-    datasystem::Status rc = (*client)->UpdateAkSk(accessKey, secretKey);
-    if (rc.IsError()) {
-        return ToStatusC(rc);
-    }
-    return StatusC{ datasystem::K_OK, {} };
+    return UpdateAkSkImpl<datasystem::object_cache::ObjectClientImpl>(clientPtr, cAccessKey, cAccessKeyLen, cSecretKey,
+                                                                      cSecretKeyLen);
 }
 
 void SCFreeClient(KVClient_p clientPtr)
