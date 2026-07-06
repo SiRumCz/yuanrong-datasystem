@@ -1,0 +1,1 @@
+{"summary":"Extracted shared TraceGuard+AccessRecorder+Execute+Record scaffold from OCGIncreaseRef, OCDeccreaseRef, OCReleaseGRefs into a file-local variadic template RecordedObjectOp; each op is now a one-line delegation with unchanged C ABI","pr_branch":"impl-feature-auto/issue-157","run_id":"28803918107"}
