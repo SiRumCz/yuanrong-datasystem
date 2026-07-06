@@ -1,0 +1,1 @@
+{"summary":"Extracted duplicate KVCreateClient/OCCreateClient trace-and-delegate bodies into shared CreateObjectClientWithTrace helper in util.{h,cpp}; both wrappers slimmed to one-line delegations, ABI preserved.","pr_branch":"impl-feature-auto/issue-156","run_id":"28805348257"}
