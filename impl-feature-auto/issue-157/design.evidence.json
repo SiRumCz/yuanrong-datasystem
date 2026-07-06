@@ -1,0 +1,78 @@
+{
+  "spec_path": "docs/superpowers/specs/2026-07-06-object-op-wrapper-boilerplate-design.md",
+  "plan_path": "docs/superpowers/plans/2026-07-06-object-op-wrapper-boilerplate.md",
+  "summary": "Extract the identical TraceGuard + AccessRecorder + Execute + Record scaffold shared by OCGIncreaseRef, OCDeccreaseRef, and OCReleaseGRefs in object_client_c_wrapper.cpp into one file-local variadic function template (RecordedObjectOp) in an anonymous namespace, rewriting the three extern \"C\" ops as one-line delegations. Behavior and the C ABI are unchanged; OCPut/OCGet (real data-size metric) and the kv/stream peer wrappers are out of scope. Coverage relies on the existing Go integration tests in go/object/object_client_test.go.",
+  "run_id": "28803443734",
+  "ledger": [
+    {
+      "id": "L1",
+      "category": "DECISION",
+      "what": "Use a variadic C++ function template (RecordedObjectOp), not a preprocessor macro, for the shared scaffold.",
+      "why": "The codebase is C++ and values type/memory safety; a template is type-checked and debuggable while still collapsing each call site to one line. Both were named as candidates in the issue.",
+      "what_i_did": "Chose the template and specified it in the spec/plan.",
+      "confidence": "high",
+      "blast_radius": { "level": "low", "why": "File-local helper used by three call sites in a single translation unit; nothing else references it." },
+      "reversibility": { "level": "reversible", "why": "Can be swapped to a macro or inlined again with a local edit to one file." },
+      "revisit_if": "A call site needs behavior a template cannot express, e.g. token-pasting to also generate the AccessRecorderKey name."
+    },
+    {
+      "id": "L2",
+      "category": "DECISION",
+      "what": "Hard-code the Record data-size argument to the literal \"0\" inside the helper and exclude OCPut/OCGet.",
+      "why": "All three in-scope ops pass exactly \"0\" today; parameterizing it would add an unused knob and blur the boundary with OCPut/OCGet, which pass real sizes (std::to_string(cValLen)/std::to_string(totalSize)).",
+      "what_i_did": "Baked \"0\" into the helper; scoped the change to the three constant-metric ops only.",
+      "confidence": "high",
+      "blast_radius": { "level": "low", "why": "Only the three targeted ops are affected; Put/Get and peers are untouched." },
+      "reversibility": { "level": "reversible", "why": "The \"0\" constant can later be promoted to a helper parameter without disturbing callers." },
+      "revisit_if": "A fourth constant-metric op needs a different constant, or OCPut/OCGet are folded into the same helper."
+    },
+    {
+      "id": "L3",
+      "category": "DEFERRED",
+      "what": "Keep the helper file-local (anonymous namespace in object_client_c_wrapper.cpp); do not generalize into shared util.h across kv/object/stream now.",
+      "why": "The issue's requested change targets the object wrapper's three call sites; promoting to a shared header touches kv/stream translation units and their differing metric/return patterns, a broader refactor best done separately.",
+      "what_i_did": "Scoped to this file and recorded the peer duplication as a follow-up.",
+      "confidence": "medium",
+      "blast_radius": { "level": "low", "why": "No peer files are modified; the deferral affects only future work, not this change." },
+      "reversibility": { "level": "reversible", "why": "The template can be moved into util.h when a consolidation task is undertaken." },
+      "revisit_if": "A follow-up task consolidates the kv/object/stream public-op wrappers."
+    },
+    {
+      "id": "L4",
+      "category": "ASSUMPTION",
+      "what": "The three ops are extern \"C\" and rewriting only their bodies to call an internal C++ template leaves their public signatures and linkage unchanged.",
+      "why": "The helper is invoked inside each extern \"C\" function; templates are a C++ implementation detail invisible to the C ABI, so Go/C callers are unaffected.",
+      "what_i_did": "Verified object_client_c_wrapper.h declares all three inside 'extern \"C\" {' (lines 26, 142, 163, 174) and left the header untouched.",
+      "confidence": "high",
+      "blast_radius": { "level": "low", "why": "ABI is preserved, so no downstream caller changes." },
+      "reversibility": { "level": "reversible", "why": "Body-only edit in one file can be reverted trivially." },
+      "revisit_if": "The public header signatures of these ops change.",
+      "verified": true
+    },
+    {
+      "id": "L5",
+      "category": "ASSUMPTION",
+      "what": "Each OCExecute* worker takes datasystem::RequestParam * as its final parameter, so one variadic template can forward the caller's args and append &reqParam last.",
+      "why": "This uniform trailing parameter is what lets a single helper fit all three call sites.",
+      "what_i_did": "Verified the signatures: OCExecuteGIncreaseRef (lines 142-145), OCExecuteGDecreaseRef (190-193), OCExecuteReleaseGRefs (238-239) all end with datasystem::RequestParam *reqParam.",
+      "confidence": "high",
+      "blast_radius": { "level": "low", "why": "Only the three call sites depend on this parameter ordering." },
+      "reversibility": { "level": "reversible", "why": "If a worker changes, that single call site can revert to an inline body." },
+      "revisit_if": "A worker's parameter order changes so reqParam is no longer last.",
+      "verified": true
+    },
+    {
+      "id": "L6",
+      "category": "ASSUMPTION",
+      "what": "Existing Go integration tests already cover the three ops, so no new test is added for this pure structural refactor.",
+      "why": "Simplicity First / Surgical Changes: identical-behavior refactors should lean on existing coverage rather than add redundant tests.",
+      "what_i_did": "Verified go/object/object_client_test.go exercises GIncreaseRef (lines 114, 162), GDecreaseRef (137, 185), and ReleaseGRefs (TestObjectReleaseGRefs, line 199) through the C API.",
+      "confidence": "high",
+      "blast_radius": { "level": "low", "why": "Test strategy choice; does not alter product code paths." },
+      "reversibility": { "level": "reversible", "why": "A targeted C++ unit test can be added later if reviewers require it." },
+      "revisit_if": "Reviewers require a dedicated C++ unit test, or the Go tests do not run in CI for this change.",
+      "verified": true
+    }
+  ],
+  "read_these_first": ["L3", "L2", "L1", "L6", "L5", "L4"]
+}
