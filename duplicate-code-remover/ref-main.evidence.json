@@ -1,80 +1,94 @@
 {
   "scanned": [
-    "src/datasystem/client/kv_cache/kv_client.cpp",
-    "src/datasystem/client/object_cache/object_client.cpp",
-    "src/datasystem/client/stream_cache/stream_client.cpp",
-    "src/datasystem/client/hetero_cache/hetero_client.cpp",
-    "src/datasystem/client/perf_client/perf_client.cpp",
-    "src/datasystem/pybind_api/pybind_register_common.cpp",
-    "src/datasystem/pybind_api/pybind_register_context.cpp",
+    "src/datasystem/c_api/kv_client_c_wrapper.cpp",
+    "src/datasystem/c_api/object_client_c_wrapper.cpp",
+    "src/datasystem/c_api/stream_client_c_wrapper.cpp",
     "src/datasystem/pybind_api/pybind_register_kv.cpp",
     "src/datasystem/pybind_api/pybind_register_object.cpp",
-    "KVClient::ShutDown",
-    "KVClient::Init",
-    "KVClient::Create",
-    "KVClient::MCreate",
-    "ObjectClient::ShutDown",
-    "ObjectClient::Init",
-    "ObjectClient::Create"
+    "src/datasystem/pybind_api/pybind_register_stream.cpp",
+    "KVCreateClient",
+    "OCCreateClient",
+    "StreamCreateClient",
+    "SCUpdateAkSk",
+    "OCUpdateAkSk",
+    "StreamUpdateAkSk",
+    "OCGIncreaseRef",
+    "OCDeccreaseRef",
+    "OCReleaseGRefs",
+    "ObjectExecutePut",
+    "SCExecuteSet",
+    "SCExecuteGet"
   ],
   "patterns": [
     {
-      "id": "client-shutdown-init-duplicated-across-clients",
-      "name": "Identical ShutDown()/Init() lifecycle methods across KVClient and ObjectClient",
+      "id": "c-api-updateaksk-wrapper-duplication",
+      "name": "Identical UpdateAkSk client wrapper duplicated across kv/object/stream C-API wrappers",
       "severity": "high",
-      "rationale": "KVClient::ShutDown and ObjectClient::ShutDown have byte-identical bodies (TraceGuard + impl_ null-check + ShutDown + CompleteHandler), and their Init() bodies are likewise identical (TraceGuard + InitKvMetrics + Init + CompleteHandler). The two client wrappers delegate to the same ObjectClientImpl, so this lifecycle boilerplate is copy-pasted per client. A shared helper or common base would remove the duplication and prevent the two copies from drifting.",
+      "rationale": "SCUpdateAkSk, OCUpdateAkSk and StreamUpdateAkSk have byte-identical bodies: same reinterpret_cast of the opaque client pointer, the same (buggy) redundant `accessKey.assign(...)` right after constructing `accessKey`, the same SensitiveValue construction, the same UpdateAkSk call and the same error-to-StatusC handling. Only the function name and the templated client type differ. This is copy-paste that should be a single templated/shared helper; the redundant assign is duplicated three times, so a fix must be applied in three places.",
       "locations": [
         {
-          "path": "src/datasystem/client/kv_cache/kv_client.cpp",
-          "start_line": 56,
-          "end_line": 66,
-          "existing_code": "Status KVClient::ShutDown()\n{\n    TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n    if (impl_) {\n        bool needRollbackState;\n        auto rc = impl_->ShutDown(needRollbackState);\n        impl_->CompleteHandler(rc.IsError(), needRollbackState);\n        return rc;\n    }\n    return Status::OK();\n}"
+          "path": "src/datasystem/c_api/kv_client_c_wrapper.cpp",
+          "start_line": 60,
+          "end_line": 72,
+          "existing_code": "struct StatusC SCUpdateAkSk(KVClient_p clientPtr, const char *cAccessKey, size_t cAccessKeyLen, const char *cSecretKey,\n                            size_t cSecretKeyLen)\n{\n    auto client = reinterpret_cast<std::shared_ptr<datasystem::object_cache::ObjectClientImpl> *>(clientPtr);\n    std::string accessKey(cAccessKey, cAccessKeyLen);\n    accessKey.assign(cAccessKey, cAccessKeyLen);\n    datasystem::SensitiveValue secretKey(cSecretKey, cSecretKeyLen);\n    datasystem::Status rc = (*client)->UpdateAkSk(accessKey, secretKey);\n    if (rc.IsError()) {\n        return ToStatusC(rc);\n    }\n    return StatusC{ datasystem::K_OK, {} };\n}"
         },
         {
-          "path": "src/datasystem/client/object_cache/object_client.cpp",
-          "start_line": 41,
-          "end_line": 51,
-          "existing_code": "Status ObjectClient::ShutDown()\n{\n    TraceGuard traceGuard = Trace::Instance().SetRequestTraceUUID();\n    if (impl_) {\n        bool needRollbackState;\n        auto rc = impl_->ShutDown(needRollbackState);\n        impl_->CompleteHandler(rc.IsError(), needRollbackState);\n        return rc;\n    }\n    return Status::OK();\n}"
+          "path": "src/datasystem/c_api/object_client_c_wrapper.cpp",
+          "start_line": 57,
+          "end_line": 69,
+          "existing_code": "struct StatusC OCUpdateAkSk(ObjectClient_p clientPtr, const char *cAccessKey, size_t cAccessKeyLen,\n                            const char *cSecretKey, size_t cSecretKeyLen)\n{\n    auto client = reinterpret_cast<std::shared_ptr<datasystem::object_cache::ObjectClientImpl> *>(clientPtr);\n    std::string accessKey(cAccessKey, cAccessKeyLen);\n    accessKey.assign(cAccessKey, cAccessKeyLen);\n    datasystem::SensitiveValue secretKey(cSecretKey, cSecretKeyLen);\n    datasystem::Status rc = (*client)->UpdateAkSk(accessKey, secretKey);\n    if (rc.IsError()) {\n        return ToStatusC(rc);\n    }\n    return StatusC{ datasystem::K_OK, {} };\n}"
+        },
+        {
+          "path": "src/datasystem/c_api/stream_client_c_wrapper.cpp",
+          "start_line": 74,
+          "end_line": 86,
+          "existing_code": "struct StatusC StreamUpdateAkSk(StreamClient_p clientPtr, const char *cAccessKey, size_t cAccessKeyLen,\n                                const char *cSecretKey, size_t cSecretKeyLen)\n{\n    auto client = reinterpret_cast<std::shared_ptr<datasystem::StreamClient> *>(clientPtr);\n    std::string accessKey(cAccessKey, cAccessKeyLen);\n    accessKey.assign(cAccessKey, cAccessKeyLen);\n    datasystem::SensitiveValue secretKey(cSecretKey, cSecretKeyLen);\n    datasystem::Status rc = (*client)->UpdateAkSk(accessKey, secretKey);\n    if (rc.IsError()) {\n        return ToStatusC(rc);\n    }\n    return StatusC{ datasystem::K_OK, {} };\n}"
         }
       ]
     },
     {
-      "id": "kv-fullparam-setup-create-mcreate",
-      "name": "Duplicated object_cache::FullParam initialization in KVClient::Create and KVClient::MCreate",
-      "severity": "medium",
-      "rationale": "The six-line FullParam initializer (writeMode/ttlSecond/consistencyType=CAUSAL/cacheType/existence copied from SetParam) is identical in Create and MCreate. Any new SetParam field must be added in both places; a single helper that builds a FullParam from a SetParam would centralize it.",
+      "id": "c-api-createclient-trace-delegate-wrapper",
+      "name": "Identical CreateClient trace-and-delegate wrapper (kv and object C-API)",
+      "severity": "high",
+      "rationale": "KVCreateClient and OCCreateClient are byte-for-byte identical: same 17-parameter signature, same TraceGuard, and the same forwarding call to CreateObjectClient with the identical argument list. The two functions differ only in name and return type alias; the entire body is duplicated and should be a single shared helper.",
       "locations": [
         {
-          "path": "src/datasystem/client/kv_cache/kv_client.cpp",
-          "start_line": 102,
-          "end_line": 107,
-          "existing_code": "    object_cache::FullParam creatParam;\n    creatParam.writeMode = param.writeMode;\n    creatParam.ttlSecond = param.ttlSecond;\n    creatParam.consistencyType = ConsistencyType::CAUSAL;\n    creatParam.cacheType = param.cacheType;\n    creatParam.existence = param.existence;"
+          "path": "src/datasystem/c_api/kv_client_c_wrapper.cpp",
+          "start_line": 40,
+          "end_line": 52,
+          "existing_code": "KVClient_p KVCreateClient(const char *cWorkerHost, const int workerPort, const int timeOut, const char *token,\n                          size_t tokenLen, const char *clientPublicKey, size_t cClientPublicKeyLen,\n                          const char *clientPrivateKey, size_t clientPrivateKeyLen, const char *serverPublicKey,\n                          size_t cServerPublicKeyLen, const char *accessKey, size_t cAccessKeyLen,\n                          const char *secretKey, size_t secretKeyLen, const char *tenantId, size_t cTenantIdLen,\n                          const char *enableCrossNodeConnection)\n{\n    datasystem::TraceGuard traceGuard = datasystem::Trace::Instance().SetRequestTraceUUID();\n    return CreateObjectClient(cWorkerHost, workerPort, timeOut, token, tokenLen, clientPublicKey, cClientPublicKeyLen,\n                              clientPrivateKey, clientPrivateKeyLen, serverPublicKey, cServerPublicKeyLen, accessKey,\n                              cAccessKeyLen, secretKey, secretKeyLen, tenantId, cTenantIdLen,\n                              enableCrossNodeConnection);\n}"
         },
         {
-          "path": "src/datasystem/client/kv_cache/kv_client.cpp",
-          "start_line": 127,
-          "end_line": 132,
-          "existing_code": "    object_cache::FullParam creatParam;\n    creatParam.writeMode = param.writeMode;\n    creatParam.ttlSecond = param.ttlSecond;\n    creatParam.consistencyType = ConsistencyType::CAUSAL;\n    creatParam.cacheType = param.cacheType;\n    creatParam.existence = param.existence;"
+          "path": "src/datasystem/c_api/object_client_c_wrapper.cpp",
+          "start_line": 37,
+          "end_line": 49,
+          "existing_code": "ObjectClient_p OCCreateClient(const char *cWorkerHost, const int workerPort, const int timeOut, const char *token,\n                              size_t tokenLen, const char *clientPublicKey, size_t cClientPublicKeyLen,\n                              const char *clientPrivateKey, size_t clientPrivateKeyLen, const char *serverPublicKey,\n                              size_t cServerPublicKeyLen, const char *accessKey, size_t cAccessKeyLen,\n                              const char *secretKey, size_t secretKeyLen, const char *tenantId, size_t cTenantIdLen,\n                              const char *enableCrossNodeConnection)\n{\n    datasystem::TraceGuard traceGuard = datasystem::Trace::Instance().SetRequestTraceUUID();\n    return CreateObjectClient(cWorkerHost, workerPort, timeOut, token, tokenLen, clientPublicKey, cClientPublicKeyLen,\n                              clientPrivateKey, clientPrivateKeyLen, serverPublicKey, cServerPublicKeyLen, accessKey,\n                              cAccessKeyLen, secretKey, secretKeyLen, tenantId, cTenantIdLen,\n                              enableCrossNodeConnection);\n}"
         }
       ]
     },
     {
-      "id": "kv-reqparam-access-recorder-mapping",
-      "name": "Duplicated RequestParam field mapping for AccessRecorder in KVClient",
+      "id": "c-api-op-wrapper-trace-record-boilerplate",
+      "name": "Repeated public-op wrapper boilerplate: TraceGuard + AccessRecorder + Execute + Record",
       "severity": "medium",
-      "rationale": "The RequestParam mapping block (objectKey substr + writeMode/ttlSecond/existence/cacheType to_string casts) is repeated verbatim in Create and MCreate (and closely echoed in the Set variants). This access-record population is copy-pasted rather than factored into a helper that fills a RequestParam from a SetParam/FullParam.",
+      "rationale": "Every public C-API op is a thin wrapper that repeats the identical scaffold: construct a TraceGuard, construct an AccessRecorder for the op's key, declare a RequestParam, call the corresponding *Execute* worker, then accessPoint.Record(rc.code, \"0\", reqParam, rc.errMsg) and return rc. OCGIncreaseRef, OCDeccreaseRef and OCReleaseGRefs (and many peers across kv/object/stream) are structurally identical up to the AccessRecorderKey and the delegated Execute call, making this a strong candidate for a macro or template wrapper.",
       "locations": [
         {
-          "path": "src/datasystem/client/kv_cache/kv_client.cpp",
-          "start_line": 112,
-          "end_line": 116,
-          "existing_code": "    reqParam.objectKey = key.substr(0, LOG_OBJECT_KEY_SIZE_LIMIT);\n    reqParam.writeMode = std::to_string(static_cast<int>(param.writeMode));\n    reqParam.ttlSecond = std::to_string(param.ttlSecond);\n    reqParam.existence = std::to_string(static_cast<int>(param.existence));\n    reqParam.cacheType = std::to_string(static_cast<int>(param.cacheType));"
+          "path": "src/datasystem/c_api/object_client_c_wrapper.cpp",
+          "start_line": 177,
+          "end_line": 188,
+          "existing_code": "struct StatusC OCGIncreaseRef(ObjectClient_p clientPtr, const char **cObjKeys, const size_t *cObjKeysLen,\n                              uint64_t cObjKeysNum, char *cRemoteClientId, size_t cRemoteClientIdLen,\n                              char **cFailedObjKeys, size_t *failedObjKeysCount)\n{\n    datasystem::TraceGuard traceGuard = datasystem::Trace::Instance().SetRequestTraceUUID();\n    datasystem::AccessRecorder accessPoint(datasystem::AccessRecorderKey::DS_OBJECT_CLIENT_GINCREASEREF);\n    datasystem::RequestParam reqParam;\n    StatusC rc = OCExecuteGIncreaseRef(clientPtr, cObjKeys, cObjKeysLen, cObjKeysNum, cRemoteClientId,\n                                       cRemoteClientIdLen, cFailedObjKeys, failedObjKeysCount, &reqParam);\n    accessPoint.Record(rc.code, \"0\", reqParam, rc.errMsg);\n    return rc;\n}"
         },
         {
-          "path": "src/datasystem/client/kv_cache/kv_client.cpp",
-          "start_line": 138,
-          "end_line": 142,
-          "existing_code": "    reqParam.objectKey = key.substr(0, LOG_OBJECT_KEY_SIZE_LIMIT);\n    reqParam.writeMode = std::to_string(static_cast<int>(param.writeMode));\n    reqParam.ttlSecond = std::to_string(param.ttlSecond);\n    reqParam.existence = std::to_string(static_cast<int>(param.existence));\n    reqParam.cacheType = std::to_string(static_cast<int>(param.cacheType));"
+          "path": "src/datasystem/c_api/object_client_c_wrapper.cpp",
+          "start_line": 225,
+          "end_line": 236,
+          "existing_code": "struct StatusC OCDeccreaseRef(ObjectClient_p clientPtr, const char **cObjKeys, const size_t *cObjKeysLen,\n                              uint64_t cObjKeysNum, char *cRemoteClientId, size_t cRemoteClientIdLen,\n                              char **cFailedObjKeys, size_t *failedObjKeysCount)\n{\n    datasystem::TraceGuard traceGuard = datasystem::Trace::Instance().SetRequestTraceUUID();\n    datasystem::AccessRecorder accessPoint(datasystem::AccessRecorderKey::DS_OBJECT_CLIENT_GDECREASEREF);\n    datasystem::RequestParam reqParam;\n    StatusC rc = OCExecuteGDecreaseRef(clientPtr, cObjKeys, cObjKeysLen, cObjKeysNum, cRemoteClientId,\n                                       cRemoteClientIdLen, cFailedObjKeys, failedObjKeysCount, &reqParam);\n    accessPoint.Record(rc.code, \"0\", reqParam, rc.errMsg);\n    return rc;\n}"
+        },
+        {
+          "path": "src/datasystem/c_api/object_client_c_wrapper.cpp",
+          "start_line": 257,
+          "end_line": 265,
+          "existing_code": "struct StatusC OCReleaseGRefs(ObjectClient_p clientPtr, char *cRemoteClientId, size_t cRemoteClientIdLen)\n{\n    datasystem::TraceGuard traceGuard = datasystem::Trace::Instance().SetRequestTraceUUID();\n    datasystem::AccessRecorder accessPoint(datasystem::AccessRecorderKey::DS_OBJECT_CLIENT_RELEASEGREFS);\n    datasystem::RequestParam reqParam;\n    StatusC rc = OCExecuteReleaseGRefs(clientPtr, cRemoteClientId, cRemoteClientIdLen, &reqParam);\n    accessPoint.Record(rc.code, \"0\", reqParam, rc.errMsg);\n    return rc;\n}"
         }
       ]
     }
