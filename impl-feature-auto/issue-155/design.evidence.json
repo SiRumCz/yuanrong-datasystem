@@ -1,0 +1,77 @@
+{
+  "spec_path": "docs/superpowers/specs/2026-07-06-c-api-updateaksk-dedup-design.md",
+  "plan_path": "docs/superpowers/plans/2026-07-06-c-api-updateaksk-dedup.md",
+  "summary": "Extract the three byte-identical *UpdateAkSk C-API wrapper bodies (kv/object/stream) into one header-only function template UpdateAkSkImpl<ClientT> in src/datasystem/c_api/util.h, dropping the redundant accessKey.assign no-op. Each wrapper becomes a single delegating return: kv and object instantiate with ObjectClientImpl (verified: the KV handle is uniformly ObjectClientImpl-backed), stream with StreamClient. Signatures, linkage, and error/success return semantics are preserved exactly; no BUILD/CMake edits.",
+  "run_id": "28803441836",
+  "ledger": [
+    {
+      "id": "L1",
+      "category": "DECISION",
+      "what": "Place the shared logic as a template<typename ClientT> free function in src/datasystem/c_api/util.h (header-only), rather than a non-template void* helper in util.cpp.",
+      "why": "The three sites differ only by client type; the member call (*client)->UpdateAkSk(...) needs the concrete type, which a void* non-template cannot supply without a second dispatch. A header-only template matches the issue's 'templated/shared helper' request and needs no BUILD edits.",
+      "what_i_did": "Chose the template-in-util.h approach; util.h already hosts sibling helpers ConnectWorker/FreeClient and is included by all three wrapper .cpp files.",
+      "confidence": "high",
+      "blast_radius": { "level": "low", "why": "Only the three wrapper .cpp files instantiate it; no other caller and no C-ABI change." },
+      "reversibility": { "level": "reversible", "why": "It is an internal helper; inlining it back into the three sites is mechanical." },
+      "revisit_if": "A reviewer prefers explicit instantiation in util.cpp, or a non-template void* dispatch is mandated for header-size reasons."
+    },
+    {
+      "id": "L2",
+      "category": "DECISION",
+      "what": "Drop the redundant accessKey.assign(cAccessKey, cAccessKeyLen) line entirely rather than preserving it in the helper.",
+      "why": "The line reassigns the exact same bytes into a std::string just constructed from them (a pure no-op); the issue explicitly flags it as the bug and notes the fix must apply to all three sites, which extraction achieves.",
+      "what_i_did": "Excluded the .assign call from the extracted helper so a single construction remains.",
+      "confidence": "high",
+      "blast_radius": { "level": "low", "why": "Removing a self-assignment of identical bytes cannot change accessKey's value or length." },
+      "reversibility": { "level": "reversible", "why": "Re-adding one line if ever wanted is trivial." },
+      "revisit_if": "Review insists on a literal no-behavior-change extraction that keeps the dead line."
+    },
+    {
+      "id": "L3",
+      "category": "ASSUMPTION",
+      "what": "The KV wrapper's SCUpdateAkSk casting the handle to datasystem::object_cache::ObjectClientImpl is intentional and correct, not a latent bug to change to a KV-specific type.",
+      "why": "If it were wrong, the KV helper's template argument would be ambiguous and the extraction could silently change behavior.",
+      "what_i_did": "Verified: every reinterpret_cast in kv_client_c_wrapper.cpp (lines 63, 91, 137, 186, 226, 278, 313, ...) casts to std::shared_ptr<ObjectClientImpl> *; the KV handle is uniformly ObjectClientImpl-backed. Instantiate the KV helper with ObjectClientImpl.",
+      "confidence": "high",
+      "blast_radius": { "level": "low", "why": "Preserving the existing cast type keeps behavior identical to today." },
+      "reversibility": { "level": "reversible", "why": "The template argument is a one-token change if a separate issue re-types the KV handle." },
+      "revisit_if": "A separate issue re-types the KV handle away from ObjectClientImpl.",
+      "verified": true
+    },
+    {
+      "id": "L4",
+      "category": "ASSUMPTION",
+      "what": "util.h already transitively provides everything the template body needs (std::shared_ptr, std::string, datasystem::SensitiveValue, datasystem::Status, datasystem::K_OK, StatusC, ToStatusC), so no new #include is required in util.h, and each client type is complete at its instantiation site.",
+      "why": "A template body is only type-checked at instantiation; the header must still name the utility types it references directly, and each .cpp must see the complete client type.",
+      "what_i_did": "Verified: util.h includes object_client_impl.h, sensitive_value.h, status.h, status_definition.h and declares ToStatusC, and already uses std::string/std::shared_ptr in existing declarations; the three .cpp files each include their client impl / stream_client.h header. Plan Task 1 Step 2 adds a syntax-only fallback to add <memory>/<string> if the build complains.",
+      "confidence": "medium",
+      "blast_radius": { "level": "low", "why": "At worst a missing-include compile error surfaces immediately at build; no runtime impact." },
+      "reversibility": { "level": "reversible", "why": "Add the missing #include if the build reports it." },
+      "revisit_if": "The build reports an incomplete-type or unknown-symbol error in any of the three translation units.",
+      "verified": true
+    },
+    {
+      "id": "L5",
+      "category": "DECISION",
+      "what": "Name the helper UpdateAkSkImpl (template) to disambiguate it from the member function UpdateAkSk it calls, rather than reusing the bare name UpdateAkSk in the style of ConnectWorker/FreeClient.",
+      "why": "Readability: (*client)->UpdateAkSk(...) inside a same-named free function is confusing; the sibling helpers happen to have non-colliding names.",
+      "what_i_did": "Chose UpdateAkSkImpl as the template name.",
+      "confidence": "medium",
+      "blast_radius": { "level": "low", "why": "Internal name only; no exported symbol or ABI is affected." },
+      "reversibility": { "level": "reversible", "why": "A rename is a mechanical find/replace across four files." },
+      "revisit_if": "A reviewer prefers matching the plain ConnectWorker/FreeClient naming convention."
+    },
+    {
+      "id": "L6",
+      "category": "DEFERRED",
+      "what": "No new isolated unit test is added for the three wrappers; verification relies on a clean build plus the existing AK/SK auth ST tests.",
+      "why": "The C wrappers require a live client handle / worker; existing coverage is ST-level AK/SK auth tests, and the repo has no unit harness that constructs these handles in isolation. Adding one exceeds this dedup's surgical scope.",
+      "what_i_did": "Relied on existing AK/SK ST tests (kv_client_tenant_akskauth_test, sc_client_aksk_auth_test) plus compile verification; documented the gap in the plan's Task 5.",
+      "confidence": "medium",
+      "blast_radius": { "level": "medium", "why": "A pure behavior-preserving extraction keeps regression risk low, but with no targeted test a subtle instantiation error would only be caught by the broader ST suite." },
+      "reversibility": { "level": "reversible", "why": "A dedicated test can be added later without reworking the helper." },
+      "revisit_if": "The reviewer requires a dedicated regression test, or a unit harness for the C wrappers already exists and was missed."
+    }
+  ],
+  "read_these_first": ["L6", "L4", "L5", "L1", "L2", "L3"]
+}
