@@ -161,6 +161,20 @@ void *CreateObjectClient(const char *cWorkerHost, const int workerPort, const in
                          const char *enableCrossNodeConnection);
 
 /**
+ * @brief Sets a request-scoped trace UUID, then creates a KVClient/ObjectClient.
+ *        Shared by the KVCreateClient and OCCreateClient C-API entry points so the
+ *        trace-and-delegate logic lives in exactly one place.
+ * @param ... Same parameters as CreateObjectClient.
+ * @return Return the pointer of KVClient/ObjectClient (nullptr on invalid host/port).
+ */
+void *CreateObjectClientWithTrace(const char *cWorkerHost, const int workerPort, const int timeOut, const char *token,
+                                  size_t tokenLen, const char *clientPublicKey, size_t cClientPublicKeyLen,
+                                  const char *clientPrivateKey, size_t clientPrivateKeyLen, const char *serverPublicKey,
+                                  size_t cServerPublicKeyLen, const char *accessKey, size_t cAccessKeyLen,
+                                  const char *secretKey, size_t secretKeyLen, const char *tenantId, size_t cTenantIdLen,
+                                  const char *enableCrossNodeConnection);
+
+/**
  * @brief Executes the initialization of the connection to the worker
  * @param[in] clientPtr The pointer of KVClient/ObjectClient to connect worker.
  * @return status of the call
