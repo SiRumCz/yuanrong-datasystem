@@ -1,6 +1,6 @@
 ---
 name: "Honesty-Triage Agent (protocol state: triage, code-review-honesty)"
-run-name: "Fix-Triage Agent · cid:[${{ fromJSON(github.event.inputs.aw_context || '{}').cid }}]"
+run-name: "Honesty-Triage Agent · cid:[${{ fromJSON(github.event.inputs.aw_context || '{}').cid }}]"
 on:
   workflow_dispatch:
 engine:
@@ -9,7 +9,7 @@ engine:
   # Codex (OpenAI) routed through the private OpenAI-compatible gateway below
   # (Tailscale Funnel, reachable from GitHub runners). gh-aw injects OPENAI_API_KEY
   # (repo secret). The agent needs no GitHub network access — the PR context and the
-  # PR's open [ai-review] issues are prefetched in steps: (outside the agent firewall).
+  # PR's open and closed [ai-review] issues are prefetched in steps: (outside the agent firewall).
   env:
     OPENAI_BASE_URL: https://arcyleung-ubuntu.tailb940e6.ts.net/v1/
 network:
