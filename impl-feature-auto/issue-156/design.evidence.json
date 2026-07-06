@@ -1,0 +1,100 @@
+{
+  "spec_path": "docs/superpowers/specs/2026-07-06-dedup-createclient-wrapper-design.md",
+  "plan_path": "docs/superpowers/plans/2026-07-06-dedup-createclient-wrapper.md",
+  "summary": "Deduplicate the identical KVCreateClient / OCCreateClient trace-and-delegate bodies by extracting a single shared helper CreateObjectClientWithTrace into src/datasystem/c_api/util.{h,cpp}; both extern \"C\" wrappers become one-line delegations. Both exported ABI symbols (bound by Go cgo) are preserved; CreateObjectClient stays an unchanged pure factory. No new C++ test harness — existing Go binding tests plus compilation gate correctness.",
+  "run_id": "28804598945",
+  "ledger": [
+    {
+      "id": "L2",
+      "category": "ASSUMPTION",
+      "what": "Both KVCreateClient and OCCreateClient are extern \"C\" ABI symbols consumed by external language bindings, so both must be preserved; neither may be deleted or renamed.",
+      "why": "The dedup must not collapse the two public symbols into one, or it breaks the cross-language ABI.",
+      "what_i_did": "Verified extern \"C\" in kv_client_c_wrapper.h:26 and object_client_c_wrapper.h:26, and confirmed Go cgo binds C.KVCreateClient (go/kv/kv_client.go:147) and C.OCCreateClient (go/object/object_client.go:152); kept both entry points and deduplicated only their bodies.",
+      "confidence": "high",
+      "blast_radius": { "level": "high", "why": "Removing or renaming an exported symbol breaks the cross-language ABI and every downstream binding build (Go/Python/Java)." },
+      "reversibility": { "level": "costly", "why": "A shipped ABI break requires coordinated fixes across all downstream language bindings." },
+      "revisit_if": "A maintainer confirms one symbol is genuinely unused and may be dropped.",
+      "verified": true
+    },
+    {
+      "id": "L1",
+      "category": "DECISION",
+      "what": "Extraction strategy: add a dedicated shared helper CreateObjectClientWithTrace in util.{h,cpp}; both wrappers delegate to it.",
+      "why": "Gives the trace-and-create logic a single named, documented home while leaving CreateObjectClient's factory contract untouched; chosen over moving TraceGuard into CreateObjectClient (L4) and over symbol aliasing (L6).",
+      "what_i_did": "Specified the new 17-param void* helper and rewrote both wrapper bodies as one-line delegations to it in the plan.",
+      "confidence": "high",
+      "blast_radius": { "level": "medium", "why": "util.h/util.cpp are shared by the kv, object, and stream wrappers, so a new symbol there is broadly visible across the c_api layer." },
+      "reversibility": { "level": "reversible", "why": "Pure internal refactor with no persisted state or exported-symbol change; trivially revertible." },
+      "revisit_if": "Review prefers option B (fold TraceGuard into CreateObjectClient) for minimality."
+    },
+    {
+      "id": "L5",
+      "category": "DEVIATION",
+      "what": "Do not add a new C++ unit-test harness; rely on existing Go binding tests plus compilation to satisfy 'add/keep tests'.",
+      "why": "No C++ unit-test harness exists for the c_api wrappers today, the change is pure behaviour-preserving delegation, and both symbols are already exercised via go/kv/kv_client_test.go and go/object/object_client_test.go.",
+      "what_i_did": "Scoped testing to 'existing Go tests still pass + both datasystem_c and datasystem_c_static targets compile' in the plan's Task 4.",
+      "confidence": "medium",
+      "blast_radius": { "level": "low", "why": "Test-only scope; no production code affected by this decision." },
+      "reversibility": { "level": "reversible", "why": "A dedicated regression test can be added later without undoing any production change." },
+      "revisit_if": "A c_api C++ unit-test target is later added, or a maintainer requires a dedicated regression test."
+    },
+    {
+      "id": "L3",
+      "category": "ASSUMPTION",
+      "what": "CreateObjectClient has no callers besides the two wrappers, and KVClient_p/ObjectClient_p are both typedef void* identical to its void* return, so a single void*-returning helper serves both without cast churn.",
+      "why": "Justifies one shared helper rather than two type-specialized variants.",
+      "what_i_did": "Grepped the repo for CreateObjectClient (only the two wrappers plus its own decl/def) and confirmed the typedefs at kv_client_c_wrapper.h:33 and object_client_c_wrapper.h:32.",
+      "confidence": "high",
+      "blast_radius": { "level": "low", "why": "Confined to the create-client entry points; no other callers to affect." },
+      "reversibility": { "level": "reversible", "why": "Assumption is easy to re-check and the helper is trivially adjustable if a new caller appears." },
+      "revisit_if": "A new direct caller of CreateObjectClient is introduced.",
+      "verified": true
+    },
+    {
+      "id": "L4",
+      "category": "DECISION",
+      "what": "Keep CreateObjectClient unchanged as a pure factory with no tracing side effect; the TraceGuard lives only in the new helper.",
+      "why": "CreateObjectClient is declared and documented in util.h; folding a trace side effect into it would silently broaden its contract for any future caller.",
+      "what_i_did": "Placed the TraceGuard exclusively in CreateObjectClientWithTrace and left CreateObjectClient's body untouched.",
+      "confidence": "high",
+      "blast_radius": { "level": "low", "why": "Additive change; the existing factory contract is preserved so nothing downstream is affected." },
+      "reversibility": { "level": "reversible", "why": "Trace behaviour could be relocated later with a one-line move." },
+      "revisit_if": "Tracing is later desired at the factory level for all CreateObjectClient callers."
+    },
+    {
+      "id": "L6",
+      "category": "DECISION",
+      "what": "Reject the __attribute__((alias(...))) symbol-aliasing approach that would collapse both public symbols onto one definition.",
+      "why": "It is compiler-specific (GCC/Clang), fragile across the C ABI and cross-language boundary, and harder to read than a plain delegation.",
+      "what_i_did": "Excluded aliasing; both symbols remain real functions that delegate to the shared helper.",
+      "confidence": "high",
+      "blast_radius": { "level": "low", "why": "Choosing plain delegation over aliasing has no effect beyond the two wrapper definitions." },
+      "reversibility": { "level": "reversible", "why": "Aliasing could be adopted later if ever justified; nothing here forecloses it." },
+      "revisit_if": "Binary size or symbol-count constraints justify aliasing and the toolchain is pinned."
+    },
+    {
+      "id": "L7",
+      "category": "ASSUMPTION",
+      "what": "TraceGuard is a stack-scoped RAII object; moving the identical SetRequestTraceUUID() call into the shared helper preserves the same trace scope and lifetime, so tracing behaviour is unchanged.",
+      "why": "Confirms the extraction is behaviour-preserving for observability, not only for correctness.",
+      "what_i_did": "Verified TraceGuard/SetRequestTraceUUID in common/log/trace.h (guard cleared on destruction) and that the helper's return point matches the wrappers' original return point, keeping the guard alive across the CreateObjectClient call.",
+      "confidence": "high",
+      "blast_radius": { "level": "low", "why": "Affects only tracing/observability, not correctness or the returned handle." },
+      "reversibility": { "level": "reversible", "why": "The guard placement is a one-line change, trivially adjustable." },
+      "revisit_if": "TraceGuard scope/lifetime semantics change in common/log/trace.h.",
+      "verified": true
+    },
+    {
+      "id": "L8",
+      "category": "DECISION",
+      "what": "Place the shared helper in util.{h,cpp} beside CreateObjectClient rather than in either wrapper header.",
+      "why": "Both wrappers already include datasystem/c_api/util.h, so the helper is reachable with no new include edges and ownership stays in the c_api util layer.",
+      "what_i_did": "Specified the declaration in util.h and the definition in util.cpp; noted that util.cpp must add #include datasystem/common/log/trace.h since it is not currently included.",
+      "confidence": "high",
+      "blast_radius": { "level": "low", "why": "Reuses existing include edges; no new dependencies introduced." },
+      "reversibility": { "level": "reversible", "why": "The helper could be relocated to another translation unit with a mechanical move." },
+      "revisit_if": "The c_api util layer is reorganized."
+    }
+  ],
+  "read_these_first": ["L2", "L1", "L5", "L3", "L4", "L6", "L7", "L8"]
+}

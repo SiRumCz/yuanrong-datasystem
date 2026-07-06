@@ -1,6 +1,6 @@
 protocol: impl-feature-auto
 instance: issue-156
-state: design
+state: done
 iteration: 3
 gates: {}
 head_sha: dfc126aba23dfd859e9861087038b5034361713b
@@ -27,3 +27,12 @@ history:
   feedback: 'read_these_first order is not risk-descending: [(''L6'', 2), (''L7'',
     1), (''L2'', 2), (''L1'', 1), (''L3'', 0), (''L4'', 0), (''L5'', 0), (''L8'',
     0)]'
+- iteration: 3
+  agent_run_id: '28804598945'
+  checks:
+    ledger-wellformed: pass
+    ledger-consistent: pass
+    read-these-first-consistent: pass
+    spec-present: pass
+    plan-present: pass
+  feedback: ''
