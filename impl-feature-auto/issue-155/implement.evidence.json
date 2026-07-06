@@ -1,0 +1,1 @@
+{"summary":"Extracted three byte-identical *UpdateAkSk C-API wrapper bodies into a single template<typename ClientT> UpdateAkSkImpl helper in util.h, with the redundant accessKey.assign no-op removed; each wrapper reduced to one delegating return.","pr_branch":"impl-feature-auto/issue-155","run_id":"28803992213"}
