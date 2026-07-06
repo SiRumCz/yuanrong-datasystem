@@ -108,7 +108,8 @@ code, as ONE triage cluster, so the fix state can make the correction real.
      the `review:<dim>` label). One of correctness, test, performance, security,
      maintainability.
    - `title` — the issue title with the leading `[ai-review][<dim>] ` prefix
-     removed, **kept verbatim** (the fix phase closes the issue by this exact title).
+     removed, **kept verbatim** (the fix phase resolves the issue by this exact
+     title).
    - `path` and `line` — from the first back-ticked `` `path:line` `` token in the body.
    - `severity` — the bold `**<severity>**` token in the body (critical|high|medium|low).
    - `impact` — the explanatory paragraph after the header line.
