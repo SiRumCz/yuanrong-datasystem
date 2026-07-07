@@ -1,0 +1,7 @@
+protocol: honesty-crypto-verification
+instance: pr-112
+state: crypto-verify
+iteration: 1
+gates: {}
+head_sha: fcb276bf86b89265d71a86d8109848dbbea245bd
+history: []
