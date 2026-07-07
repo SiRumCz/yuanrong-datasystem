@@ -8,11 +8,11 @@
   },
   "head": "demo/honesty-run2",
   "clone_rc": 0,
-  "clone_err": "Cloning into '/tmp/fix-apply-kf7ohxx0'...",
+  "clone_err": "Cloning into '/tmp/fix-apply-uap6ns7u'...",
   "apply": [
     {
       "status": "applied",
-      "detail": "reanchored"
+      "detail": ""
     }
   ],
   "applied_n": 1,
