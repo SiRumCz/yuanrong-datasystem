@@ -137,9 +137,16 @@ Add a `post-steps:` entry (BEFORE the existing evidence-upload post-step) to `.g
 ```yaml
   - name: Capture test output per fix (empty under sabotage)
     if: always()
-    env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}", PR: "${{ fromJSON(github.event.inputs.aw_context || '{}').pr }}", REPO: "${{ github.repository }}", SABOTAGE: "${{ fromJSON(github.event.inputs.aw_context || '{}').sabotage }}" }
+    env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}", PR: "${{ fromJSON(github.event.inputs.aw_context || '{}').pr }}", REPO: "${{ github.repository }}", SHA: "${{ fromJSON(github.event.inputs.aw_context || '{}').sha }}", SABOTAGE: "${{ fromJSON(github.event.inputs.aw_context || '{}').sabotage }}" }
     run: |
       set -uo pipefail
+      # Check out the PR head so the fix applies to (and the guarding test runs against) the real
+      # PR code — the engine dispatches agents ref-lessly, so the job checked out the default branch.
+      if [ -n "${SHA:-}" ]; then
+        git fetch --depth=1 "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "$SHA" 2>/dev/null \
+          && git checkout -q "$SHA" 2>/dev/null \
+          || echo "::warning::could not checkout PR head $SHA; capturing against current tree"
+      fi
       python3 - "$SABOTAGE" <<'PY'
       import json, os, subprocess, sys
       ev_path = "/tmp/gh-aw/evidence.json"
