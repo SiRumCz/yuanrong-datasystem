@@ -1,0 +1,7 @@
+protocol: code-review-honesty
+instance: pr-167
+state: fixverify
+iteration: 1
+gates: {}
+head_sha: 6731f519becea76a876fd0da90d3ad34cf7008e0
+history: []
