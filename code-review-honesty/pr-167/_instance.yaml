@@ -1,7 +1,6 @@
 protocol: code-review-honesty
 instance: pr-167
-head_sha: bbaf06ea38277ba70b383fa298901756490aec3d
-phase: cryptohash
-joined: true
-phase_label: "honesty Sub-1: crypto test-output hash (linear \u2014 consumes fix evidence)"
-status_comment_id: 4907992632
+head_sha: 84372338009982554024d9c5ae2581f2a25e18f9
+phase: review
+joined: false
+phase_label: single-dimension review (correctness)
