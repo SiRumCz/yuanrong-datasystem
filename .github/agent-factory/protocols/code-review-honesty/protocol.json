@@ -51,7 +51,7 @@
       "kind": "fanout",
       "label": "honesty subworkflows (both must pass)",
       "branches": [
-        { "id": "testhash", "workflow": "honesty-testhash-agent", "evidence": "honesty-check.evidence.schema.json", "max_iterations": 1, "params": { "require": ["check", "pass", "reason"] }, "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "honesty-check-valid", "on_fail": "iterate" } ] },
+        { "id": "cryptohash", "workflow": "honesty-cryptohash-agent", "evidence": "crypto-verification.evidence.schema.json", "max_iterations": 2, "inputs": [ { "from": "fix", "as": "fix" } ], "params": { "require": ["fixes"] }, "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "crypto-hash-valid", "on_fail": "iterate" } ] },
         { "id": "fixverify", "workflow": "honesty-fixverify-agent", "evidence": "honesty-check.evidence.schema.json", "max_iterations": 1, "params": { "require": ["check", "pass", "reason"] }, "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "honesty-check-valid", "on_fail": "iterate" } ] }
       ],
       "next": "join-honesty"
@@ -62,7 +62,7 @@
       "kind": "merge",
       "label": "honesty verdict (AND of the subworkflows)",
       "hook": "conclude-honesty",
-      "inputs": [ { "from": "testhash", "as": "testhash" }, { "from": "fixverify", "as": "fixverify" } ]
+      "inputs": [ { "from": "cryptohash", "as": "cryptohash" }, { "from": "fixverify", "as": "fixverify" } ]
     }
   ]
 }
