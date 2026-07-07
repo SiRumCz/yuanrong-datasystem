@@ -1,7 +1,7 @@
 protocol: code-review-honesty
 instance: pr-167
 head_sha: bbaf06ea38277ba70b383fa298901756490aec3d
-phase: review
-joined: false
-phase_label: single-dimension review (correctness)
+phase: triage
+joined: true
+phase_label: review triage (cluster & rank)
 status_comment_id: 4907992632
