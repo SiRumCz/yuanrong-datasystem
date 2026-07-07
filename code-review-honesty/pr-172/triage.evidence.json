@@ -1,0 +1,47 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "Parser reports dscli and other decoy processes as workers",
+      "dimension": [
+        "correctness"
+      ],
+      "severity": "high",
+      "paths": [
+        "cli/status.py"
+      ],
+      "member_findings": [
+        {
+          "dimension": "correctness",
+          "path": "cli/status.py",
+          "line": 58,
+          "severity": "high",
+          "category": "correctness",
+          "title": "Parser reports dscli and other decoy processes as workers",
+          "impact": "parse_worker_lines() defines _WORKER_BIN_RE but never uses it before appending a match, so any process whose command line contains --worker_address is returned as a running worker. A concurrent dscli stop --worker_address=... or another helper process will be printed by dscli status with its PID and address, producing a wrong status result and contradicting the documented worker-only contract.",
+          "fix": "Before extracting/appending the address, require _WORKER_BIN_RE.search(cmdline); skip the line when the actual datasystem_worker executable token is absent."
+        }
+      ],
+      "rank": 1
+    }
+  ],
+  "summary": {
+    "present": [
+      "correctness"
+    ],
+    "missing": [
+      "test",
+      "performance",
+      "security",
+      "maintainability"
+    ],
+    "clusters": 1,
+    "total_findings": 1,
+    "by_severity": {
+      "high": 1
+    },
+    "by_dimension": {
+      "correctness": 1
+    }
+  }
+}

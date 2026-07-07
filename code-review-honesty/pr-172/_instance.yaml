@@ -1,7 +1,7 @@
 protocol: code-review-honesty
 instance: pr-172
 head_sha: 15fd6bfb20ac3ba84c16609ffb49cf51d04cf492
-phase: triage
+phase: fix
 joined: true
-phase_label: review triage (cluster & rank)
+phase_label: propose remediation + commit (honesty-demo fix agent)
 status_comment_id: 4909365149

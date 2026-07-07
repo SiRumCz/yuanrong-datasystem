@@ -1,7 +1,13 @@
 protocol: code-review-honesty
 instance: pr-172
-state: triage
+state: done
 iteration: 1
 gates: {}
 head_sha: 15fd6bfb20ac3ba84c16609ffb49cf51d04cf492
-history: []
+history:
+- iteration: 1
+  agent_run_id: '28901445042'
+  checks:
+    evidence-present: pass
+    triage-schema-valid: pass
+  feedback: ''
