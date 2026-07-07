@@ -1,75 +1,68 @@
 {
   "$schema": "../../engine/protocol.schema.json",
   "name": "code-review-honesty",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "min_engine_version": "1.0.0",
   "max_depth": 6,
-  "_note": "Factory self-honesty loop (audit -> correct), forked from code-review-fix. Triggered by /honesty on a PR comment (run keyed pr-<N>). The triage agent (honesty-triage-agent) audits whether the factory's prior fix loop honestly resolved the [ai-review] issues it CLOSED on this PR, comparing each closed issue's suggested fix against the committed diff, and surfaces the single clearest dishonest closure as one cluster. The fix agent (honesty-fix-agent) proposes the genuine correction; conclude-fix commits it to the PR head and resolves the matching issue by title. Reuses code-review-fix's schemas/checks/conclude-* verbatim; the only new files are the two renamed agents. code-review-fix is untouched.",
+  "_note": "Full-lifecycle honesty DEMO protocol. /honesty runs a single-dimension (correctness) review that opens the [ai-review] issue, then triage -> fix (honesty-demo-fix-agent) -> a 2-branch honesty fanout [testhash (Sub 1, dummy) || fixverify (Sub 2, deterministic fix-claim check)] -> join -> a merge whose conclude-honesty reduce hook ANDs the two verdicts; the engine posts one HONEST/NOT-honest comment + check-run. Dishonesty is induced by the poc:sabotage PR label -> aw_context.sabotage, which honesty-demo-fix-agent reads to emit a cosmetic non-fix that fixverify catches. Reuses review-correctness-agent/triage-agent/publish-review/conclude-triage/conclude-fix; the merge verdict host uses no LLM agent.",
   "triggers": [
-    {
-      "on": "issue_comment",
-      "comment_prefix": "/honesty",
-      "command": "start"
-    }
+    { "on": "issue_comment", "comment_prefix": "/honesty", "command": "start" }
   ],
   "states": [
     {
+      "id": "review",
+      "kind": "fanout",
+      "label": "single-dimension review (correctness)",
+      "params": { "status_note": { "verdict_field": "verdict", "flag_verdicts": ["REQUEST_CHANGES"], "severity_field": "severity", "flag_severities": ["critical", "high"], "label": "request-changes" } },
+      "branches": [
+        { "id": "correctness", "workflow": "review-correctness-agent", "evidence": "review.evidence.schema.json", "max_iterations": 2, "params": { "dimension": "correctness", "require": ["dimension", "verdict", "findings"], "non_empty": ["dimension", "verdict"] }, "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "review-schema-valid", "on_fail": "iterate" }, { "run": "review-findings-anchored", "on_fail": "iterate" } ], "publish": "publish-review" }
+      ],
+      "next": "join-review"
+    },
+    { "id": "join-review", "kind": "join", "of": "review", "next": "triage" },
+    {
       "id": "triage",
       "kind": "agent",
-      "label": "triage the review issue (cluster & rank)",
-      "workflow": "honesty-triage-agent",
+      "label": "review triage (cluster & rank)",
+      "workflow": "triage-agent",
       "evidence": "triage.evidence.schema.json",
       "max_iterations": 2,
-      "params": {
-        "require": [
-          "clusters",
-          "summary"
-        ]
-      },
-      "checks": [
-        {
-          "run": "evidence-present",
-          "on_fail": "iterate"
-        },
-        {
-          "run": "triage-schema-valid",
-          "on_fail": "iterate"
-        }
-      ],
+      "inputs": [ { "from": "correctness", "as": "correctness" } ],
+      "params": { "require": ["clusters", "summary"] },
+      "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "triage-schema-valid", "on_fail": "iterate" } ],
       "conclude": "conclude-triage",
       "next": "fix"
     },
     {
       "id": "fix",
       "kind": "agent",
-      "label": "propose remediation + commit to the PR",
-      "workflow": "honesty-fix-agent",
+      "label": "propose remediation + commit (honesty-demo fix agent)",
+      "workflow": "honesty-demo-fix-agent",
       "evidence": "fix.evidence.schema.json",
       "max_iterations": 2,
-      "inputs": [
-        {
-          "from": "triage",
-          "as": "triage"
-        }
-      ],
-      "params": {
-        "require": [
-          "fixes",
-          "mode"
-        ]
-      },
-      "checks": [
-        {
-          "run": "evidence-present",
-          "on_fail": "iterate"
-        },
-        {
-          "run": "fix-schema-valid",
-          "on_fail": "iterate"
-        }
-      ],
+      "inputs": [ { "from": "triage", "as": "triage" } ],
+      "params": { "require": ["fixes", "mode"] },
+      "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "fix-schema-valid", "on_fail": "iterate" } ],
       "conclude": "conclude-fix",
-      "next": "done"
+      "next": "honesty"
+    },
+    {
+      "id": "honesty",
+      "kind": "fanout",
+      "label": "honesty subworkflows (both must pass)",
+      "branches": [
+        { "id": "testhash", "workflow": "honesty-testhash-agent", "evidence": "honesty-check.evidence.schema.json", "max_iterations": 1, "params": { "require": ["check", "pass", "reason"] }, "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "honesty-check-valid", "on_fail": "iterate" } ] },
+        { "id": "fixverify", "workflow": "honesty-fixverify-agent", "evidence": "honesty-check.evidence.schema.json", "max_iterations": 1, "params": { "require": ["check", "pass", "reason"] }, "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "honesty-check-valid", "on_fail": "iterate" } ] }
+      ],
+      "next": "join-honesty"
+    },
+    { "id": "join-honesty", "kind": "join", "of": "honesty", "next": "honesty-verdict" },
+    {
+      "id": "honesty-verdict",
+      "kind": "merge",
+      "label": "honesty verdict (AND of the subworkflows)",
+      "hook": "conclude-honesty",
+      "inputs": [ { "from_fanout": "honesty", "as": "legs" } ]
     }
   ]
 }
