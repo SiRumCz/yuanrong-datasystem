@@ -6,7 +6,7 @@
   "max_depth": 6,
   "_note": "Full-lifecycle honesty DEMO protocol. /honesty runs a single-dimension (correctness) review that opens the [ai-review] issue, then triage -> fix (honesty-demo-fix-agent) -> a 2-branch honesty fanout [testhash (Sub 1, dummy) || fixverify (Sub 2, deterministic fix-claim check)] -> join -> a merge whose conclude-honesty reduce hook ANDs the two verdicts; the engine posts one HONEST/NOT-honest comment + check-run. Dishonesty is induced by the poc:sabotage PR label -> aw_context.sabotage, which honesty-demo-fix-agent reads to emit a cosmetic non-fix that fixverify catches. Reuses review-correctness-agent/triage-agent/publish-review/conclude-triage/conclude-fix; the merge verdict host uses no LLM agent.",
   "triggers": [
-    { "on": "issue_comment", "comment_prefix": "/honesty", "command": "start" }
+    { "on": "issue_comment", "comment_prefix": "/honesty-review", "command": "start" }
   ],
   "states": [
     {
