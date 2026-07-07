@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
-"""Regression: a TOP `merge` state must read its fanout legs' evidence path-aware.
+"""Regression: the honesty `merge` verdict reads its two LINEAR sub-phases' evidence.
 
-Guards lib.run_merge_hook's top-merge input resolution. The code-review-honesty
-demo puts its 2-branch honesty fanout SECOND (after `review`); a leg persists to
-`honesty.<leg>.evidence.json`. The legacy top-merge resolver read `<leg>.evidence.json`
-(no fanout prefix, assuming the FIRST fanout), so it never found the legs and every
-run reported NOT-honest even when both legs passed. This test drives the real
-lib.run_merge_hook exactly as next.py does and asserts the AND-verdict is correct
-for the real Sub-1 shape: `cryptohash` carries fix evidence (`fixes[]` with
-`test_output` + a real sha256 `crypto-verification-hash`, recomputed by
-conclude-honesty via `_crypto` — never trusted as a self-claim) and `fixverify`
-carries the deterministic fix-claim check.
+Sub-1 (`cryptohash`) was a static fanout leg, but the engine does not deliver
+`inputs` to static fanout legs, so it never received the fix evidence. It is now a
+LINEAR phase: `fix -> cryptohash -> fixverify -> honesty-verdict(merge)`. The top
+merge reads `{from:cryptohash}` + `{from:fixverify}` — now LINEAR phases, resolved
+via resolve_inputs' phase case (not the branch-leg case). This test drives the real
+lib.run_merge_hook exactly as next.py does and asserts the AND-verdict for the real
+Sub-1 shape: `cryptohash` carries fix evidence (`fixes[]` with `test_output` + a real
+sha256 `crypto-verification-hash`, recomputed by conclude-honesty via `_crypto` —
+never trusted as a self-claim) and `fixverify` carries its {check,pass,reason}.
 """
 import hashlib, json, os, sys, shutil, tempfile
 
@@ -28,10 +27,10 @@ INST = "pr-1"
 
 
 def verdict(test_output, fixverify_pass):
-    """Persist the two honesty legs where the engine writes them, then run the
-    merge hook exactly as next.py does (consuming_path = the merge's node path).
+    """Persist the two honesty phases' evidence where the engine writes them, then
+    run the merge hook exactly as next.py does (consuming_path = the merge's node path).
 
-    cryptohash leg carries the real crypto shape: a `fixes[]` entry with
+    cryptohash phase carries the real crypto shape: a `fixes[]` entry with
     `test_output` and its real sha256 `crypto-verification-hash` (hashlib, not a
     fixture constant) — or `null` when `test_output` is empty, mirroring an
     unverifiable fix that conclude-honesty must catch."""
@@ -43,7 +42,7 @@ def verdict(test_output, fixverify_pass):
         fixverify_ev = {"check": "fixverify", "pass": fixverify_pass,
                          "reason": "present" if fixverify_pass else "bug remains"}
         for leg, ev in (("cryptohash", cryptohash_ev), ("fixverify", fixverify_ev)):
-            wp = lib.output_artifact_path(d, PID, INST, path=lib.state_path(proto, ["honesty", leg]))
+            wp = lib.output_artifact_path(d, PID, INST, path=lib.state_path(proto, [leg]))
             os.makedirs(os.path.dirname(wp), exist_ok=True)
             with open(wp, "w") as f:
                 json.dump(ev, f)
