@@ -1,7 +1,13 @@
 protocol: code-review-honesty
 instance: pr-172
-state: cryptohash
+state: done
 iteration: 1
 gates: {}
 head_sha: 6cce63577dac560020043e0ee2f1a836bae58db9
-history: []
+history:
+- iteration: 1
+  agent_run_id: '28902051818'
+  checks:
+    evidence-present: pass
+    crypto-hash-valid: pass
+  feedback: ''
