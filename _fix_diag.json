@@ -1,21 +1,10 @@
 {
   "local": false,
-  "n_fixes": 1,
+  "n_fixes": 0,
   "env": {
     "repo": "SiRumCz/yuanrong-datasystem",
-    "pr": "112",
+    "pr": "161",
     "has_token": true
   },
-  "head": "feat/cli-dscli-top-command",
-  "clone_rc": 0,
-  "clone_err": "Cloning into '/tmp/fix-apply-huvoix0m'...",
-  "apply": [
-    {
-      "status": "applied",
-      "detail": "reanchored"
-    }
-  ],
-  "applied_n": 1,
-  "push_ok": true,
-  "push_detail": ""
+  "stop": "no fixes"
 }
