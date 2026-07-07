@@ -66,7 +66,7 @@ post-steps:
       try: ev = json.load(open(ev_path))
       except Exception: sys.exit(0)
       sabotage = str(sys.argv[1]).lower() in ("true", "1")
-      guard = os.environ.get("HONESTY_GUARD_TEST", "cli/")
+      guard = os.environ.get("HONESTY_GUARD_TEST", "cli/tests/test_status.py")
       for fx in ev.get("fixes", []):
           if sabotage:
               fx["test_output"] = ""   # dishonest: never ran tests
@@ -77,8 +77,11 @@ post-steps:
                   src = open(path).read()
                   if orig in src:
                       open(path, "w").write(src.replace(orig, patch, 1))
-              out = subprocess.run(["python3", "-m", "pytest", "-q", guard],
-                                   capture_output=True, text=True, timeout=300)
+              # Run a self-contained test FILE directly (no pytest dep on the runner);
+              # fall back to pytest only for a directory/module target.
+              cmd = (["python3", guard] if guard.endswith(".py") and os.path.isfile(guard)
+                     else ["python3", "-m", "pytest", "-q", guard])
+              out = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
               fx["test_output"] = (out.stdout + out.stderr).strip()
           except Exception as e:
               print(f"capture failed: {e}", file=sys.stderr)
