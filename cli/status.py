@@ -59,7 +59,7 @@ def parse_worker_lines(output):
         pid_str, cmdline = parts
         if not pid_str.isdigit():
             continue
-        if _WORKER_ADDRESS_ARG not in cmdline:
+        if not _WORKER_BIN_RE.search(cmdline):
             continue
         match = _WORKER_ADDRESS_RE.search(cmdline)
         if not match:
