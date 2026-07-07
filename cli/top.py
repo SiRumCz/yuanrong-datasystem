@@ -101,7 +101,7 @@ class Command(BaseCommand):
         base = f"pgrep -fa -- '{_WORKER_ADDRESS_ARG}'"
         if filter_text:
             # Narrow the match to command lines containing the operator's text.
-            cmd = f"{base} | grep -- '{filter_text}'"
+            cmd = base + " | grep -- '" + filter_text.replace("'", "'\"'\"'") + "'"
         else:
             cmd = base
         try:
