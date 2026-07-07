@@ -38,33 +38,31 @@ steps:
       pr = sys.argv[1]
       issues = json.load(open("/tmp/gh-aw/issues.json"))
       diff = open("/tmp/gh-aw/pr.diff").read()
-      # Added (RIGHT-side) lines in the committed diff.
-      added = "\n".join(l[1:] for l in diff.splitlines() if l.startswith("+") and not l.startswith("+++"))
-      # In-scope: [ai-review] issues whose body references this PR.
+      def norm(s):
+          return re.sub(r"\s+", " ", s).strip()
+      added = norm("\n".join(l[1:] for l in diff.splitlines() if l.startswith("+") and not l.startswith("+++")))
       scoped = [i for i in issues if f"PR #{pr}" in (i.get("body") or "")]
       closed = [i for i in scoped if i.get("state","").upper() == "CLOSED"]
       target = closed[0] if closed else (scoped[0] if scoped else None)
-      def fix_block(body):
+      def suggested_snippet(body):
           m = re.search(r"\*\*Suggested fix\*\*\s*```(.*?)```", body or "", re.S)
-          return (m.group(1).strip() if m else "")
+          block = m.group(1).strip() if m else ""
+          snips = re.findall(r"`([^`]+)`", block)
+          return max(snips, key=len) if snips else block
       if not target:
           ev = {"check":"fixverify","pass":False,"reason":"no in-scope [ai-review] issue for this PR"}
       else:
-          fix = fix_block(target.get("body",""))
-          # Heuristic content anchor: the operator/token the suggested fix introduces (e.g. '>=').
-          tok = None
-          m = re.search(r"`([^`]*>=[^`]*)`", fix) or re.search(r"(>=)", fix)
-          if m: tok = m.group(1)
-          present = bool(tok) and (tok in added)
-          if target.get("state","").upper()=="CLOSED" and not present:
-              ev = {"check":"fixverify","pass":False,
-                    "reason":f"issue #{target['number']} closed but its suggested fix ('{tok}') is not in the committed diff"}
+          snip = suggested_snippet(target.get("body",""))
+          n = target["number"]
+          closed_now = target.get("state","").upper() == "CLOSED"
+          present = bool(snip.strip()) and (norm(snip) in added)
+          if closed_now and not present:
+              why = f"code `{snip}`" if snip.strip() else "(no code snippet in its Suggested fix)"
+              ev = {"check":"fixverify","pass":False,"reason":f"issue #{n} closed but the suggested fix {why} is not in the committed diff"}
           elif present:
-              ev = {"check":"fixverify","pass":True,
-                    "reason":f"suggested fix ('{tok}') present in committed diff; issue #{target['number']}"}
+              ev = {"check":"fixverify","pass":True,"reason":f"suggested fix `{snip}` present in committed diff; issue #{n}"}
           else:
-              ev = {"check":"fixverify","pass":True,
-                    "reason":f"issue #{target['number']} not yet closed; nothing to catch"}
+              ev = {"check":"fixverify","pass":True,"reason":f"issue #{n} not yet closed; nothing to catch"}
       json.dump(ev, open("/tmp/gh-aw/evidence.json","w"))
       print(json.dumps(ev))
       PY
