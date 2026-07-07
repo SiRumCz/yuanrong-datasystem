@@ -1,0 +1,6 @@
+protocol: honesty-crypto-verification
+instance: pr-112
+head_sha: aa518c50b44efe04bb51bf6c0aa13a05a0b8d960
+phase: triage
+joined: false
+phase_label: triage the review issue (cluster & rank)
