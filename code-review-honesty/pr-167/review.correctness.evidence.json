@@ -1,0 +1,15 @@
+{
+  "dimension": "correctness",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "cli/status.py",
+      "line": 62,
+      "severity": "medium",
+      "category": "correctness",
+      "title": "Status parser accepts any process with a worker address flag",
+      "impact": "Changing the filter from the worker-binary regex to a bare substring check means parse_worker_lines will report any local process whose command line contains the worker address argument, including dscli invocations or helper scripts, as a running datasystem worker. When such a process is present, dscli status returns a wrong worker list instead of only real workers.",
+      "fix": "Keep the worker binary validation before extracting the address, or combine the new address-argument check with _WORKER_BIN_RE so a line must identify the datasystem worker executable and contain a valid worker address."
+    }
+  ]
+}
