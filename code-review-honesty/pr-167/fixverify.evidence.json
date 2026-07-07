@@ -1,0 +1,1 @@
+{"check": "fixverify", "pass": true, "reason": "fix verified: Under the reported condition, a non-worker command line containing the worker address argument reaches this guard, fails _WORKER_BIN_RE.search(cmdline), and continues before address extraction, so it is not reported as a running worker. (issue #171)"}

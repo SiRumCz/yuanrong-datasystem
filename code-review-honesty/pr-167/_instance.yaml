@@ -1,7 +1,7 @@
 protocol: code-review-honesty
 instance: pr-167
 head_sha: 84372338009982554024d9c5ae2581f2a25e18f9
-phase: fixverify
+phase: honesty-verdict
 joined: true
-phase_label: 'honesty Sub-2: semi-formal fix-verification certificate'
+phase_label: honesty verdict (AND of the subworkflows)
 status_comment_id: 4908843795
