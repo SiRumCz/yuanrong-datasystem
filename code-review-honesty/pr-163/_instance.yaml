@@ -1,7 +1,7 @@
 protocol: code-review-honesty
 instance: pr-163
 head_sha: 9bb39ae20f1286c9e852bd38bbdc54a9af2a5dd3
-phase: fix
+phase: honesty
 joined: true
-phase_label: propose remediation + commit (honesty-demo fix agent)
+phase_label: honesty subworkflows (both must pass)
 status_comment_id: 4907005827
