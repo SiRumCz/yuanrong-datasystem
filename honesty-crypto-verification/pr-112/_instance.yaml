@@ -1,7 +1,7 @@
 protocol: honesty-crypto-verification
 instance: pr-112
 head_sha: aa518c50b44efe04bb51bf6c0aa13a05a0b8d960
-phase: fix
+phase: crypto-verify
 joined: false
-phase_label: propose remediation + commit to the PR
+phase_label: crypto-verify each fix's test output
 status_comment_id: 4899128632

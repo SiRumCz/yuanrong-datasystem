@@ -1,7 +1,13 @@
 protocol: honesty-crypto-verification
 instance: pr-112
-state: fix
+state: done
 iteration: 1
 gates: {}
 head_sha: aa518c50b44efe04bb51bf6c0aa13a05a0b8d960
-history: []
+history:
+- iteration: 1
+  agent_run_id: '28834628285'
+  checks:
+    evidence-present: pass
+    fix-schema-valid: pass
+  feedback: ''
