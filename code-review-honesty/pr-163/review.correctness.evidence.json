@@ -1,0 +1,15 @@
+{
+  "dimension": "correctness",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "cli/status.py",
+      "line": 63,
+      "severity": "medium",
+      "category": "correctness",
+      "title": "Status parsing now accepts non-worker processes with a worker address flag",
+      "impact": "Any process whose command line contains `-worker_address=` and a parseable address now passes this filter, even if it is not the datasystem worker binary. In that case `dscli status` can report unrelated helper, wrapper, or test processes as live workers and return a wrong cluster status.",
+      "fix": "Keep the worker-binary check, or replace it with an equivalent executable identity check while still extracting the worker address from the flag."
+    }
+  ]
+}
