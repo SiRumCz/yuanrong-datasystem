@@ -32,10 +32,7 @@ def _load_json(path):
 def _comment_body(verdicts):
     green = [v for v in verdicts if v["verified"]]
     red = [v for v in verdicts if not v["verified"]]
-    head = (
-        f"### 🔐 Crypto-verification of fixes\n"
-        f"{len(green)} verified · {len(red)} unverified · {len(verdicts)} total\n"
-    )
+    head = f"{len(green)} verified · {len(red)} unverified · {len(verdicts)} total"
     lines = [head]
     for v in verdicts:
         n, sid = v["index"], _crypto.short_id(v)
