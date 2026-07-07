@@ -1,7 +1,13 @@
 protocol: honesty-crypto-verification
 instance: pr-161
-state: crypto-verify
+state: done
 iteration: 1
 gates: {}
 head_sha: 49b03cc19dfd7fe30a91320bb82c1ede74341c55
-history: []
+history:
+- iteration: 1
+  agent_run_id: '28834012944'
+  checks:
+    evidence-present: pass
+    crypto-hash-valid: pass
+  feedback: ''

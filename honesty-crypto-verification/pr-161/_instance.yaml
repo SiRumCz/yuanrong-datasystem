@@ -3,5 +3,5 @@ instance: pr-161
 head_sha: 49b03cc19dfd7fe30a91320bb82c1ede74341c55
 phase: crypto-verify
 joined: false
-phase_label: crypto-verify each fix's test output
+phase_label: "\u2705 done"
 status_comment_id: 4898985906
