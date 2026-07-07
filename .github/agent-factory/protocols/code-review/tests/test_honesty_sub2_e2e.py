@@ -78,7 +78,7 @@ def merge_verdict(fixverify_ev, test_output):
         cryptohash_ev = {"fixes": [{"cluster_id": "c1", "test_output": test_output,
                                     "crypto-verification-hash": crypto_hash}]}
         for leg, ev in (("cryptohash", cryptohash_ev), ("fixverify", fixverify_ev)):
-            wp = lib.output_artifact_path(d, PID, INST, path=lib.state_path(proto, ["honesty", leg]))
+            wp = lib.output_artifact_path(d, PID, INST, path=lib.state_path(proto, [leg]))
             os.makedirs(os.path.dirname(wp), exist_ok=True)
             with open(wp, "w") as f:
                 json.dump(ev, f)
