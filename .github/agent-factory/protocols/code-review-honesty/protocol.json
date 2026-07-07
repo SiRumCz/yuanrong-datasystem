@@ -62,7 +62,7 @@
       "kind": "merge",
       "label": "honesty verdict (AND of the subworkflows)",
       "hook": "conclude-honesty",
-      "inputs": [ { "from_fanout": "honesty", "as": "legs" } ]
+      "inputs": [ { "from": "testhash", "as": "testhash" }, { "from": "fixverify", "as": "fixverify" } ]
     }
   ]
 }

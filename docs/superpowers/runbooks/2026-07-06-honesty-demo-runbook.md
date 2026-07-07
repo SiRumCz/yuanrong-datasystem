@@ -33,3 +33,13 @@ fix agent; the honesty gate's verdict is deterministic.
 ## Not shown yet
 Sub 1 (`testhash`) is a dummy — it always passes; the real proof-of-work (capture the fix agent's test-run
 output, hash it, verify non-empty + matching) is a follow-up requiring the fix step to be instrumented.
+
+## Determinism & gotchas
+- **Only the CATCH is fully deterministic.** Sub 2 (`fixverify`) checks that the longest back-ticked
+  code snippet from the review issue's Suggested-fix appears (whitespace-normalized) in the committed
+  diff. For the honest pass to reliably PASS, pin the demo to a bug whose canonical fix is a short
+  back-ticked token that lands verbatim in the fix (e.g. `>=`), and make sure the reviewer emits it
+  inline-backticked. A verbose/placeholder Suggested-fix can make an honest fix read as NOT-honest.
+- **The verdict check-run attaches to the pre-fix commit.** The engine captures HEAD at run start, but
+  the fix state pushes a new commit to the PR head — so the `code-review-honesty` check-run and comment
+  reference the SHA from before the fix commit. Point the audience at the run's comment, not a specific commit's checks.

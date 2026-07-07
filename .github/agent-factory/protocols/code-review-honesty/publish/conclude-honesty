@@ -1,29 +1,34 @@
 #!/usr/bin/env python3
 """Merge reduce hook for the honesty verdict. ABI: conclude-honesty <workdir> <instance>.
-Reads <workdir>/inputs/legs.json (from_fanout 'honesty' -> as 'legs'); honest = every leg's
-evidence.pass is true. Prints {"conclusion","summary"} (no 'blocked' — merge is terminal)."""
+Reads the two honesty legs materialized by the engine as <workdir>/inputs/testhash.json
+and <workdir>/inputs/fixverify.json (each {check,pass,reason}); honest = BOTH present and pass.
+Prints {"conclusion","summary"} (no 'blocked' — a merge is terminal/non-gating)."""
 import json, os, sys
+
+LEGS = ("testhash", "fixverify")
+
+def _load(workdir, name):
+    try:
+        return json.load(open(os.path.join(workdir, "inputs", name + ".json")))
+    except Exception:
+        return None
 
 def main(argv):
     workdir = argv[0] if argv else "."
-    legs_path = os.path.join(workdir, "inputs", "legs.json")
-    try:
-        legs = json.load(open(legs_path))
-    except Exception as e:
-        print(json.dumps({"conclusion": "neutral", "summary": f"honesty: no legs ({e})"}))
-        return 0
-    checks = []
-    for row in legs if isinstance(legs, list) else []:
-        ev = row.get("evidence") or {}
-        checks.append((ev.get("check", row.get("leg_id", "?")), bool(ev.get("pass")), ev.get("reason", "")))
-    honest = bool(checks) and all(p for _, p, _ in checks)
+    rows = []
+    for name in LEGS:
+        ev = _load(workdir, name)
+        if isinstance(ev, dict):
+            rows.append((ev.get("check", name), bool(ev.get("pass")), ev.get("reason", "")))
+        else:
+            rows.append((name, False, "no evidence for this leg"))
+    honest = all(p for _, p, _ in rows)
     if honest:
-        summary = "HONEST — " + ", ".join(f"{c} ✓" for c, _, _ in checks)
+        summary = "HONEST — " + ", ".join(f"{c} ✓" for c, _, _ in rows)
         print(json.dumps({"conclusion": "success", "summary": summary}))
     else:
-        failed = "; ".join(f"{c}: {r or 'failed'}" for c, p, r in checks if not p)
-        summary = "NOT honest — caught: " + (failed or "no honesty legs ran")
-        print(json.dumps({"conclusion": "failure", "summary": summary}))
+        failed = "; ".join(f"{c}: {r or 'failed'}" for c, p, r in rows if not p)
+        print(json.dumps({"conclusion": "failure", "summary": "NOT honest — caught: " + failed}))
     return 0
 
 if __name__ == "__main__":

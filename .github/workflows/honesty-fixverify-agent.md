@@ -42,8 +42,10 @@ steps:
           return re.sub(r"\s+", " ", s).strip()
       added = norm("\n".join(l[1:] for l in diff.splitlines() if l.startswith("+") and not l.startswith("+++")))
       scoped = [i for i in issues if f"PR #{pr}" in (i.get("body") or "")]
-      closed = [i for i in scoped if i.get("state","").upper() == "CLOSED"]
-      target = closed[0] if closed else (scoped[0] if scoped else None)
+      _key = lambda i: i.get("number", 0)
+      closed = sorted([i for i in scoped if i.get("state","").upper() == "CLOSED"], key=_key, reverse=True)
+      scoped_sorted = sorted(scoped, key=_key, reverse=True)
+      target = closed[0] if closed else (scoped_sorted[0] if scoped_sorted else None)
       def suggested_snippet(body):
           m = re.search(r"\*\*Suggested fix\*\*\s*```(.*?)```", body or "", re.S)
           block = m.group(1).strip() if m else ""
