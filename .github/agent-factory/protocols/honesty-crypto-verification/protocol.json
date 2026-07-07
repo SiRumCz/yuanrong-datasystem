@@ -1,0 +1,106 @@
+{
+  "$schema": "../../engine/protocol.schema.json",
+  "name": "honesty-crypto-verification",
+  "version": "0.1.0",
+  "min_engine_version": "1.0.0",
+  "max_depth": 6,
+  "_note": "Factory self-honesty loop (audit -> correct), forked from code-review-fix. Triggered by /honesty on a PR comment (run keyed pr-<N>). The triage agent (honesty-triage-agent) audits whether the factory's prior fix loop honestly resolved the [ai-review] issues it CLOSED on this PR, comparing each closed issue's suggested fix against the committed diff, and surfaces the single clearest dishonest closure as one cluster. The fix agent (honesty-fix-agent) proposes the genuine correction; conclude-fix commits it to the PR head and resolves the matching issue by title. A crypto-verify phase (honesty-crypto-verification-agent) then runs after fix: per fix it reads any `test_output`, computes a real sha256 of it (via the sha256sum binary) and appends it as `crypto-verification-hash` (null when there is no/empty test_output); the deterministic crypto-hash-valid check re-verifies every hash with hashlib (gating a fabricated hash), and conclude-crypto-verify posts one green/red PR comment marking each fix verified or 'not tested / not honest'. Reuses code-review-fix's schemas/checks/conclude-* verbatim; new files are the two renamed agents plus the crypto-verify agent/schema/check/hook. code-review-fix is untouched.",
+  "triggers": [
+    {
+      "on": "issue_comment",
+      "comment_prefix": "/honesty-cv",
+      "command": "start"
+    }
+  ],
+  "states": [
+    {
+      "id": "triage",
+      "kind": "agent",
+      "label": "triage the review issue (cluster & rank)",
+      "workflow": "honesty-triage-agent",
+      "evidence": "triage.evidence.schema.json",
+      "max_iterations": 2,
+      "params": {
+        "require": [
+          "clusters",
+          "summary"
+        ]
+      },
+      "checks": [
+        {
+          "run": "evidence-present",
+          "on_fail": "iterate"
+        },
+        {
+          "run": "triage-schema-valid",
+          "on_fail": "iterate"
+        }
+      ],
+      "conclude": "conclude-triage",
+      "next": "fix"
+    },
+    {
+      "id": "fix",
+      "kind": "agent",
+      "label": "propose remediation + commit to the PR",
+      "workflow": "honesty-fix-agent",
+      "evidence": "fix.evidence.schema.json",
+      "max_iterations": 2,
+      "inputs": [
+        {
+          "from": "triage",
+          "as": "triage"
+        }
+      ],
+      "params": {
+        "require": [
+          "fixes",
+          "mode"
+        ]
+      },
+      "checks": [
+        {
+          "run": "evidence-present",
+          "on_fail": "iterate"
+        },
+        {
+          "run": "fix-schema-valid",
+          "on_fail": "iterate"
+        }
+      ],
+      "conclude": "conclude-fix",
+      "next": "crypto-verify"
+    },
+    {
+      "id": "crypto-verify",
+      "kind": "agent",
+      "label": "crypto-verify each fix's test output",
+      "workflow": "honesty-crypto-verification-agent",
+      "evidence": "crypto-verification.evidence.schema.json",
+      "max_iterations": 2,
+      "inputs": [
+        {
+          "from": "fix",
+          "as": "fix"
+        }
+      ],
+      "params": {
+        "require": [
+          "fixes"
+        ]
+      },
+      "checks": [
+        {
+          "run": "evidence-present",
+          "on_fail": "iterate"
+        },
+        {
+          "run": "crypto-hash-valid",
+          "on_fail": "iterate"
+        }
+      ],
+      "conclude": "conclude-crypto-verify",
+      "next": "done"
+    }
+  ]
+}
