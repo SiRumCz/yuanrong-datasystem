@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "honesty subworkflow check evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["check", "pass", "reason"],
+  "properties": {
+    "check": { "type": "string", "enum": ["testhash", "fixverify"] },
+    "pass": { "type": "boolean" },
+    "reason": { "type": "string" },
+    "test_output_hash": { "type": "string" }
+  }
+}
