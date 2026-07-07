@@ -3,5 +3,5 @@ instance: pr-172
 head_sha: 15fd6bfb20ac3ba84c16609ffb49cf51d04cf492
 phase: honesty-verdict
 joined: true
-phase_label: honesty verdict (AND of the subworkflows)
+phase_label: "\u2705 done"
 status_comment_id: 4909365149
