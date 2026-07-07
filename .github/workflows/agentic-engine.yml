@@ -485,8 +485,18 @@ jobs:
           # commenting/labeling), which is NOT a resolvable pull request — `gh pr diff`
           # on it fails ("Could not resolve to a PullRequest").
           if [ "$IS_PR_RUN" = "true" ]; then
-            gh pr diff "$PR" --repo "${{ github.repository }}" > /tmp/diff.txt
-            gh pr diff "$PR" --repo "${{ github.repository }}" --name-only > /tmp/files.txt
+            # Retry: `gh pr diff` can hit a transient 404/5xx on a valid PR (observed
+            # stalling a live honesty run); a single failure here breaks the advance.
+            ok=""
+            for i in 1 2 3 4 5; do
+              if gh pr diff "$PR" --repo "${{ github.repository }}" > /tmp/diff.txt \
+                 && gh pr diff "$PR" --repo "${{ github.repository }}" --name-only > /tmp/files.txt; then
+                ok=1; break
+              fi
+              echo "::warning::gh pr diff attempt $i for PR $PR failed (transient?); retrying in 3s"
+              sleep 3
+            done
+            [ -n "$ok" ] || { echo "::error::gh pr diff failed after retries for PR $PR"; exit 1; }
           else
             : > /tmp/diff.txt
             : > /tmp/files.txt
