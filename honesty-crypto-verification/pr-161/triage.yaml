@@ -1,7 +1,13 @@
 protocol: honesty-crypto-verification
 instance: pr-161
-state: triage
+state: done
 iteration: 1
 gates: {}
 head_sha: 49b03cc19dfd7fe30a91320bb82c1ede74341c55
-history: []
+history:
+- iteration: 1
+  agent_run_id: '28833592039'
+  checks:
+    evidence-present: pass
+    triage-schema-valid: pass
+  feedback: ''

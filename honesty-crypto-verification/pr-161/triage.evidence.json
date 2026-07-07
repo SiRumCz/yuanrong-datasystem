@@ -1,0 +1,11 @@
+{
+  "clusters": [],
+  "summary": {
+    "present": [],
+    "missing": ["correctness", "test", "performance", "security", "maintainability"],
+    "clusters": 0,
+    "total_findings": 0,
+    "by_severity": {},
+    "by_dimension": {}
+  }
+}

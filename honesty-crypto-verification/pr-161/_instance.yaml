@@ -1,7 +1,7 @@
 protocol: honesty-crypto-verification
 instance: pr-161
 head_sha: 49b03cc19dfd7fe30a91320bb82c1ede74341c55
-phase: triage
+phase: fix
 joined: false
-phase_label: triage the review issue (cluster & rank)
+phase_label: propose remediation + commit to the PR
 status_comment_id: 4898985906
