@@ -3,16 +3,16 @@
   "n_fixes": 1,
   "env": {
     "repo": "SiRumCz/yuanrong-datasystem",
-    "pr": "167",
+    "pr": "172",
     "has_token": true
   },
-  "head": "demo/honesty-run2",
+  "head": "feat/dscli-status",
   "clone_rc": 0,
-  "clone_err": "Cloning into '/tmp/fix-apply-uap6ns7u'...",
+  "clone_err": "Cloning into '/tmp/fix-apply-s0dqh6hg'...",
   "apply": [
     {
       "status": "applied",
-      "detail": ""
+      "detail": "reanchored"
     }
   ],
   "applied_n": 1,

@@ -1,7 +1,7 @@
 protocol: code-review-honesty
 instance: pr-172
 head_sha: 15fd6bfb20ac3ba84c16609ffb49cf51d04cf492
-phase: fix
+phase: cryptohash
 joined: true
-phase_label: propose remediation + commit (honesty-demo fix agent)
+phase_label: "honesty Sub-1: crypto test-output hash (linear \u2014 consumes fix evidence)"
 status_comment_id: 4909365149
