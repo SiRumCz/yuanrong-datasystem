@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-07
 **Branch:** `feat/honesty-protocol` (extends the v2 demo protocol / PR #161)
-**Status:** design for review
+**Status:** implemented (2026-07-07) — cryptohash Sub-1 landed on `feat/honesty-protocol` (PR #161)
 **Builds on:** `2026-07-06-honesty-demo-protocol-design.md` (the v2 fanout→merge demo)
 
 ## Context / why

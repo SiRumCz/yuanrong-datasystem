@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-06
 **Branch:** `feat/honesty-protocol` (reworks the existing `code-review-honesty/` dir)
-**Status:** design for review
+**Status:** implemented (2026-07-07) — landed on `feat/honesty-protocol` (PR #161)
 **Supersedes:** `2026-07-06-honesty-protocol-design.md` (the #161 "fork the fix loop" design) *for the demo direction*. #161 stays parked; this v2 reworks `code-review-honesty/` into a verification-gate protocol.
 
 ## Context / why

@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-07
 **Branch:** `feat/honesty-protocol` (stacks on the crypto Sub-1 rework @ `4b8cefe6`, PR #161)
-**Status:** design for review — **BLOCKED on Sub-1/merge-hook owner sign-off** (see *Coordination gate*)
+**Status:** implemented (2026-07-07) — Sub-1/merge-hook owner signed off (other session hands-off); landed on `feat/honesty-protocol` (PR #161). See `code-review-honesty/checks/_fixcert.py` + `honesty-fixverify-agent.md`; tests `code-review/tests/test_fixcert.py` + `test_honesty_sub2_e2e.py`.
 **Builds on:** `2026-07-07-honesty-real-sub1-design.md` (real crypto Sub-1), `2026-07-06-honesty-demo-protocol-design.md` (fanout→merge)
 **Paper:** *Agentic Code Reasoning* (Ugare & Chandra, Meta — arXiv 2603.01896). Core idea: replace free-form
 chain-of-thought verification with a fill-in **certificate template** (definitions → premises → per-case
