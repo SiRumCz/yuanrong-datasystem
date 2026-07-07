@@ -1705,10 +1705,14 @@ def run_merge_hook(dir_, pid, instance, proto_path, merge_state, consuming_path=
     fo = _fanout_state(proto)
     phase = fo["id"] if (fo and is_multiphase(proto)) else None
     merge_inputs = merge_state.get("inputs", [])
-    # A nested merge (its tree path has more than one element) resolves inputs
-    # relative to its own scope; a top merge (None or length 1) stays legacy.
+    # A nested merge (its tree path has more than one element) resolves its
+    # from_fanout relative to its own scope; `nested` still gates that below.
     nested = bool(consuming_path) and len(consuming_path) > 1
-    cp_for_inputs = consuming_path if nested else None
+    # Resolve plain `from` inputs PATH-AWARE whenever the merge's node path is known
+    # (top merge included), mirroring run_conclude_hook — so a merge can read a leg of
+    # ANY fanout, not just the first. Byte-identical to legacy for a first-fanout
+    # branch. (No protocol used a top merge before, so this only affects new users.)
+    cp_for_inputs = consuming_path
     # from_fanout inputs have no `from` key — resolve_inputs only understands
     # `from`, so keep them out of that call and handle them in the loop below.
     plain_inputs = [inp for inp in merge_inputs if "from" in inp]
