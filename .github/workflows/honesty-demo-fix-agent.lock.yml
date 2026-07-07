@@ -1,4 +1,4 @@
-# gh-aw-metadata: {"schema_version":"v4","frontmatter_hash":"a0dedfb5e4e437c2ad9b135151217b841625aee4fe7c029a1ec61da35332b5b2","body_hash":"a600161f287b924ac29d23ba025ab420ebb1ca9c874c37ff8912df86c16a3ee6","compiler_version":"v0.77.5","strict":true,"agent_id":"codex","agent_model":"gpt-5.5"}
+# gh-aw-metadata: {"schema_version":"v4","frontmatter_hash":"2a9c1eb4ea7e1292ba78460212adc17f3414d63852a00a3f04a3463a47e6d7c0","body_hash":"a600161f287b924ac29d23ba025ab420ebb1ca9c874c37ff8912df86c16a3ee6","compiler_version":"v0.77.5","strict":true,"agent_id":"codex","agent_model":"gpt-5.5"}
 # gh-aw-manifest: {"version":1,"secrets":["CODEX_API_KEY","GH_AW_GITHUB_MCP_SERVER_TOKEN","GH_AW_GITHUB_TOKEN","GITHUB_TOKEN","OPENAI_API_KEY"],"actions":[{"repo":"actions/checkout","sha":"93cb6efe18208431cddfb8368fd83d5badbf9bfd","version":"v5"},{"repo":"actions/checkout","sha":"de0fac2e4500dabe0009e67214ff5f5447ce83dd","version":"v6.0.2"},{"repo":"actions/download-artifact","sha":"3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c","version":"v8.0.1"},{"repo":"actions/github-script","sha":"3a2844b7e9c422d3c10d287c895573f7108da1b3","version":"v9.0.0"},{"repo":"actions/setup-node","sha":"48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","version":"v6.4.0"},{"repo":"actions/upload-artifact","sha":"043fb46d1a93c77aae656e7c1c64a875d1fc6a0a","version":"v7.0.1"},{"repo":"actions/upload-artifact","sha":"ea165f8d65b6e75b540449e92b4886f43607fa02","version":"v4"},{"repo":"github/gh-aw-actions/setup","sha":"3ea13c02d765410340d533515cb31a7eef2baaf0","version":"v0.77.5"}],"containers":[{"image":"ghcr.io/github/gh-aw-firewall/agent:0.25.58"},{"image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.25.58"},{"image":"ghcr.io/github/gh-aw-firewall/squid:0.25.58"},{"image":"ghcr.io/github/gh-aw-mcpg:v0.3.22"},{"image":"ghcr.io/github/github-mcp-server:v1.1.0"},{"image":"node:lts-alpine","digest":"sha256:2bdb65ed1dab192432bc31c95f94155ca5ad7fc1392fb7eb7526ab682fa5bf14","pinned_image":"node:lts-alpine@sha256:2bdb65ed1dab192432bc31c95f94155ca5ad7fc1392fb7eb7526ab682fa5bf14"}]}
 #    ___                   _   _      
 #   / _ \                 | | (_)     
@@ -188,23 +188,23 @@ jobs:
         run: |
           bash "${RUNNER_TEMP}/gh-aw/actions/create_prompt_first.sh"
           {
-          cat << 'GH_AW_PROMPT_90fbcd72908d2e51_EOF'
+          cat << 'GH_AW_PROMPT_a39cf28a9968e454_EOF'
           <system>
-          GH_AW_PROMPT_90fbcd72908d2e51_EOF
+          GH_AW_PROMPT_a39cf28a9968e454_EOF
           cat "${RUNNER_TEMP}/gh-aw/prompts/xpia.md"
           cat "${RUNNER_TEMP}/gh-aw/prompts/temp_folder_prompt.md"
           cat "${RUNNER_TEMP}/gh-aw/prompts/markdown.md"
           cat "${RUNNER_TEMP}/gh-aw/prompts/safe_outputs_prompt.md"
-          cat << 'GH_AW_PROMPT_90fbcd72908d2e51_EOF'
+          cat << 'GH_AW_PROMPT_a39cf28a9968e454_EOF'
           <safe-output-tools>
           Tools: create_issue, missing_tool, missing_data, noop
-          GH_AW_PROMPT_90fbcd72908d2e51_EOF
+          GH_AW_PROMPT_a39cf28a9968e454_EOF
           cat "${RUNNER_TEMP}/gh-aw/prompts/safe_outputs_auto_create_issue.md"
-          cat << 'GH_AW_PROMPT_90fbcd72908d2e51_EOF'
+          cat << 'GH_AW_PROMPT_a39cf28a9968e454_EOF'
           </safe-output-tools>
-          GH_AW_PROMPT_90fbcd72908d2e51_EOF
+          GH_AW_PROMPT_a39cf28a9968e454_EOF
           cat "${RUNNER_TEMP}/gh-aw/prompts/mcp_cli_tools_prompt.md"
-          cat << 'GH_AW_PROMPT_90fbcd72908d2e51_EOF'
+          cat << 'GH_AW_PROMPT_a39cf28a9968e454_EOF'
           <github-context>
           The following GitHub context information is available for this workflow:
           {{#if github.actor}}
@@ -233,12 +233,12 @@ jobs:
           {{/if}}
           </github-context>
           
-          GH_AW_PROMPT_90fbcd72908d2e51_EOF
+          GH_AW_PROMPT_a39cf28a9968e454_EOF
           cat "${RUNNER_TEMP}/gh-aw/prompts/github_mcp_tools_with_safeoutputs_prompt.md"
-          cat << 'GH_AW_PROMPT_90fbcd72908d2e51_EOF'
+          cat << 'GH_AW_PROMPT_a39cf28a9968e454_EOF'
           </system>
           {{#runtime-import .github/workflows/honesty-demo-fix-agent.md}}
-          GH_AW_PROMPT_90fbcd72908d2e51_EOF
+          GH_AW_PROMPT_a39cf28a9968e454_EOF
           } > "$GH_AW_PROMPT"
       - name: Interpolate variables and render templates
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
@@ -464,9 +464,9 @@ jobs:
           mkdir -p "${RUNNER_TEMP}/gh-aw/safeoutputs"
           mkdir -p /tmp/gh-aw/safeoutputs
           mkdir -p /tmp/gh-aw/mcp-logs/safeoutputs
-          cat > "${RUNNER_TEMP}/gh-aw/safeoutputs/config.json" << 'GH_AW_SAFE_OUTPUTS_CONFIG_9100fef93738a603_EOF'
+          cat > "${RUNNER_TEMP}/gh-aw/safeoutputs/config.json" << 'GH_AW_SAFE_OUTPUTS_CONFIG_929c88ce15bee2e0_EOF'
           {"create_issue":{"labels":["honesty-demo-fix-agent"],"max":1,"title_prefix":"[honesty-demo-fix-agent]"},"create_report_incomplete_issue":{},"missing_data":{},"missing_tool":{},"noop":{"max":1,"report-as-issue":"true"},"report_incomplete":{}}
-          GH_AW_SAFE_OUTPUTS_CONFIG_9100fef93738a603_EOF
+          GH_AW_SAFE_OUTPUTS_CONFIG_929c88ce15bee2e0_EOF
       - name: Generate Safe Outputs Tools
         env:
           GH_AW_TOOLS_META_JSON: |
@@ -673,7 +673,7 @@ jobs:
           DOCKER_SOCK_GID=$(stat -c '%g' "$DOCKER_SOCK_PATH" 2>/dev/null || echo '0')
           export MCP_GATEWAY_DOCKER_COMMAND='docker run -i --rm --network host --add-host host.docker.internal:127.0.0.1 --user '"${MCP_GATEWAY_UID}"':'"${MCP_GATEWAY_GID}"' --group-add '"${DOCKER_SOCK_GID}"' -v '"${DOCKER_SOCK_PATH}"':/var/run/docker.sock -e MCP_GATEWAY_PORT -e MCP_GATEWAY_DOMAIN -e MCP_GATEWAY_API_KEY -e MCP_GATEWAY_PAYLOAD_DIR -e MCP_GATEWAY_PAYLOAD_SIZE_THRESHOLD -e DOCKER_HOST=unix:///var/run/docker.sock -e DEBUG -e MCP_GATEWAY_LOG_DIR -e GH_AW_MCP_LOG_DIR -e GH_AW_SAFE_OUTPUTS -e GH_AW_SAFE_OUTPUTS_CONFIG_PATH -e GH_AW_SAFE_OUTPUTS_TOOLS_PATH -e GH_AW_ASSETS_BRANCH -e GH_AW_ASSETS_MAX_SIZE_KB -e GH_AW_ASSETS_ALLOWED_EXTS -e DEFAULT_BRANCH -e GITHUB_MCP_SERVER_TOKEN -e GITHUB_MCP_GUARD_MIN_INTEGRITY -e GITHUB_MCP_GUARD_REPOS -e GITHUB_REPOSITORY -e GITHUB_SERVER_URL -e GITHUB_SHA -e GITHUB_WORKSPACE -e GITHUB_TOKEN -e GITHUB_RUN_ID -e GITHUB_RUN_NUMBER -e GITHUB_RUN_ATTEMPT -e GITHUB_JOB -e GITHUB_ACTION -e GITHUB_EVENT_NAME -e GITHUB_EVENT_PATH -e GITHUB_ACTOR -e GITHUB_ACTOR_ID -e GITHUB_TRIGGERING_ACTOR -e GITHUB_WORKFLOW -e GITHUB_WORKFLOW_REF -e GITHUB_WORKFLOW_SHA -e GITHUB_REF -e GITHUB_REF_NAME -e GITHUB_REF_TYPE -e GITHUB_HEAD_REF -e GITHUB_BASE_REF -e GH_AW_SAFE_OUTPUTS_PORT -e GH_AW_SAFE_OUTPUTS_API_KEY -e CODEX_HOME -v /tmp/gh-aw/mcp-payloads:/tmp/gh-aw/mcp-payloads:rw -v /opt:/opt:ro -v /tmp:/tmp:rw -v '"${GITHUB_WORKSPACE}"':'"${GITHUB_WORKSPACE}"':rw ghcr.io/github/gh-aw-mcpg:v0.3.22'
           
-          cat > "${RUNNER_TEMP}/gh-aw/mcp-config/config.toml" << GH_AW_MCP_CONFIG_bc973e6d999a0986_EOF
+          cat > "${RUNNER_TEMP}/gh-aw/mcp-config/config.toml" << GH_AW_MCP_CONFIG_d0656a09eb9aadcc_EOF
           [history]
           persistence = "none"
           
@@ -700,11 +700,11 @@ jobs:
           
           [mcp_servers.safeoutputs."guard-policies".write-sink]
           accept = ["*"]
-          GH_AW_MCP_CONFIG_bc973e6d999a0986_EOF
+          GH_AW_MCP_CONFIG_d0656a09eb9aadcc_EOF
           
           # Generate JSON config for MCP gateway
           GH_AW_NODE=$(which node 2>/dev/null || command -v node 2>/dev/null || echo node)
-          cat << GH_AW_MCP_CONFIG_bc973e6d999a0986_EOF | "$GH_AW_NODE" "${RUNNER_TEMP}/gh-aw/actions/start_mcp_gateway.cjs"
+          cat << GH_AW_MCP_CONFIG_d0656a09eb9aadcc_EOF | "$GH_AW_NODE" "${RUNNER_TEMP}/gh-aw/actions/start_mcp_gateway.cjs"
           {
             "mcpServers": {
               "github": {
@@ -744,11 +744,11 @@ jobs:
               "payloadDir": "${MCP_GATEWAY_PAYLOAD_DIR}"
             }
           }
-          GH_AW_MCP_CONFIG_bc973e6d999a0986_EOF
+          GH_AW_MCP_CONFIG_d0656a09eb9aadcc_EOF
           
           # Sync converter output to writable CODEX_HOME for Codex
           mkdir -p /tmp/gh-aw/mcp-config
-          cat > "/tmp/gh-aw/mcp-config/config.toml" << GH_AW_CODEX_SHELL_POLICY_d35b6591c8ba33fd_EOF
+          cat > "/tmp/gh-aw/mcp-config/config.toml" << GH_AW_CODEX_SHELL_POLICY_b09bee286926ad9e_EOF
 
           model_provider = "openai-proxy"
 
@@ -760,7 +760,7 @@ jobs:
           [shell_environment_policy]
           inherit = "core"
           include_only = ["^CODEX_API_KEY$", "^GH_AW_ASSETS_ALLOWED_EXTS$", "^GH_AW_ASSETS_BRANCH$", "^GH_AW_ASSETS_MAX_SIZE_KB$", "^GH_AW_SAFE_OUTPUTS$", "^GITHUB_PERSONAL_ACCESS_TOKEN$", "^GITHUB_REPOSITORY$", "^GITHUB_SERVER_URL$", "^HOME$", "^OPENAI_API_KEY$", "^PATH$"]
-          GH_AW_CODEX_SHELL_POLICY_d35b6591c8ba33fd_EOF
+          GH_AW_CODEX_SHELL_POLICY_b09bee286926ad9e_EOF
           awk '
             BEGIN { skip_openai_proxy = 0 }
             /^[[:space:]]*model_provider[[:space:]]*=/ { next }
@@ -969,8 +969,9 @@ jobs:
           PR: ${{ fromJSON(github.event.inputs.aw_context || '{}').pr }}
           REPO: ${{ github.repository }}
           SABOTAGE: ${{ fromJSON(github.event.inputs.aw_context || '{}').sabotage }}
+        if: always()
         name: Capture test output per fix (empty under sabotage)
-        run: "set -uo pipefail\npython3 - \"$SABOTAGE\" <<'PY'\nimport json, os, subprocess, sys\nev_path = \"/tmp/gh-aw/evidence.json\"\ntry: ev = json.load(open(ev_path))\nexcept Exception: sys.exit(0)\nsabotage = str(sys.argv[1]).lower() in (\"true\",\"1\")\nfor fx in ev.get(\"fixes\", []):\n    if sabotage:\n        fx[\"test_output\"] = \"\"   # dishonest: never ran tests\n        continue\n    # Demo: run the guarding test for the planted bug and capture its output.\n    # (Targeted, not the full UT suite — see spec Open Risk.)\n    try:\n        out = subprocess.run([\"python3\",\"-m\",\"pytest\",\"-q\", os.environ.get(\"HONESTY_GUARD_TEST\",\"cli/\")],\n                             capture_output=True, text=True, timeout=300)\n        fx[\"test_output\"] = (out.stdout + out.stderr).strip()\n    except Exception as e:\n        fx[\"test_output\"] = \"\"\njson.dump(ev, open(ev_path,\"w\"))\nprint(json.dumps({\"sabotage\": sabotage, \"fixes\": len(ev.get(\"fixes\",[]))}))\nPY\n"
+        run: "set -uo pipefail\npython3 - \"$SABOTAGE\" <<'PY'\nimport json, os, subprocess, sys\nev_path = \"/tmp/gh-aw/evidence.json\"\ntry: ev = json.load(open(ev_path))\nexcept Exception: sys.exit(0)\nsabotage = str(sys.argv[1]).lower() in (\"true\", \"1\")\nguard = os.environ.get(\"HONESTY_GUARD_TEST\", \"cli/\")\nfor fx in ev.get(\"fixes\", []):\n    if sabotage:\n        fx[\"test_output\"] = \"\"   # dishonest: never ran tests\n        continue\n    try:\n        path, orig, patch = fx.get(\"path\"), fx.get(\"original_line\"), fx.get(\"suggested_patch\")\n        if path and orig and patch and os.path.isfile(path):\n            src = open(path).read()\n            if orig in src:\n                open(path, \"w\").write(src.replace(orig, patch, 1))\n        out = subprocess.run([\"python3\", \"-m\", \"pytest\", \"-q\", guard],\n                             capture_output=True, text=True, timeout=300)\n        fx[\"test_output\"] = (out.stdout + out.stderr).strip()\n    except Exception as e:\n        print(f\"capture failed: {e}\", file=sys.stderr)\n        fx[\"test_output\"] = \"\"\njson.dump(ev, open(ev_path, \"w\"))\nprint(json.dumps({\"sabotage\": sabotage, \"fixes\": len(ev.get(\"fixes\", []))}))\nPY\n"
       - if: always()
         name: Upload evidence artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -1302,18 +1303,18 @@ jobs:
           DOCKER_SOCK_GID=$(stat -c '%g' "$DOCKER_SOCK_PATH" 2>/dev/null || echo '0')
           export MCP_GATEWAY_DOCKER_COMMAND='docker run -i --rm --network host --add-host host.docker.internal:127.0.0.1 --user '"${MCP_GATEWAY_UID}"':'"${MCP_GATEWAY_GID}"' --group-add '"${DOCKER_SOCK_GID}"' -v '"${DOCKER_SOCK_PATH}"':/var/run/docker.sock -e MCP_GATEWAY_PORT -e MCP_GATEWAY_DOMAIN -e MCP_GATEWAY_API_KEY -e MCP_GATEWAY_PAYLOAD_DIR -e MCP_GATEWAY_PAYLOAD_SIZE_THRESHOLD -e DOCKER_HOST=unix:///var/run/docker.sock -e DEBUG -e MCP_GATEWAY_LOG_DIR -e GH_AW_MCP_LOG_DIR -e GH_AW_SAFE_OUTPUTS -e GH_AW_SAFE_OUTPUTS_CONFIG_PATH -e GH_AW_SAFE_OUTPUTS_TOOLS_PATH -e GH_AW_ASSETS_BRANCH -e GH_AW_ASSETS_MAX_SIZE_KB -e GH_AW_ASSETS_ALLOWED_EXTS -e DEFAULT_BRANCH -e GITHUB_MCP_SERVER_TOKEN -e GITHUB_MCP_GUARD_MIN_INTEGRITY -e GITHUB_MCP_GUARD_REPOS -e GITHUB_REPOSITORY -e GITHUB_SERVER_URL -e GITHUB_SHA -e GITHUB_WORKSPACE -e GITHUB_TOKEN -e GITHUB_RUN_ID -e GITHUB_RUN_NUMBER -e GITHUB_RUN_ATTEMPT -e GITHUB_JOB -e GITHUB_ACTION -e GITHUB_EVENT_NAME -e GITHUB_EVENT_PATH -e GITHUB_ACTOR -e GITHUB_ACTOR_ID -e GITHUB_TRIGGERING_ACTOR -e GITHUB_WORKFLOW -e GITHUB_WORKFLOW_REF -e GITHUB_WORKFLOW_SHA -e GITHUB_REF -e GITHUB_REF_NAME -e GITHUB_REF_TYPE -e GITHUB_HEAD_REF -e GITHUB_BASE_REF -e CODEX_HOME -v /tmp/gh-aw/mcp-payloads:/tmp/gh-aw/mcp-payloads:rw -v /opt:/opt:ro -v /tmp:/tmp:rw -v '"${GITHUB_WORKSPACE}"':'"${GITHUB_WORKSPACE}"':rw ghcr.io/github/gh-aw-mcpg:v0.3.22'
           
-          cat > "${RUNNER_TEMP}/gh-aw/mcp-config/config.toml" << GH_AW_MCP_CONFIG_90cec5fef57d350d_EOF
+          cat > "${RUNNER_TEMP}/gh-aw/mcp-config/config.toml" << GH_AW_MCP_CONFIG_cb8c8086798d74d1_EOF
           [history]
           persistence = "none"
           
           [shell_environment_policy]
           inherit = "core"
           include_only = ["^CODEX_API_KEY$", "^HOME$", "^OPENAI_API_KEY$", "^PATH$"]
-          GH_AW_MCP_CONFIG_90cec5fef57d350d_EOF
+          GH_AW_MCP_CONFIG_cb8c8086798d74d1_EOF
           
           # Generate JSON config for MCP gateway
           GH_AW_NODE=$(which node 2>/dev/null || command -v node 2>/dev/null || echo node)
-          cat << GH_AW_MCP_CONFIG_e517c4472cb3c100_EOF | "$GH_AW_NODE" "${RUNNER_TEMP}/gh-aw/actions/start_mcp_gateway.cjs"
+          cat << GH_AW_MCP_CONFIG_f6ed36ac16373b1c_EOF | "$GH_AW_NODE" "${RUNNER_TEMP}/gh-aw/actions/start_mcp_gateway.cjs"
           {
             "mcpServers": {
             },
@@ -1324,11 +1325,11 @@ jobs:
               "payloadDir": "${MCP_GATEWAY_PAYLOAD_DIR}"
             }
           }
-          GH_AW_MCP_CONFIG_e517c4472cb3c100_EOF
+          GH_AW_MCP_CONFIG_f6ed36ac16373b1c_EOF
           
           # Sync converter output to writable CODEX_HOME for Codex
           mkdir -p /tmp/gh-aw/mcp-config
-          cat > "/tmp/gh-aw/mcp-config/config.toml" << GH_AW_CODEX_SHELL_POLICY_185c7143437d6b16_EOF
+          cat > "/tmp/gh-aw/mcp-config/config.toml" << GH_AW_CODEX_SHELL_POLICY_4f1702aa5549b692_EOF
           model_provider = "openai-proxy"
           [model_providers.openai-proxy]
           name = "OpenAI AWF proxy"
@@ -1338,7 +1339,7 @@ jobs:
           [shell_environment_policy]
           inherit = "core"
           include_only = ["^CODEX_API_KEY$", "^HOME$", "^OPENAI_API_KEY$", "^PATH$"]
-          GH_AW_CODEX_SHELL_POLICY_185c7143437d6b16_EOF
+          GH_AW_CODEX_SHELL_POLICY_4f1702aa5549b692_EOF
           awk '
             BEGIN { skip_openai_proxy = 0 }
             /^[[:space:]]*model_provider[[:space:]]*=/ { next }
