@@ -30,11 +30,20 @@ steps:
   - uses: actions/checkout@v5
     with: { persist-credentials: false }
   - name: Select the [ai-review] finding to verify (host, outside the agent firewall)
-    env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}", PR: "${{ fromJSON(github.event.inputs.aw_context || '{}').pr }}", REPO: "${{ github.repository }}" }
+    env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}", PR: "${{ fromJSON(github.event.inputs.aw_context || '{}').pr }}", REPO: "${{ github.repository }}", SHA: "${{ fromJSON(github.event.inputs.aw_context || '{}').sha }}" }
     run: |
       set -euo pipefail
       mkdir -p /tmp/gh-aw/agent
-      gh pr diff "$PR" --repo "$REPO" > /tmp/gh-aw/agent/pr.diff || true
+      # Sub-2 verifies the FIX COMMIT's changes, not the net PR diff (base-independent):
+      # a fix that reverts to base has an empty net diff. Diff run-start SHA (pre-fix) .. PR head.
+      HEAD_SHA=$(gh pr view "$PR" --repo "$REPO" --json headRefOid -q .headRefOid 2>/dev/null || true)
+      if [ -n "${SHA:-}" ] && [ -n "$HEAD_SHA" ] && [ "$SHA" != "$HEAD_SHA" ]; then
+        git fetch --depth=50 "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "$SHA" "$HEAD_SHA" 2>/dev/null || true
+        git diff "$SHA" "$HEAD_SHA" > /tmp/gh-aw/agent/pr.diff 2>/dev/null \
+          || gh pr diff "$PR" --repo "$REPO" > /tmp/gh-aw/agent/pr.diff || true
+      else
+        gh pr diff "$PR" --repo "$REPO" > /tmp/gh-aw/agent/pr.diff || true
+      fi
       gh issue list --repo "$REPO" --label ai-review --state all \
         --json number,title,body,state,url --limit 100 > /tmp/gh-aw/issues.json || echo '[]' > /tmp/gh-aw/issues.json
       python3 - "$PR" <<'PY'
@@ -106,7 +115,7 @@ that isn't in the diff.
 ## Inputs (already gathered for you — do NOT access the network)
 
 - `/tmp/gh-aw/finding.json` — the finding under verification: `{ issue, state, title, body, suggested_fix }`.
-- `/tmp/gh-aw/agent/pr.diff` — the committed unified diff for this PR.
+- `/tmp/gh-aw/agent/pr.diff` — the **fix commit's** diff (what the fix agent changed on this PR).
 
 Read both with `cat` first.
 
