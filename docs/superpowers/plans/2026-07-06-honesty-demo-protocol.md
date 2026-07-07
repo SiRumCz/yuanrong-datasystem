@@ -337,7 +337,8 @@ steps:
       PY
       cat /tmp/gh-aw/evidence.json
   - name: Materialize task context
-    env: { CTX: ${{ github.event.inputs.aw_context }} }
+    env:
+      CTX: ${{ github.event.inputs.aw_context }}
     run: |
       mkdir -p /tmp/gh-aw
       if [ -z "$CTX" ]; then CTX='{}'; fi
@@ -438,7 +439,8 @@ steps:
       printf '{"check":"testhash","pass":true,"reason":"stub — test-output-hash check not yet enforced","test_output_hash":"%s"}' "$HASH" > /tmp/gh-aw/evidence.json
       cat /tmp/gh-aw/evidence.json
   - name: Materialize task context
-    env: { CTX: ${{ github.event.inputs.aw_context }} }
+    env:
+      CTX: ${{ github.event.inputs.aw_context }}
     run: |
       mkdir -p /tmp/gh-aw
       if [ -z "$CTX" ]; then CTX='{}'; fi
