@@ -22,6 +22,7 @@
 #include <cstddef>
 #include <cstring>
 #include <functional>
+#include <utility>
 
 #include <securec.h>
 
@@ -33,6 +34,22 @@
 #include "datasystem/common/log/trace.h"
 #include "datasystem/object/buffer.h"
 #include "datasystem/utils/status.h"
+
+namespace {
+// Shared scaffold for object-client public ops whose access metric is the constant "0":
+// set up request tracing and access recording, run the worker (which fills reqParam),
+// record the result, and return it. Keeps the three ops below identical in behavior.
+template <typename ExecFn, typename... Args>
+StatusC RecordedObjectOp(datasystem::AccessRecorderKey key, ExecFn exec, Args &&... args)
+{
+    datasystem::TraceGuard traceGuard = datasystem::Trace::Instance().SetRequestTraceUUID();
+    datasystem::AccessRecorder accessPoint(key);
+    datasystem::RequestParam reqParam;
+    StatusC rc = exec(std::forward<Args>(args)..., &reqParam);
+    accessPoint.Record(rc.code, "0", reqParam, rc.errMsg);
+    return rc;
+}
+}  // namespace
 
 ObjectClient_p OCCreateClient(const char *cWorkerHost, const int workerPort, const int timeOut, const char *token,
                               size_t tokenLen, const char *clientPublicKey, size_t cClientPublicKeyLen,
@@ -178,13 +195,9 @@ struct StatusC OCGIncreaseRef(ObjectClient_p clientPtr, const char **cObjKeys, c
                               uint64_t cObjKeysNum, char *cRemoteClientId, size_t cRemoteClientIdLen,
                               char **cFailedObjKeys, size_t *failedObjKeysCount)
 {
-    datasystem::TraceGuard traceGuard = datasystem::Trace::Instance().SetRequestTraceUUID();
-    datasystem::AccessRecorder accessPoint(datasystem::AccessRecorderKey::DS_OBJECT_CLIENT_GINCREASEREF);
-    datasystem::RequestParam reqParam;
-    StatusC rc = OCExecuteGIncreaseRef(clientPtr, cObjKeys, cObjKeysLen, cObjKeysNum, cRemoteClientId,
-                                       cRemoteClientIdLen, cFailedObjKeys, failedObjKeysCount, &reqParam);
-    accessPoint.Record(rc.code, "0", reqParam, rc.errMsg);
-    return rc;
+    return RecordedObjectOp(datasystem::AccessRecorderKey::DS_OBJECT_CLIENT_GINCREASEREF,
+                            OCExecuteGIncreaseRef, clientPtr, cObjKeys, cObjKeysLen, cObjKeysNum, cRemoteClientId,
+                            cRemoteClientIdLen, cFailedObjKeys, failedObjKeysCount);
 }
 
 struct StatusC OCExecuteGDecreaseRef(ObjectClient_p clientPtr, const char **cObjKeys, const size_t *cObjKeysLen,
@@ -226,13 +239,9 @@ struct StatusC OCDeccreaseRef(ObjectClient_p clientPtr, const char **cObjKeys, c
                               uint64_t cObjKeysNum, char *cRemoteClientId, size_t cRemoteClientIdLen,
                               char **cFailedObjKeys, size_t *failedObjKeysCount)
 {
-    datasystem::TraceGuard traceGuard = datasystem::Trace::Instance().SetRequestTraceUUID();
-    datasystem::AccessRecorder accessPoint(datasystem::AccessRecorderKey::DS_OBJECT_CLIENT_GDECREASEREF);
-    datasystem::RequestParam reqParam;
-    StatusC rc = OCExecuteGDecreaseRef(clientPtr, cObjKeys, cObjKeysLen, cObjKeysNum, cRemoteClientId,
-                                       cRemoteClientIdLen, cFailedObjKeys, failedObjKeysCount, &reqParam);
-    accessPoint.Record(rc.code, "0", reqParam, rc.errMsg);
-    return rc;
+    return RecordedObjectOp(datasystem::AccessRecorderKey::DS_OBJECT_CLIENT_GDECREASEREF,
+                            OCExecuteGDecreaseRef, clientPtr, cObjKeys, cObjKeysLen, cObjKeysNum, cRemoteClientId,
+                            cRemoteClientIdLen, cFailedObjKeys, failedObjKeysCount);
 }
 
 struct StatusC OCExecuteReleaseGRefs(ObjectClient_p clientPtr, char *cRemoteClientId, size_t cRemoteClientIdLen,
@@ -256,12 +265,8 @@ struct StatusC OCExecuteReleaseGRefs(ObjectClient_p clientPtr, char *cRemoteClie
 
 struct StatusC OCReleaseGRefs(ObjectClient_p clientPtr, char *cRemoteClientId, size_t cRemoteClientIdLen)
 {
-    datasystem::TraceGuard traceGuard = datasystem::Trace::Instance().SetRequestTraceUUID();
-    datasystem::AccessRecorder accessPoint(datasystem::AccessRecorderKey::DS_OBJECT_CLIENT_RELEASEGREFS);
-    datasystem::RequestParam reqParam;
-    StatusC rc = OCExecuteReleaseGRefs(clientPtr, cRemoteClientId, cRemoteClientIdLen, &reqParam);
-    accessPoint.Record(rc.code, "0", reqParam, rc.errMsg);
-    return rc;
+    return RecordedObjectOp(datasystem::AccessRecorderKey::DS_OBJECT_CLIENT_RELEASEGREFS,
+                            OCExecuteReleaseGRefs, clientPtr, cRemoteClientId, cRemoteClientIdLen);
 }
 
 struct StatusC GetObjMetaInfo(ObjectClient_p clientPtr, const char *cTenantId, const size_t cTenantIdLen,
