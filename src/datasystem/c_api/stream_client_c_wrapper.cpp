@@ -74,15 +74,7 @@ struct StatusC StreamConnectWorker(StreamClient_p clientPtr, bool reportWorkerLo
 struct StatusC StreamUpdateAkSk(StreamClient_p clientPtr, const char *cAccessKey, size_t cAccessKeyLen,
                                 const char *cSecretKey, size_t cSecretKeyLen)
 {
-    auto client = reinterpret_cast<std::shared_ptr<datasystem::StreamClient> *>(clientPtr);
-    std::string accessKey(cAccessKey, cAccessKeyLen);
-    accessKey.assign(cAccessKey, cAccessKeyLen);
-    datasystem::SensitiveValue secretKey(cSecretKey, cSecretKeyLen);
-    datasystem::Status rc = (*client)->UpdateAkSk(accessKey, secretKey);
-    if (rc.IsError()) {
-        return ToStatusC(rc);
-    }
-    return StatusC{ datasystem::K_OK, {} };
+    return UpdateAkSkImpl<datasystem::StreamClient>(clientPtr, cAccessKey, cAccessKeyLen, cSecretKey, cSecretKeyLen);
 }
 
 void StreamFreeClient(StreamClient_p clientPtr)
