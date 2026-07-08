@@ -15,6 +15,7 @@
     - [生成Cpp样例代码](#生成cpp样例代码)
     - [日志收集](#日志收集)
     - [多机命令运行](#多机命令运行)
+    - [配置Metastore高可用](#配置metastore高可用)
 - [命令行参数说明](#命令行参数说明)
     - [dscli start](#dscli-start)
     - [dscli stop](#dscli-stop)
@@ -25,6 +26,7 @@
     - [dscli generate_cpp_template](#dscli-generate_cpp_template)
     - [dscli generate_config](#dscli-generate_config)
     - [dscli collect_log](#dscli-collect_log)
+    - [dscli metastore_ha](#dscli-metastore_ha)
 - [配置项说明](#配置项说明)
     - [集群配置项](#集群配置项)
     - [命令行参数配置项](#命令行参数配置项)
@@ -546,6 +548,23 @@ dscli collect_log --cluster_config_path ./cluster_config.json
 更多关于 dscli runscript 命令的使用请参考：[dscli runscript](#dscli-runscript)。
 
 
+### 配置Metastore高可用
+
+通过 [dscli metastore_ha](#dscli-metastore_ha) 命令可将现有集群配置转换为高可用 Metastore 配置，从 worker_nodes 中选取多个节点作为 Metastore 主节点副本：
+
+```bash
+dscli metastore_ha -c ./cluster_config.json -r 3 -o ./cluster_config_ha.json
+```
+
+生成的 `cluster_config_ha.json` 使用 `metastore_head_nodes` 列表替代单个 `metastore_head_node`，可通过 [dscli up](#dscli-up) 部署，使列表中的每个节点均启动 Metastore 服务，从而在单个主节点故障时元数据服务仍可用：
+
+```bash
+dscli up -f ./cluster_config_ha.json
+```
+
+更多关于 dscli metastore_ha 命令的使用请参考：[dscli metastore_ha](#dscli-metastore_ha)。
+
+
 ## 命令行参数说明
 
 本节包含用于管理 openYuanrong datasystem 集群的命令。
@@ -679,6 +698,14 @@ dscli collect_log --cluster_config_path ./cluster_config.json
 |--cluster_config_path &lt;FILE&gt; |-f &lt;FILE&gt; | 集群配置文件（JSON）的路径                                           |
 |--log_path &lt;PATH&gt;            |-d &lt;PATH&gt; | 对于每个需要采集日志的集群节点，指定存放日志的远程路径                  |
 |--output_path &lt;...&gt;          |-o &lt;...&gt;  | 存储日志的本地目录，默认路径为当前目录下名为'log_\<timestamp\>'的文件夹 |
+
+### dscli metastore_ha
+
+|选项                         |等效短参数  |说明     |
+|-----------------------------|-----------|--------|
+|--config &lt;FILE&gt;             |-c &lt;FILE&gt; | 源集群配置文件（JSON）的路径，默认为当前目录下的 cluster_config.json |
+|--replicas &lt;N&gt;              |-r &lt;N&gt;   | Metastore 主节点副本数量，默认为 3 |
+|--output &lt;FILE&gt;             |-o &lt;FILE&gt; | 高可用集群配置文件的输出路径，默认为当前目录下的 cluster_config_ha.json |
 
 ## 配置项说明
 
