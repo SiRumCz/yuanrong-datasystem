@@ -16,10 +16,93 @@ so it is unit-testable and shared by both `crypto-hash-valid.py` (the check) and
 `conclude-crypto-verify.py` (the publish hook).
 """
 import hashlib
+import json
 import os
+import re
 
 # The evidence field the agent appends. Spelled with hyphens per the spec.
 HASH_FIELD = "crypto-verification-hash"
+
+# --- find_test_run: recognize a real test-runner invocation in a trusted
+# gh-aw trajectory (agent-stdio.log), by COMMAND shape rather than output
+# content. This is a best-effort, tunable heuristic -- NOT a guarantee: a
+# project using an unlisted runner, an alias, or a wrapper script will not be
+# recognized. Extend this list as new runners are seen in the wild.
+TEST_RUNNER_PATTERNS = [
+    re.compile(r"\bpytest\b", re.IGNORECASE),
+    re.compile(r"\bpython3?\s+-m\s+pytest\b", re.IGNORECASE),
+    re.compile(r"\bpython3?\s+-m\s+unittest\b", re.IGNORECASE),
+    re.compile(r"\bpython3?\s+\S*test\S*\.py\b", re.IGNORECASE),
+    re.compile(r"\bunittest\b", re.IGNORECASE),
+    re.compile(r"\bgo\s+test\b", re.IGNORECASE),
+    re.compile(r"\bnpm\s+test\b", re.IGNORECASE),
+    re.compile(r"\bcargo\s+test\b", re.IGNORECASE),
+    re.compile(r"\bctest\b", re.IGNORECASE),
+    re.compile(r"\brspec\b", re.IGNORECASE),
+    re.compile(r"\bjest\b", re.IGNORECASE),
+]
+
+
+def _is_test_command(command):
+    """True iff `command` looks like a test-runner invocation, matched on
+    word-ish boundaries so `echo`, `sed`, `cat`, `grep` don't match. See
+    TEST_RUNNER_PATTERNS -- this is a heuristic, not a guarantee."""
+    if not isinstance(command, str) or not command:
+        return False
+    return any(p.search(command) for p in TEST_RUNNER_PATTERNS)
+
+
+def find_test_run(stdio_log):
+    """Scan a gh-aw `agent-stdio.log` (mixed plain log lines + JSONL) for the
+    newest real test-runner command execution.
+
+    `stdio_log` is the harness's trusted record of what the fix agent actually
+    executed -- the agent cannot forge it -- so this verifies a REAL test ran,
+    as opposed to the agent merely claiming one did in its own narrative
+    output. Keys on the item's `command`, not its `aggregated_output`: e.g. an
+    `echo "5 passed"` command does not count no matter what its output says.
+
+    Each JSONL line is parsed independently; lines that aren't valid JSON, or
+    that aren't a `{"type":"item.completed","item":{"type":"command_execution",...}}`
+    record, are skipped.
+
+    Returns {"ran": bool, "output": str, "exit_code": int|None, "command": str}.
+    When multiple test-runner items are present, returns the NEWEST (last in
+    file order).
+    """
+    if not isinstance(stdio_log, str):
+        stdio_log = ""
+
+    newest = None
+    for line in stdio_log.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            record = json.loads(line)
+        except ValueError:
+            continue
+        if not isinstance(record, dict) or record.get("type") != "item.completed":
+            continue
+        item = record.get("item")
+        if not isinstance(item, dict) or item.get("type") != "command_execution":
+            continue
+        if not _is_test_command(item.get("command")):
+            continue
+        newest = item  # last match in file order wins -> newest
+
+    if newest is None:
+        return {"ran": False, "output": "", "exit_code": None, "command": ""}
+
+    output = newest.get("aggregated_output")
+    exit_code = newest.get("exit_code")
+    command = newest.get("command")
+    return {
+        "ran": True,
+        "output": output if isinstance(output, str) else "",
+        "exit_code": exit_code if isinstance(exit_code, int) else None,
+        "command": command if isinstance(command, str) else "",
+    }
 
 
 def sha256_hex(text):
