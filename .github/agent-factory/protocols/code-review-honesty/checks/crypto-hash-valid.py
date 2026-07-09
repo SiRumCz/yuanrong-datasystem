@@ -13,6 +13,14 @@ red/green *reporting* of an agent that never ran tests is the conclude hook's
 job. This check only fails when the agent LIES about a hash — a mismatch, a
 hash where there should be null, or null where there should be a hash.
 
+When the trusted pre-step's `/tmp/gh-aw/recognized-test-run.json` is present
+(the real gh-aw run: the honesty-cryptohash-agent's own job wrote it from the
+fix agent's trusted `agent-stdio.log` trajectory), this also re-verifies the
+agent copied `ran`/`test_output` through verbatim rather than substituting its
+own — the agent cannot launder a fabricated run behind a correctly-computed
+hash of ITS OWN made-up output. Absent that file (e.g. unit tests / local
+invocation), the check falls back to hash-only, unchanged.
+
 ABI: crypto-hash-valid.py <evidence.json> <diff.txt> <changed-files.txt>
 Prints one {"check","pass","feedback"} object to stdout and always exits 0.
 """
@@ -24,10 +32,27 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _crypto  # noqa: E402
 
 CHECK = "crypto-hash-valid"
+RECOGNIZED_PATH = "/tmp/gh-aw/recognized-test-run.json"
 
 
 def _emit(passed, feedback):
     print(json.dumps({"check": CHECK, "pass": passed, "feedback": feedback}, ensure_ascii=False))
+
+
+def _load_recognized():
+    """The trusted pre-step's recognized test run, if present on disk. Returns
+    None when absent/unreadable/not-an-object — the caller then skips the
+    trusted-source re-verify and falls back to hash-only (unchanged)."""
+    try:
+        with open(RECOGNIZED_PATH) as fh:
+            data = json.load(fh)
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _str(v):
+    return v if isinstance(v, str) else ""
 
 
 def main():
@@ -40,6 +65,13 @@ def main():
     if not isinstance(ev, dict):
         _emit(False, "evidence is not a JSON object")
         return
+
+    recognized = _load_recognized()
+    if recognized is not None:
+        if (bool(ev.get("ran")) != bool(recognized.get("ran"))
+                or _str(ev.get("test_output")) != _str(recognized.get("test_output"))):
+            _emit(False, "evidence does not match the trusted recognized test run")
+            return
 
     v = _crypto.verify_run(ev)
     if v["hash_ok"]:
