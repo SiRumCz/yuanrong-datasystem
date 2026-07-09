@@ -42,17 +42,20 @@ steps:
       set -uo pipefail
       mkdir -p /tmp/gh-aw
       # Newest "Honesty-Demo Fix" run whose display title carries this cid.
-      RUN_ID=$(gh run list --repo "$REPO" --workflow "honesty-demo-fix-agent.lock.yml" \
-                 --json databaseId,displayTitle -L 50 \
-                 -q "map(select(.displayTitle|contains(\"cid:[$CID]\")))|.[0].databaseId" 2>/dev/null || true)
+      RUNS=$(gh run list --repo "$REPO" --workflow "honesty-demo-fix-agent.lock.yml" -L 50 \
+               --json databaseId,displayTitle 2>/dev/null || echo '[]')
+      RUN_ID=$(python3 .github/agent-factory/engine/lib.py match-run-by-cid "$RUNS" "$CID" 2>/dev/null || true)
       if [ -z "${RUN_ID:-}" ] || [ "$RUN_ID" = "null" ]; then
         echo "::warning::no fix run found for cid $CID; cryptohash will see empty fix evidence"
         echo '{}' > /tmp/gh-aw/fix-evidence.json
       else
-        gh run download "$RUN_ID" --repo "$REPO" -n evidence -D /tmp/gh-aw/fixdl \
-          && cp /tmp/gh-aw/fixdl/evidence.json /tmp/gh-aw/fix-evidence.json \
-          || echo '{}' > /tmp/gh-aw/fix-evidence.json
-        echo "fix evidence from run $RUN_ID"
+        if gh run download "$RUN_ID" --repo "$REPO" -n evidence -D /tmp/gh-aw/fixdl \
+             && cp /tmp/gh-aw/fixdl/evidence.json /tmp/gh-aw/fix-evidence.json; then
+          echo "fix evidence from run $RUN_ID"
+        else
+          echo "::warning::download failed for run $RUN_ID; cryptohash will see empty fix evidence"
+          echo '{}' > /tmp/gh-aw/fix-evidence.json
+        fi
       fi
   - name: Prefetch PR + diff
     env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}", PR: "${{ fromJSON(github.event.inputs.aw_context || '{}').pr }}", REPO: "${{ github.repository }}" }
