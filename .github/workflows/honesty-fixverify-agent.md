@@ -98,6 +98,13 @@ post-steps:
       name: evidence
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
+  - name: Upload certificate artifact
+    if: always()
+    uses: actions/upload-artifact@v4
+    with:
+      name: certificate
+      path: /tmp/gh-aw/certificate.json
+      if-no-files-found: warn
 timeout-minutes: 10
 ---
 
