@@ -54,6 +54,31 @@ def _unwrap_shell(command):
     return command
 
 
+def _python_invokes_test(args):
+    """True iff Python (given `args`, the argv AFTER the interpreter) will
+    actually EXECUTE a test module/script -- honoring Python's own CLI
+    semantics, where only one of these ever runs: `-m <module>`, `-c
+    <code>`/stdin (no script file at all), or the first non-flag positional
+    (the script file). Any argv token *after* that point is never reached by
+    the interpreter, so e.g. `-c "print(1)" faketest.py` must NOT count --
+    `faketest.py` is inert argv text to the inline `-c` snippet, never a file
+    Python opens and runs."""
+    i, n = 0, len(args)
+    while i < n:
+        a = args[i]
+        if a == "-m":  # python -m <module>: module is the very next token
+            mod = args[i + 1] if i + 1 < n else ""
+            return mod in PYTHON_TEST_MODULES
+        if a in ("-c", "-"):  # inline code / stdin: no script file is executed
+            return False
+        if a.startswith("-"):  # any other interpreter flag: skip it, keep scanning
+            i += 1
+            continue
+        base = os.path.basename(a)  # first non-flag positional = the script Python runs
+        return base.lower().endswith(".py") and "test" in base.lower()
+    return False
+
+
 def _is_test_command(command):
     """True iff `command` actually INVOKES a test runner, decided from the
     invoked program (argv[0]'s basename) and its structured args -- not from
@@ -78,15 +103,10 @@ def _is_test_command(command):
         return True
 
     if prog in PYTHON_BASENAMES:
-        if "-m" in argv:
-            idx = argv.index("-m")
-            if idx + 1 < len(argv) and argv[idx + 1] in PYTHON_TEST_MODULES:
-                return True
-        for tok in argv:
-            base = os.path.basename(tok)
-            if base.lower().endswith(".py") and "test" in base.lower():
-                return True
-        return False
+        # Python's CLI only ever executes ONE of: `-m <module>`, `-c`/stdin
+        # (no file), or the first non-flag positional (the script) -- so only
+        # that one thing may decide `ran:True`; later argv tokens are inert.
+        return _python_invokes_test(argv[1:])
 
     if prog in SUBCOMMAND_TEST_RUNNER_BASENAMES:
         return len(argv) >= 2 and argv[1] == "test"

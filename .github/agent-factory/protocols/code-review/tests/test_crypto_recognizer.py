@@ -177,4 +177,33 @@ log = json.dumps({
 r = _crypto.find_test_run(log)
 expect(f"item.started (in-progress) -> ran False (got {r})", r["ran"] is False)
 
+# 16. exploit: `-c` runs the inline code; `faketest.py` is never opened/run,
+# it is just an inert argv token to the `-c` snippet -> ran False
+log = item_line('/bin/bash -lc \'python3 -c "print(1)" faketest.py\'', "1", 0)
+r = _crypto.find_test_run(log)
+expect(f"python3 -c ... faketest.py exploit -> ran False (got {r})", r["ran"] is False)
+
+# 17. `python3 -c "import pytest"` -> the word "pytest" is inline-code TEXT,
+# never an invoked module/script -> ran False
+log = item_line('/bin/bash -lc \'python3 -c "import pytest"\'', "", 0)
+r = _crypto.find_test_run(log)
+expect(f'python3 -c "import pytest" -> ran False (got {r})', r["ran"] is False)
+
+# 18. an interpreter flag before the script (`-O`) must not block recognizing
+# the script itself -> ran True
+log = item_line('/bin/bash -lc "python3 -O cli/tests/test_status.py"', "Ran 7 tests in 0.00s\n\nOK", 0)
+r = _crypto.find_test_run(log)
+expect(f"python3 -O cli/tests/test_status.py -> ran True (got {r})", r["ran"] is True)
+
+# 19. `python3 -m unittest discover` -> ran True
+log = item_line('/bin/bash -lc "python3 -m unittest discover"', "OK", 0)
+r = _crypto.find_test_run(log)
+expect(f"python3 -m unittest discover -> ran True (got {r})", r["ran"] is True)
+
+# 20. `python3 -m mypackage` -> a real `-m` invocation, but of a non-test
+# module -> ran False
+log = item_line('/bin/bash -lc "python3 -m mypackage"', "", 0)
+r = _crypto.find_test_run(log)
+expect(f"python3 -m mypackage (non-test module) -> ran False (got {r})", r["ran"] is False)
+
 sys.exit(0 if expect.ok else 1)
