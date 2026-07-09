@@ -44,11 +44,10 @@ KVClient_p KVCreateClient(const char *cWorkerHost, const int workerPort, const i
                           const char *secretKey, size_t secretKeyLen, const char *tenantId, size_t cTenantIdLen,
                           const char *enableCrossNodeConnection)
 {
-    datasystem::TraceGuard traceGuard = datasystem::Trace::Instance().SetRequestTraceUUID();
-    return CreateObjectClient(cWorkerHost, workerPort, timeOut, token, tokenLen, clientPublicKey, cClientPublicKeyLen,
-                              clientPrivateKey, clientPrivateKeyLen, serverPublicKey, cServerPublicKeyLen, accessKey,
-                              cAccessKeyLen, secretKey, secretKeyLen, tenantId, cTenantIdLen,
-                              enableCrossNodeConnection);
+    return CreateObjectClientWithTrace(cWorkerHost, workerPort, timeOut, token, tokenLen, clientPublicKey,
+                                       cClientPublicKeyLen, clientPrivateKey, clientPrivateKeyLen, serverPublicKey,
+                                       cServerPublicKeyLen, accessKey, cAccessKeyLen, secretKey, secretKeyLen, tenantId,
+                                       cTenantIdLen, enableCrossNodeConnection);
 }
 
 struct StatusC SCConnectWorker(KVClient_p clientPtr)
