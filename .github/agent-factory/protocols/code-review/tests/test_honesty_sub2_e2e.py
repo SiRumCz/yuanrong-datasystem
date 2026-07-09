@@ -71,12 +71,14 @@ SUBTLE_DIFF = """diff --git a/cli/top.py b/cli/top.py
 
 def merge_verdict(fixverify_ev, test_output):
     """Persist both honesty legs where the engine writes them and run the real merge
-    reduce hook. cryptohash carries a real sha256 of `test_output` (null when empty)."""
+    reduce hook. cryptohash carries the single-run shape: `ran` (True iff a test
+    actually ran) plus a real sha256 of `test_output` (null when no run / empty)."""
     d = tempfile.mkdtemp(prefix="honesty-e2e-")
     try:
+        ran = bool(test_output)
         crypto_hash = hashlib.sha256(test_output.encode("utf-8")).hexdigest() if test_output else None
-        cryptohash_ev = {"fixes": [{"cluster_id": "c1", "test_output": test_output,
-                                    "crypto-verification-hash": crypto_hash}]}
+        cryptohash_ev = {"ran": ran, "command": "pytest -q", "exit_code": 0 if ran else None,
+                          "test_output": test_output, "crypto-verification-hash": crypto_hash}
         for leg, ev in (("cryptohash", cryptohash_ev), ("fixverify", fixverify_ev)):
             wp = lib.output_artifact_path(d, PID, INST, path=lib.state_path(proto, ["honesty", leg]))
             os.makedirs(os.path.dirname(wp), exist_ok=True)

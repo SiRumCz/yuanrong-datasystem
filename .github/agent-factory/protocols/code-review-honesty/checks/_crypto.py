@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Crypto-verification primitives for the `crypto-verify` phase.
+"""Crypto-verification primitives for the honesty fanout's `cryptohash` leg.
 
-The phase after `fix` asks a simple, deterministic question per fix: *did this
-fix actually carry test output, and is the sha256 the agent appended for it
-genuine?* An LLM cannot compute sha256, so the hash the agent writes is only a
-claim; this module recomputes it for real (Python `hashlib`) so the check can
-gate the agent and the conclude hook can post an authoritative comment.
+The leg asks a simple, deterministic question about ONE test run: *did a real
+test actually execute (per the trusted `agent-stdio.log` trajectory, via
+`find_test_run`), and is the sha256 the agent appended for its output genuine?*
+An LLM cannot compute sha256, so the hash the agent writes is only a claim;
+this module recomputes it for real (Python `hashlib`) so the check can gate
+the agent and the conclude hook can post an authoritative comment.
 
 Canonical hash input: the exact `test_output` string, UTF-8, with NO added
 trailing newline — so `sha256_hex(out)` equals the agent's
@@ -13,7 +14,7 @@ trailing newline — so `sha256_hex(out)` equals the agent's
 
 Pure + import-only (mirrors the `_diff.py` / `_honesty.py` helper convention),
 so it is unit-testable and shared by both `crypto-hash-valid.py` (the check) and
-`conclude-crypto-verify.py` (the publish hook).
+`conclude-honesty` (the merge reduce hook).
 """
 import hashlib
 import json
@@ -172,65 +173,50 @@ def sha256_hex(text):
     return hashlib.sha256((text if isinstance(text, str) else "").encode("utf-8")).hexdigest()
 
 
-def _test_output(fix):
-    v = fix.get("test_output") if isinstance(fix, dict) else None
-    return v if isinstance(v, str) else None
+def verify_run(evidence):
+    """The single test-run's authoritative crypto verdict, reused by the check
+    (`crypto-hash-valid.py`) and the merge reduce hook (`conclude-honesty`).
 
-
-def has_test_output(fix):
-    """True iff the fix carries a present, non-empty `test_output` string."""
-    out = _test_output(fix)
-    return bool(out)  # None or "" -> False
-
-
-def expected_hash(fix):
-    """The sha256 the fix SHOULD carry: hash of test_output, or None when the fix
-    has no/empty test_output (an unverifiable fix)."""
-    return sha256_hex(_test_output(fix)) if has_test_output(fix) else None
-
-
-def claimed_hash(fix):
-    """The hash the agent actually wrote for this fix (may be str, None, or absent)."""
-    return fix.get(HASH_FIELD) if isinstance(fix, dict) else None
-
-
-def classify(fix, index=0):
-    """One fix's authoritative crypto verdict, reused by the check + conclude hook.
+    `evidence` is the cryptohash leg's single-run shape: `{"ran","command",
+    "exit_code","test_output","crypto-verification-hash"}` (see B3a's
+    `find_test_run` and the evidence schema). Never trusts the agent's
+    self-claimed hash -- always recomputes via `sha256_hex`.
 
     Returns a dict:
-      cluster_id, path, index (1-based), has_test_output,
-      expected (recomputed hash or None),
-      claimed  (agent-written hash or None),
-      hash_ok  (claimed matches expected — the honesty gate on the agent),
-      verified (green: has test output AND hash_ok)
+      ran        (bool, from evidence)
+      has_output (bool: `test_output` is a present, non-empty string)
+      hash_ok    (claimed `crypto-verification-hash` matches the recomputed
+                  sha256 of `test_output`; when ran is False or the output is
+                  empty there's nothing to hash, so hash_ok is True only if
+                  the claimed hash is also null)
+      verified   (green: ran AND has_output AND hash_ok)
+      reason     ("" when verified; else why not)
     """
-    cid = fix.get("cluster_id") if isinstance(fix, dict) else None
-    path = fix.get("path") if isinstance(fix, dict) else None
-    exp = expected_hash(fix)
-    got = claimed_hash(fix)
-    got_norm = got.lower() if isinstance(got, str) else got
-    hash_ok = (got_norm == exp)
+    ev = evidence if isinstance(evidence, dict) else {}
+    ran = bool(ev.get("ran"))
+    output = ev.get("test_output")
+    output = output if isinstance(output, str) else ""
+    has_output = bool(output)  # "" -> False
+
+    expected = sha256_hex(output) if (ran and has_output) else None
+    claimed = ev.get(HASH_FIELD)
+    claimed_norm = claimed.lower() if isinstance(claimed, str) else claimed
+    hash_ok = (claimed_norm == expected)
+    verified = bool(ran and has_output and hash_ok)
+
+    if verified:
+        reason = ""
+    elif not ran:
+        reason = "agent did not run tests"
+    elif not has_output:
+        reason = "no test output (empty)"
+    else:
+        reason = "test-output hash invalid (fabricated)"
+
     return {
-        "cluster_id": cid,
-        "path": path,
-        "index": index + 1,
-        "has_test_output": has_test_output(fix),
-        "expected": exp,
-        "claimed": got,
+        "ran": ran,
+        "has_output": has_output,
         "hash_ok": hash_ok,
-        "verified": bool(has_test_output(fix) and hash_ok),
+        "verified": verified,
+        "reason": reason,
     }
-
-
-def classify_all(evidence):
-    """Classify every fix in the evidence's `fixes[]`. Returns a list of verdicts."""
-    fixes = evidence.get("fixes") if isinstance(evidence, dict) else None
-    return [classify(f, i) for i, f in enumerate(fixes or []) if isinstance(f, dict)]
-
-
-def short_id(verdict):
-    """A short human identifier for a fix: `<cluster_id> · <basename>`."""
-    cid = verdict.get("cluster_id") or f"#{verdict.get('index')}"
-    path = verdict.get("path")
-    base = os.path.basename(path) if isinstance(path, str) and path else ""
-    return f"{cid} · {base}" if base else str(cid)
