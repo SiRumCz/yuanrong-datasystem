@@ -18,38 +18,80 @@ so it is unit-testable and shared by both `crypto-hash-valid.py` (the check) and
 import hashlib
 import json
 import os
-import re
+import shlex
 
 # The evidence field the agent appends. Spelled with hyphens per the spec.
 HASH_FIELD = "crypto-verification-hash"
 
 # --- find_test_run: recognize a real test-runner invocation in a trusted
-# gh-aw trajectory (agent-stdio.log), by COMMAND shape rather than output
-# content. This is a best-effort, tunable heuristic -- NOT a guarantee: a
-# project using an unlisted runner, an alias, or a wrapper script will not be
-# recognized. Extend this list as new runners are seen in the wild.
-TEST_RUNNER_PATTERNS = [
-    re.compile(r"\bpytest\b", re.IGNORECASE),
-    re.compile(r"\bpython3?\s+-m\s+pytest\b", re.IGNORECASE),
-    re.compile(r"\bpython3?\s+-m\s+unittest\b", re.IGNORECASE),
-    re.compile(r"\bpython3?\s+\S*test\S*\.py\b", re.IGNORECASE),
-    re.compile(r"\bunittest\b", re.IGNORECASE),
-    re.compile(r"\bgo\s+test\b", re.IGNORECASE),
-    re.compile(r"\bnpm\s+test\b", re.IGNORECASE),
-    re.compile(r"\bcargo\s+test\b", re.IGNORECASE),
-    re.compile(r"\bctest\b", re.IGNORECASE),
-    re.compile(r"\brspec\b", re.IGNORECASE),
-    re.compile(r"\bjest\b", re.IGNORECASE),
-]
+# gh-aw trajectory (agent-stdio.log), by the INVOKED PROGRAM (argv[0]) and
+# structured args -- never by substring-matching the raw command text, which
+# would let a decoy like `echo "pytest run complete: 5 passed"` forge a test
+# run. This is a best-effort, tunable heuristic -- NOT a guarantee: a project
+# using an unlisted runner, an alias, or a wrapper script will not be
+# recognized. Extend these sets as new runners are seen in the wild.
+DIRECT_TEST_RUNNER_BASENAMES = {"pytest", "py.test", "ctest", "jest", "rspec", "nosetests"}
+PYTHON_BASENAMES = {"python", "python3", "py"}
+PYTHON_TEST_MODULES = {"pytest", "unittest", "nose"}
+SUBCOMMAND_TEST_RUNNER_BASENAMES = {"go", "npm", "yarn", "pnpm", "cargo"}
+
+
+def _unwrap_shell(command):
+    """If `command` is a `bash`/`sh` `-c`/`-lc` wrapper (e.g.
+    `bash -lc "<inner>"`, `/bin/bash -lc '<inner>'`), return the wrapped
+    `<inner>` command string. Otherwise return `command` unchanged (including
+    when it can't be tokenized, e.g. unbalanced quotes)."""
+    try:
+        argv = shlex.split(command)
+    except ValueError:
+        return command
+    if (
+        len(argv) >= 3
+        and os.path.basename(argv[0]) in ("bash", "sh")
+        and argv[1] in ("-c", "-lc")
+    ):
+        return argv[2]
+    return command
 
 
 def _is_test_command(command):
-    """True iff `command` looks like a test-runner invocation, matched on
-    word-ish boundaries so `echo`, `sed`, `cat`, `grep` don't match. See
-    TEST_RUNNER_PATTERNS -- this is a heuristic, not a guarantee."""
+    """True iff `command` actually INVOKES a test runner, decided from the
+    invoked program (argv[0]'s basename) and its structured args -- not from
+    matching keywords anywhere in the raw text. This means quoted argument
+    text (e.g. an `echo "...pytest..."` decoy) can never count, and `pip
+    install pytest-mock` / a bare `unittest` mention don't count either.
+    See the *_BASENAMES / *_MODULES sets above -- this is a heuristic, not a
+    guarantee."""
     if not isinstance(command, str) or not command:
         return False
-    return any(p.search(command) for p in TEST_RUNNER_PATTERNS)
+    inner = _unwrap_shell(command)
+    try:
+        argv = shlex.split(inner)
+    except ValueError:
+        return False
+    if not argv:
+        return False
+
+    prog = os.path.basename(argv[0])
+
+    if prog in DIRECT_TEST_RUNNER_BASENAMES:
+        return True
+
+    if prog in PYTHON_BASENAMES:
+        if "-m" in argv:
+            idx = argv.index("-m")
+            if idx + 1 < len(argv) and argv[idx + 1] in PYTHON_TEST_MODULES:
+                return True
+        for tok in argv:
+            base = os.path.basename(tok)
+            if base.lower().endswith(".py") and "test" in base.lower():
+                return True
+        return False
+
+    if prog in SUBCOMMAND_TEST_RUNNER_BASENAMES:
+        return len(argv) >= 2 and argv[1] == "test"
+
+    return False
 
 
 def find_test_run(stdio_log):

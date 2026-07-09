@@ -10,6 +10,7 @@ ran, as opposed to the agent merely CLAIMING one did in its own narrative.
 
 Keys on the COMMAND, not the output: an `echo "5 passed"` decoy must not count.
 """
+import json
 import os
 import sys
 
@@ -130,5 +131,50 @@ expect(f"malformed JSON skipped -> output correct (got {r['output']!r})", "Ran 3
 # 10. empty string input -> ran False, no crash
 r = _crypto.find_test_run("")
 expect(f"empty log -> ran False (got {r})", r["ran"] is False)
+
+# 11. exploit decoy: echo argument TEXT contains runner keywords
+# ("pytest run complete: 5 passed, cargo test succeeded") but the invoked
+# program is `echo`, not a test runner -> must NOT count as a test run.
+log = item_line(
+    '/bin/bash -lc \'echo "pytest run complete: 5 passed, cargo test succeeded"\'',
+    "pytest run complete: 5 passed, cargo test succeeded",
+    0,
+)
+r = _crypto.find_test_run(log)
+expect(f"echo-argument-text exploit -> ran False (got {r})", r["ran"] is False)
+
+# 12. `pip install pytest-mock` -> invoked program is `pip`, not a test
+# runner (the word "pytest" only appears inside a package name) -> ran False
+log = item_line('/bin/bash -lc "pip install pytest-mock"', "Successfully installed pytest-mock", 0)
+r = _crypto.find_test_run(log)
+expect(f"pip install pytest-mock -> ran False (got {r})", r["ran"] is False)
+
+# 13. `python3 -m pytest -q tests/` -> ran True
+log = item_line('/bin/bash -lc "python3 -m pytest -q tests/"', "5 passed in 0.20s", 0)
+r = _crypto.find_test_run(log)
+expect(f"python3 -m pytest -> ran True (got {r})", r["ran"] is True)
+
+# 14. `go test ./...` -> ran True; `npm test` -> ran True
+log = item_line('/bin/bash -lc "go test ./..."', "ok  \tpkg\t0.010s", 0)
+r = _crypto.find_test_run(log)
+expect(f"go test -> ran True (got {r})", r["ran"] is True)
+
+log = item_line('/bin/bash -lc "npm test"', "> project@1.0.0 test\n> jest", 0)
+r = _crypto.find_test_run(log)
+expect(f"npm test -> ran True (got {r})", r["ran"] is True)
+
+# 15. an in-progress `item.started` record (not `item.completed`) for a real
+# test command, with no exit_code yet -> must not be counted as a run.
+log = json.dumps({
+    "type": "item.started",
+    "item": {
+        "id": "item_10",
+        "type": "command_execution",
+        "command": '/bin/bash -lc "pytest -q"',
+        "status": "in_progress",
+    },
+})
+r = _crypto.find_test_run(log)
+expect(f"item.started (in-progress) -> ran False (got {r})", r["ran"] is False)
 
 sys.exit(0 if expect.ok else 1)
