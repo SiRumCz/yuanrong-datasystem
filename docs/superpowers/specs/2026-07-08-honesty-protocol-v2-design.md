@@ -46,9 +46,13 @@ Restore the parallel fanout (undo the linearization from `2026-07-07-honesty-sub
 
 ```
 review → join-review → triage → fix
-       → honesty [ fanout: cryptohash ‖ fixverify ]
-       → join-honesty (conclude-honesty: honest = sub1_ok AND sub2_ok) → verdict
+       → honesty         [ fanout: cryptohash ‖ fixverify ]
+       → join-honesty    [ join, of: honesty — the AND barrier: waits for both legs terminal ]
+       → honesty-verdict [ merge, hook: conclude-honesty — honest = sub1_ok AND sub2_ok ]
 ```
+
+The barrier (join) and the evidence reduction (merge) are **two nodes**: the join gates on all legs
+terminal, then the merge reads the two legs' evidence and runs `conclude-honesty`.
 
 **Why self-fetch instead of fixing the engine.** Engine bug #166 (`next.py:_fanout_action`) does not deliver
 a static fanout leg's declared `inputs`; that is why parallel `cryptohash` previously received `inputs:{}`
@@ -63,13 +67,28 @@ their own inputs (as `fixverify` already does):
   - fetch: `gh run download <run-id> -n evidence` → the fix evidence JSON carrying `test_output` per fix.
   - all GitHub API, reachable from the runner; **no engine input-passing required.**
 
-**#166-safe claim.** #166 concerns *inputs into* fanout legs; the **join** collects leg *outputs*, which is a
-different path. `conclude-honesty` reads `inputs/cryptohash.json` + `inputs/fixverify.json` (the leg outputs).
-**Verification obligation (planning):** confirm the join assembles both fanout-leg outputs on the parallel
-graph before relying on it; add an E2E that exercises the fanout end-to-end.
+**#166-safe claim — verified against `engine/lib.py` + `engine/join.py`.** #166 concerns *inputs delivered
+into* fanout legs (`next.py:_fanout_action`); the verdict reads leg *outputs*, a separate path. Two engine
+facts pin the correct wiring:
 
-**Files touched:** `protocol.json` (fix → fanout(cryptohash, fixverify) → join → verdict);
-`honesty-cryptohash-agent.md` (new self-fetch pre-step). No `next.py` / engine change.
+1. **Use per-leg `{from: <leg-id>}` refs on the merge — NOT `from_fanout`.** A `{from: cryptohash}` ref
+   resolves through `resolve_inputs`' branch-id case (`lib.py:~432`) to that leg's output evidence
+   (`output_artifact_path(branch=cryptohash, kind="evidence")`), materialized to a **separate**
+   `inputs/cryptohash.json`. Per-leg refs ⇒ `inputs/cryptohash.json` + `inputs/fixverify.json` ⇒
+   **`conclude-honesty` unchanged.**
+2. **`from_fanout` would break here.** It requires a fanout **manifest**, and `next.py:139` writes a manifest
+   only for **dynamic `each`** fanouts — a **static `branches:` fanout (ours) writes none** — and it emits a
+   single list file that would force a `conclude-honesty` rewrite. So per-leg refs, not `from_fanout`.
+
+The cryptohash leg **drops its declared `inputs:[{from:fix}]`** (never delivered under #166) and self-fetches
+instead. **Verification obligation (planning):** E2E the fanout end-to-end (both legs concurrent → join →
+merge → verdict); and confirm multi-fanout handling since the protocol now has **two** fanouts (`review` +
+`honesty`) — `join.py` selects the fanout by cursor phase, `run_merge_hook` derives `phase` from
+`_fanout_state`; verify both resolve to the *honesty* fanout at verdict time.
+
+**Files touched:** `protocol.json` (fix → fanout `honesty` → join `join-honesty` → merge `honesty-verdict`,
+per-leg `from` refs); `honesty-cryptohash-agent.md` (new self-fetch pre-step, drop `inputs:[{from:fix}]`).
+No `next.py` / engine change.
 
 ## 4. Sub-1 `cryptohash` — "did the agent actually test?"
 
@@ -135,8 +154,10 @@ failure mode). Label it **"grounded semi-formal certificate,"** not "proven."
 
 ## 6. Verdict & UI surfacing
 
-- **Verdict unchanged.** `conclude-honesty`: `honest = sub1_ok AND sub2_ok`; per-leg `{check, pass, reason}`
-  preserved ⇒ **no merge-hook edit.**
+- **Verdict unchanged** *(conditional on §3 wiring).* `conclude-honesty`: `honest = sub1_ok AND sub2_ok`;
+  per-leg `{check, pass, reason}` preserved ⇒ **no merge-hook edit — but only with per-leg `from` refs**
+  (which keep the separate `inputs/cryptohash.json` + `inputs/fixverify.json` files it reads). `from_fanout`
+  would change the input shape and force a rewrite; do not use it (§3).
 - **Surface the real certificate** (folds in the earlier "Step 1"): the fixverify post-step persists the full
   certificate (upload `certificate.json` and/or fold fields into evidence); **widen the shaper allowlist** for
   the new fields; **Card 2** renders premises + trace + counterexample/proof + the "grounded semi-formal"
@@ -178,7 +199,10 @@ failure mode). Label it **"grounded semi-formal certificate,"** not "proven."
 
 ## 10. Open items to resolve in planning
 
-- Confirm gh-aw's ability to capture the agent's real test-tool output into evidence (§4 risk).
-- Confirm the join assembles fanout-leg outputs on the parallel graph (§3 obligation).
+- Confirm gh-aw's ability to capture the agent's real test-tool output into evidence (§4 risk — the single
+  most uncertain piece; if it can't, fall back to inspecting the agent's tool-call log for a real invocation).
+- Confirm per-leg `from` refs resolve to leg outputs at the `honesty-verdict` merge, AND multi-fanout handling
+  now that the protocol has two fanouts (`review` + `honesty`) — `join.py` cursor-phase selection and
+  `run_merge_hook`'s `_fanout_state` phase derivation must both resolve to `honesty` at verdict time (§3).
 - Confirm the shaper allowlist field set for the v2 certificate (which of `premises`/`execution_trace`/
   `counterexample`/`no_counterexample_proof` already pass through vs. need adding).
