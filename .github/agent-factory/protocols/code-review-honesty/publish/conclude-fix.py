@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Conclude hook for fix: completeness against real triage input + suggestions."""
+"""Conclude hook for fix: completeness against real triage input + diff apply."""
 import json
 import os
 import shutil
@@ -64,7 +64,7 @@ def _classify(evidence, triage):
     fixed_set = set(fixed_ids)
     skipped_set = set(skipped_ids)
     return {
-        "mode": evidence.get("mode") or "suggest",
+        "mode": evidence.get("mode") or "edit",
         "applied": [cid for cid in fixable_ids if cid in fixed_set],
         "skipped": [cid for cid in fixable_ids if cid in skipped_set],
         "dropped": [
@@ -77,25 +77,18 @@ def _classify(evidence, triage):
     }
 
 
-def _suggestion_comments(evidence):
-    comments = []
-    for fix in evidence.get("fixes") or []:
-        if not isinstance(fix, dict):
-            continue
-        comments.append(
-            {
-                "path": fix.get("path"),
-                "line": fix.get("line"),
-                "side": "RIGHT",
-                "body": (
-                    "```suggestion\n"
-                    f"{fix.get('suggested_patch') or ''}\n"
-                    "```\n\n"
-                    f"{fix.get('rationale') or ''}"
-                ),
-            }
-        )
-    return comments
+def _fix_review_body(evidence):
+    """Diff-shape fixes carry no single path/line anchor (unlike the old
+    suggested_patch mode), so there is no per-line 'suggestion' block to post --
+    just a summary of which clusters carry a diff to be applied below."""
+    ids = [
+        f.get("cluster_id")
+        for f in evidence.get("fixes") or []
+        if isinstance(f, dict) and f.get("cluster_id")
+    ]
+    if not ids:
+        return "Fix phase: no fix diffs received."
+    return f"Fix phase: {len(ids)} cluster diff(s) received ({', '.join(ids)})."
 
 
 def _write_fix(report):
@@ -241,14 +234,14 @@ def _apply_commit_close(evidence):
         applied = [r for r in results if r["status"] == "applied"]
         report["applied"] = len(applied)
         report["skipped"] = [
-            {"cluster_id": r.get("cluster_id"), "path": r.get("path"), "reason": r.get("detail")}
+            {"cluster_id": r.get("cluster_id"), "reason": r.get("detail")}
             for r in results if r["status"] != "applied"
         ]
         report["close"] = _issue_targets({r["cluster_id"] for r in applied})
         diag["applied_n"] = len(applied)
 
         if applied and not local:
-            paths = sorted({r["path"] for r in applied})
+            paths = sorted({p for r in applied for p in r.get("paths") or []})
             push = _commit_push(workdir, head, pr, paths, token)
             report["pushed"] = push["ok"]
             diag["push_ok"] = push["ok"]
@@ -320,7 +313,7 @@ def _post_apply_comment(repo, pr, token, report):
     if skipped:
         lines.append("Skipped fixes:")
         for s in skipped[:10]:
-            lines.append(f"- {s.get('cluster_id')} ({s.get('path')}): {s.get('reason')}")
+            lines.append(f"- {s.get('cluster_id')}: {s.get('reason')}")
     body = "\n".join(lines)
     env = dict(os.environ)
     if token:
@@ -369,11 +362,10 @@ def main():
     triage = _triage_input()
     report = _classify(evidence, triage)
     _write_fix(report)
-    comments = _suggestion_comments(evidence)
     payload = {
         "event": "COMMENT",
-        "body": f"Fix suggestions: {len(comments)} suggestion(s).",
-        "comments": comments,
+        "body": _fix_review_body(evidence),
+        "comments": [],
         "commit_id": os.environ.get("HEAD_SHA") or os.environ.get("PR_HEAD_SHA", ""),
     }
     _post_review(payload)
@@ -384,7 +376,7 @@ def main():
             {
                 "conclusion": "neutral",
                 "summary": (
-                    f"Fix suggestions: clusters_fixed={len(report['applied'])}, "
+                    f"Fix diffs: clusters_fixed={len(report['applied'])}, "
                     f"skipped={len(report['skipped'])}, dropped={len(report['dropped'])}, "
                     f"unknown={len(report['unknown']['fixes']) + len(report['unknown']['skipped'])}."
                     f" files_patched={apply_report['applied']}, pushed={apply_report['pushed']}"
