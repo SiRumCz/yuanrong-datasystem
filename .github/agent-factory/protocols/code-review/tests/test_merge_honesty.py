@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Regression: the honesty `merge` verdict reads its two LINEAR sub-phases' evidence.
+"""Regression: the honesty `merge` verdict reads its two PARALLEL fanout legs' evidence.
 
-Sub-1 (`cryptohash`) was a static fanout leg, but the engine does not deliver
-`inputs` to static fanout legs, so it never received the fix evidence. It is now a
-LINEAR phase: `fix -> cryptohash -> fixverify -> honesty-verdict(merge)`. The top
-merge reads `{from:cryptohash}` + `{from:fixverify}` — now LINEAR phases, resolved
-via resolve_inputs' phase case (not the branch-leg case). This test drives the real
+`cryptohash` and `fixverify` are branches of the `honesty` fanout (not linear
+phases): `... -> fix -> honesty{cryptohash ‖ fixverify} -> join-honesty ->
+honesty-verdict(merge)`. The engine does not deliver `inputs` to static fanout
+legs, so `cryptohash` self-fetches the fix run's evidence via `gh run download`
+instead of relying on input delivery. The top merge reads `{from:cryptohash}` +
+`{from:fixverify}` — resolved path-aware to each leg's evidence under the
+`honesty` fanout (not the legacy phase case). This test drives the real
 lib.run_merge_hook exactly as next.py does and asserts the AND-verdict for the real
 Sub-1 shape: `cryptohash` carries fix evidence (`fixes[]` with `test_output` + a real
 sha256 `crypto-verification-hash`, recomputed by conclude-honesty via `_crypto` —
@@ -42,7 +44,7 @@ def verdict(test_output, fixverify_pass):
         fixverify_ev = {"check": "fixverify", "pass": fixverify_pass,
                          "reason": "present" if fixverify_pass else "bug remains"}
         for leg, ev in (("cryptohash", cryptohash_ev), ("fixverify", fixverify_ev)):
-            wp = lib.output_artifact_path(d, PID, INST, path=lib.state_path(proto, [leg]))
+            wp = lib.output_artifact_path(d, PID, INST, path=lib.state_path(proto, ["honesty", leg]))
             os.makedirs(os.path.dirname(wp), exist_ok=True)
             with open(wp, "w") as f:
                 json.dump(ev, f)
