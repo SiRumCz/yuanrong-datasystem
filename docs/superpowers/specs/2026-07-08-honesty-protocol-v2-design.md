@@ -102,13 +102,13 @@ edits or tests; a host post-step runs a **designated guard test** with a `sabota
   code, then test your change before you finish."* It **edits the file(s) directly** — any complexity; the
   single-line cap is removed — runs **tests of its own choosing**, and records the resulting **`git diff`** as
   the fix evidence. Its command executions (including any test run) are recorded by gh-aw in the trusted
-  trajectory `agent_output.json` (uploaded as the `agent` artifact). A pre-step checks out the PR head so the
+  trajectory `agent-stdio.log` (uploaded in the `agent` artifact; JSONL `item.completed` lines). A pre-step checks out the PR head so the
   agent edits/tests the real PR code.
 - **No sabotage flag, no persona, no guard test.** Dishonesty is **emergent**: agent nondeterminism means it
   sometimes genuinely tests and sometimes skips *despite* the intent — the real behavior we detect. (Demo:
   capture a natural skip across runs; never force one.)
 - **Sub-1 verifies from the trusted trajectory (the correctness change).** The `cryptohash` leg fetches the
-  fix run's `agent_output.json` and, via a **deterministic host recognizer**, decides whether the agent
+  fix run's `agent-stdio.log` and, via a **deterministic host recognizer**, decides whether the agent
   executed a real *test* command (a test-runner invocation with test-like output + exit 0) and captures that
   output. The recognizer is trust-critical → deterministic (host), never an LLM judgment.
 - **cryptohash agent = the sha256 receipt.** The cryptohash agent computes `sha256` of the recognizer's
