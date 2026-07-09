@@ -7,20 +7,25 @@ resolve the finding?* (arXiv 2603.01896, "Agentic Code Reasoning") — via a
 semi-formal certificate the independent judge agent fills:
 
     { "issue": <int>,
-      "diff_evidence": ["<exact changed/added code the cert reasons about>", ...],
-      "on_reached_path": <bool>,      # is that changed code on the path the bug reaches?
-      "reasoning": "<one-line execution trace>",
-      "concludes_fixed": <bool> }     # the conclusion — DOES the diff fix the finding?
+      "premises": ["<grounded claims about the patch>", ...],
+      "execution_trace": "<one-line execution trace of the patched code>",
+      "verdict": "resolved" | "not_resolved",
+      "counterexample": "<example showing the finding is not fixed>" | absent,
+      "no_counterexample_proof": "<reasoning why no counterexample exists>" | absent,
+      "concludes_fixed": <bool> }     # must agree with verdict: resolved iff concludes_fixed
 
 Per the design decision (option C), the certificate's `concludes_fixed` IS the
 verdict: an LLM judgment, not a host re-derivation. This module does NOT re-decide
-the semantics. It enforces two deterministic honesty guardrails the LLM cannot fake:
+the semantics. It enforces three deterministic honesty guardrails the LLM cannot fake:
 
   1. refute-by-default — a malformed / structurally-incomplete certificate fails
      (the paper's "the agent cannot skip cases" made deterministic);
-  2. grounded premises — every `diff_evidence` snippet must appear in the real
-     committed diff's added lines, else the certificate is rejected as citing code
-     that isn't there (the conclude-triage `_fabricated_members` pattern).
+  2. grounded premises — every premise snippet must appear in the real committed
+     diff's added lines, else the certificate is rejected as citing code that
+     isn't there (the conclude-triage `_fabricated_members` pattern);
+  3. counterexample/proof XOR — the certificate must provide exactly one of
+     `counterexample` (for 'not_resolved') or `no_counterexample_proof` (for
+     'resolved'), and must be coherent with the verdict.
 
 Pure + import-only (mirrors _crypto.py), so it is unit-testable and shared by the
 fixverify agent's post-step reducer.
@@ -74,35 +79,50 @@ def select_finding(issues, pr):
             "suggested_fix": _suggested_fix(target.get("body", ""))}
 
 
-def verdict(cert, diff):
-    """Authoritative `fixverify` verdict for a certificate against the committed diff.
+_VERDICTS = ("resolved", "not_resolved")
 
-    Returns {check, pass, reason}. `pass` is the certificate's `concludes_fixed`
-    ONLY when the certificate is well-formed and every premise it cites is grounded
-    in the diff; otherwise it fails (refute-by-default)."""
+
+def verdict(cert, diff):
+    """Authoritative `fixverify` verdict for a paper-template certificate against the
+    committed diff. Returns {check, pass, reason}. Refute-by-default: any structural
+    gap, ungrounded premise, or XOR/coherence violation fails."""
     if not isinstance(cert, dict):
         return _bad("no fix-verification certificate produced")
 
-    ev = cert.get("diff_evidence")
-    if not isinstance(ev, list) or not ev or not all(isinstance(x, str) and x.strip() for x in ev):
-        return _bad("certificate has no `diff_evidence` (must cite the changed code)")
-    if not isinstance(cert.get("on_reached_path"), bool):
-        return _bad("certificate missing `on_reached_path` premise")
-    if not isinstance(cert.get("reasoning"), str) or not cert["reasoning"].strip():
-        return _bad("certificate missing `reasoning` (the execution trace)")
+    prem = cert.get("premises")
+    if not isinstance(prem, list) or not prem or not all(isinstance(x, str) and x.strip() for x in prem):
+        return _bad("certificate has no `premises` (grounded claims about the patch)")
+    if not isinstance(cert.get("execution_trace"), str) or not cert["execution_trace"].strip():
+        return _bad("certificate missing `execution_trace` (trace of the patched code)")
+    v = cert.get("verdict")
+    if v not in _VERDICTS:
+        return _bad("certificate `verdict` must be 'resolved' or 'not_resolved'")
     if not isinstance(cert.get("concludes_fixed"), bool):
         return _bad("certificate missing `concludes_fixed` conclusion")
 
+    ce = cert.get("counterexample")
+    proof = cert.get("no_counterexample_proof")
+    has_ce = isinstance(ce, str) and bool(ce.strip())
+    has_proof = isinstance(proof, str) and bool(proof.strip())
+    if has_ce == has_proof:  # neither, or both
+        return _bad("certificate must provide exactly one of `counterexample` / `no_counterexample_proof`")
+    if v == "not_resolved" and not has_ce:
+        return _bad("verdict 'not_resolved' requires a `counterexample`")
+    if v == "resolved" and not has_proof:
+        return _bad("verdict 'resolved' requires a `no_counterexample_proof`")
+    if cert["concludes_fixed"] != (v == "resolved"):
+        return _bad("`concludes_fixed` must agree with `verdict`")
+
     hay = added_text(diff)
-    fabricated = [x for x in ev if _norm(x) not in hay]
+    fabricated = [x for x in prem if _norm(x) not in hay]
     if fabricated:
-        return _bad("certificate cites code not in the committed diff: "
+        return _bad("certificate premises cite code not in the committed diff: "
                     + "; ".join(repr(x) for x in fabricated[:3]))
 
-    reasoning = _norm(cert["reasoning"])
+    trace = _norm(cert["execution_trace"])
     if cert["concludes_fixed"]:
-        return {"check": CHECK, "pass": True, "reason": f"fix verified: {reasoning}"}
-    return {"check": CHECK, "pass": False, "reason": f"fix NOT verified: {reasoning}"}
+        return {"check": CHECK, "pass": True, "reason": f"fix verified: {trace}"}
+    return {"check": CHECK, "pass": False, "reason": f"fix NOT verified: {trace}"}
 
 
 def leg_verdict(finding, cert, diff):

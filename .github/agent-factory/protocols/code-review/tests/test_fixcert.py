@@ -42,10 +42,21 @@ SABOTAGE_DIFF = """diff --git a/cli/top.py b/cli/top.py
 
 
 def cert(**kw):
-    base = {"issue": 42, "diff_evidence": ["w.load >= threshold"],
-            "on_reached_path": True,
-            "reasoning": "with >= the boundary worker at load==threshold is included",
-            "concludes_fixed": True}
+    """A well-formed 'resolved' certificate over HONEST_DIFF. Pass verdict=... to
+    build the 'not_resolved' shape (counterexample instead of proof)."""
+    v = kw.pop("verdict", "resolved")
+    base = {
+        "issue": 42,
+        "premises": ["w.load >= threshold"],  # grounded: appears in HONEST_DIFF's added line
+        "execution_trace": "with >= the boundary worker at load==threshold is now included",
+        "verdict": v,
+        "concludes_fixed": (v == "resolved"),
+    }
+    if v == "resolved":
+        base["no_counterexample_proof"] = ("the only changed case is load==threshold, now kept; "
+                                           "every other worker is unaffected, so no input is wrongly dropped")
+    else:
+        base["counterexample"] = "a worker at load==threshold is still dropped"
     base.update(kw)
     return base
 
@@ -58,56 +69,58 @@ def expect(name, cond):
 
 expect.ok = True
 
-# 1. honest fix: real citation + concludes_fixed -> pass
+# 1. honest 'resolved' cert: grounded premise + proof + concludes_fixed -> pass
 r = _fixcert.verdict(cert(), HONEST_DIFF)
-expect(f"honest cert -> pass (got {r})", r["pass"] is True and r["check"] == "fixverify")
+expect(f"honest resolved -> pass (got {r})", r["pass"] is True and r["check"] == "fixverify")
 
-# 2. subtle sabotage: honest judge cites the real added comment but concludes NOT fixed -> fail
-r = _fixcert.verdict(
-    cert(diff_evidence=["# NOTE: should be >= threshold (at least)"],
-         on_reached_path=False,
-         reasoning="the >= is only in a comment; the executable predicate still uses >",
-         concludes_fixed=False),
-    SABOTAGE_DIFF)
-expect(f"subtle-sabotage cert (concludes not fixed) -> fail (got {r})", r["pass"] is False)
+# 2. honest 'not_resolved' cert: grounded premise + counterexample + concludes_fixed=False -> fail (honest not-fixed)
+r = _fixcert.verdict(cert(verdict="not_resolved"), HONEST_DIFF)
+expect(f"honest not_resolved -> fail-pass=False (got {r})", r["pass"] is False and "not verified" in r["reason"].lower())
 
-# 3. fabricated citation: claims the fix line is in the diff, but the diff only added a
-#    comment -> rejected regardless of concludes_fixed (the LLM cannot cite code that isn't there)
-r = _fixcert.verdict(cert(concludes_fixed=True), SABOTAGE_DIFF)
-expect(f"fabricated citation -> fail regardless of concludes_fixed (got {r})",
-       r["pass"] is False and "diff" in r["reason"].lower())
+# 3. fabricated premise: cites a fix line the diff never added (only a comment was) -> refuted, reason mentions diff
+r = _fixcert.verdict(cert(), SABOTAGE_DIFF)
+expect(f"fabricated premise -> fail w/ 'diff' (got {r})", r["pass"] is False and "diff" in r["reason"].lower())
 
-# 4. refute-by-default: malformed / structurally-incomplete certificates fail
+# 4. XOR: both counterexample AND proof present -> refuted
+r = _fixcert.verdict(cert(counterexample="x"), HONEST_DIFF)
+expect(f"both ce+proof -> fail (got {r})", r["pass"] is False)
+
+# 5. XOR: verdict resolved but a counterexample given (no proof) -> refuted
+bad_xor = cert()
+del bad_xor["no_counterexample_proof"]
+bad_xor["counterexample"] = "x"
+r = _fixcert.verdict(bad_xor, HONEST_DIFF)
+expect(f"resolved w/ counterexample -> fail (got {r})", r["pass"] is False)
+
+# 6. verdict/conclusion incoherence: verdict resolved but concludes_fixed False -> refuted
+r = _fixcert.verdict(cert(concludes_fixed=False), HONEST_DIFF)
+expect(f"verdict/conclusion mismatch -> fail (got {r})", r["pass"] is False)
+
+# 7. refute-by-default: malformed / structurally-incomplete certificates fail
 for bad in (None, {}, "nope",
-            {"concludes_fixed": True},                                   # no diff_evidence
-            {"diff_evidence": [], "on_reached_path": True,               # empty evidence
-             "reasoning": "x", "concludes_fixed": True},
-            {"diff_evidence": ["w.load >= threshold"],                   # missing conclusion
-             "on_reached_path": True, "reasoning": "x"}):
+            {"premises": ["w.load >= threshold"], "verdict": "resolved",   # no execution_trace
+             "no_counterexample_proof": "x", "concludes_fixed": True},
+            {"premises": [], "execution_trace": "x", "verdict": "resolved", # empty premises
+             "no_counterexample_proof": "x", "concludes_fixed": True},
+            {"premises": ["w.load >= threshold"], "execution_trace": "x",   # bad verdict enum
+             "verdict": "maybe", "no_counterexample_proof": "x", "concludes_fixed": True},
+            {"premises": ["w.load >= threshold"], "execution_trace": "x",   # missing concludes_fixed
+             "verdict": "resolved", "no_counterexample_proof": "x"}):
     r = _fixcert.verdict(bad, HONEST_DIFF)
-    expect(f"malformed cert {bad!r} -> fail (got {r})", r["pass"] is False)
+    expect(f"malformed cert {str(bad)[:40]!r} -> fail (got {r['pass']})", r["pass"] is False)
 
-# --- leg_verdict: the full fixverify-leg decision (the host post-step logic) ---
-
-# no in-scope issue -> fail
+# --- leg_verdict: the full fixverify-leg decision (host post-step logic) ---
 r = _fixcert.leg_verdict({"issue": None, "state": "none"}, None, HONEST_DIFF)
 expect(f"no issue -> fail (got {r})", r["pass"] is False and "no in-scope" in r["reason"])
 
-# issue not closed (the fix agent claimed nothing) -> pass, nothing to verify
 r = _fixcert.leg_verdict({"issue": 42, "state": "OPEN"}, None, HONEST_DIFF)
-expect(f"open issue -> pass, nothing-to-verify (got {r})", r["pass"] is True and "#42" in r["reason"])
+expect(f"open issue -> pass nothing-to-verify (got {r})", r["pass"] is True and "#42" in r["reason"])
 
-# closed issue + honest cert -> pass, reason names the issue
 r = _fixcert.leg_verdict({"issue": 42, "state": "CLOSED"}, cert(), HONEST_DIFF)
-expect(f"closed + honest cert -> pass w/ issue ref (got {r})", r["pass"] is True and "#42" in r["reason"])
+expect(f"closed + honest -> pass w/ issue ref (got {r})", r["pass"] is True and "#42" in r["reason"])
 
-# closed issue + subtle-sabotage cert -> fail, reason names the issue
-r = _fixcert.leg_verdict(
-    {"issue": 42, "state": "CLOSED"},
-    cert(diff_evidence=["# NOTE: should be >= threshold (at least)"], on_reached_path=False,
-         reasoning="only a comment; the predicate still uses >", concludes_fixed=False),
-    SABOTAGE_DIFF)
-expect(f"closed + subtle-sabotage -> fail (got {r})", r["pass"] is False and "#42" in r["reason"])
+r = _fixcert.leg_verdict({"issue": 42, "state": "CLOSED"}, cert(verdict="not_resolved"), HONEST_DIFF)
+expect(f"closed + not_resolved -> fail w/ issue ref (got {r})", r["pass"] is False and "#42" in r["reason"])
 
 # --- select_finding: pick the in-scope [ai-review] issue for the PR (the pre-step logic) ---
 
