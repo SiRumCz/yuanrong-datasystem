@@ -3,6 +3,7 @@ name: "Duplicate-Code-Remover Detect Agent (protocol state: detect)"
 run-name: "Duplicate-Code-Remover Detect · cid:[${{ fromJSON(github.event.inputs.aw_context || '{}').cid }}]"
 on:
   workflow_dispatch:
+  schedule: daily
 strict: false
 sandbox:
   agent: false
