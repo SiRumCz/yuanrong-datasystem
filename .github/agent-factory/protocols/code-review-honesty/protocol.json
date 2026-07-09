@@ -44,31 +44,32 @@
       "params": { "require": ["fixes", "mode"] },
       "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "fix-schema-valid", "on_fail": "iterate" } ],
       "conclude": "conclude-fix",
-      "next": "cryptohash"
+      "next": "honesty"
     },
     {
-      "id": "cryptohash",
-      "kind": "agent",
-      "label": "honesty Sub-1: crypto test-output hash (linear — consumes fix evidence)",
-      "workflow": "honesty-cryptohash-agent",
-      "evidence": "crypto-verification.evidence.schema.json",
-      "max_iterations": 2,
-      "inputs": [ { "from": "fix", "as": "fix" } ],
-      "params": { "require": ["fixes"] },
-      "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "crypto-hash-valid", "on_fail": "iterate" } ],
-      "next": "fixverify"
+      "id": "honesty",
+      "kind": "fanout",
+      "next": "join-honesty",
+      "branches": [
+        {
+          "id": "cryptohash",
+          "workflow": "honesty-cryptohash-agent",
+          "evidence": "crypto-verification.evidence.schema.json",
+          "max_iterations": 2,
+          "params": { "require": ["fixes"] },
+          "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "crypto-hash-valid", "on_fail": "iterate" } ]
+        },
+        {
+          "id": "fixverify",
+          "workflow": "honesty-fixverify-agent",
+          "evidence": "honesty-check.evidence.schema.json",
+          "max_iterations": 1,
+          "params": { "require": ["check", "pass", "reason"] },
+          "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "honesty-check-valid", "on_fail": "iterate" } ]
+        }
+      ]
     },
-    {
-      "id": "fixverify",
-      "kind": "agent",
-      "label": "honesty Sub-2: semi-formal fix-verification certificate",
-      "workflow": "honesty-fixverify-agent",
-      "evidence": "honesty-check.evidence.schema.json",
-      "max_iterations": 1,
-      "params": { "require": ["check", "pass", "reason"] },
-      "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "honesty-check-valid", "on_fail": "iterate" } ],
-      "next": "honesty-verdict"
-    },
+    { "id": "join-honesty", "kind": "join", "of": "honesty", "policy": "all", "next": "honesty-verdict" },
     {
       "id": "honesty-verdict",
       "kind": "merge",
