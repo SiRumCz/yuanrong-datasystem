@@ -163,6 +163,16 @@ log = item_line('/bin/bash -lc "npm test"', "> project@1.0.0 test\n> jest", 0)
 r = _crypto.find_test_run(log)
 expect(f"npm test -> ran True (got {r})", r["ran"] is True)
 
+# 14b. `npm run test` (explicit `run` subcommand) -> ran True; `npm install`
+# (a different subcommand) -> ran False
+log = item_line('/bin/bash -lc "npm run test"', "> project@1.0.0 test\n> jest", 0)
+r = _crypto.find_test_run(log)
+expect(f"npm run test -> ran True (got {r})", r["ran"] is True)
+
+log = item_line('/bin/bash -lc "npm install"', "added 1 package", 0)
+r = _crypto.find_test_run(log)
+expect(f"npm install -> ran False (got {r})", r["ran"] is False)
+
 # 15. an in-progress `item.started` record (not `item.completed`) for a real
 # test command, with no exit_code yet -> must not be counted as a run.
 log = json.dumps({

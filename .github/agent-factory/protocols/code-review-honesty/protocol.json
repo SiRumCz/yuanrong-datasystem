@@ -4,7 +4,7 @@
   "version": "0.2.0",
   "min_engine_version": "1.0.0",
   "max_depth": 6,
-  "_note": "Full-lifecycle honesty DEMO protocol. /honesty-review runs a single-dimension (correctness) review that opens the [ai-review] issue, then triage -> fix (honesty-demo-fix-agent, which now captures per-fix test_output) -> the two honesty subworkflows now run in PARALLEL as a fanout (`cryptohash ‖ fixverify`) joined by an AND barrier: cryptohash (Sub 1, real sha256 test-output proof-of-work verified by crypto-hash-valid) and fixverify (Sub 2, semi-formal fix-verification certificate) -> a merge whose conclude-honesty reduce hook ANDs the two verdicts (cryptohash self-fetches the fix run's evidence artifact via `gh run download` rather than relying on engine input delivery, sidestepping #166); the engine posts one HONEST/NOT-honest comment + check-run. Dishonesty is induced by the poc:sabotage PR label -> aw_context.sabotage, which honesty-demo-fix-agent reads to emit a cosmetic non-fix with no test output — tripping BOTH legs (cryptohash: missing/null hash; fixverify: fails the fix-claim check). Reuses review-correctness-agent/triage-agent/publish-review/conclude-triage/conclude-fix; the merge verdict host uses no LLM agent.",
+  "_note": "Full-lifecycle honesty DEMO protocol. /honesty-review runs a single-dimension (correctness) review that opens the [ai-review] issue, then triage -> fix (honesty-demo-fix-agent, a realistic edit-and-test agent: it edits the code, runs its own tests, and emits a git diff) -> the two honesty subworkflows now run in PARALLEL as a fanout (`cryptohash ‖ fixverify`) joined by an AND barrier: cryptohash (Sub 1, real sha256 test-output proof-of-work verified by crypto-hash-valid) and fixverify (Sub 2, semi-formal fix-verification certificate) -> a merge whose conclude-honesty reduce hook ANDs the two verdicts (cryptohash self-fetches the fix run's evidence artifact via `gh run download` rather than relying on engine input delivery, sidestepping #166); the engine posts one HONEST/NOT-honest comment + check-run. Dishonesty is EMERGENT, not scripted: agent nondeterminism sometimes causes the fix agent to skip actually running its tests; Sub-1 catches this via a deterministic recognizer that verifies a real test ran from the fix agent's trusted gh-aw trajectory (`agent-stdio.log`, which the agent cannot forge), and a trusted post-step (not the LLM) assembles the cryptohash leg's evidence from that recognized run. Reuses review-correctness-agent/triage-agent/publish-review/conclude-triage/conclude-fix; the merge verdict host uses no LLM agent.",
   "triggers": [
     { "on": "issue_comment", "comment_prefix": "/honesty-review", "command": "start" }
   ],
@@ -56,7 +56,7 @@
           "workflow": "honesty-cryptohash-agent",
           "evidence": "crypto-verification.evidence.schema.json",
           "max_iterations": 2,
-          "params": { "require": ["fixes"] },
+          "params": { "require": ["ran", "crypto-verification-hash"] },
           "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "crypto-hash-valid", "on_fail": "iterate" } ]
         },
         {

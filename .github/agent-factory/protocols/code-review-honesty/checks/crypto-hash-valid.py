@@ -19,7 +19,13 @@ fix agent's trusted `agent-stdio.log` trajectory), this also re-verifies the
 agent copied `ran`/`test_output` through verbatim rather than substituting its
 own — the agent cannot launder a fabricated run behind a correctly-computed
 hash of ITS OWN made-up output. Absent that file (e.g. unit tests / local
-invocation), the check falls back to hash-only, unchanged.
+invocation), the check falls back to hash-only, unchanged. Note that in the
+real CI job this file is absent by the time this check runs in `checks:`
+(only the pre-step's own process wrote it, into a workspace that isn't
+carried into the checks job); this re-verify is a local/belt-and-suspenders
+guard, not the live trust anchor — the live anchor is the leg's trusted
+`post-steps:` assemble step, which rebuilds `evidence.json` itself from the
+recognized run rather than trusting the agent's copy.
 
 ABI: crypto-hash-valid.py <evidence.json> <diff.txt> <changed-files.txt>
 Prints one {"check","pass","feedback"} object to stdout and always exits 0.

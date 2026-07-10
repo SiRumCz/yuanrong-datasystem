@@ -71,7 +71,7 @@ both = copy.deepcopy(VALID)
 both["skipped"].append({"cluster_id": "c1", "reason": "also skipped"})
 ok("cluster in fixes and skipped fails", run(both)["pass"] is False)
 
-# fixes[] entry missing required field (diff) => pass False
+# skipped[] entry missing required field (reason) => pass False
 missing_reason = copy.deepcopy(VALID)
 del missing_reason["skipped"][0]["reason"]
 ok("missing skipped reason fails", run(missing_reason)["pass"] is False)

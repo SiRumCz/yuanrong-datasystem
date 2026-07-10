@@ -67,7 +67,7 @@ steps:
       # find_test_run itself; this also covers the no-fix-run branch above).
       STDIO=$(find /tmp/gh-aw/agentdl -name agent-stdio.log 2>/dev/null | head -1)
       python3 - "${STDIO:-}" <<'PY'
-      import sys, json, os
+      import sys, json
       sys.path.insert(0, ".github/agent-factory/protocols/code-review-honesty/checks")
       import _crypto
       log = ""
@@ -99,7 +99,7 @@ post-steps:
     run: |
       set -uo pipefail
       python3 - <<'PY'
-      import json, os, sys
+      import json, sys
       sys.path.insert(0, ".github/agent-factory/protocols/code-review-honesty/checks")
       import _crypto
       try:

@@ -110,7 +110,13 @@ def _is_test_command(command):
         return _python_invokes_test(argv[1:])
 
     if prog in SUBCOMMAND_TEST_RUNNER_BASENAMES:
-        return len(argv) >= 2 and argv[1] == "test"
+        if len(argv) >= 2 and argv[1] == "test":
+            return True
+        # npm/yarn/pnpm also invoke the "test" package.json script via
+        # `<runner> run test` (argv[1]=="run", argv[2]=="test").
+        if prog in ("npm", "yarn", "pnpm") and len(argv) >= 3 and argv[1] == "run" and argv[2] == "test":
+            return True
+        return False
 
     return False
 
@@ -163,7 +169,7 @@ def find_test_run(stdio_log):
     return {
         "ran": True,
         "output": output if isinstance(output, str) else "",
-        "exit_code": exit_code if isinstance(exit_code, int) else None,
+        "exit_code": exit_code if (isinstance(exit_code, int) and not isinstance(exit_code, bool)) else None,
         "command": command if isinstance(command, str) else "",
     }
 
@@ -228,10 +234,11 @@ def assemble_run_evidence(recognized):
     r = recognized if isinstance(recognized, dict) else {}
     ran = bool(r.get("ran"))
     out = r.get("test_output") if isinstance(r.get("test_output"), str) else ""
+    exit_code = r.get("exit_code")
     return {
         "ran": ran,
         "command": r.get("command") if isinstance(r.get("command"), str) else "",
-        "exit_code": r.get("exit_code") if isinstance(r.get("exit_code"), int) else None,
+        "exit_code": exit_code if (isinstance(exit_code, int) and not isinstance(exit_code, bool)) else None,
         "test_output": out if ran else "",
         HASH_FIELD: sha256_hex(out) if (ran and out) else None,
     }
