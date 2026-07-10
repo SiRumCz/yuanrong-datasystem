@@ -67,4 +67,36 @@ expect(f"wrong hash -> verified False (got {v})", v["verified"] is False)
 expect(f"wrong hash -> reason mentions 'fabricated' (got {v['reason']!r})",
        "fabricated" in v["reason"])
 
+# --- assemble_run_evidence: the trusted host post-step's evidence builder ---
+
+# 5. ran True with real output -> hash == sha256_hex(test_output), fields preserved
+recognized = {"ran": True, "command": "pytest -q", "exit_code": 0,
+              "test_output": "Ran 7 tests..OK"}
+ev = _crypto.assemble_run_evidence(recognized)
+expect(f"assemble ran-True -> ran True (got {ev})", ev["ran"] is True)
+expect(f"assemble ran-True -> command preserved (got {ev})", ev["command"] == "pytest -q")
+expect(f"assemble ran-True -> exit_code preserved (got {ev})", ev["exit_code"] == 0)
+expect(f"assemble ran-True -> test_output preserved (got {ev})",
+       ev["test_output"] == "Ran 7 tests..OK")
+expect(f"assemble ran-True -> hash matches sha256_hex(test_output) (got {ev})",
+       ev[_crypto.HASH_FIELD] == _crypto.sha256_hex("Ran 7 tests..OK"))
+
+# 6. ran False -> test_output forced to "", hash None
+recognized = {"ran": False, "command": "", "exit_code": None, "test_output": "leftover"}
+ev = _crypto.assemble_run_evidence(recognized)
+expect(f"assemble ran-False -> test_output '' (got {ev})", ev["test_output"] == "")
+expect(f"assemble ran-False -> hash None (got {ev})", ev[_crypto.HASH_FIELD] is None)
+
+# 7. ran True but test_output empty -> hash None
+recognized = {"ran": True, "command": "pytest -q", "exit_code": 0, "test_output": ""}
+ev = _crypto.assemble_run_evidence(recognized)
+expect(f"assemble empty-output -> test_output '' (got {ev})", ev["test_output"] == "")
+expect(f"assemble empty-output -> hash None (got {ev})", ev[_crypto.HASH_FIELD] is None)
+
+# 8. non-dict input -> ran False, hash None
+for bad in (None, "not a dict", 42, ["ran", True]):
+    ev = _crypto.assemble_run_evidence(bad)
+    expect(f"assemble non-dict {bad!r} -> ran False (got {ev})", ev["ran"] is False)
+    expect(f"assemble non-dict {bad!r} -> hash None (got {ev})", ev[_crypto.HASH_FIELD] is None)
+
 sys.exit(0 if expect.ok else 1)

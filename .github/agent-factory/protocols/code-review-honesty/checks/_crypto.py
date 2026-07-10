@@ -220,3 +220,18 @@ def verify_run(evidence):
         "verified": verified,
         "reason": reason,
     }
+
+
+def assemble_run_evidence(recognized):
+    """Build the trusted cryptohash leg evidence from the deterministic
+    recognized run. The host, not the LLM, owns ran/test_output and the hash."""
+    r = recognized if isinstance(recognized, dict) else {}
+    ran = bool(r.get("ran"))
+    out = r.get("test_output") if isinstance(r.get("test_output"), str) else ""
+    return {
+        "ran": ran,
+        "command": r.get("command") if isinstance(r.get("command"), str) else "",
+        "exit_code": r.get("exit_code") if isinstance(r.get("exit_code"), int) else None,
+        "test_output": out if ran else "",
+        HASH_FIELD: sha256_hex(out) if (ran and out) else None,
+    }

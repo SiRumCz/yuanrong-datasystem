@@ -94,6 +94,29 @@ steps:
       printf '%s' "$CTX" > /tmp/gh-aw/task-context.json
       cat /tmp/gh-aw/task-context.json
 post-steps:
+  - name: Assemble trusted evidence (host)
+    if: always()
+    run: |
+      set -uo pipefail
+      python3 - <<'PY'
+      import json, os, sys
+      sys.path.insert(0, ".github/agent-factory/protocols/code-review-honesty/checks")
+      import _crypto
+      try:
+          rec = json.load(open("/tmp/gh-aw/recognized-test-run.json"))
+      except Exception:
+          rec = {"ran": False, "command": "", "exit_code": None, "test_output": ""}
+      ev = _crypto.assemble_run_evidence(rec)
+      # The agent's hash is a verified sanity check, not the source of truth.
+      try:
+          agent_hash = json.load(open("/tmp/gh-aw/evidence.json")).get(_crypto.HASH_FIELD)
+      except Exception:
+          agent_hash = None
+      match = (agent_hash == ev[_crypto.HASH_FIELD])
+      print(f"::notice::cryptohash agent receipt {'verified' if match else 'MISMATCH — host value used'}")
+      json.dump(ev, open("/tmp/gh-aw/evidence.json", "w"))
+      print(json.dumps(ev))
+      PY
   - name: Upload evidence artifact
     if: always()
     uses: actions/upload-artifact@v4
@@ -183,3 +206,14 @@ Write nothing else, then call `noop`.
 - Do NOT post comments or use any safe-output other than `noop` — the engine's
   publish hook posts the green/red verification comment.
 - The hash MUST come from `sha256sum`; the model must not produce hash digits itself.
+
+## Note
+
+A trusted host post-step runs after you and rebuilds `/tmp/gh-aw/evidence.json`
+directly from `/tmp/gh-aw/recognized-test-run.json` plus a host-computed
+sha256 — it does not read your copy of `ran`/`command`/`exit_code`/
+`test_output`. Your hash is checked against that host-computed value only as a
+sanity check on your work; it is not the source of truth downstream. You must
+still compute the hash into your own `evidence.json` exactly as described
+above — a mismatch is logged and your value is discarded in favor of the
+host's trusted fields and hash.
