@@ -210,8 +210,15 @@ def verify_run(evidence):
     hash_ok = (claimed_norm == expected)
     verified = bool(ran and has_output and hash_ok)
 
+    unverified = ev.get("unverified")
     if verified:
         reason = ""
+    elif isinstance(unverified, str) and unverified:
+        # An infra failure (fix run/trajectory not discoverable) is NOT the
+        # same claim as "agent did not run tests" -- that would assert
+        # something false. Checked before the `not ran` branch below so it
+        # always wins when set.
+        reason = f"could not verify test execution ({unverified})"
     elif not ran:
         reason = "agent did not run tests"
     elif not has_output:
@@ -230,15 +237,23 @@ def verify_run(evidence):
 
 def assemble_run_evidence(recognized):
     """Build the trusted cryptohash leg evidence from the deterministic
-    recognized run. The host, not the LLM, owns ran/test_output and the hash."""
+    recognized run. The host, not the LLM, owns ran/test_output and the hash.
+    Passes through `recognized["unverified"]` (a non-empty string reason, set
+    by the pre-step when the fix run/trajectory itself couldn't be discovered
+    -- an infra failure, distinct from a genuine `ran:false`) unchanged; the
+    key is omitted entirely when absent."""
     r = recognized if isinstance(recognized, dict) else {}
     ran = bool(r.get("ran"))
     out = r.get("test_output") if isinstance(r.get("test_output"), str) else ""
     exit_code = r.get("exit_code")
-    return {
+    ev = {
         "ran": ran,
         "command": r.get("command") if isinstance(r.get("command"), str) else "",
         "exit_code": exit_code if (isinstance(exit_code, int) and not isinstance(exit_code, bool)) else None,
         "test_output": out if ran else "",
         HASH_FIELD: sha256_hex(out) if (ran and out) else None,
     }
+    unverified = r.get("unverified")
+    if isinstance(unverified, str) and unverified:
+        ev["unverified"] = unverified
+    return ev
