@@ -1,0 +1,1 @@
+{"ran": true, "command": "/bin/bash -lc 'python3 cli/tests/test_status.py'", "exit_code": 0, "test_output": "........\n----------------------------------------------------------------------\nRan 8 tests in 0.001s\n\nOK\n", "crypto-verification-hash": "698d16d7b93c4bd9707d3cfacda6fb1e0fea99ed0cda6e69bedc42772940540a"}
