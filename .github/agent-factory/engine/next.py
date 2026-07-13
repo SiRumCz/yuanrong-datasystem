@@ -846,11 +846,11 @@ if COMMAND == "continue" and NODE_PATH:
         inst["joined"] = True
         lib.dump_yaml(inf, inst)
         pr = lib.pr_from_instance(INSTANCE)
-        lib.set_check_run(PID, HEAD_SHA, "completed", res.get("conclusion", "neutral"),
-                          "Combined", res.get("summary", ""))
-        lib.post_pr_comment(pr, f"🧬 **{_p[-1]}**: {res.get('summary', '')}")
+        concl, summary, label = lib.finalize_merge_result(res)
+        lib.set_check_run(PID, HEAD_SHA, "completed", concl, "Combined", summary)
+        lib.post_pr_comment(pr, f"🧬 **{_p[-1]}**: {summary}")
         lib.upsert_status_comment(inf, pr, lib.render_instance_status_body(DIR, PID, INSTANCE, PROTO))
-        lib.ensure_phase_label(DIR, PID, INSTANCE, proto_data, pr, "done")
+        lib.ensure_phase_label(DIR, PID, INSTANCE, proto_data, pr, label)
         lib.cas_push(DIR, f"{INSTANCE}: merge {_p[-1]} → done")
         print(json.dumps({"action": "noop", "iteration": 0, "feedback": "",
                           "reason": f"merge:{_p[-1]}"}))

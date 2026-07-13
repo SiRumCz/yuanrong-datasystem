@@ -1600,7 +1600,14 @@ def ensure_status_comment(state_dir, pid, instance, proto_path, pr):
 
 
 def _gh_dispatch(event_type, fields):
-    """Fire a repository_dispatch. ENGINE_LOCAL → no-op (logs to stderr in gh-args format)."""
+    """Fire a repository_dispatch. ENGINE_LOCAL → no-op (logs to stderr in gh-args
+    format). Retries up to 3 attempts (5s apart) on gh api failure (e.g. a 403 from
+    the shared PAT's rate limit, or a transient 5xx); after the 3rd failure raises
+    so the calling job fails red instead of stalling silently. State is CAS-pushed
+    before every dispatch call site, so nothing is lost, but a plain job re-run
+    will no-op on the empty-commit guard — recovery is re-firing the printed
+    `gh api` command."""
+    import time
     args = [f"repos/{os.environ.get('GITHUB_REPOSITORY', '')}/dispatches",
             "-f", f"event_type={event_type}"]
     for k, v in fields.items():
@@ -1608,7 +1615,17 @@ def _gh_dispatch(event_type, fields):
     if os.environ.get("ENGINE_LOCAL", "0") == "1":
         sys.stderr.write(f"[ENGINE_LOCAL] gh api {' '.join(args)}\n")
         return
-    subprocess.run(["gh", "api"] + args, text=True, capture_output=True)
+    last_err = ""
+    for attempt in range(3):
+        r = subprocess.run(["gh", "api"] + args, text=True, capture_output=True)
+        if r.returncode == 0:
+            return
+        last_err = r.stderr
+        if attempt < 2:
+            time.sleep(5)
+    replay = "gh api " + " ".join(args)
+    sys.stderr.write(f"[engine] repository_dispatch {event_type} failed after 3 attempts: {last_err}; state already pushed — recover by re-firing: {replay}\n")
+    raise RuntimeError(f"[engine] repository_dispatch {event_type} failed after 3 attempts: {last_err}; state already pushed — recover by re-firing: {replay}")
 
 
 def dispatch_continue(pid, instance, branch=None, substate=None, phase="", path=None):
@@ -1768,6 +1785,21 @@ def run_merge_hook(dir_, pid, instance, proto_path, merge_state, consuming_path=
     except (json.JSONDecodeError, ValueError):
         pass
     return {"conclusion": "neutral", "summary": "merge hook returned no verdict"}
+
+
+def finalize_merge_result(res):
+    """Map a merge hook's result to the (conclusion, summary, label) the TOP-merge
+    finalize arm publishes. A hook that crashed / was unresolved / returned no
+    verdict (conclusion 'neutral') must GATE, not complete: neutral -> failure with
+    an explicit hook-failed summary and a 'failed' phase label. A genuine verdict
+    ('success' or 'failure', e.g. an honest NOT-honest outcome) passes through with
+    the 'done' label (the pipeline completed; the verdict is the verdict)."""
+    res = res if isinstance(res, dict) else {}
+    concl = res.get("conclusion", "neutral")
+    summary = res.get("summary", "")
+    if concl in ("success", "failure"):
+        return concl, summary, "done"
+    return "failure", f"verdict hook failed — gate blocked: {summary or 'no verdict'}", "failed"
 
 
 def _cli(argv):

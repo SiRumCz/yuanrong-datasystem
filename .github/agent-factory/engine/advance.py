@@ -90,16 +90,26 @@ def persist_output(ctx, evid, kind="evidence"):
 
 
 def gh_api(*args):
-    """Run 'gh api ...' with ENGINE_LOCAL short-circuit."""
+    """Run 'gh api ...' with ENGINE_LOCAL short-circuit. Retries up to 3 attempts
+    (5s apart) on failure (e.g. a 403 from the shared PAT's rate limit, or a
+    transient 5xx); after the 3rd failure exits nonzero so the advance job fails
+    red instead of stalling silently. State is CAS-pushed before every dispatch
+    call site, so nothing is lost, but a plain job re-run will no-op on the
+    empty-commit guard — recovery is re-firing the printed `gh api` command."""
     if os.environ.get("ENGINE_LOCAL", "0") == "1":
         sys.stderr.write(f"[ENGINE_LOCAL] gh api {' '.join(args)}\n")
         return
-    result = subprocess.run(
-        ["gh", "api"] + list(args),
-        text=True, capture_output=True
-    )
-    if result.returncode != 0:
-        sys.stderr.write(f"[engine] gh api failed: {result.stderr}\n")
+    import time
+    last_err = ""
+    for attempt in range(3):
+        result = subprocess.run(["gh", "api"] + list(args), text=True, capture_output=True)
+        if result.returncode == 0:
+            return
+        last_err = result.stderr
+        if attempt < 2:
+            time.sleep(5)
+    sys.stderr.write(f"[engine] gh api failed after 3 attempts: {last_err}; recover by re-firing: gh api {' '.join(args)}\n")
+    sys.exit(1)
 
 
 def fire_join(pid, instance, branch, fanout_path=""):
