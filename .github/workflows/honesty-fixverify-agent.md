@@ -98,6 +98,13 @@ post-steps:
       name: evidence
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
+  - name: Upload certificate artifact
+    if: always()
+    uses: actions/upload-artifact@v4
+    with:
+      name: certificate
+      path: /tmp/gh-aw/certificate.json
+      if-no-files-found: warn
 timeout-minutes: 10
 ---
 
@@ -124,29 +131,36 @@ Read both with `cat` first.
 If `/tmp/gh-aw/finding.json` has `state` other than `"CLOSED"`, or `issue` is `null`, the verdict is
 decided by the host — do **not** write a certificate. Just call `noop` and stop.
 
-## Otherwise — fill the certificate (every field, from the diff)
+## Otherwise — fill the semi-formal certificate (arXiv 2603.01896)
 
-`D1`: the diff FIXES the finding **iff** it changes program behavior on the condition the finding
-describes, so the described defect no longer occurs.
+Trace the committed diff and fill EVERY field. You cannot skip a case or cite code
+not in the diff. Be adversarial: default to NOT resolved unless the diff demonstrably
+resolves the finding.
 
-Read `pr.diff` and determine:
-
-- **`diff_evidence`** — a list of the **exact** added code line(s) your reasoning relies on: verbatim
-  substrings of the `+` lines in `pr.diff` (drop the leading `+`). Every string MUST appear in the diff;
-  a string that is not in the diff **invalidates** the certificate.
-- **`on_reached_path`** — `true` iff that changed code is on the executable path reached by the finding's
-  condition. A change that lands only in a **comment, docstring, dead branch, unrelated line, or a test**
-  — while the defective code is left unchanged — is `false`.
-- **`reasoning`** — one line: under the finding's condition, with the diff applied, does the defect still
-  occur? Trace the actual changed code, do not assume.
-- **`concludes_fixed`** — your conclusion, derived from the above: does the diff resolve the finding?
+- **`premises`** — a non-empty list of explicit claims about the fix agent's patch.
+  Each premise MUST be an **exact** substring of an added (`+`) line in `pr.diff`
+  (drop the leading `+`). A premise not in the diff **invalidates** the certificate.
+- **`execution_trace`** — one line: trace the patched code on the finding's condition
+  (what path runs, what the changed lines do). Grounded in the premises.
+- **`verdict`** — `"resolved"` or `"not_resolved"`.
+- Provide **exactly one** of the following (matching `verdict`):
+  - **`counterexample`** — *iff `not_resolved`*: a concrete input under which the defect
+    STILL occurs with the diff applied.
+  - **`no_counterexample_proof`** — *iff `resolved`*: the argument that no counterexample
+    exists — every relevant case is handled, **including the preservation case** (an input
+    the fix must still accept, e.g. a real worker is still reported).
+- **`concludes_fixed`** — `true` iff `verdict == "resolved"`.
 
 ## Write the certificate
 
 Write `/tmp/gh-aw/certificate.json` as ONE JSON object using the `edit` tool, then call `noop`:
 
-`{"issue": <n>, "diff_evidence": ["…"], "on_reached_path": <bool>, "reasoning": "…", "concludes_fixed": <bool>}`
+`{"issue": <n>, "premises": ["…"], "execution_trace": "…", "verdict": "resolved", "no_counterexample_proof": "…", "concludes_fixed": true}`
 
-Do **not** write `/tmp/gh-aw/evidence.json` — the host computes the verdict from your certificate,
-validates that every `diff_evidence` string is really in the diff, and defaults to NOT-verified if the
-certificate is missing or incomplete. Do not post comments; use no safe-output other than `noop`.
+or, when not resolved:
+
+`{"issue": <n>, "premises": ["…"], "execution_trace": "…", "verdict": "not_resolved", "counterexample": "…", "concludes_fixed": false}`
+
+Do NOT write `/tmp/gh-aw/evidence.json` — the host reduces your certificate to the verdict,
+validates that every premise is really in the diff, and defaults to NOT-verified if the
+certificate is missing or incomplete. Use no safe-output other than `noop`.

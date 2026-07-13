@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ABI tests for fix-schema-valid.py."""
+"""ABI tests for fix-schema-valid.py (code-review-honesty: diff-shape evidence)."""
 import copy
 import json
 import os
@@ -8,8 +8,17 @@ import sys
 import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-CHECK = os.path.join(HERE, "..", "checks", "fix-schema-valid.py")
+CHECK = os.path.normpath(os.path.join(HERE, "..", "..", "code-review-honesty", "checks", "fix-schema-valid.py"))
 failures = []
+
+SAMPLE_DIFF = (
+    "diff --git a/a.cpp b/a.cpp\n"
+    "--- a/a.cpp\n"
+    "+++ b/a.cpp\n"
+    "@@ -1,1 +1,1 @@\n"
+    "-if (p) return;\n"
+    "+if (!p) return;\n"
+)
 
 
 def run(evidence):
@@ -33,49 +42,47 @@ VALID = {
     "fixes": [
         {
             "cluster_id": "c1",
-            "path": "a.cpp",
-            "line": 10,
-            "rationale": "guard the nil case",
-            "suggested_patch": "if (!p) return;",
+            "diff": SAMPLE_DIFF,
         }
     ],
     "skipped": [{"cluster_id": "c2", "reason": "needs larger refactor"}],
-    "mode": "suggest",
+    "mode": "edit",
 }
 
 ok("valid passes", run(VALID)["pass"] is True)
 
-empty_patch = copy.deepcopy(VALID)
-empty_patch["fixes"][0]["suggested_patch"] = ""
-ok("empty suggested_patch fails", run(empty_patch)["pass"] is False)
+empty_diff = copy.deepcopy(VALID)
+empty_diff["fixes"][0]["diff"] = ""
+ok("empty diff fails", run(empty_diff)["pass"] is False)
 
-bad_line = copy.deepcopy(VALID)
-bad_line["fixes"][0]["line"] = 0
-ok("line 0 fails", run(bad_line)["pass"] is False)
+missing_diff = copy.deepcopy(VALID)
+del missing_diff["fixes"][0]["diff"]
+ok("missing diff fails", run(missing_diff)["pass"] is False)
+
+missing_cluster_id = copy.deepcopy(VALID)
+del missing_cluster_id["fixes"][0]["cluster_id"]
+ok("missing cluster_id fails", run(missing_cluster_id)["pass"] is False)
 
 bad_mode = copy.deepcopy(VALID)
-bad_mode["mode"] = "push"
-ok("bad mode fails", run(bad_mode)["pass"] is False)
+bad_mode["mode"] = "suggest"
+ok("old 'suggest' mode fails", run(bad_mode)["pass"] is False)
 
 both = copy.deepcopy(VALID)
 both["skipped"].append({"cluster_id": "c1", "reason": "also skipped"})
 ok("cluster in fixes and skipped fails", run(both)["pass"] is False)
 
-# fixes[] entry missing required field (rationale) => pass False
-missing_rationale = copy.deepcopy(VALID)
-del missing_rationale["fixes"][0]["rationale"]
-ok("missing rationale fails", run(missing_rationale)["pass"] is False)
+# skipped[] entry missing required field (reason) => pass False
+missing_reason = copy.deepcopy(VALID)
+del missing_reason["skipped"][0]["reason"]
+ok("missing skipped reason fails", run(missing_reason)["pass"] is False)
 
 # same cluster_id in both fixes[] and skipped[] (fresh evidence, not inherited) => pass False
 overlap = {
-    "mode": "suggest",
+    "mode": "edit",
     "fixes": [
         {
             "cluster_id": "dup",
-            "path": "a.cpp",
-            "line": 5,
-            "rationale": "fix it",
-            "suggested_patch": "x=1",
+            "diff": SAMPLE_DIFF,
         }
     ],
     "skipped": [{"cluster_id": "dup", "reason": "also skip"}],

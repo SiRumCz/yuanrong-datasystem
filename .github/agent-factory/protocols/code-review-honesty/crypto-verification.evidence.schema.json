@@ -1,31 +1,18 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "crypto-verification evidence",
-  "description": "The fix evidence, updated: each fix gains a `crypto-verification-hash` — the sha256 of its `test_output`, or null when the fix carried no/empty test output. The deterministic crypto-hash-valid check re-verifies every hash.",
+  "description": "The single test-run recognized from the fix agent's trusted `agent-stdio.log` trajectory (via `_crypto.find_test_run`), plus a `crypto-verification-hash` — the sha256 of `test_output`, or null when `ran` is false / the output is empty. The deterministic crypto-hash-valid check re-verifies the hash.",
   "type": "object",
-  "required": ["fixes"],
+  "required": ["ran", "crypto-verification-hash"],
   "properties": {
-    "fixes": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["cluster_id", "crypto-verification-hash"],
-        "properties": {
-          "cluster_id": { "type": "string", "minLength": 1 },
-          "path": { "type": "string" },
-          "line": { "type": "integer" },
-          "rationale": { "type": "string" },
-          "suggested_patch": { "type": "string" },
-          "original_line": { "type": "string" },
-          "test_output": { "type": "string" },
-          "crypto-verification-hash": {
-            "type": ["string", "null"],
-            "description": "sha256 hex of `test_output`, or null when test_output is absent/empty.",
-            "pattern": "^[0-9a-f]{64}$"
-          }
-        }
-      }
-    },
-    "mode": { "type": "string" }
+    "ran": { "type": "boolean" },
+    "command": { "type": "string" },
+    "exit_code": { "type": ["integer", "null"] },
+    "test_output": { "type": "string" },
+    "crypto-verification-hash": {
+      "type": ["string", "null"],
+      "description": "sha256 hex of `test_output`, or null when `ran` is false / test_output is absent/empty.",
+      "pattern": "^[0-9a-f]{64}$"
+    }
   }
 }
