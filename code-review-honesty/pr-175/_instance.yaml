@@ -2,6 +2,6 @@ protocol: code-review-honesty
 instance: pr-175
 head_sha: b380d1a6e8e9f303d1458084a9735bac9376741c
 phase: honesty
-joined: true
+joined: false
 phase_label: Honesty
 status_comment_id: 4961101741
