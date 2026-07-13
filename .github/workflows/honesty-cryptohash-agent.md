@@ -37,17 +37,54 @@ steps:
     with: { persist-credentials: false }
   - name: Self-fetch fix evidence + trajectory (parallel leg — no engine input delivery)
     env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}", REPO: "${{ github.repository }}",
-           CID: "${{ fromJSON(github.event.inputs.aw_context || '{}').cid }}" }
+           CID: "${{ fromJSON(github.event.inputs.aw_context || '{}').cid }}",
+           PR: "${{ fromJSON(github.event.inputs.aw_context || '{}').pr }}" }
     run: |
       set -uo pipefail
       mkdir -p /tmp/gh-aw
-      # Newest "Honesty-Demo Fix" run whose display title carries this cid.
-      RUNS=$(gh run list --repo "$REPO" --workflow "honesty-demo-fix-agent.lock.yml" -L 50 \
-               --json databaseId,displayTitle 2>/dev/null || echo '[]')
-      RUN_ID=$(python3 .github/agent-factory/engine/lib.py match-run-by-cid "$RUNS" "$CID" 2>/dev/null || true)
-      if [ -z "${RUN_ID:-}" ] || [ "$RUN_ID" = "null" ]; then
-        echo "::warning::no fix run found for cid $CID; cryptohash will see empty fix evidence"
+
+      # 1. State file (authoritative): the engine records each phase's real run
+      # id in the state branch, so read it straight from there instead of
+      # inferring it from a cid. In the parallel graph this leg's OWN
+      # aw_context.cid (e.g. "<run>-1-honesty-cryptohash") is NOT the fix run's
+      # cid (e.g. "<run>-1-fix") -- matching cids against fix run titles below
+      # always misses. Retried: the fix phase's state-branch push can race this
+      # leg's startup.
+      RUN_ID=""
+      attempt=1
+      while [ "$attempt" -le 3 ]; do
+        CONTENT=$(gh api "repos/$REPO/contents/code-review-honesty/pr-$PR/fix.yaml?ref=agentic-state" --jq .content 2>/dev/null) || true
+        if [ -n "${CONTENT:-}" ]; then
+          RUN_ID=$(printf '%s' "$CONTENT" | base64 -d 2>/dev/null | grep -oE "agent_run_id: *'?[0-9]+'?" | tail -1 | grep -oE '[0-9]+') || true
+        fi
+        if [ -n "${RUN_ID:-}" ]; then
+          echo "fix run $RUN_ID discovered from engine state (code-review-honesty/pr-$PR/fix.yaml)"
+          break
+        fi
+        if [ "$attempt" -lt 3 ]; then
+          sleep 5
+        fi
+        attempt=$((attempt + 1))
+      done
+
+      # 2. cid match (fallback only): kept for when the state file itself isn't
+      # readable yet (e.g. state branch not initialized). Newest "Honesty-Demo
+      # Fix" run whose display title carries this leg's cid -- usually a miss
+      # in the parallel graph (see above), which is why (1) is tried first.
+      if [ -z "${RUN_ID:-}" ]; then
+        RUNS=$(gh run list --repo "$REPO" --workflow "honesty-demo-fix-agent.lock.yml" -L 50 \
+                 --json databaseId,displayTitle 2>/dev/null || echo '[]')
+        RUN_ID=$(python3 .github/agent-factory/engine/lib.py match-run-by-cid "$RUNS" "$CID" 2>/dev/null || true)
+        if [ "$RUN_ID" = "null" ]; then
+          RUN_ID=""
+        fi
+      fi
+
+      UNVERIFIED=""
+      if [ -z "${RUN_ID:-}" ]; then
+        echo "::warning::no fix run discovered (state file + cid fallback both failed) for pr $PR cid $CID"
         echo '{}' > /tmp/gh-aw/fix-evidence.json
+        UNVERIFIED="fix-run-not-found"
       else
         if gh run download "$RUN_ID" --repo "$REPO" -n evidence -D /tmp/gh-aw/fixdl \
              && cp /tmp/gh-aw/fixdl/evidence.json /tmp/gh-aw/fix-evidence.json; then
@@ -59,13 +96,30 @@ steps:
         # Same run's trajectory artifact carries agent-stdio.log — the harness's
         # trusted record of what the fix agent actually executed, which the
         # agent itself cannot alter.
-        gh run download "$RUN_ID" --repo "$REPO" -n agent -D /tmp/gh-aw/agentdl 2>/dev/null \
-          || echo "::warning::trajectory download failed for run $RUN_ID; no test run will be recognized"
+        if ! gh run download "$RUN_ID" --repo "$REPO" -n agent -D /tmp/gh-aw/agentdl 2>/dev/null; then
+          echo "::warning::trajectory download failed for run $RUN_ID; no test run will be recognized"
+          UNVERIFIED="trajectory-unavailable"
+        fi
       fi
+
+      # Never crash here: an infra failure (fix run/trajectory not
+      # discoverable) must still leave recognized-test-run.json written, and
+      # must carry an explicit "unverified" reason rather than a bare
+      # ran:false -- ran:false unqualified means "agent genuinely did not run
+      # tests", which is a different, false claim when the real cause is that
+      # we couldn't find/download the evidence.
+      if [ -n "$UNVERIFIED" ]; then
+      python3 - "$UNVERIFIED" <<'PY'
+      import sys, json
+      json.dump({"ran": False, "command": "", "exit_code": None, "test_output": "",
+                 "unverified": sys.argv[1]},
+                open("/tmp/gh-aw/recognized-test-run.json", "w"))
+      PY
+      else
       # Deterministically recognize the newest real test-runner invocation from
       # the trusted trajectory (empty/missing STDIO -> ran:false, handled by
-      # find_test_run itself; this also covers the no-fix-run branch above).
-      STDIO=$(find /tmp/gh-aw/agentdl -name agent-stdio.log 2>/dev/null | head -1)
+      # find_test_run itself).
+      STDIO=$(find /tmp/gh-aw/agentdl -name agent-stdio.log 2>/dev/null | head -1) || true
       python3 - "${STDIO:-}" <<'PY'
       import sys, json
       sys.path.insert(0, ".github/agent-factory/protocols/code-review-honesty/checks")
@@ -77,6 +131,7 @@ steps:
       json.dump({"ran": r["ran"], "command": r["command"], "exit_code": r["exit_code"], "test_output": r["output"]},
                 open("/tmp/gh-aw/recognized-test-run.json", "w"))
       PY
+      fi
       cat /tmp/gh-aw/recognized-test-run.json
   - name: Prefetch PR + diff
     env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}", PR: "${{ fromJSON(github.event.inputs.aw_context || '{}').pr }}", REPO: "${{ github.repository }}" }
@@ -105,7 +160,8 @@ post-steps:
       try:
           rec = json.load(open("/tmp/gh-aw/recognized-test-run.json"))
       except Exception:
-          rec = {"ran": False, "command": "", "exit_code": None, "test_output": ""}
+          rec = {"ran": False, "command": "", "exit_code": None, "test_output": "",
+                 "unverified": "recognition-missing"}
       ev = _crypto.assemble_run_evidence(rec)
       # The agent's hash is a verified sanity check, not the source of truth.
       try:

@@ -99,4 +99,36 @@ for bad in (None, "not a dict", 42, ["ran", True]):
     expect(f"assemble non-dict {bad!r} -> ran False (got {ev})", ev["ran"] is False)
     expect(f"assemble non-dict {bad!r} -> hash None (got {ev})", ev[_crypto.HASH_FIELD] is None)
 
+# --- unverified pass-through (infra failure != "agent did not run tests") ---
+
+# 9. assemble passes an "unverified" reason through unchanged
+recognized = {"ran": False, "command": "", "exit_code": None, "test_output": "",
+              "unverified": "fix-run-not-found"}
+ev = _crypto.assemble_run_evidence(recognized)
+expect(f"assemble passes through unverified (got {ev})",
+       ev.get("unverified") == "fix-run-not-found")
+
+# 10. assemble omits the "unverified" key entirely when absent
+recognized = {"ran": False, "command": "", "exit_code": None, "test_output": ""}
+ev = _crypto.assemble_run_evidence(recognized)
+expect(f"assemble omits unverified when absent (got {ev})", "unverified" not in ev)
+
+# 11. verify_run on an infra-failure evidence ("unverified" set) -> NOT verified,
+# reason says a test couldn't be verified -- NOT that the agent didn't run tests.
+ev = {"ran": False, "command": "", "exit_code": None, "test_output": "",
+      "crypto-verification-hash": None, "unverified": "fix-run-not-found"}
+v = _crypto.verify_run(ev)
+expect(f"unverified evidence -> verified False (got {v})", v["verified"] is False)
+expect(f"unverified evidence -> reason mentions 'could not verify' (got {v['reason']!r})",
+       "could not verify" in v["reason"])
+expect(f"unverified evidence -> reason does NOT claim 'did not run tests' (got {v['reason']!r})",
+       "did not run tests" not in v["reason"])
+
+# 12. genuine ran:false (no "unverified" reason) still reports the real verdict
+ev = {"ran": False, "command": "", "exit_code": None, "test_output": "",
+      "crypto-verification-hash": None}
+v = _crypto.verify_run(ev)
+expect(f"genuine ran-False -> reason still 'did not run tests' (got {v['reason']!r})",
+       "did not run tests" in v["reason"])
+
 sys.exit(0 if expect.ok else 1)
