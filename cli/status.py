@@ -61,6 +61,8 @@ def parse_worker_lines(output):
             continue
         if _WORKER_ADDRESS_ARG not in cmdline:
             continue
+        if not _WORKER_BIN_RE.search(cmdline):
+            continue
         match = _WORKER_ADDRESS_RE.search(cmdline)
         if not match:
             continue
