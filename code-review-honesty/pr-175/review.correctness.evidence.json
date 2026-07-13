@@ -1,0 +1,15 @@
+{
+  "dimension": "correctness",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "cli/status.py",
+      "line": 86,
+      "severity": "high",
+      "category": "correctness",
+      "title": "Handle status discovery failures instead of letting the CLI crash",
+      "impact": "Command.run calls list_workers() directly, but list_workers() raises RuntimeError when pgrep is missing, times out, or exits with an error other than no matches. The top-level dscli main() does not catch command exceptions, so these expected operational failures terminate dscli status with an uncaught traceback instead of the command contract used by neighboring CLI commands: log the failure and return BaseCommand.FAILURE.",
+      "fix": "Wrap the list_workers() call in run() in a try/except, log a concise status failure message, and return BaseCommand.FAILURE on discovery errors."
+    }
+  ]
+}
