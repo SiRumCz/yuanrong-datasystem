@@ -1604,8 +1604,9 @@ def _gh_dispatch(event_type, fields):
     format). Retries up to 3 attempts (5s apart) on gh api failure (e.g. a 403 from
     the shared PAT's rate limit, or a transient 5xx); after the 3rd failure raises
     so the calling job fails red instead of stalling silently. State is CAS-pushed
-    before dispatch at every call site, so a red job here is safely recoverable by
-    re-dispatch."""
+    before every dispatch call site, so nothing is lost, but a plain job re-run
+    will no-op on the empty-commit guard — recovery is re-firing the printed
+    `gh api` command."""
     import time
     args = [f"repos/{os.environ.get('GITHUB_REPOSITORY', '')}/dispatches",
             "-f", f"event_type={event_type}"]
@@ -1622,8 +1623,9 @@ def _gh_dispatch(event_type, fields):
         last_err = r.stderr
         if attempt < 2:
             time.sleep(5)
-    sys.stderr.write(f"[engine] repository_dispatch {event_type} failed after 3 attempts: {last_err}\n")
-    raise RuntimeError(f"[engine] repository_dispatch {event_type} failed after 3 attempts: {last_err}")
+    replay = "gh api " + " ".join(args)
+    sys.stderr.write(f"[engine] repository_dispatch {event_type} failed after 3 attempts: {last_err}; state already pushed — recover by re-firing: {replay}\n")
+    raise RuntimeError(f"[engine] repository_dispatch {event_type} failed after 3 attempts: {last_err}; state already pushed — recover by re-firing: {replay}")
 
 
 def dispatch_continue(pid, instance, branch=None, substate=None, phase="", path=None):

@@ -17,7 +17,9 @@ advanced -> silent stall. Both now retry up to 3 attempts (5s apart) and then
 fail LOUD: _gh_dispatch raises RuntimeError (its callers run inside next.py,
 which should crash the job); gh_api calls sys.exit(1) (advance.py is a script).
 """
+import contextlib
 import importlib.util
+import io
 import os
 import sys
 import time
@@ -100,12 +102,16 @@ try:
     calls.clear()
     lib.subprocess.run = _fail
     raised = False
+    err_msg = ""
     try:
         lib._gh_dispatch("protocol-continue", {"protocol": "p", "instance": "i"})
-    except RuntimeError:
+    except RuntimeError as e:
         raised = True
+        err_msg = str(e)
     expect(f"_gh_dispatch raises RuntimeError after retries (raised={raised})", raised)
     expect(f"_gh_dispatch retried 3 times before raising (got {len(calls)})", len(calls) == 3)
+    expect(f"_gh_dispatch error names event_type and replay command (msg={err_msg!r})",
+           "recover by re-firing" in err_msg and "protocol-continue" in err_msg)
 
     calls.clear()
     lib.subprocess.run = _ok
@@ -129,12 +135,17 @@ try:
     calls.clear()
     advance.subprocess.run = _fail
     exited = None
+    stderr_buf = io.StringIO()
     try:
-        advance.gh_api("some/path")
+        with contextlib.redirect_stderr(stderr_buf):
+            advance.gh_api("some/path")
     except SystemExit as e:
         exited = e.code
+    stderr_out = stderr_buf.getvalue()
     expect(f"gh_api sys.exit(1)s after retries (exit code {exited})", exited == 1)
     expect(f"gh_api retried 3 times before exiting (got {len(calls)})", len(calls) == 3)
+    expect(f"gh_api stderr carries replay command (stderr={stderr_out!r})",
+           "recover by re-firing" in stderr_out and "some/path" in stderr_out)
 
     calls.clear()
     advance.subprocess.run = _ok
