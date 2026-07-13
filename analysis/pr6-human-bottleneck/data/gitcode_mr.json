@@ -1,0 +1,223 @@
+{
+  "id": 8696642,
+  "html_url": "https://gitcode.com/openeuler/yuanrong-datasystem/merge_requests/1064",
+  "number": 1064,
+  "state": "merged",
+  "title": "feat(log): implement unified random log sampling system",
+  "url": "https://api.gitcode.com/api/v5/repos/openeuler/yuanrong-datasystem/pulls/1064",
+  "issue_url": "https://api.gitcode.com/api/v5/repos/openeuler/yuanrong-datasystem/pulls/1064/issues",
+  "body": "**这是什么类型的PR？**\n\n/kind feat (新增功能)\n\n----\n\n**这个PR是做什么的/我们为什么需要它**\n\n实现统一的随机日志采样系统（LogSampler），替代原有 LogRateLimiter 的首N限流模式，改为按请求/访问/诊断三维维度的随机哈希阈值采样。支持 LogSampleState RPC 跨进程传播，保证同一请求在客户端和工作端的采样决策一致性。扩展 AccessRecorder 类引入 lambda-fill Record() 懒构造模式和 ShouldRecord() 守卫，将约65+调用点从先构造RequestParam再判断是否记录改为仅在sampled-in时才构造，避免sampled-out时的无效开销。新增 request_sample_rate/access_sample_rate/diagnostic_sample_rate (double 0.0-1.0) 三个gflag替代旧 log_rate_limit (int32)，支持派生规则和显式阻断。\n\n----\n\n**此PR修复了哪些问题**:\n\nFixes #574\n\n----\n\n**PR对程序接口进行了哪些修改？**\n\n**新增组件：**\n- `LogSampler` (log_sampler.h/cpp): 核心采样器，分类优先算法(BYPASS→REQUEST→DIAGNOSTIC→ACCESS)，热路径仅1个atomic load(relaxed)\n- `LogSamplerProto` (log_sampler_proto.cpp): LogSampleConfigPb 序列化/反序列化，worker→client ppm传输\n- `LogSampleConfigPb` (share_memory.proto): 新增proto message，替代RegisterClientRspPb.field24的int32 log_rate_limit\n\n**修改接口：**\n- `AccessRecorder`: 新增 lambda-fill `Record()` 模板方法，`ShouldRecord()` getter，`FormatAccessReqMsg()`；移除旧 string dataSize签名，改为 uint64_t dataSize\n- `ShouldCreateLogMessage()/ShouldCreatePlogMessage()`: 改为LogSampler分类算法，FATAL/CHECK始终通过\n- `EmbeddedConfig`: 移除 `LogRateLimit(int)`，新增 `RequestSampleRate(double)/AccessSampleRate(double)/DiagnosticSampleRate(double)`\n- `ZMQ GetOrCreateLogSampleState()/ApplyLogSampleState()`: 改为LogSampler API\n\n**新增gflags：**\n- `--request_sample_rate` (double, default 1.0, range 0.0-1.0)\n- `--access_sample_rate` (double, default 1.0, range 0.0-1.0, 可派生)\n- `--diagnostic_sample_rate` (double, default 1.0, range 0.0-1.0, 可派生)\n\n**移除：**\n- `LogRateLimiter` 类 (log_rate_limiter.h/cpp) 及其测试\n- `--log_rate_limit` gflag (int32)\n- `DATASYSTEM_LOG_RATE_LIMIT` 客户端环境变量\n- `EmbeddedConfig::LogRateLimit(int)`\n- `RegisterClientRspPb.log_rate_limit` proto field 24 → 改为 `LogSampleConfigPb log_sample_config`\n- `EnsureRequestSampleDecision()` (trace.cpp)\n- `AccessRecorder::Record()` string dataSize签名\n\n**Breaking changes：**\n- proto wire-format: RegisterClientRspPb field 24 从 int32→message，旧客户端解析失败\n- log_rate_limit gflag完全移除，无向后兼容映射\n- DATASYSTEM_LOG_RATE_LIMIT env var不再读取\n\n**测试：**\n- UT: log_sampler_test, log_sampler_access_test, log_sampler_config_test, log_sampler_integration_test (覆盖LS-001至LS-016外部可观测场景)\n- ST: log_sampler_st_test (跨进程传播一致性)\n- Performance: log_performance_test (LS-010/LS-011基准)\n\n**文档：**\n- log_guide.md: 替换log_rate_limit章节为LogSampler完整文档(三维采样、派生规则、配置方式)\n- client_env_guide.md: 移除DATASYSTEM_LOG_RATE_LIMIT行\n- dscli.md: 替换log_rate_limit为三个sample_rate行\n- worker_config.json / K8s helm values: 替换log_rate_limit为三个sample_rate配置\n\n----\n\n**Self-checklist**:\n\n+ - [x] **设计**：方案覆盖LS-001至LS-016共18个外部可观测场景，设计文档见.repo_context/modules/infra/logging/log-sampler-design.md\n+ - [x] **测试**：新增4个UT(log_sampler_test/access/config/integration) + 1个ST，删除log_rate_limiter_test\n+ - [x] **验证**：功能UT/ST通过；性能4000QPS 32线程4场景全部PASS，无measurable regression\n+ - [x] **接口**：EmbeddedConfig三维采样率替代LogRateLimit；AccessRecorder扩展lambda-fill；proto field 24 wire-format变更\n+ - [x] **文档**：log_guide.md/client_env_guide.md/dscli.md已更新；K8s helm配置已更新\n+ - [x] **性能**：详见下方性能验证章节\n\n----\n\n**性能验证 (LS-010/LS-011/LS-016)**\n\n设计文档要求：\"4000 QPS 32线程下，与无LogSampler基线对比，无measurable throughput或p99回归\"\n\n验证方法：PR vs Baseline(LogRateLimiter)，相同QPS(4000)和线程数(32)，4场景对比\n\n### S1: 全通过 — 合入阻断门限\n\n| 路径 | 指标 | PR tm | BL tm | Δ | Δ% | noise_band | 判定 |\n|------|------|-------|-------|------|------|-----------|------|\n| Direct | achievedQps | 4002.92 | 4002.96 | 0.04 | 0.00% | 0.38 | PASS ✅ |\n| Direct | avgUs | 35.81μs | 37.78μs | 1.97μs | 5.21% | 8.56μs | PASS ⚠️ |\n| Direct | p50Us | 14.00μs | 14.76μs | 0.75μs | 5.11% | 1.66μs | PASS ⚠️ |\n| Direct | p95Us | 115.23μs | 117.99μs | 2.76μs | 2.34% | 13.61μs | PASS ⚠️ |\n| Direct | p99Us | 183.85μs | 184.34μs | 0.50μs | 0.27% | 50.33μs | PASS ✅ |\n| Macro | achievedQps | 4002.96 | 4002.94 | 0.01 | 0.00% | 0.09 | PASS ✅ |\n| Macro | avgUs | 35.17μs | 36.29μs | 1.11μs | 3.07% | 6.67μs | PASS ⚠️ |\n| Macro | p50Us | 13.64μs | 14.56μs | 0.91μs | 6.27% | 1.66μs | PASS ⚠️ |\n| Macro | p95Us | 113.50μs | 114.99μs | 1.50μs | 1.30% | 13.14μs | PASS ⚠️ |\n| Macro | p99Us | 174.60μs | 168.43μs | 6.17μs | 3.66% | 38.43μs | PASS ⚠️ |\n\n✅ unobservable(Δ%<1%) | ⚠️ observable within noise(Δ%≥1%但Δ<noise_band，PR更优，Macro p99Us BL略优+5μs)\n\n### S2: 近全量拒绝\n\n| 指标 | PR tm | BL tm | Δ | Δ% | noise_band | 判定 |\n|------|-------|-------|------|------|-----------|------|\n| achievedQps | 4002.98 | 4002.97 | 0.01 | 0.00% | 0.20 | PASS ✅ |\n| avgUs | 7.13μs | 7.35μs | 0.22μs | 2.99% | 0.47μs | PASS ⚠️ |\n| p50Us | 4.95μs | 5.14μs | 0.19μs | 3.69% | 0.09μs | PASS 🟢 |\n| p95Us | 21.04μs | 21.05μs | 0.01μs | 0.02% | 2.00μs | PASS ✅ |\n| p99Us | 28.01μs | 28.47μs | 0.47μs | 1.64% | 2.05μs | PASS ⚠️ |\n\n🟢 observable, improved(PR reject fast path更快); payloadBuilds=0, zero allocation\n\n### S3: 半量通过 — sampler vs rate limiter\n\n**S3a (纯日志)**\n\n| 指标 | PR tm | BL tm | Δ | Δ% | noise_band | 判定 |\n|------|-------|-------|------|------|-----------|------|\n| achievedQps | 4002.96 | 4002.97 | 0.01 | 0.00% | 0.14 | PASS ✅ |\n| avgUs | 19.76μs | 23.53μs | 3.77μs | 16.01% | 4.45μs | PASS 🟢 |\n| p50Us | 10.05μs | 10.27μs | 0.22μs | 2.17% | 0.63μs | PASS ⚠️ |\n| p95Us | 72.87μs | 93.84μs | 20.97μs | 22.35% | 12.54μs | PASS 🟢 |\n| p99Us | 109.16μs | 142.94μs | 33.78μs | 23.63% | 11.95μs | PASS 🟢 |\n\n**S3b (含payload)**\n\n| 指标 | PR tm | BL tm | Δ | Δ% | noise_band | 判定 |\n|------|-------|-------|------|------|-----------|------|\n| achievedQps | 4002.94 | 4002.81 | 0.13 | 0.00% | 0.76 | PASS ✅ |\n| avgUs | 20.65μs | 23.20μs | 2.55μs | 10.99% | 2.17μs | PASS 🟢 |\n| p50Us | 10.61μs | 10.76μs | 0.15μs | 1.43% | 1.11μs | PASS ⚠️ |\n| p95Us | 78.27μs | 98.59μs | 20.31μs | 20.60% | 6.82μs | PASS 🟢 |\n| p99Us | 116.17μs | 148.24μs | 32.07μs | 21.63% | 14.78μs | PASS 🟢 |\n\n🟢 observable, improved — sampler比rate limiter p99低23-24%(5轮全部PR<B)，系统性架构优势(随机采样无聚集效应)\n\n### S4: AccessRecorder\n\n| 测试 | avgUs | p50Us | p99Us | 功能验证 |\n|------|-------|-------|-------|---------|\n| sampled-out (rate=0) | 0.09μs | 0.09μs | 0.17μs | sampledOut=10000 ✅ |\n| sampled-in (rate=1.0) | 4.88μs | 4.05μs | 9.65μs | sampledIn=10000 ✅ |\n| sampled-mixed (rate=0.5) | 2.48μs | (bimodal) | 7.32μs | 50.03% pass ✅ |\n\nsub-μs sampled-out fast path, ~10μs sampled-in full path\n\n### 结论\n\n- S1关键指标(achievedQps/p99Us)Δ%<1%，不可观测(unobservable)\n- S1次要指标(avgUs/p50Us/p95Us)Δ%≥1%但Δ<noise_band，可观测但在噪声内(observable within noise)，PR更优\n- S3 sampler比rate limiter p99低23-24%，系统性架构优势\n- S2 reject fast path payloadBuilds=0，zero allocation\n\nLogSampler满足LS-010\"no measurable regression\"需求，所有场景PASS，无性能回归。\n",
+  "assignees_number": 7,
+  "assignees": [
+    {
+      "id": "694a531c5b7ea66514a10c49",
+      "login": "tianyi-huawei",
+      "name": "tianyi-huawei",
+      "avatar_url": "https://cdn-img.gitcode.com/fe/ff/124f3ef7616f5e3d08824f6287ee8c5ab49c8ee43a9bd4cdf722e588591145cd.jpg",
+      "html_url": "https://gitcode.com/tianyi-huawei",
+      "assignee": true,
+      "code_owner": false,
+      "accept": false
+    },
+    {
+      "id": "69330473d6e2d93a4f11ac22",
+      "login": "iewauh",
+      "name": "iewauh",
+      "avatar_url": "https://cdn-img.gitcode.com/ba/ba/1b45a7956b66a604d4a6e69c5cf19676489d83615bb695eb2d1d1500844401f8.jpg",
+      "html_url": "https://gitcode.com/iewauh",
+      "assignee": true,
+      "code_owner": false,
+      "accept": false
+    },
+    {
+      "id": "692d0ae2c5538775c7f9b788",
+      "login": "liangyi1234",
+      "name": "liangyi1234",
+      "avatar_url": "https://cdn-img.gitcode.com/ee/ac/ee9a8c9c4cf0546dfbd356cffc0c18806c33f02bb16276e6ad211ffd872905af.jpg",
+      "html_url": "https://gitcode.com/liangyi1234",
+      "assignee": true,
+      "code_owner": false,
+      "accept": false
+    },
+    {
+      "id": "6933047333ea216945373ad7",
+      "login": "yche-huawei",
+      "name": "cheyulin",
+      "avatar_url": "https://cdn-img.gitcode.com/be/fc/be13630561f69cae8919c621a36d6ee8e20ba73a1693e1adef5cc076685da194.jpg",
+      "html_url": "https://gitcode.com/yche-huawei",
+      "assignee": true,
+      "code_owner": false,
+      "accept": false
+    },
+    {
+      "id": "69330473a0c71d442ad87dd8",
+      "login": "slichengsong",
+      "name": "slichengsong",
+      "avatar_url": "https://cdn-img.gitcode.com/ba/ca/ba3765c8ad681557a8210a5885b21b6f69706d586c1b5e4b5c39306754fb7174.jpg",
+      "html_url": "https://gitcode.com/slichengsong",
+      "assignee": true,
+      "code_owner": false,
+      "accept": false
+    },
+    {
+      "id": "692e62273e517c5e1528f00f",
+      "login": "yuchaow",
+      "name": "YuchaoWang",
+      "avatar_url": "https://cdn-img.gitcode.com/ff/df/21ff16d85077f9176c54b3324075ffe3f9bece9b07edae9a468e94cea6ba447e.jpg",
+      "html_url": "https://gitcode.com/yuchaow",
+      "assignee": true,
+      "code_owner": false,
+      "accept": false
+    },
+    {
+      "id": "692d0ae1c5538775c7f9b784",
+      "login": "luozhancheng",
+      "name": "luozhancheng",
+      "avatar_url": "https://cdn-img.gitcode.com/ee/df/48e49e1d296f6f422d9b0b39dff31f3bb96114ffcf3bc6ff473551797fe363a5.jpg",
+      "html_url": "https://gitcode.com/luozhancheng",
+      "assignee": true,
+      "code_owner": false,
+      "accept": false
+    }
+  ],
+  "testers": [],
+  "approval_reviewers": [],
+  "labels": [
+    {
+      "id": 18089,
+      "color": "#2865E0",
+      "name": "sig/sig-YuanRong",
+      "repository_id": 7982840,
+      "created_at": "2025-11-08T15:25:33+08:00",
+      "updated_at": "2026-06-04T19:42:59+08:00"
+    },
+    {
+      "id": 17924,
+      "color": "#25e42b",
+      "name": "openeuler-cla/yes",
+      "repository_id": 7982840,
+      "created_at": "2025-11-08T15:24:14+08:00",
+      "updated_at": "2026-06-04T19:43:01+08:00"
+    },
+    {
+      "id": 18317,
+      "color": "#5ae61e",
+      "name": "ci_successful",
+      "repository_id": 7982840,
+      "created_at": "2025-11-08T15:27:21+08:00",
+      "updated_at": "2026-06-14T15:09:28+08:00"
+    },
+    {
+      "id": 18193,
+      "color": "#23eb14",
+      "name": "approved",
+      "repository_id": 7982840,
+      "created_at": "2025-11-08T15:26:21+08:00",
+      "updated_at": "2026-06-14T16:12:53+08:00"
+    },
+    {
+      "id": 18367,
+      "color": "#3af221",
+      "name": "lgtm",
+      "repository_id": 7982840,
+      "created_at": "2025-11-08T15:27:45+08:00",
+      "updated_at": "2026-06-14T16:12:53+08:00"
+    }
+  ],
+  "created_at": "2026-06-04T19:42:53+08:00",
+  "updated_at": "2026-06-14T16:13:08+08:00",
+  "closed_at": "2026-06-14T16:13:07+08:00",
+  "merged_at": "2026-06-14T16:13:07+08:00",
+  "merged_by": {
+    "id": "67862084285f793d15c6fdfb",
+    "login": "openeuler-ci-bot",
+    "name": "openeuler-ci-bot",
+    "avatar_url": "https://cdn-img.gitcode.com/fc/da/28237fc33d815a5de0ce27705eb6413c3b83ef0d7a3e39b02d9272fff3a0dddc.png?time=1762158018903",
+    "html_url": "https://gitcode.com/openeuler-ci-bot"
+  },
+  "draft": false,
+  "can_merge_check": true,
+  "prune_branch": false,
+  "mergeable": true,
+  "user": {
+    "id": "6952265a89ac7e7fb9f51c86",
+    "login": "liudongliang",
+    "name": "liudongliang",
+    "html_url": "https://gitcode.com/liudongliang"
+  },
+  "head": {
+    "ref": "log-sampler-pr",
+    "sha": "daa2cf52fc6f68211f30d748501e8d0fd122e2a8",
+    "label": "log-sampler-pr",
+    "repo": {
+      "path": "yuanrong-datasystem",
+      "name": "yuanrong-datasystem",
+      "namespace": {
+        "path": "liudongliang"
+      },
+      "full_name": "liudongliang/yuanrong-datasystem",
+      "html_url": "https://gitcode.com/liudongliang/yuanrong-datasystem.git"
+    },
+    "user": {
+      "id": "6952265a89ac7e7fb9f51c86",
+      "login": "liudongliang",
+      "name": "liudongliang",
+      "html_url": "https://gitcode.com/liudongliang"
+    }
+  },
+  "base": {
+    "ref": "master",
+    "sha": "30e7ed3255936e55f407f184aaa7f12da8ecaaf9",
+    "label": "master",
+    "repo": {
+      "path": "yuanrong-datasystem",
+      "name": "yuanrong-datasystem",
+      "namespace": {
+        "path": "openeuler"
+      },
+      "full_name": "openeuler/yuanrong-datasystem",
+      "html_url": "https://gitcode.com/openeuler/yuanrong-datasystem.git"
+    }
+  },
+  "mergeable_state": {
+    "merge_request_id": 8696642,
+    "state": true,
+    "status_without_user_auth": true,
+    "conflict_passed": true,
+    "branch_missing_passed": true,
+    "non_ff_passed": true,
+    "mr_state_passed": true,
+    "merged_by_user_passed": true,
+    "work_in_progress_passed": true,
+    "resolve_discussion_passed": true,
+    "ci_state_passed": true,
+    "merge_by_self_passed": true,
+    "can_force_merge": false,
+    "approval_reviewers_required_passed": true,
+    "approval_approvers_required_passed": true,
+    "approval_testers_required_passed": true,
+    "merge_request_switch": {
+      "review_mode": "approval",
+      "merge_method": "merge",
+      "only_allow_merge_if_all_discussions_are_resolved": true,
+      "disable_merge_by_self": false,
+      "only_allow_merge_if_pipeline_succeeds": false,
+      "disable_squash_merge": true,
+      "squash_merge_with_no_merge_commit": false,
+      "approval_required_reviewers_count": 0,
+      "approval_required_reviewers_branch": "*",
+      "add_notes_after_merged": true,
+      "mark_auto_merged_mr_as_closed": false,
+      "can_force_merge": false,
+      "can_reopen": true
+    },
+    "reason": {},
+    "check_tasks_num": 0,
+    "all_depend_merge_request_merged_passed": true,
+    "approval_approvers_result": 2,
+    "approval_testers_result": 2
+  },
+  "visibility_reason": "public",
+  "close_related_issue": true,
+  "squash_merge": false
+}

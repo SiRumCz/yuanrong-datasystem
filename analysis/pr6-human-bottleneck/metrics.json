@@ -1,0 +1,131 @@
+{
+  "subject_pr": {
+    "repo": "SiRumCz/yuanrong-datasystem",
+    "number": 6,
+    "title": "feat(log): implement unified random log sampling system",
+    "author": "haoxianghz",
+    "changed_files": 98,
+    "additions": 7423,
+    "deletions": 2708,
+    "loc_changed": 10131,
+    "commits": 1,
+    "issue_comments": 162,
+    "review_comments": 163,
+    "review_submissions": 163,
+    "review_submission_states": {
+      "COMMENTED": 163
+    },
+    "discussion_artifacts": 325,
+    "decision_findings": 44,
+    "findings_by_severity": {
+      "严重": 22,
+      "警告": 22
+    },
+    "findings_by_category": {
+      "Bug": 12,
+      "测试": 6,
+      "设计": 4,
+      "性能": 7,
+      "文档": 6,
+      "安全": 8
+    },
+    "threaded_replies": 115,
+    "fix_acknowledgements": 99,
+    "files_touched_by_review": 30,
+    "comments_per_changed_file": 3.3,
+    "review_comments_per_100_loc": 1.61,
+    "text": {
+      "latin_words": 25970,
+      "cjk_chars": 22463,
+      "read_minutes": 186.0
+    },
+    "note": "issue comments are recreated CI/mirror posts by one account; the 163 review comments are the seeded [severity][category] decision corpus."
+  },
+  "upstream_origin": {
+    "platform": "gitcode openeuler/yuanrong-datasystem",
+    "number": 1064,
+    "title": "feat(log): implement unified random log sampling system",
+    "author": null,
+    "state": "merged",
+    "created_at": "2026-06-04T19:42:53+08:00",
+    "merged_at": "2026-06-14T16:13:07+08:00",
+    "days_open": 9.9,
+    "total_comments": 208,
+    "human_comments": 104,
+    "bot_comments": 104,
+    "distinct_humans": 3,
+    "human_breakdown": {
+      "yaohaolin": 58,
+      "liudongliang": 43,
+      "yche-huawei": 3
+    },
+    "bot_breakdown": {
+      "openeuler-ci-bot": 104
+    },
+    "comment_types": {
+      "pr_comment": 150,
+      "diff_comment": 58
+    },
+    "rfc_issue": {
+      "number": "574",
+      "title": "[RFC]日志采样",
+      "comments": 3
+    },
+    "text": {
+      "latin_words": 13754,
+      "cjk_chars": 14178,
+      "read_minutes": 104.2
+    }
+  },
+  "derived": {
+    "decision_signal_ratio_pct": 13.5,
+    "decision_signal_note": "44 explicit findings hidden among 325 #6 artifacts → you read 100% to find 13.5%.",
+    "read_everything_minutes_subject": 186.0,
+    "read_everything_minutes_upstream": 104.2,
+    "no_single_index": true,
+    "no_single_index_note": "Decisions are distributed across review threads and 30 files with no merge-readiness summary; reconstructing the decision log requires reading the whole thread."
+  },
+  "method": {
+    "generated_utc": "2026-06-30T19:21:38Z",
+    "severity_tags": [
+      "严重",
+      "警告",
+      "提示",
+      "建议",
+      "重要"
+    ],
+    "category_tags": [
+      "Bug",
+      "安全",
+      "性能",
+      "测试",
+      "文档",
+      "设计",
+      "正确性",
+      "可维护性",
+      "可读性",
+      "并发"
+    ],
+    "fix_ack_regex": "已修复|已修改|已解决|已优化|已调整|fixed|resolved|done",
+    "bot_regex": "bot|ci|robot|gitee|action|workflow",
+    "reading_model": "Latin words @200 wpm + CJK chars @400 cpm (stated estimate)",
+    "inputs": [
+      "gitcode_mr.json",
+      "gitcode_mr_comments.json",
+      "gitcode_rfc_comments.json",
+      "gitcode_rfc_issue.json",
+      "sirumcz_commits.json",
+      "sirumcz_files.json",
+      "sirumcz_issue_comments.json",
+      "sirumcz_pr.json",
+      "sirumcz_review_comments.json",
+      "sirumcz_reviews.json"
+    ],
+    "caveats": [
+      "#6 issue comments are recreated CI/mirror posts by a single account; participant/human-involvement metrics are taken from the UPSTREAM original !1064.",
+      "Decision detection is [severity]-tag based on #6's seeded review corpus; approximate.",
+      "review_submissions(163) are 1:1 COMMENTED wrappers of the 163 inline review comments and are NOT double-counted in discussion_artifacts.",
+      "Reading-time is a coarse estimate from the stated word/char rates."
+    ]
+  }
+}
