@@ -252,6 +252,10 @@ jobs:
           # download each leg's mm-tree artifact by run_id. The job already holds
           # this PAT via STATE_REMOTE/GH_TOKEN, so this grants no new privilege.
           PUBLISH_TOKEN: ${{ secrets.POC_DISPATCH_TOKEN }}
+          # Optional write-token pool: set POC_DISPATCH_TOKEN_2 (a second dispatch
+          # PAT from a DIFFERENT account) and engine writes fail over to it on a
+          # 403/429 rate-limit. Unset => single-token behavior. Add _3, _4, … too.
+          PUBLISH_TOKEN_2: ${{ secrets.POC_DISPATCH_TOKEN_2 }}
           # The ACTIONS token for completing the aggregate check-run: a terminal
           # `merge` finalizes here (plan job), but a classic PAT (PUBLISH_TOKEN)
           # cannot create/complete the github-actions[bot] check-run created at
@@ -586,6 +590,13 @@ jobs:
           # conclude-fix pushes to the PR head + closes issues; publish-review opens issues.
           # Needs contents:write + issues:write — use the write-capable PAT, not GITHUB_TOKEN.
           PUBLISH_TOKEN: ${{ secrets.POC_DISPATCH_TOKEN }}
+          # Optional write-token pool (see plan job): rotate to POC_DISPATCH_TOKEN_2
+          # on a 403/429 rate-limit. Add PUBLISH_TOKEN_3, _4, … for more.
+          PUBLISH_TOKEN_2: ${{ secrets.POC_DISPATCH_TOKEN_2 }}
+          # The Actions token completes the aggregate check-run here too: a classic
+          # PAT cannot complete a github-actions[bot] check-run, so without this the
+          # advance check-run write fell back to the PAT and 403'd under load.
+          CHECK_RUN_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           PR: ${{ needs.plan.outputs.pr }}
           PR_HEAD_SHA: ${{ needs.plan.outputs.head_sha }}
