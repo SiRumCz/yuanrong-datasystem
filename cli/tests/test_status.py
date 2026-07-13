@@ -122,5 +122,34 @@ class TestParseWorkerLines(unittest.TestCase):
         self.assertEqual(status.parse_worker_lines(output), [])
 
 
+class _FakeLogger:
+    def __init__(self):
+        self.errors = []
+        self.infos = []
+
+    def error(self, message):
+        self.errors.append(message)
+
+    def info(self, message):
+        self.infos.append(message)
+
+
+class TestStatusCommand(unittest.TestCase):
+    """Tests for status.Command runtime behavior."""
+
+    def test_run_returns_failure_when_worker_discovery_fails(self):
+        command = status.Command()
+        command.logger = _FakeLogger()
+        command.list_workers = lambda: (_ for _ in ()).throw(
+            RuntimeError("pgrep command not found")
+        )
+
+        self.assertEqual(command.run(None), status.BaseCommand.FAILURE)
+        self.assertEqual(
+            command.logger.errors,
+            ["Status failed: pgrep command not found"],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

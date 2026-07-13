@@ -88,7 +88,11 @@ class Command(BaseCommand):
         Returns:
             int: BaseCommand.SUCCESS on success.
         """
-        workers = self.list_workers()
+        try:
+            workers = self.list_workers()
+        except RuntimeError as e:
+            self.logger.error(f"Status failed: {e}")
+            return BaseCommand.FAILURE
         if not workers:
             self.logger.info("No running datasystem workers found.")
             return BaseCommand.SUCCESS
