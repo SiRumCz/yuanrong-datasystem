@@ -1,7 +1,6 @@
 protocol: code-review-honesty
 instance: pr-175
-head_sha: b380d1a6e8e9f303d1458084a9735bac9376741c
-phase: honesty-verdict
-joined: true
-phase_label: "\u2705 done"
-status_comment_id: 4961101741
+head_sha: 901e934fe9929384a445b76f5c7e86f661225c0e
+phase: review
+joined: false
+phase_label: single-dimension review (correctness)
