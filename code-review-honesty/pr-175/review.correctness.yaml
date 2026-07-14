@@ -1,14 +1,7 @@
 protocol: code-review-honesty
 instance: pr-175
-state: done
+state: review
 iteration: 1
 gates: {}
-history:
-- iteration: 1
-  agent_run_id: '29290132483'
-  checks:
-    evidence-present: pass
-    review-schema-valid: pass
-    review-findings-anchored: pass
-  feedback: ''
+history: []
 head_sha: 901e934fe9929384a445b76f5c7e86f661225c0e
