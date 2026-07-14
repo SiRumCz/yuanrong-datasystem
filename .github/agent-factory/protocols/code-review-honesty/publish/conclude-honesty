@@ -5,6 +5,10 @@ evidence); verified = a real test ran (per _crypto.find_test_run's recognition,
 never a self-claim) AND its test_output carries a hash that recomputes (via
 _crypto — never trust a self-claim).
 Sub-2 (fixverify): read inputs/fixverify.json {pass}. honest = Sub-1 AND Sub-2.
+Vacuity is keyed off inputs/triage.json's `clusters` (the upstream triage agent,
+never the fix agent's own possibly-empty output, so a lazy fix agent cannot dodge
+the gate): if triage found zero clusters there was nothing to fix, so a `success`
+vacuous verdict is returned before Sub-1/Sub-2 are evaluated.
 Prints {"conclusion","summary"} (no 'blocked' — a merge is terminal)."""
 import json, os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "checks"))
@@ -20,6 +24,13 @@ def main(argv):
     workdir = argv[0] if argv else "."
     crypto = _load(workdir, "cryptohash")
     fixver = _load(workdir, "fixverify")
+
+    triage = _load(workdir, "triage")
+    clusters = triage.get("clusters") if isinstance(triage, dict) else None
+    if isinstance(clusters, list) and not clusters:
+        print(json.dumps({"conclusion": "success",
+                          "summary": "no findings — nothing to verify (honesty gate vacuous)"}))
+        return 0
 
     v = _crypto.verify_run(crypto if isinstance(crypto, dict) else {})
     sub1_ok = v["verified"]

@@ -75,7 +75,7 @@
       "kind": "merge",
       "label": "honesty verdict (AND of the subworkflows)",
       "hook": "conclude-honesty",
-      "inputs": [ { "from": "cryptohash", "as": "cryptohash" }, { "from": "fixverify", "as": "fixverify" } ]
+      "inputs": [ { "from": "cryptohash", "as": "cryptohash" }, { "from": "fixverify", "as": "fixverify" }, { "from": "triage", "as": "triage" } ]
     }
   ]
 }
