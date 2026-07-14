@@ -1,10 +1,21 @@
 {
   "local": false,
-  "n_fixes": 0,
+  "n_fixes": 1,
   "env": {
     "repo": "SiRumCz/yuanrong-datasystem",
-    "pr": "175",
+    "pr": "181",
     "has_token": true
   },
-  "stop": "no fixes"
+  "head": "demo/honesty-v2-full-check",
+  "clone_rc": 0,
+  "clone_err": "Cloning into '/tmp/fix-apply-t2i9xt0u'...",
+  "apply": [
+    {
+      "status": "applied",
+      "detail": ""
+    }
+  ],
+  "applied_n": 1,
+  "push_ok": true,
+  "push_detail": ""
 }
