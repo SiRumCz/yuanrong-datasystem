@@ -1,0 +1,1 @@
+{"check": "fixverify", "pass": true, "reason": "fix verified: On the finding condition, Command.run enters the try block and calls self.list_workers(); when discovery raises RuntimeError, control transfers to the except RuntimeError block, logs Status failed with the exception text, and returns BaseCommand.FAILURE instead of propagating the exception. (issue #178)"}
