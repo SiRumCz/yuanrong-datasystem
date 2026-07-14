@@ -1,0 +1,47 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "Parser reports non-worker processes as running workers",
+      "dimension": [
+        "correctness"
+      ],
+      "severity": "high",
+      "paths": [
+        "cli/status.py"
+      ],
+      "member_findings": [
+        {
+          "dimension": "correctness",
+          "path": "cli/status.py",
+          "line": 62,
+          "severity": "high",
+          "category": "correctness",
+          "title": "Parser reports non-worker processes as running workers",
+          "impact": "parse_worker_lines only checks that a pgrep result contains -worker_address= and then extracts the address, so concurrent commands such as dscli stop --worker_address=... or any other process with that argument are returned as datasystem workers. Operators can get a wrong status table, and the added test_skips_dscli_process would fail because the dscli line is not filtered out.",
+          "fix": "Apply the declared worker-binary filter before extracting the address, for example skip the line unless _WORKER_BIN_RE.search(cmdline) is true."
+        }
+      ],
+      "rank": 1
+    }
+  ],
+  "summary": {
+    "present": [
+      "correctness"
+    ],
+    "missing": [
+      "test",
+      "performance",
+      "security",
+      "maintainability"
+    ],
+    "clusters": 1,
+    "total_findings": 1,
+    "by_severity": {
+      "high": 1
+    },
+    "by_dimension": {
+      "correctness": 1
+    }
+  }
+}
