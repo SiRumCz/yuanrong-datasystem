@@ -1,7 +1,7 @@
 protocol: code-review-honesty
 instance: pr-181
 head_sha: 15fd6bfb20ac3ba84c16609ffb49cf51d04cf492
-phase: honesty
-joined: false
-phase_label: Honesty
+phase: honesty-verdict
+joined: true
+phase_label: honesty verdict (AND of the subworkflows)
 status_comment_id: 4969668143
