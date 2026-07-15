@@ -1,0 +1,151 @@
+{
+  "scope": {
+    "code_changed": true,
+    "plan_present": true,
+    "plan_path": "docs/superpowers/plans/2026-07-15-dscli-logs.md",
+    "code_files": [
+      "cli/command.py",
+      "cli/logs.py"
+    ]
+  },
+  "plan_to_code": [
+    {
+      "plan_item": "1. **Add `cli/logs.py`** — a `Command(BaseCommand)` subclass:\n   - `name`/`description`, and `add_arguments` for `-w/--worker_address`\n     (required) and `-n/--lines` (default 100).\n   - `run(args)`: resolve the worker by address, locate its log file under the\n     worker log directory, and print the last N lines to stdout.\n   - `find_worker_pid(address)`: pgrep-based `-worker_address=` scan returning the\n     PID or `None`, mirroring `stop.py`.",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "2. **Register the command** — add `\"logs\"` to the `modules` list in\n   `cli/command.py`.",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "3. **Add `cli/tests/test_logs.py`** — verify the primary path (running worker →\n   log tail printed → success).",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "4. **Docs** — this plan + the design spec under `docs/superpowers/`.",
+      "status": "implemented"
+    }
+  ],
+  "files": [
+    {
+      "path": "cli/command.py",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "\"logs\""
+          ],
+          "findings": [
+            {
+              "plan_item": "2. **Register the command** — add `\"logs\"` to the `modules` list in\n   `cli/command.py`.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 153,
+              "existing_code": "        \"logs\","
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "cli/logs.py",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "Command",
+            "find_worker_pid",
+            "_LOG_DIR"
+          ],
+          "findings": [
+            {
+              "plan_item": "1. **Add `cli/logs.py`** — a `Command(BaseCommand)` subclass:\n   - `name`/`description`, and `add_arguments` for `-w/--worker_address`\n     (required) and `-n/--lines` (default 100).\n   - `run(args)`: resolve the worker by address, locate its log file under the\n     worker log directory, and print the last N lines to stdout.\n   - `find_worker_pid(address)`: pgrep-based `-worker_address=` scan returning the\n     PID or `None`, mirroring `stop.py`.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 79,
+              "existing_code": "# Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.\n#\n# Licensed under the Apache License, Version 2.0 (the \"License\");\n# you may not use this file except in compliance with the License.\n# You may obtain a copy of the License at\n#\n# http://www.apache.org/licenses/LICENSE-2.0\n#\n# Unless required by applicable law or agreed to in writing, software\n# distributed under the License is distributed on an \"AS IS\" BASIS,\n# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n# See the License for the specific language governing permissions and\n# limitations under the License.\n\"\"\"``dscli logs`` subcommand: print recent log lines for a worker service.\"\"\"\n\nimport os\nimport re\nimport subprocess\n\nfrom yr.datasystem.cli.command import BaseCommand\n\n# Every worker is launched with a ``-worker_address=`` argument; reuse that\n# signal (as ``stop``/``status`` do) to locate the running process.\n_WORKER_ADDRESS_ARG = \"-worker_address=\"\n_PGREP_TIMEOUT_S = 5\n_DEFAULT_LINES = 100\n# Workers write their logs under this directory, one file per worker address.\n_LOG_DIR = \"/opt/yuanrong/datasystem/log\"\n\n\nclass Command(BaseCommand):\n    \"\"\"Print the last N lines of a worker's log file to stdout.\"\"\"\n\n    name = \"logs\"\n    description = \"print recent log lines for a worker service\"\n\n    def add_arguments(self, parser):\n        \"\"\"Add ``logs`` arguments to the parser.\"\"\"\n        parser.add_argument(\n            \"-w\", \"--worker_address\", metavar=\"ADDR\", required=True,\n            help=\"address (host:port) of the worker whose log to print\",\n        )\n        parser.add_argument(\n            \"-n\", \"--lines\", metavar=\"N\", default=_DEFAULT_LINES,\n            help=\"number of trailing log lines to print\",\n        )\n\n    def run(self, args):\n        \"\"\"Print the tail of the worker's log to stdout.\"\"\"\n        address = args.worker_address\n        if self.find_worker_pid(address) is None:\n            self.logger.warning(f\"No running worker @ {address}; showing last log\")\n\n        log_path = os.path.join(_LOG_DIR, f\"{address}.log\")\n        result = subprocess.run(\n            f\"tail -n {args.lines} {log_path}\",\n            shell=True, capture_output=True, text=True,\n        )\n        if result.returncode != 0:\n            self.logger.error(f\"Failed to read log for {address}: {result.stderr}\")\n            return BaseCommand.FAILURE\n        print(result.stdout, end=\"\")\n        return BaseCommand.SUCCESS\n\n    def find_worker_pid(self, address):\n        \"\"\"Return the PID of the worker at ``address``, or ``None`` if not found.\"\"\"\n        target = re.escape(f\"{_WORKER_ADDRESS_ARG}{address}\")\n        cmd = [\"pgrep\", \"-fa\", \"--\", target]\n        try:\n            output = subprocess.check_output(\n                cmd, stderr=subprocess.STDOUT, timeout=_PGREP_TIMEOUT_S, text=True,\n            )\n        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):\n            return None\n        for line in output.strip().splitlines():\n            parts = line.split(\" \", 1)\n            if len(parts) == 2 and \"dscli\" not in parts[1]:\n                return int(parts[0])\n        return None",
+              "start_line": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "cli/tests/test_logs.py",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "test_run_prints_recent_lines"
+          ],
+          "findings": [
+            {
+              "plan_item": "3. **Add `cli/tests/test_logs.py`** — verify the primary path (running worker →\n   log tail printed → success).",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 39,
+              "existing_code": "# Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.\n#\n# Licensed under the Apache License, Version 2.0 (the \"License\");\n# you may not use this file except in compliance with the License.\n# You may obtain a copy of the License at\n#\n# http://www.apache.org/licenses/LICENSE-2.0\n#\n# Unless required by applicable law or agreed to in writing, software\n# distributed under the License is distributed on an \"AS IS\" BASIS,\n# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n# See the License for the specific language governing permissions and\n# limitations under the License.\n\"\"\"Unit tests for the ``dscli logs`` subcommand.\"\"\"\n\nimport unittest\nfrom unittest import mock\n\nfrom yr.datasystem.cli import logs\n\n\nclass TestLogsCommand(unittest.TestCase):\n    \"\"\"Tests for :class:`yr.datasystem.cli.logs.Command`.\"\"\"\n\n    @mock.patch(\"yr.datasystem.cli.logs.subprocess.run\")\n    @mock.patch.object(logs.Command, \"find_worker_pid\", return_value=4321)\n    def test_run_prints_recent_lines(self, _mock_pid, mock_run):\n        \"\"\"A running worker's log tail is printed and the command succeeds.\"\"\"\n        mock_run.return_value = mock.Mock(returncode=0, stdout=\"a\\nb\\nc\\n\", stderr=\"\")\n\n        cmd = logs.Command()\n        args = mock.Mock(worker_address=\"127.0.0.1:31501\", lines=100)\n        rc = cmd.run(args)\n\n        self.assertEqual(rc, logs.BaseCommand.SUCCESS)\n\n\nif __name__ == \"__main__\":\n    unittest.main()",
+              "start_line": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/superpowers/plans/2026-07-15-dscli-logs.md",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "Implementation Plan"
+          ],
+          "findings": [
+            {
+              "plan_item": "4. **Docs** — this plan + the design spec under `docs/superpowers/`.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 27,
+              "existing_code": "# `dscli logs` Subcommand — Implementation Plan\n\n**Spec:** [2026-07-15-dscli-logs-design.md](../specs/2026-07-15-dscli-logs-design.md)\n**Issue:** [#184](https://github.com/SiRumCz/yuanrong-datasystem/issues/184)\n\n## Steps\n\n1. **Add `cli/logs.py`** — a `Command(BaseCommand)` subclass:\n   - `name`/`description`, and `add_arguments` for `-w/--worker_address`\n     (required) and `-n/--lines` (default 100).\n   - `run(args)`: resolve the worker by address, locate its log file under the\n     worker log directory, and print the last N lines to stdout.\n   - `find_worker_pid(address)`: pgrep-based `-worker_address=` scan returning the\n     PID or `None`, mirroring `stop.py`.\n\n2. **Register the command** — add `\"logs\"` to the `modules` list in\n   `cli/command.py`.\n\n3. **Add `cli/tests/test_logs.py`** — verify the primary path (running worker →\n   log tail printed → success).\n\n4. **Docs** — this plan + the design spec under `docs/superpowers/`.\n\n## Verification\n\n- `dscli logs -w <addr>` prints the tail of the worker's log.\n- `python -m unittest cli.tests.test_logs` passes.",
+              "start_line": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/superpowers/specs/2026-07-15-dscli-logs-design.md",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "Design Spec"
+          ],
+          "findings": [
+            {
+              "plan_item": "4. **Docs** — this plan + the design spec under `docs/superpowers/`.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 57,
+              "existing_code": "# `dscli logs` Subcommand — Design Spec\n\n**Date:** 2026-07-15\n**Issue:** [#184](https://github.com/SiRumCz/yuanrong-datasystem/issues/184)\n**Status:** Proposed\n\n## Summary\n\nAdd a read-only `dscli logs` subcommand that prints the last N lines of a\ndatasystem worker's log file, selected by the worker's address. This fills the\ngap between `start`/`stop`/`status` and operators falling back to locating log\nfiles by hand.\n\n## Motivation\n\n- `dscli` can manage a worker's lifecycle and (via `status`) list what's\n  running, but offers no way to see a worker's recent output.\n- The worker-discovery signal already exists in-repo: workers are launched with\n  a `-worker_address=` argument (see `stop.py` / `status.py`). `logs` reuses the\n  same signal to confirm the worker and locate its log.\n\n## Scope\n\n**In scope:**\n- A `logs` subcommand: `dscli logs -w <host:port> [-n N]`.\n- Output: the last N lines of the worker's log on stdout (default N = 100).\n- Local host only; read-only (no mutation of worker state).\n\n**Out of scope (YAGNI):**\n- Follow mode (`tail -f` / `-f`).\n- Multi-worker or remote-host aggregation.\n- Filtering / grep (operators can pipe to `grep`).\n\n## Design\n\n### New file: `cli/logs.py`\n\nA `Command(BaseCommand)` subclass mirroring `stop.py` / `status.py`:\n\n- `name = \"logs\"`, `description = \"print recent log lines for a worker service\"`.\n- `add_arguments`: `-w/--worker_address` (required), `-n/--lines` (default 100).\n- `run(args)`:\n  1. Resolve the worker by address (warn if not currently running — logs may\n     still exist for a stopped worker).\n  2. Locate the worker's log file (`<log-dir>/<address>.log`).\n  3. Print the last N lines to stdout.\n- `find_worker_pid(address)`: reuses the `-worker_address=` pgrep scan, returning\n  the PID or `None`.\n\n### Registration\n\nAdd `\"logs\"` to the `modules` list in `cli/command.py`.\n\n## Testing\n\n`cli/tests/test_logs.py` covers the primary path: a running worker's log tail is\nprinted and the command returns success.",
+              "start_line": 1
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "verdict": "adheres",
+  "examined": [
+    "scope.json",
+    "plan.txt",
+    "pr.diff",
+    "task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md"
+  ]
+}
