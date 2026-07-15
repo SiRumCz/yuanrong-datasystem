@@ -1,0 +1,79 @@
+# Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""``dscli logs`` subcommand: print recent log lines for a worker service."""
+
+import os
+import re
+import subprocess
+
+from yr.datasystem.cli.command import BaseCommand
+
+# Every worker is launched with a ``-worker_address=`` argument; reuse that
+# signal (as ``stop``/``status`` do) to locate the running process.
+_WORKER_ADDRESS_ARG = "-worker_address="
+_PGREP_TIMEOUT_S = 5
+_DEFAULT_LINES = 100
+# Workers write their logs under this directory, one file per worker address.
+_LOG_DIR = "/opt/yuanrong/datasystem/log"
+
+
+class Command(BaseCommand):
+    """Print the last N lines of a worker's log file to stdout."""
+
+    name = "logs"
+    description = "print recent log lines for a worker service"
+
+    def add_arguments(self, parser):
+        """Add ``logs`` arguments to the parser."""
+        parser.add_argument(
+            "-w", "--worker_address", metavar="ADDR", required=True,
+            help="address (host:port) of the worker whose log to print",
+        )
+        parser.add_argument(
+            "-n", "--lines", metavar="N", default=_DEFAULT_LINES,
+            help="number of trailing log lines to print",
+        )
+
+    def run(self, args):
+        """Print the tail of the worker's log to stdout."""
+        address = args.worker_address
+        if self.find_worker_pid(address) is None:
+            self.logger.warning(f"No running worker @ {address}; showing last log")
+
+        log_path = os.path.join(_LOG_DIR, f"{address}.log")
+        result = subprocess.run(
+            f"tail -n {args.lines} {log_path}",
+            shell=True, capture_output=True, text=True,
+        )
+        if result.returncode != 0:
+            self.logger.error(f"Failed to read log for {address}: {result.stderr}")
+            return BaseCommand.FAILURE
+        print(result.stdout, end="")
+        return BaseCommand.SUCCESS
+
+    def find_worker_pid(self, address):
+        """Return the PID of the worker at ``address``, or ``None`` if not found."""
+        target = re.escape(f"{_WORKER_ADDRESS_ARG}{address}")
+        cmd = ["pgrep", "-fa", "--", target]
+        try:
+            output = subprocess.check_output(
+                cmd, stderr=subprocess.STDOUT, timeout=_PGREP_TIMEOUT_S, text=True,
+            )
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            return None
+        for line in output.strip().splitlines():
+            parts = line.split(" ", 1)
+            if len(parts) == 2 and "dscli" not in parts[1]:
+                return int(parts[0])
+        return None
