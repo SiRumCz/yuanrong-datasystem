@@ -19,6 +19,12 @@ agentic-state remote:
   - ITERATE re-entry  → must PRESERVE state and thread iteration + feedback;
   - FIRST entry       → must still seed {iteration 1, history []}, publish it,
                         and emit iteration 1 / empty feedback (no regression).
+
+Post Task 8, `fix` is no longer a top-level phase — it is the second sub-state of
+each `per-issue` fanout leg (`per-issue.<leg_id>.fix`). We drive it at that
+relocated coordinate so the bounded-iterate guarantee is proven to survive the
+move into the fanout. A leg's state file carries `state: <enclosing fanout id>`
+(the leg's life-state, here `per-issue`), not the leaf id.
 """
 import json
 import os
@@ -34,6 +40,11 @@ NEXT = os.path.join(ENGINE, "next.py")
 PROTO = os.path.join(HERE, "..", "protocol.json")
 GIT_ID = ["-c", "user.email=test@engine", "-c", "user.name=engine-test"]
 FB = "iteration-1 failed: fix-schema-valid not satisfied (FEEDBACK_MARKER)"
+# Any 8-hex leg id resolves against the per-issue `each` template; use sha1('101')[:8]
+# (the leg the ENGINE_LOCAL items.json #101 issue would materialize) for realism.
+LEG = "dbc0f004"
+FIX_PATH = f"per-issue.{LEG}.fix"
+FIX_FILE = f"per-issue.{LEG}.fix.yaml"
 
 failures = []
 
@@ -50,8 +61,8 @@ def git(cwd, *args, id_=False):
 
 def setup_remote(tmp, instance, fix_state):
     """Bare agentic-state remote with code-review/<instance>/_instance.yaml at the
-    `fix` phase, and fix.yaml seeded from `fix_state` (or omitted when None, to
-    model a never-yet-entered phase)."""
+    `per-issue` phase, and the leg's per-issue.<leg>.fix.yaml seeded from
+    `fix_state` (or omitted when None, to model a never-yet-entered leg sub-state)."""
     bare = os.path.join(tmp, f"{instance}.git")
     subprocess.run(["git", "init", "-q", "--bare", bare], check=True)
     seed = os.path.join(tmp, f"{instance}-seed")
@@ -62,9 +73,9 @@ def setup_remote(tmp, instance, fix_state):
     os.makedirs(inst)
     with open(os.path.join(inst, "_instance.yaml"), "w") as f:
         f.write(f"protocol: code-review\ninstance: {instance}\n"
-                "head_sha: deadbeef\nphase: fix\njoined: false\n")
+                "head_sha: deadbeef\nphase: per-issue\njoined: false\n")
     if fix_state is not None:
-        with open(os.path.join(inst, "fix.yaml"), "w") as f:
+        with open(os.path.join(inst, FIX_FILE), "w") as f:
             yaml.safe_dump(fix_state, f, sort_keys=False)
     git(seed, "add", "-A")
     git(seed, "commit", "-q", "-m", "seed", id_=True)
@@ -76,7 +87,7 @@ def setup_remote(tmp, instance, fix_state):
 def run_continue(tmp, bare, instance):
     work = os.path.join(tmp, f"{instance}-work")  # must NOT exist; cloned into
     env = dict(os.environ, STATE_REMOTE=bare, STATE_BRANCH="agentic-state",
-               NODE_PATH="fix", ENGINE_LOCAL="1")
+               NODE_PATH=FIX_PATH, ENGINE_LOCAL="1")
     r = subprocess.run([sys.executable, NEXT, work, instance, PROTO, "continue", "deadbeef"],
                        env=env, capture_output=True, text=True)
     return work, r
@@ -96,14 +107,14 @@ def parse_action(stdout):
 
 
 def read_state(work, instance):
-    fp = os.path.join(work, "code-review", instance, "fix.yaml")
+    fp = os.path.join(work, "code-review", instance, FIX_FILE)
     return yaml.safe_load(open(fp)) if os.path.isfile(fp) else None
 
 
 # ── Scenario A: iterate re-entry preserves state + threads feedback ──
 with tempfile.TemporaryDirectory() as tmp:
     bare = setup_remote(tmp, "pr-iter", fix_state={
-        "protocol": "code-review", "instance": "pr-iter", "state": "fix",
+        "protocol": "code-review", "instance": "pr-iter", "state": "per-issue",
         "iteration": 2, "gates": {}, "head_sha": "deadbeef",
         "history": [{"iteration": 1, "agent_run_id": "111",
                      "checks": {"fix-schema-valid": "fail"}, "feedback": FB}],
@@ -139,11 +150,11 @@ with tempfile.TemporaryDirectory() as tmp:
     st = read_state(work, "pr-fresh") or {}
     ok("[first-entry] seeded fresh state (iteration 1, empty history)",
        st.get("iteration") == 1 and (st.get("history") or []) == [])
-    # the seed was published (re-clone origin and confirm fix.yaml landed)
+    # the seed was published (re-clone origin and confirm the leg fix state landed)
     check = os.path.join(tmp, "verify")
     subprocess.run(["git", "clone", "-q", "-b", "agentic-state", bare, check], check=True)
     ok("[first-entry] seed was published to origin",
-       os.path.isfile(os.path.join(check, "code-review", "pr-fresh", "fix.yaml")))
+       os.path.isfile(os.path.join(check, "code-review", "pr-fresh", FIX_FILE)))
 
 if failures:
     print("FAIL test_engine_iterate_state:")

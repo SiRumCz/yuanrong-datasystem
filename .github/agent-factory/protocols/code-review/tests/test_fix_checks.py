@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ABI tests for fix-schema-valid.py (code-review-honesty: diff-shape evidence)."""
+"""ABI tests for fix-schema-valid.py (code-review: diff-shape evidence)."""
 import copy
 import json
 import os
@@ -8,7 +8,7 @@ import sys
 import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-CHECK = os.path.normpath(os.path.join(HERE, "..", "..", "code-review-honesty", "checks", "fix-schema-valid.py"))
+CHECK = os.path.join(HERE, "..", "checks", "fix-schema-valid.py")
 failures = []
 
 SAMPLE_DIFF = (

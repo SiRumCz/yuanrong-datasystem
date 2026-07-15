@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Conclude hook for fix: completeness against real triage input + suggestions."""
+"""Conclude hook for fix: completeness against real triage input + diff apply."""
 import json
 import os
 import shutil
@@ -64,7 +64,7 @@ def _classify(evidence, triage):
     fixed_set = set(fixed_ids)
     skipped_set = set(skipped_ids)
     return {
-        "mode": evidence.get("mode") or "suggest",
+        "mode": evidence.get("mode") or "edit",
         "applied": [cid for cid in fixable_ids if cid in fixed_set],
         "skipped": [cid for cid in fixable_ids if cid in skipped_set],
         "dropped": [
@@ -77,25 +77,18 @@ def _classify(evidence, triage):
     }
 
 
-def _suggestion_comments(evidence):
-    comments = []
-    for fix in evidence.get("fixes") or []:
-        if not isinstance(fix, dict):
-            continue
-        comments.append(
-            {
-                "path": fix.get("path"),
-                "line": fix.get("line"),
-                "side": "RIGHT",
-                "body": (
-                    "```suggestion\n"
-                    f"{fix.get('suggested_patch') or ''}\n"
-                    "```\n\n"
-                    f"{fix.get('rationale') or ''}"
-                ),
-            }
-        )
-    return comments
+def _fix_review_body(evidence):
+    """Diff-shape fixes carry no single path/line anchor (unlike the old
+    suggested_patch mode), so there is no per-line 'suggestion' block to post --
+    just a summary of which clusters carry a diff to be applied below."""
+    ids = [
+        f.get("cluster_id")
+        for f in evidence.get("fixes") or []
+        if isinstance(f, dict) and f.get("cluster_id")
+    ]
+    if not ids:
+        return "Fix phase: no fix diffs received."
+    return f"Fix phase: {len(ids)} cluster diff(s) received ({', '.join(ids)})."
 
 
 def _write_fix(report):
@@ -241,14 +234,14 @@ def _apply_commit_close(evidence):
         applied = [r for r in results if r["status"] == "applied"]
         report["applied"] = len(applied)
         report["skipped"] = [
-            {"cluster_id": r.get("cluster_id"), "path": r.get("path"), "reason": r.get("detail")}
+            {"cluster_id": r.get("cluster_id"), "reason": r.get("detail")}
             for r in results if r["status"] != "applied"
         ]
         report["close"] = _issue_targets({r["cluster_id"] for r in applied})
         diag["applied_n"] = len(applied)
 
         if applied and not local:
-            paths = sorted({r["path"] for r in applied})
+            paths = sorted({p for r in applied for p in r.get("paths") or []})
             push = _commit_push(workdir, head, pr, paths, token)
             report["pushed"] = push["ok"]
             diag["push_ok"] = push["ok"]
@@ -285,9 +278,23 @@ def _pr_head_ref(repo, pr, token):
     return r.stdout.strip() if r.returncode == 0 else ""
 
 
-def _commit_push(workdir, head, pr, paths, token):
+def _commit_push(workdir, head, pr, paths, token, attempts=5):
     """Commit the given paths and push to the PR head branch. Returns
-    {"ok": bool, "detail": str} — detail carries the git error on failure."""
+    {"ok": bool, "detail": str} — detail carries the git error on failure.
+
+    DELIBERATE, MINIMAL DIVERGENCE FROM THE SiRumCz PORT (per-issue/parallel arch):
+    conclude-fix now runs once PER per-issue leg, and those legs run as SEPARATE
+    dispatched jobs CONCURRENTLY. Every leg clones the same PR head at the same
+    base SHA and pushes to the same ref, so a plain `git push` lets leg 1 win
+    while legs 2..N are non-fast-forward → REJECTED. With no retry those fixes
+    were silently lost and their issues left open, defeating per-issue auto-fix.
+    We therefore mirror the engine's proven lib.cas_push fetch→rebase→retry:
+    on a rejected push, fetch the advanced remote head, rebase our fix commit
+    onto it, and retry (bounded). Different issues' fixes almost always touch
+    different files so the rebase applies cleanly; a GENUINE conflict (two legs
+    editing the same lines) aborts the rebase and surfaces the existing loud
+    push_error — we NEVER force-push and NEVER silently drop a fix."""
+    import time
     paths = sorted(set(paths))
     if not paths:
         return {"ok": False, "detail": "no paths to commit"}
@@ -299,10 +306,30 @@ def _commit_push(workdir, head, pr, paths, token):
     if c.returncode != 0:
         return {"ok": False, "detail": f"commit failed: {(c.stderr or c.stdout).strip()[:300]}"}
     # Explicit refspec so the push targets the PR head branch unambiguously.
-    p = _git(["push", "origin", f"HEAD:refs/heads/{head}"], workdir, token=token)
-    if p.returncode != 0:
-        return {"ok": False, "detail": f"push failed: {(p.stderr or p.stdout).strip()[:300]}"}
-    return {"ok": True, "detail": ""}
+    # Push first (the common no-race case wins on attempt 1 with no extra fetch);
+    # only re-sync on a rejection, exactly like lib.cas_push.
+    last = ""
+    for i in range(attempts):
+        p = _git(["push", "origin", f"HEAD:refs/heads/{head}"], workdir, token=token)
+        if p.returncode == 0:
+            return {"ok": True, "detail": ""}
+        last = (p.stderr or p.stdout).strip()
+        if i + 1 >= attempts:
+            break
+        # Non-fast-forward: a concurrent leg advanced the head. Fetch it and rebase
+        # our single fix commit on top, then retry.
+        f = _git(["fetch", "origin", head], workdir, token=token)
+        if f.returncode != 0:
+            return {"ok": False, "detail": f"push failed: {last[:300]}"}
+        rb = _git(["rebase", "FETCH_HEAD"], workdir)
+        if rb.returncode != 0:
+            # Genuine conflict (two legs touched the same lines): abort and surface
+            # the loud push_error — never force-push, never drop the fix.
+            _git(["rebase", "--abort"], workdir)
+            return {"ok": False,
+                    "detail": f"push failed (rebase conflict on {head}): {last[:300]}"}
+        time.sleep(0.1 * (i + 1))
+    return {"ok": False, "detail": f"push failed after {attempts} attempts: {last[:300]}"}
 
 
 def _post_apply_comment(repo, pr, token, report):
@@ -320,7 +347,7 @@ def _post_apply_comment(repo, pr, token, report):
     if skipped:
         lines.append("Skipped fixes:")
         for s in skipped[:10]:
-            lines.append(f"- {s.get('cluster_id')} ({s.get('path')}): {s.get('reason')}")
+            lines.append(f"- {s.get('cluster_id')}: {s.get('reason')}")
     body = "\n".join(lines)
     env = dict(os.environ)
     if token:
@@ -369,22 +396,26 @@ def main():
     triage = _triage_input()
     report = _classify(evidence, triage)
     _write_fix(report)
-    comments = _suggestion_comments(evidence)
     payload = {
         "event": "COMMENT",
-        "body": f"Fix suggestions: {len(comments)} suggestion(s).",
-        "comments": comments,
+        "body": _fix_review_body(evidence),
+        "comments": [],
         "commit_id": os.environ.get("HEAD_SHA") or os.environ.get("PR_HEAD_SHA", ""),
     }
     _post_review(payload)
     apply_report = _apply_commit_close(evidence)
     sys.stderr.write("[conclude-fix] APPLY_REPORT " + json.dumps(apply_report) + "\n")
+    # A fix that was applied but whose push did NOT land must red the nested fix
+    # leg's check-run (the engine's nested-conclude arm reds on conclusion=='failure').
+    # push_error is set only when a fix was committed but the push failed; a clean
+    # push, a no-op (nothing to fix), or local dry-runs keep the neutral conclusion.
+    conclusion = "failure" if apply_report.get("push_error") else "neutral"
     print(
         json.dumps(
             {
-                "conclusion": "neutral",
+                "conclusion": conclusion,
                 "summary": (
-                    f"Fix suggestions: clusters_fixed={len(report['applied'])}, "
+                    f"Fix diffs: clusters_fixed={len(report['applied'])}, "
                     f"skipped={len(report['skipped'])}, dropped={len(report['dropped'])}, "
                     f"unknown={len(report['unknown']['fixes']) + len(report['unknown']['skipped'])}."
                     f" files_patched={apply_report['applied']}, pushed={apply_report['pushed']}"

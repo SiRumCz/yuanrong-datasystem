@@ -48,15 +48,11 @@ steps:
     env:
       GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
       REPO: "${{ github.repository }}"
-      PROTO_DIR: "${{ fromJSON(github.event.inputs.aw_context || '{}').protocol_dir }}"
     run: |
       # Two off-the-shelf engines audit the change for security data-flow risks. Every line is
       # fail-open (|| true / fallback JSON): a missing transcript/plan/dep never fails the run.
-      # Resolve THIS protocol's scripts/ (aw_context.protocol_dir); fall back to code-review for
-      # older dispatches that predate protocol_dir.
-      BASE="${PROTO_DIR:-.github/agent-factory/protocols/code-review}"
-      SEC="$BASE/scripts/security"
-      CTX="$BASE/scripts/context"
+      SEC=.github/agent-factory/protocols/code-review/scripts/security
+      CTX=.github/agent-factory/protocols/code-review/scripts/context
       A=/tmp/gh-aw/agent
       HEAD_SHA=$(jq -r '.headRefOid // ""' "$A/pr.json" 2>/dev/null || echo "")
       # Captured agent transcript(s) via the protocol's own locator → Cedar input. Read from the
@@ -107,6 +103,7 @@ post-steps:
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
 timeout-minutes: 10
+source: golivax/agentic-protocol-poc/.github/workflows/security-gather-agent.md@c6ecf5dad176860d8088573b8be7f5e65e21e3dc
 ---
 
 # Security Gather — deterministic Cedar + Guardians engine run

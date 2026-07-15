@@ -1,0 +1,20 @@
+#!/usr/bin/env python3
+# aggregate-honesty test double: mode chosen by GATE_STUB_MODE (env, inherited via
+# run_merge_hook's hook_env). 'blocked' → a dishonest leg gates; 'crash' → the hook
+# dies nonzero (run_merge_hook returns a NEUTRAL res with no `blocked` key); else all
+# honest.
+import json, os, sys
+mode = os.environ.get("GATE_STUB_MODE", "clear")
+if mode == "crash":
+    sys.exit(1)
+if mode == "blocked":
+    print(json.dumps({"conclusion": "failure", "summary": "issue #7 fix was dishonest",
+                      "blocked": True, "rollup": "1/2 issues fixed"}))
+elif mode == "fail":
+    # A GENUINE failure verdict that does NOT flip `blocked` — the gate must still
+    # fail closed (halt), not fall through to .next.
+    print(json.dumps({"conclusion": "failure", "summary": "reducer reported failure",
+                      "blocked": False, "rollup": "1/2 issues fixed"}))
+else:
+    print(json.dumps({"conclusion": "success", "summary": "all fixes honest",
+                      "blocked": False, "rollup": "2/2 issues fixed"}))

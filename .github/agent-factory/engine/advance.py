@@ -90,26 +90,20 @@ def persist_output(ctx, evid, kind="evidence"):
 
 
 def gh_api(*args):
-    """Run 'gh api ...' with ENGINE_LOCAL short-circuit. Retries up to 3 attempts
-    (5s apart) on failure (e.g. a 403 from the shared PAT's rate limit, or a
-    transient 5xx); after the 3rd failure exits nonzero so the advance job fails
-    red instead of stalling silently. State is CAS-pushed before every dispatch
-    call site, so nothing is lost, but a plain job re-run will no-op on the
-    empty-commit guard — recovery is re-firing the printed `gh api` command."""
+    """Run 'gh api ...' with ENGINE_LOCAL short-circuit and token-pool rotation.
+    Delegates to lib.run_gh_rotating so a rate-limited dispatch token fails over
+    to the next token in the pool. If rotation still can't land the call (None or
+    nonzero) fail LOUD (advance.py is a script): print the replay `gh api` command
+    and exit nonzero so the advance job fails red instead of stalling silently."""
     if os.environ.get("ENGINE_LOCAL", "0") == "1":
         sys.stderr.write(f"[ENGINE_LOCAL] gh api {' '.join(args)}\n")
         return
-    import time
-    last_err = ""
-    for attempt in range(3):
-        result = subprocess.run(["gh", "api"] + list(args), text=True, capture_output=True)
-        if result.returncode == 0:
-            return
-        last_err = result.stderr
-        if attempt < 2:
-            time.sleep(5)
-    sys.stderr.write(f"[engine] gh api failed after 3 attempts: {last_err}; recover by re-firing: gh api {' '.join(args)}\n")
-    sys.exit(1)
+    result = lib.run_gh_rotating(list(args))
+    if result is None or result.returncode != 0:
+        err = result.stderr if result is not None else "no result"
+        sys.stderr.write(f"[engine] gh api failed after token rotation: {err}; "
+                         f"recover by re-firing: gh api {' '.join(args)}\n")
+        sys.exit(1)
 
 
 def fire_join(pid, instance, branch, fanout_path=""):
@@ -288,7 +282,10 @@ def run_publish_hook(proto_path, proto, branch, agent_state, evid, instance, pid
     When tree_path is not None (NODE_PATH mode), resolve the action path-aware:
     use node_at_path to get the leg's node dict directly (which carries .publish),
     regardless of which fanout the leg belongs to. This fixes the first-fanout-only
-    resolution bug where the old branch-scan always broke on the first fanout found."""
+    resolution bug where the old branch-scan always broke on the first fanout found.
+    It also makes a `publish:` key on a root-child SINGLE-agent node fire (the
+    legacy single-agent branch below resolves via `.next` → the terminal sentinel
+    `done`, not a state, so a root-child publish would otherwise never run)."""
 
     if tree_path is not None:
         # Path-aware resolution: look up the exact leg node and read its .publish.
@@ -408,7 +405,14 @@ def run_conclude_hook(proto_path, proto, state_id, evid, instance, blocking,
     {conclusion,summary,blocked} or None if the state declares none. Trusted
     (zone 4). Receives BLOCKING via env and, for states with declared inputs,
     CONCLUDE_INPUTS_DIR with those inputs materialized as <as>.json."""
-    state = lib.state_by_id(proto, state_id)
+    # Path-aware resolution (mirrors run_publish_hook): in NODE_PATH mode look up
+    # the exact leg node via node_at_path. state_by_id is top-level-only, so a NESTED
+    # sub-pipeline state (per-issue triage/fix) would otherwise resolve to None and
+    # its conclude would silently never fire. node_at_path([root-child]) returns the
+    # identical top-level node, so the existing depth-1 caller is unchanged.
+    state = _paths.node_at_path(proto, tree_path) if tree_path is not None else None
+    if state is None:
+        state = lib.state_by_id(proto, state_id)
     action = (state or {}).get("conclude") or None
     if not action:
         return None
@@ -426,7 +430,10 @@ def run_conclude_hook(proto_path, proto, state_id, evid, instance, blocking,
     # reach from a sibling root child. "" when there is no checkout (degraded).
     env["CONCLUDE_STATE_DIR"] = dir_ or ""
     workdir = None
-    declared = lib.state_inputs(proto, state_id)
+    # In NODE_PATH mode read the declared inputs off the resolved node — state_inputs
+    # is top-level-only and would miss a nested sub-state's inputs (e.g. fix's triage).
+    declared = (list(state.get("inputs") or []) if tree_path is not None
+                else lib.state_inputs(proto, state_id))
     if dir_ is not None and declared:
         fo = lib._fanout_state(proto)
         phase = fo["id"] if (fo and lib.is_multiphase(proto)) else None
@@ -703,10 +710,28 @@ def main():
 
         # --- Sub-pipeline branch leg: advance the BRANCH CURSOR, not the phase. ---
         if branch and substate:
+            # A nested leg state may declare its own `conclude` hook (per-issue
+            # triage/fix). The root-child conclude block below is reached ONLY by
+            # depth-1 phases, so without this a nested conclude (conclude-triage /
+            # conclude-fix — the per-leg commit/push/close) would NEVER fire. Run it
+            # BEFORE advancing, mirroring the root-child block. Nested legs are not
+            # gates (no on_blocked), so there is no halt arm — a failed conclude
+            # still advances, but must surface as a RED leg check-run, not a green
+            # one (advance_node stamps a hardcoded success below, so re-stamp after).
+            _leg_node = _paths.node_at_path(proto, tree_path) or {}
+            _cc = None
+            if _leg_node.get("conclude"):
+                _cc = run_conclude_hook(
+                    proto_path, proto, agent_state, evid, instance, blocking,
+                    dir_=dir_, tree_path=tree_path)
             ctx.cursor_sf = lib.state_file(
                 dir_, pid, instance,
                 path=lib.state_path(proto, _paths.parent_path(tree_path)))
             advance_node(ctx, process="done")
+            if _cc is not None:
+                _c = "failure" if _cc.get("conclusion") == "failure" else "success"
+                lib.set_check_run(cr_name, sha, "completed", _c,
+                                  f"{substate} complete", _cc.get("summary", ""))
             return
 
         # --- Depth-1 AGENT phase (root child) clear tail. ---

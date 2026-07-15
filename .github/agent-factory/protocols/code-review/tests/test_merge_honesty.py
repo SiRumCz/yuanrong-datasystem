@@ -28,15 +28,22 @@ import hashlib, json, os, sys, shutil, tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ENGINE = os.path.normpath(os.path.join(HERE, "..", "..", "..", "engine"))
-PROTO = os.path.normpath(os.path.join(HERE, "..", "..", "code-review-honesty", "protocol.json"))
+PROTO = os.path.normpath(os.path.join(HERE, "..", "protocol.json"))
 sys.path.insert(0, ENGINE)
 os.environ["ENGINE_LOCAL"] = "1"
 import lib  # noqa: E402
 
 proto = json.load(open(PROTO))
-merge = next(s for s in proto["states"] if s.get("kind") == "merge")
+# The honesty verdict is now a NESTED merge inside the per-issue fanout's `each`
+# sub-pipeline (folded graph). Locate it under per-issue.each.states, and drive it
+# on one representative per-issue leg (<lid>) so its {from:cryptohash/fixverify/triage}
+# inputs resolve path-aware to THIS leg's own evidence.
+_per_issue = next(s for s in proto["states"] if s.get("id") == "per-issue")
+_each_states = _per_issue["each"]["states"]
+merge = next(s for s in _each_states if s.get("kind") == "merge")
 PID = proto["name"]
 INST = "pr-1"
+LID = hashlib.sha1(b"1").hexdigest()[:8]        # a representative per-issue leg id
 
 
 def verdict(test_output, fixverify_pass, triage=None):
@@ -63,16 +70,16 @@ def verdict(test_output, fixverify_pass, triage=None):
         fixverify_ev = {"check": "fixverify", "pass": fixverify_pass,
                          "reason": "present" if fixverify_pass else "bug remains"}
         for leg, ev in (("cryptohash", cryptohash_ev), ("fixverify", fixverify_ev)):
-            wp = lib.output_artifact_path(d, PID, INST, path=lib.state_path(proto, ["honesty", leg]))
+            wp = lib.output_artifact_path(d, PID, INST, path=lib.state_path(proto, ["per-issue", LID, "honesty", leg]))
             os.makedirs(os.path.dirname(wp), exist_ok=True)
             with open(wp, "w") as f:
                 json.dump(ev, f)
         if triage is not None:
-            tp = lib.output_artifact_path(d, PID, INST, path=lib.state_path(proto, ["triage"]))
+            tp = lib.output_artifact_path(d, PID, INST, path=lib.state_path(proto, ["per-issue", LID, "triage"]))
             os.makedirs(os.path.dirname(tp), exist_ok=True)
             with open(tp, "w") as f:
                 json.dump(triage, f)
-        return lib.run_merge_hook(d, PID, INST, PROTO, merge, consuming_path=[merge["id"]])
+        return lib.run_merge_hook(d, PID, INST, PROTO, merge, consuming_path=["per-issue", LID, merge["id"]])
     finally:
         shutil.rmtree(d, ignore_errors=True)
 

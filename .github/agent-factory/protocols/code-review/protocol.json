@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "min_engine_version": "1.0.0",
   "max_depth": 6,
-  "_note": "The full custody pipeline plus the mental-model gates, wired as engine phases: preflight fanout(4 cluster branches: adherence[spec-solves-issue||plan-implements-spec||code-implements-plan]->adherence-rollup, mm-compliance[gather->judge], consistency[docs||tests]->consistency-rollup, security[gather->judge]) -> join-preflight -> preflight-gate -> overview(+risk) -> review fanout(5 dims) -> join -> triage -> fix -> post-fix fanout[context || mm-updater->mm-gate] -> join -> mrp -> done. Each phase pairs the generic `evidence-present` form check with a deterministic per-phase gate: preflight (a 4-cluster nested fanout joined under preflight-gate, whose conclude-preflight runs a deterministic block-gaps/warn-extras rollup over the issue->spec->plan->code chain + mm-compliance, posts one consolidated comment, and halts via on_blocked:halt until /override), overview (schema + cohort-partition + a deterministic `conclude-overview` risk scorer porting score.js/diffusion.js that owns the authoritative band and halts only on a garbled/unknown run; the agent's risk_band is an advisory hint), the 5 review dims (schema + findings-anchored + publish-review; the fanout's params.status_note flags request-changes legs in the status header), triage (schema + conclude-triage), fix (schema + conclude-fix). The post-fix fanout runs context (schema-valid only, advisory -- a fanout leg runs NO conclude hook, so conclude-context.py is unused here) in PARALLEL with mm-updater (evidence-present + mm-questions-present; a gh-aw create-pull-request safe-output opens an [mm] PR when mm_changed, the mm-gate then holds for a human /mm-answer, else the empty gate auto-skips); the join waits for both before mrp (schema + conclude-mrp + a deterministic acceptance_plan: engine inputs[] deliver prior-phase evidence, per-cohort bands are re-derived via the shared _risk_score, and the custody-shaped pack is emitted as the merge-readiness-pack artifact). Remaining v1 simplifications to improve per-phase later: /fix is suggest-only (no push/PR/comment write-actions), and review findings are not yet posted as inline PR comments. Agent workflows live in .github/workflows/.",
+  "_note": "The full custody pipeline plus the mental-model gates, wired as engine phases: preflight fanout(4 cluster branches: adherence[spec-solves-issue||plan-implements-spec||code-implements-plan]->adherence-rollup, mm-compliance[gather->judge], consistency[docs||tests]->consistency-rollup, security[gather->judge]) -> join-preflight -> preflight-gate -> overview(+risk) -> review fanout(5 dims; publish-review opens one [ai-review] issue per finding) -> join -> per-issue(DYNAMIC fanout, one leg per open [ai-review] issue: triage(fix-triage-agent) -> fix(edit/commit) -> honesty fanout[cryptohash||fixverify] -> join-honesty -> honesty-verdict) -> join-per-issue -> honesty-gate -> post-fix fanout[context || mm-updater->mm-gate] -> join -> mrp -> done. Each phase pairs the generic `evidence-present` form check with a deterministic per-phase gate: preflight (a 4-cluster nested fanout joined under preflight-gate, whose conclude-preflight runs a deterministic block-gaps/warn-extras rollup over the issue->spec->plan->code chain + mm-compliance, posts one consolidated comment, and halts via on_blocked:halt until /override), overview (schema + cohort-partition + a deterministic `conclude-overview` risk scorer porting score.js/diffusion.js that owns the authoritative band and halts only on a garbled/unknown run; the agent's risk_band is an advisory hint), the 5 review dims (schema + findings-anchored + publish-review; the fanout's params.status_note flags request-changes legs in the status header), and then a per-issue dynamic fanout runs, for each open [ai-review] issue, triage (fix-triage-agent, host-authoritatively pinned to the leg's issue; schema + conclude-triage), fix (edit/commit -- conclude-fix commits the diff to the PR head with rebase-retry and closes the issue), and honesty (a cryptohash proof-of-work that a real test ran AND a fixverify semi-formal fix certificate, ANDed per issue by conclude-honesty). The per-issue legs join under honesty-gate, whose aggregate-honesty reducer HALTS the pipeline (on_blocked:halt, /override-able) if ANY issue's fix is dishonest; issue selection is host-authoritative and the verdict is tamper-evident (both fail closed; a nested-leg conclude hook runs so fix/triage actually commit+close). The post-fix fanout runs context (schema-valid only, advisory -- a fanout leg runs NO conclude hook, so conclude-context.py is unused here) in PARALLEL with mm-updater (evidence-present + mm-questions-present; a gh-aw create-pull-request safe-output opens an [mm] PR when mm_changed, the mm-gate then holds for a human /mm-answer, else the empty gate auto-skips); the join waits for both before mrp (schema + conclude-mrp + a deterministic acceptance_plan: engine inputs[] deliver prior-phase evidence, per-cohort bands are re-derived via the shared _risk_score, and the custody-shaped pack is emitted as the merge-readiness-pack artifact). Remaining simplification: review findings are opened as [ai-review] issues but not yet posted as inline PR comments. Agent workflows live in .github/workflows/.",
   "triggers": [
     { "on": "issue_comment", "comment_prefix": "/review", "command": "start" },
     { "on": "issue_comment", "comment_prefix": "/override", "command": "override" },
@@ -331,43 +331,66 @@
       ],
       "next": "join-review"
     },
-    { "id": "join-review", "kind": "join", "of": "review", "next": "triage" },
+    { "id": "join-review", "kind": "join", "of": "review", "next": "per-issue" },
     {
-      "id": "triage",
-      "kind": "agent",
-      "label": "review triage (cluster & rank)",
-      "workflow": "triage-agent",
-      "evidence": "triage.evidence.schema.json",
-      "max_iterations": 2,
-      "inputs": [
-        { "from": "correctness",     "as": "correctness" },
-        { "from": "test",            "as": "test" },
-        { "from": "performance",     "as": "performance" },
-        { "from": "security",        "as": "security" },
-        { "from": "maintainability", "as": "maintainability" }
-      ],
-      "params": { "require": ["clusters", "summary"] },
-      "checks": [
-        { "run": "evidence-present", "on_fail": "iterate" },
-        { "run": "triage-schema-valid", "on_fail": "iterate" }
-      ],
-      "conclude": "conclude-triage",
-      "next": "fix"
+      "id": "per-issue",
+      "kind": "fanout",
+      "label": "per-issue triage → fix (one leg per open [ai-review] issue)",
+      "expand": { "hook": "expand-issues", "as": "issue", "id_from": "$.number", "max_legs": 32, "matrix_fields": ["number"] },
+      "each": { "states": [
+        {
+          "id": "triage",
+          "kind": "agent",
+          "label": "per-issue triage (one cluster from the delivered issue)",
+          "workflow": "fix-triage-agent",
+          "evidence": "triage.evidence.schema.json",
+          "max_iterations": 2,
+          "params": { "require": ["clusters", "summary"] },
+          "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "triage-schema-valid", "on_fail": "iterate" } ],
+          "conclude": "conclude-triage",
+          "next": "fix"
+        },
+        {
+          "id": "fix",
+          "kind": "agent",
+          "label": "edit + commit remediation (edit mode)",
+          "workflow": "fix-agent",
+          "evidence": "fix.evidence.schema.json",
+          "max_iterations": 2,
+          "inputs": [ { "from": "triage", "as": "triage" } ],
+          "params": { "require": ["fixes", "mode"] },
+          "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "fix-schema-valid", "on_fail": "iterate" } ],
+          "conclude": "conclude-fix",
+          "next": "honesty"
+        },
+        {
+          "id": "honesty",
+          "kind": "fanout",
+          "next": "join-honesty",
+          "branches": [
+            { "id": "cryptohash", "workflow": "honesty-cryptohash-agent", "evidence": "crypto-verification.evidence.schema.json", "max_iterations": 2, "params": { "require": ["ran", "crypto-verification-hash"] }, "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "crypto-hash-valid", "on_fail": "iterate" } ] },
+            { "id": "fixverify", "workflow": "honesty-fixverify-agent", "evidence": "honesty-check.evidence.schema.json", "max_iterations": 1, "params": { "require": ["check", "pass", "reason"] }, "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "honesty-check-valid", "on_fail": "iterate" } ] }
+          ]
+        },
+        { "id": "join-honesty", "kind": "join", "of": "honesty", "policy": "all", "next": "honesty-verdict" },
+        {
+          "id": "honesty-verdict",
+          "kind": "merge",
+          "label": "per-issue honesty verdict (AND of the subworkflows)",
+          "hook": "conclude-honesty",
+          "inputs": [ { "from": "cryptohash", "as": "cryptohash" }, { "from": "fixverify", "as": "fixverify" }, { "from": "triage", "as": "triage" } ]
+        }
+      ] },
+      "next": "join-per-issue"
     },
+    { "id": "join-per-issue", "kind": "join", "of": "per-issue", "policy": "all", "next": "honesty-gate" },
     {
-      "id": "fix",
-      "kind": "agent",
-      "label": "propose remediations (suggest)",
-      "workflow": "fix-agent",
-      "evidence": "fix.evidence.schema.json",
-      "max_iterations": 2,
-      "inputs": [ { "from": "triage", "as": "triage" } ],
-      "params": { "require": ["fixes", "mode"] },
-      "checks": [
-        { "run": "evidence-present", "on_fail": "iterate" },
-        { "run": "fix-schema-valid", "on_fail": "iterate" }
-      ],
-      "conclude": "conclude-fix",
+      "id": "honesty-gate",
+      "kind": "merge",
+      "label": "aggregate per-issue honesty (halt if any dishonest)",
+      "hook": "aggregate-honesty",
+      "inputs": [ { "from_fanout": "per-issue", "as": "per-issue" } ],
+      "on_blocked": "halt",
       "next": "post-fix"
     },
     {
@@ -427,7 +450,7 @@
       "inputs": [
         { "from": "preflight-gate", "as": "preflight" },
         { "from": "overview",  "as": "overview" },
-        { "from": "triage",    "as": "triage" },
+        { "from": "honesty-gate", "as": "honesty" },
         { "from": "context",   "as": "context" }
       ],
       "params": { "require": ["rationale", "critique_ledger", "routed_questions", "acceptance", "acceptance_plan"] },

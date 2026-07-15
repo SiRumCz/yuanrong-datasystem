@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ABI tests for crypto-hash-valid.py (code-review-honesty): the check recomputes
+"""ABI tests for crypto-hash-valid.py (code-review): the check recomputes
 the sha256 hash for real, AND — when the trusted pre-step's
 `/tmp/gh-aw/recognized-test-run.json` is present (the real gh-aw run) — cross-
 checks the evidence's `ran`/`test_output` against that recognized run, so the
@@ -16,7 +16,7 @@ import sys
 import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-CHECK = os.path.normpath(os.path.join(HERE, "..", "..", "code-review-honesty", "checks", "crypto-hash-valid.py"))
+CHECK = os.path.normpath(os.path.join(HERE, "..", "checks", "crypto-hash-valid.py"))
 RECOGNIZED_PATH = "/tmp/gh-aw/recognized-test-run.json"
 
 

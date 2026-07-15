@@ -42,6 +42,7 @@ post-steps:
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
 timeout-minutes: 10
+source: golivax/agentic-protocol-poc/.github/workflows/adherence-rollup-agent.md@c6ecf5dad176860d8088573b8be7f5e65e21e3dc
 ---
 
 # Adherence Rollup — consolidate the three adherence judges into one cluster evidence

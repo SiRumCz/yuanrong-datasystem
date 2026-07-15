@@ -15,7 +15,7 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-CHECKS = os.path.normpath(os.path.join(HERE, "..", "..", "code-review-honesty", "checks"))
+CHECKS = os.path.normpath(os.path.join(HERE, "..", "checks"))
 sys.path.insert(0, CHECKS)
 import _fixcert  # noqa: E402
 
@@ -149,5 +149,22 @@ expect(f"suggested_fix extracted (got {f.get('suggested_fix')!r})", f["suggested
 # only open scoped issues -> selected but state OPEN (nothing claimed yet)
 f = _fixcert.select_finding([ISSUES[2]], 12)
 expect(f"open-only scoped -> state OPEN (got {f})", f["issue"] == 9 and f["state"] == "OPEN")
+
+# --- select_finding pinning: pick the delivered number, any state ---
+f = _fixcert.select_finding(ISSUES, 12, pinned=9)
+expect(f"pinned picks #9 exactly (got {f})", f["issue"] == 9 and f["state"] == "OPEN")
+f = _fixcert.select_finding(ISSUES, 12, pinned=404)
+expect(f"pinned-not-found -> none (got {f})", f["issue"] is None)
+
+# --- word-boundary PR scope: `PR #<pr>` must not over-match a longer PR number ---
+# A body that only says "PR #12" is a DIFFERENT PR from #1; the old `f"PR #{pr}" in body`
+# substring check over-matched it (so #1 wrongly captured #12's issues). #7 & #9 below
+# are the ISSUES entries whose bodies mention only "PR #12" — for pr=1 they must be OUT.
+f = _fixcert.select_finding(ISSUES, 1)
+expect(f"pr=1 does NOT match 'PR #12'-only bodies (got {f})", f["issue"] is None and f["state"] == "none")
+# ... but pr=1 DOES match an exact `PR #1` token, at any word boundary (EOL, '.', space).
+for body in ("finding on PR #1", "regression at PR #1.", "see PR #1 for context", "PR #1"):
+    one = _fixcert.select_finding([{"number": 3, "state": "OPEN", "title": "t", "body": body}], 1)
+    expect(f"pr=1 matches {body!r} (got {one})", one["issue"] == 3 and one["state"] == "OPEN")
 
 sys.exit(0 if expect.ok else 1)

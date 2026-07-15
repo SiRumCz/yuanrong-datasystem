@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+"""Expander for the per-issue dynamic fanout. Emits one item per OPEN, PR-scoped
+[ai-review] issue: {"number","title"}. publish-review.py opens one [ai-review]
+issue per finding; the `ai-review` label is repo-global, so keep only issues whose
+body references THIS PR ("PR #<pr>") — mirrors fix-triage-agent.md:86 / _fixcert.py:70.
+
+Modes:
+  ENGINE_LOCAL=1            -> read items.json beside this script (offline dry-run).
+  EXPAND_ISSUES_FILE=<path> -> read that `gh issue list` JSON (test injection, no gh).
+  otherwise                -> `gh issue list --label ai-review --state open` (live, zone 1).
+
+id_from '$.number' + matrix_fields ['number']: lib.leg_id sha1-hashes the number to
+the leg id; only `number` is inlined into the GHA matrix, titles ride the state branch.
+"""
+import json, os, re, subprocess
+
+def _load_issues(pr):
+    inj = os.environ.get("EXPAND_ISSUES_FILE")
+    if inj:
+        with open(inj) as f:
+            return json.load(f)
+    repo = os.environ.get("GITHUB_REPOSITORY", "")
+    r = subprocess.run(
+        ["gh", "issue", "list", "--repo", repo, "--label", "ai-review",
+         "--state", "open", "--json", "number,title,body", "--limit", "100"],
+        capture_output=True, text=True)
+    if r.returncode != 0:
+        raise SystemExit(f"expand-issues: gh issue list failed: {r.stderr.strip()}")
+    return json.loads(r.stdout or "[]")
+
+def main():
+    pr = os.environ.get("PR", "")
+    if os.environ.get("ENGINE_LOCAL"):
+        here = os.path.dirname(os.path.abspath(__file__))
+        with open(os.path.join(here, "items.json")) as f:
+            print(json.dumps({"items": json.load(f)}))
+        return
+    # Word-boundary match: `PR #1` must not over-match a body that only says `PR #12`
+    # (the trailing `(?!\d)` rejects a longer PR number). Mirrors _fixcert.select_finding.
+    scope = re.compile(rf"PR #{re.escape(pr)}(?!\d)")
+    items = []
+    for it in _load_issues(pr):
+        if not isinstance(it, dict) or not scope.search(it.get("body") or ""):
+            continue
+        items.append({"number": it.get("number"), "title": it.get("title", "")})
+    print(json.dumps({"items": items}))
+
+if __name__ == "__main__":
+    main()

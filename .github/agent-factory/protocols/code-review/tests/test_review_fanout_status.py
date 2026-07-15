@@ -88,15 +88,17 @@ with tempfile.TemporaryDirectory() as d:
 
 
 # ── Integration: render_pipeline_status_body, scoping ──
-# After Phase A, `preflight` is a FANOUT (3 legs: spec-solves-issue,
-# plan-implements-spec, code-implements-plan) + a separate `preflight-gate`
-# AGENT phase. Fanout legs render as "**preflight · <leg>**"; the gate renders
-# as "**preflight-gate**" with an agent-style "✅ clear." note.
+# `preflight` is a FANOUT whose direct legs are the adherence-chain clusters
+# (adherence ∥ mm-compliance ∥ consistency ∥ security) + a separate
+# `preflight-gate` AGENT phase. Fanout legs render as "**preflight · <leg>**";
+# the gate renders as "**preflight-gate**" with an agent-style "✅ clear." note.
+# (spec-solves-issue et al. are now nested one level down under adherence, so
+# they are no longer direct preflight legs — we exercise a real direct leg.)
 with tempfile.TemporaryDirectory() as d:
     pid, inst = "code-review", "pr-99"
     # preflight fanout: write one leg state to exercise the fanout rendering path
-    _wstate(d, pid, inst, "preflight", branch="spec-solves-issue",
-            checks={"evidence-present": "pass", "spec-solves-issue-coverage": "pass"})
+    _wstate(d, pid, inst, "preflight", branch="adherence",
+            checks={"evidence-present": "pass"})
     # preflight-gate agent phase (must be done to get "✅ clear." note)
     _wstate(d, pid, inst, "preflight-gate",
             checks={"evidence-present": "pass", "preflight-gate-schema-valid": "pass"})
@@ -114,8 +116,8 @@ with tempfile.TemporaryDirectory() as d:
     ok("[render] review·correctness (APPROVE) stays plain — no flag",
        "**review · correctness**\n" in body and "**review · correctness** — ⚠️" not in body)
     ok("[render] preflight fanout leg renders without a verdict-note flag",
-       "**preflight · spec-solves-issue**\n" in body
-       and "**preflight · spec-solves-issue** — ⚠️" not in body)
+       "**preflight · adherence**\n" in body
+       and "**preflight · adherence** — ⚠️" not in body)
     ok("[render] preflight-gate (agent phase) renders its '✅ clear.' note",
        "**preflight-gate**\n" in body
        and "✅ clear." in body.split("**preflight-gate**", 1)[1].split("**", 1)[0])

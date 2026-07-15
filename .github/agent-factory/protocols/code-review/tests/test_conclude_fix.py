@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
-"""ABI tests for conclude-fix.py (code-review-honesty): completeness against
+"""ABI tests for conclude-fix.py (code-review): completeness against
 triage, diff-shape review messaging, and the git-apply pipeline (applied vs
 skipped, never a partial write on a diff that doesn't apply cleanly)."""
 import copy
+import importlib.util
+import io
 import json
 import os
 import subprocess
 import sys
 import tempfile
+from contextlib import redirect_stdout
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-HOOK = os.path.normpath(os.path.join(HERE, "..", "..", "code-review-honesty", "publish", "conclude-fix.py"))
+HOOK = os.path.normpath(os.path.join(HERE, "..", "publish", "conclude-fix.py"))
 failures = []
 
 
@@ -200,6 +203,57 @@ apply_report3 = run_apply(
     repo3,
 )
 ok(f"empty diff is skipped, not applied (got {apply_report3})", apply_report3.get("applied") == 0)
+
+# --- FIX #6: main()'s conclusion reflects whether the fix push actually landed ---
+# The nested fix leg's check-run reds on conclusion=='failure' (engine advance.py). A
+# fix that was applied but whose push did NOT succeed must therefore red the leg, not
+# stay neutral. Drive main() with a stubbed apply pipeline so we control the push state.
+_spec = importlib.util.spec_from_file_location("conclude_fix_mod", HOOK)
+_cf = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_cf)
+
+
+def conclusion_for(apply_report):
+    """Invoke conclude-fix.main() with _apply_commit_close stubbed to return
+    `apply_report`, and return the emitted verdict's `conclusion`."""
+    d = tempfile.mkdtemp()
+    ev = os.path.join(d, "e.json")
+    open(ev, "w").write(json.dumps(FIX))
+    inputs_dir = os.path.join(d, "inputs")
+    os.makedirs(inputs_dir, exist_ok=True)
+    with open(os.path.join(inputs_dir, "triage.json"), "w") as fh:
+        json.dump(TRIAGE, fh)
+    saved_argv, saved_env = sys.argv, dict(os.environ)
+    saved_ac = _cf._apply_commit_close
+    os.environ.update({
+        "ENGINE_LOCAL": "1", "CONCLUDE_INPUTS_DIR": inputs_dir,
+        "FIX_OUT": os.path.join(d, "fix.json"),
+        "FIX_REVIEW_OUT": os.path.join(d, "review.json"),
+        "GITHUB_REPOSITORY": "o/r", "PR": "9", "HEAD_SHA": "abc",
+    })
+    sys.argv = [HOOK, ev]
+    _cf._apply_commit_close = lambda evidence: apply_report
+    buf = io.StringIO()
+    try:
+        with redirect_stdout(buf):
+            _cf.main()
+    finally:
+        _cf._apply_commit_close = saved_ac
+        sys.argv = saved_argv
+        os.environ.clear()
+        os.environ.update(saved_env)
+    return json.loads(buf.getvalue().strip())["conclusion"]
+
+
+# push attempted and FAILED (push_error present, pushed False) -> red the leg (failure)
+c = conclusion_for({"applied": 1, "pushed": False, "push_error": "push failed: non-fast-forward on head"})
+ok(f"push-failed -> conclusion 'failure' (got {c})", c == "failure")
+# push SUCCEEDED -> unchanged, non-failure
+c = conclusion_for({"applied": 1, "pushed": True})
+ok(f"push-ok -> conclusion not 'failure' (got {c})", c != "failure")
+# no fix attempted / nothing pushed -> non-failure
+c = conclusion_for({"applied": 0, "pushed": False})
+ok(f"no-push -> conclusion not 'failure' (got {c})", c != "failure")
 
 if failures:
     print("FAIL test_conclude_fix:")

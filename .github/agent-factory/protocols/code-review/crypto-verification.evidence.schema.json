@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "crypto-verification evidence",
+  "description": "The single test-run recognized from the fix agent's trusted `agent-stdio.log` trajectory (via `_crypto.find_test_run`), plus a `crypto-verification-hash` — the sha256 of `test_output`, or null when `ran` is false / the output is empty. The deterministic crypto-hash-valid check re-verifies the hash.",
+  "type": "object",
+  "required": ["ran", "crypto-verification-hash"],
+  "properties": {
+    "ran": { "type": "boolean" },
+    "command": { "type": "string" },
+    "exit_code": { "type": ["integer", "null"] },
+    "test_output": { "type": "string" },
+    "crypto-verification-hash": {
+      "type": ["string", "null"],
+      "description": "sha256 hex of `test_output`, or null when `ran` is false / test_output is absent/empty.",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

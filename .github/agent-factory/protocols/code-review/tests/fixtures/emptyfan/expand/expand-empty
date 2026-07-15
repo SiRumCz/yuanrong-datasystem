@@ -1,0 +1,4 @@
+#!/usr/bin/env python3
+# 0-leg expander stub: no PR-scoped [ai-review] issues -> empty items list.
+import json
+print(json.dumps({"items": []}))
