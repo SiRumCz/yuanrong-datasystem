@@ -1,0 +1,6 @@
+protocol: code-review
+instance: pr-185
+head_sha: 236d631bc8e50077e16ef38efb03b2bbabea1fa9
+phase: preflight
+joined: false
+phase_label: pre-flight adherence chain
