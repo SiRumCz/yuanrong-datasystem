@@ -1,0 +1,36 @@
+{
+  "scope": { "code_changed": true },
+  "items": [
+    {
+      "path": "docs/superpowers/specs/2026-07-15-dscli-logs-design.md",
+      "status": "updated_appropriately",
+      "reason": "New design spec in the PR accurately describes the added `dscli logs -w <host:port> [-n N]` command, default line count, local read-only scope, registration, and test coverage."
+    },
+    {
+      "path": "docs/superpowers/plans/2026-07-15-dscli-logs.md",
+      "status": "updated_appropriately",
+      "reason": "New implementation plan in the PR matches the changed files by covering `cli/logs.py`, command registration, the focused unit test, and verification command."
+    },
+    {
+      "path": "docs/source_zh_cn/deployment/dscli.md",
+      "status": "missing",
+      "reason": "This user-facing dscli command reference documents existing subcommands and log collection, but the PR does not add the new `dscli logs` usage or its `--worker_address`/`--lines` options."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    "docs/source_zh_cn/deployment/dscli.md",
+    "docs/source_zh_cn/deployment/index.md",
+    "docs/source_zh_cn/index.rst",
+    "docs/README_CN.md",
+    "README.md",
+    "README_EN.md",
+    ".repo_context/modules/overview/repository-overview.md",
+    "cli/command.py",
+    "cli/stop.py"
+  ]
+}
