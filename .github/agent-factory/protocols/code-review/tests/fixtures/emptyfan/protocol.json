@@ -1,0 +1,13 @@
+{
+  "name": "emptyfan-fixture",
+  "version": "0.0.1",
+  "states": [
+    {"id": "overview", "kind": "agent", "workflow": "overview-agent", "next": "per-issue"},
+    {"id": "per-issue", "kind": "fanout",
+     "expand": {"hook": "expand-empty", "as": "issue", "id_from": "$.number", "max_legs": 32, "matrix_fields": ["number"]},
+     "each": {"workflow": "fix-triage-agent"},
+     "next": "join-per-issue"},
+    {"id": "join-per-issue", "kind": "join", "of": "per-issue", "next": "honesty-gate"},
+    {"id": "honesty-gate", "kind": "agent", "workflow": "gate-agent"}
+  ]
+}

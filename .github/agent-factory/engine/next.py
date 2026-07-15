@@ -765,6 +765,17 @@ if COMMAND == "continue" and NODE_PATH:
         # to origin so the matrix legs (which re-checkout state) find them, THEN emit.
         branches = enter_node(proto_data, _p, "continue", emit=False)
         lib.cas_push(DIR, f"{PID}/{INSTANCE}: enter nested fanout {NODE_PATH} (continue)")
+        if not branches:
+            # Empty dynamic-fanout short-circuit: a 0-leg materialization would emit
+            # run-fanout with no legs; every GHA zone gates on legs != '[]' and skips,
+            # so the enclosing join never fires and the instance STALLS. Fire THIS
+            # fanout's join now (a vacuous barrier → all_terminal True → advance to
+            # its .next), and emit a noop instead of the empty run-fanout. Path-keyed
+            # only for a NESTED fanout; the top fanout stays path-less.
+            lib.fire_join_dispatch(PID, INSTANCE, NODE_PATH if len(_p) > 1 else "")
+            print(json.dumps({"action": "noop", "iteration": 0, "feedback": "",
+                              "reason": f"empty-fanout:{NODE_PATH}"}))
+            sys.exit(0)
         print(json.dumps(_fanout_action(proto_data, _p, branches)))
         sys.exit(0)
     if _kind == "agent":
@@ -839,13 +850,66 @@ if COMMAND == "continue" and NODE_PATH:
             print(json.dumps({"action": "noop", "iteration": 0, "feedback": "",
                               "reason": f"nested-merge-done:{'.'.join(_p)}"}))
             sys.exit(0)
-        # TOP merge (existing behavior, unchanged): finalize the instance.
+        # TOP merge — Option-B gate: honor on_blocked / .next before finalizing.
+        pr = lib.pr_from_instance(INSTANCE)
         inf = lib.instance_file(DIR, PID, INSTANCE)
         inst = lib.load_yaml(inf) if os.path.isfile(inf) else {}
+        # A crashed/unresolved/bad-JSON hook returns a NEUTRAL res with no `blocked`
+        # key. On a gate that opted into halting, a non-genuine verdict must FAIL
+        # CLOSED (halt), never fall through to .next — otherwise a security-critical
+        # gate (on_blocked:halt + next:post-fix) fails OPEN on a crash. A GENUINE
+        # `failure` conclusion (blocked not set) must halt too: a reducer that
+        # reports failure without flipping `blocked` would otherwise fall through.
+        genuine = res.get("conclusion") in ("success", "failure")
+        if node.get("on_blocked") == "halt" and (
+                res.get("blocked") or res.get("conclusion") == "failure" or not genuine):
+            # A required gate returned blocked:true (or a non-genuine/crashed verdict)
+            # → HALT before .next. Record the `halted` marker do_override reads
+            # (advance.py:728 shape), fail the check-run, label 'blocked', and stop.
+            # `/override` clears it and continues to next_sibling(honesty-gate) == post-fix.
+            inst["halted"] = {"phase": _p[-1], "reason": "blocked", "sha": HEAD_SHA}
+            lib.dump_yaml(inf, inst)
+            gsum = res.get("summary", "") or "a required gate did not pass"
+            lib.set_check_run(PID, HEAD_SHA, "completed", "failure", "Gate blocked", gsum)
+            lib.post_pr_comment(pr, f"⛔ **{_p[-1]}** gate blocked: {gsum}. "
+                                    f"A write-access user can comment `/override <reason>` to proceed.")
+            lib.upsert_status_comment(inf, pr, lib.render_instance_status_body(DIR, PID, INSTANCE, PROTO))
+            lib.ensure_phase_label(DIR, PID, INSTANCE, proto_data, pr, "blocked")
+            lib.cas_push(DIR, f"{INSTANCE}: merge {_p[-1]} blocked → pipeline halted")
+            print(json.dumps({"action": "halt", "iteration": 0, "feedback": "",
+                              "reason": f"merge-blocked:{_p[-1]}"}))
+            sys.exit(0)
+        if node.get("next"):
+            # Not blocked and the gate names a successor → CONTINUE past the merge
+            # instead of finalizing (multi-phase after a top merge, e.g. post-fix).
+            nxt = node["next"]
+            # Persist the merge rollup as THIS gate phase's output evidence so a
+            # downstream `{from:'<this-gate>'}` agent input resolves (e.g. mrp's
+            # {from:'honesty-gate', as:'honesty'} → aggregate-honesty's
+            # {conclusion,summary,blocked,rollup}). Mirrors the nested-merge arm above;
+            # the path is state_path(proto, _p) — byte-identical to what resolve_inputs
+            # computes for a top-level `from` — and is written BEFORE cas_push so it
+            # lands on the state branch with the rest of this transition.
+            ev = lib.output_artifact_path(DIR, PID, INSTANCE, path=lib.state_path(proto_data, _p))
+            os.makedirs(os.path.dirname(ev), exist_ok=True)
+            with open(ev, "w") as f:
+                json.dump(res, f)
+            concl, summary, _label = lib.finalize_merge_result(res)
+            inst["phase"] = nxt
+            lib.dump_yaml(inf, inst)
+            lib.set_check_run(PID, HEAD_SHA, "completed", concl, "Combined", summary)
+            lib.post_pr_comment(pr, f"🧬 **{_p[-1]}**: {summary}")
+            lib.upsert_status_comment(inf, pr, lib.render_instance_status_body(DIR, PID, INSTANCE, PROTO))
+            lib.ensure_phase_label(DIR, PID, INSTANCE, proto_data, pr, nxt)
+            lib.cas_push(DIR, f"{INSTANCE}: merge {_p[-1]} clear → continue {nxt}")
+            lib.dispatch_continue(PID, INSTANCE, path=nxt)
+            print(json.dumps({"action": "noop", "iteration": 0, "feedback": "",
+                              "reason": f"merge-continue:{nxt}"}))
+            sys.exit(0)
+        # TOP merge (no .next): finalize the instance (existing behavior).
         inst["phase"] = _p[-1]
         inst["joined"] = True
         lib.dump_yaml(inf, inst)
-        pr = lib.pr_from_instance(INSTANCE)
         concl, summary, label = lib.finalize_merge_result(res)
         lib.set_check_run(PID, HEAD_SHA, "completed", concl, "Combined", summary)
         lib.post_pr_comment(pr, f"🧬 **{_p[-1]}**: {summary}")

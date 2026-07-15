@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+"""Top honesty-gate reducer (merge hook, from_fanout:'per-issue').
+ABI: aggregate-honesty <workdir> <instance>. Reads inputs/per-issue.json — the
+from_fanout rows over the per-issue legs ({leg_id,key,state,evidence}); each row's
+`evidence` is that leg's terminal honesty-verdict output (conclude-honesty's
+{conclusion,summary}). An issue is dishonest when its verdict conclusion != 'success'
+('failure' == NOT-honest; 'success' == HONEST or vacuous). Emits
+{conclusion,summary,blocked,rollup}: blocked iff ANY per-issue honest==false — the
+engine top-merge arm reads `blocked` + on_blocked/next. `rollup` is mrp's input."""
+import json, os, sys
+
+def _honest(ev):
+    if not isinstance(ev, dict):
+        return False, "no verdict evidence"
+    return (ev.get("conclusion") == "success"), ev.get("summary", "")
+
+def _fail_closed(reason):
+    # A missing/unreadable/corrupt input file is NOT a vacuous pass: it means the
+    # gate cannot see the per-issue verdicts, so fail CLOSED (blocked:true) rather
+    # than silently reporting "all honest". Exit 0 so run_merge_hook parses this as
+    # a genuine failure verdict (a nonzero exit degrades to a neutral res).
+    print(json.dumps({"conclusion": "failure", "blocked": True,
+                      "summary": f"honesty gate could not read per-issue verdicts: {reason}",
+                      "rollup": {"total": 0, "dishonest": [], "per_issue": []}}))
+    sys.exit(0)
+
+def main():
+    workdir = sys.argv[1] if len(sys.argv) > 1 else "."
+    path = os.path.join(workdir, "inputs", "per-issue.json")
+    # A GENUINELY empty parsed list ([]) is a vacuous success (no per-issue fixes to
+    # verify — handled below). But a MISSING / unreadable / corrupt file must fail
+    # closed, not degrade to that same empty list.
+    try:
+        with open(path) as f:
+            rows = json.load(f)
+    except FileNotFoundError:
+        _fail_closed("input file missing")
+    except (OSError, ValueError):
+        # OSError: unreadable; ValueError ⊇ json.JSONDecodeError: corrupt/empty JSON.
+        _fail_closed("input file unreadable or corrupt")
+    if not isinstance(rows, list):
+        _fail_closed("input is not a list of per-issue verdict rows")
+    per_issue, dishonest = [], []
+    for r in rows:
+        key = r.get("key")
+        honest, summ = _honest(r.get("evidence"))
+        per_issue.append(f"issue {key}: {'HONEST' if honest else 'NOT honest'} — {summ}")
+        if not honest:
+            dishonest.append(key)
+    total = len(rows)
+    blocked = bool(dishonest)
+    if blocked:
+        conclusion, summary = "failure", (
+            f"{len(dishonest)}/{total} issue(s) dishonest: "
+            + ", ".join(str(k) for k in dishonest))
+    elif total == 0:
+        conclusion, summary = "success", "honesty gate vacuous — no per-issue fixes to verify"
+    else:
+        conclusion, summary = "success", f"all {total} issue(s) HONEST"
+    print(json.dumps({"conclusion": conclusion, "summary": summary, "blocked": blocked,
+                      "rollup": {"total": total, "dishonest": dishonest, "per_issue": per_issue}}))
+
+if __name__ == "__main__":
+    main()

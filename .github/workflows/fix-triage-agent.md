@@ -1,5 +1,5 @@
 ---
-name: "Fix-Triage Agent (protocol state: triage, code-review-fix)"
+name: "Fix-Triage Agent (protocol state: per-issue.triage)"
 run-name: "Fix-Triage Agent · cid:[${{ fromJSON(github.event.inputs.aw_context || '{}').cid }}]"
 on:
   workflow_dispatch:
@@ -62,6 +62,7 @@ post-steps:
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
 timeout-minutes: 10
+source: golivax/agentic-protocol-poc/.github/workflows/fix-triage-agent.md@c6ecf5dad176860d8088573b8be7f5e65e21e3dc
 ---
 
 # Fix-Triage — turn one published review issue into a single-cluster triage
@@ -84,14 +85,15 @@ findings from the diff, or invent anything. The PR view and diff are provided fo
 ## Process
 
 1. **Scope to this PR.** From `issues.json`, keep only issues whose `body`
-   references this PR (it contains `PR #<.pr>` from task-context.json). Ignore
+   references this PR by the EXACT token `PR #<.pr>` (from task-context.json),
+   where `<.pr>` is NOT followed by a further digit. E.g. for PR #1 a body that
+   mentions only `PR #12` is a DIFFERENT PR — do NOT match it. Ignore
    `[ai-review]` issues for other PRs.
-2. **Select exactly one finding.** Among the in-scope issues, pick the SINGLE
-   highest-priority finding that admits a precise, low-risk, **single-line source
-   remediation** — prefer a clear off-by-one / wrong-operator / boundary-condition
-   fix over multi-line refactors, security rewrites, test-only gaps, or doc-only
-   changes. (For the seeded PR this is the `correctness` finding about `--min-rss`
-   using `>` instead of `>=`.) Produce **exactly one cluster** for it.
+2. **Select the delivered issue.** Read `.inputs.issue.number` from
+   `/tmp/gh-aw/task-context.json` — the engine threads THIS leg's issue into it.
+   From the in-scope `issues.json`, take the single issue whose `number` equals
+   `.inputs.issue.number`. Produce **exactly one cluster** for that issue's finding.
+   (Do not rank or choose across issues — the fanout already picked this one.)
 3. **Reconstruct the finding from its issue**, verbatim where noted (the fix phase
    matches issues by title, so do not paraphrase the title):
    - `dimension` / `category` — from the `[ai-review][<dim>]` title prefix (also on
@@ -104,7 +106,12 @@ findings from the diff, or invent anything. The PR view and diff are provided fo
    - `impact` — the explanatory paragraph after the header line.
    - `fix` — the text inside the body's fenced "Suggested fix" block.
 4. **Write `/tmp/gh-aw/evidence.json`** (the engine evidence path) as ONE JSON
-   object, using the `edit` tool. Use exactly this shape (one cluster, rank 1):
+   object, using the `edit` tool. Also set a top-level `"pinned_issue":
+   <.inputs.issue.number>` (the integer) so the downstream fix agent can carry it
+   into fix evidence. Example tail:
+       "summary": { ... },
+       "pinned_issue": 101
+   Use exactly this shape (one cluster, rank 1):
 
 ```json
 {
@@ -131,7 +138,8 @@ findings from the diff, or invent anything. The PR view and diff are provided fo
     "total_findings": 1,
     "by_severity": { "medium": 1 },
     "by_dimension": { "correctness": 1 }
-  }
+  },
+  "pinned_issue": 101
 }
 ```
 

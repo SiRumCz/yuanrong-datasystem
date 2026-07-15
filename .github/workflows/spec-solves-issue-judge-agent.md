@@ -41,6 +41,7 @@ post-steps:
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
 timeout-minutes: 10
+source: golivax/agentic-protocol-poc/.github/workflows/spec-solves-issue-judge-agent.md@c6ecf5dad176860d8088573b8be7f5e65e21e3dc
 ---
 
 # Spec-Solves-Issue Judge — grade the seriousness of the gather's findings

@@ -1,0 +1,24 @@
+{
+  "name": "nested-conclude-fixture",
+  "version": "0.0.1",
+  "states": [
+    {
+      "id": "per-issue",
+      "kind": "fanout",
+      "label": "per-issue triage → fix (fixture: nested conclude hooks)",
+      "expand": {"hook": "expand-issues", "as": "issue", "id_from": "$.number", "max_legs": 32, "matrix_fields": ["number"]},
+      "each": {
+        "states": [
+          {"id": "triage", "kind": "agent", "workflow": "noop", "max_iterations": 2,
+           "conclude": "stub-conclude", "next": "fix"},
+          {"id": "fix", "kind": "agent", "workflow": "noop", "max_iterations": 2,
+           "inputs": [{"from": "triage", "as": "triage"}],
+           "conclude": "stub-conclude", "next": "verify"},
+          {"id": "verify", "kind": "agent", "workflow": "noop", "max_iterations": 2}
+        ]
+      },
+      "next": "final"
+    },
+    {"id": "final", "kind": "agent", "workflow": "noop"}
+  ]
+}

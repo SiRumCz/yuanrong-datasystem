@@ -76,6 +76,7 @@ post-steps:
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
 timeout-minutes: 10
+source: golivax/agentic-protocol-poc/.github/workflows/review-test-agent.md@c6ecf5dad176860d8088573b8be7f5e65e21e3dc
 ---
 
 # Review Agent — one dimension of the code-quality review

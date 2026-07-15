@@ -1,10 +1,12 @@
 const { test } = require('node:test')
 const assert = require('node:assert/strict')
-const { locateTranscripts, earliestTimestamp, CONVERSATIONS_DIR } = require('../scripts/context/locate.js')
+const { locateTranscripts, earliestTimestamp } = require('../scripts/context/locate.js')
 
-test('CONVERSATIONS_DIR defaults to .conversations', () => {
-  assert.equal(CONVERSATIONS_DIR, '.conversations')
-})
+// locate.js now sources transcripts from the dedicated `conversations` branch at
+// <owner>/<repo>/pr-<N>/ and no longer exports a PR_DIR default (the CLI
+// derives the dir from REPO + pr.number). These DI tests drive the pure core with a
+// representative prDir.
+const PR_DIR = 'o/r/pr-5'
 
 test('earliestTimestamp returns the smallest record timestamp; Infinity when none', () => {
   const text = '{"timestamp":"2026-06-02T00:00:00Z"}\n{"timestamp":"2026-06-01T00:00:00Z"}\nnot-json'
@@ -12,8 +14,8 @@ test('earliestTimestamp returns the smallest record timestamp; Infinity when non
   assert.equal(earliestTimestamp('{"no":"ts"}'), Infinity)
 })
 
-test('locateTranscripts: single session via .conversations probe', async () => {
-  const prDir = CONVERSATIONS_DIR
+test('locateTranscripts: single session via conversations-branch probe', async () => {
+  const prDir = PR_DIR
   const probe = async (dir) => dir === prDir ? [`${prDir}/y.jsonl`] : []
   const readFile = async (p) => p === `${prDir}/y.jsonl` ? '{"type":"assistant","timestamp":"2026-06-01T00:00:00Z"}' : null
   const r = await locateTranscripts({ prDir }, { probe, readFile })
@@ -23,7 +25,7 @@ test('locateTranscripts: single session via .conversations probe', async () => {
 })
 
 test('locateTranscripts: multiple sessions returned ordered by earliest timestamp', async () => {
-  const prDir = CONVERSATIONS_DIR
+  const prDir = PR_DIR
   const files = {
     [`${prDir}/late.jsonl`]: '{"timestamp":"2026-06-03T00:00:00Z"}',
     [`${prDir}/early.jsonl`]: '{"timestamp":"2026-06-01T00:00:00Z"}',
@@ -40,7 +42,7 @@ test('locateTranscripts: multiple sessions returned ordered by earliest timestam
 })
 
 test('locateTranscripts: clean absence is not an error', async () => {
-  const r = await locateTranscripts({ prDir: CONVERSATIONS_DIR }, { probe: async () => [], readFile: async () => null })
+  const r = await locateTranscripts({ prDir: PR_DIR }, { probe: async () => [], readFile: async () => null })
   assert.equal(r.found, false)
   assert.equal(r.error, undefined)
   assert.ok(r.searched.length)
@@ -48,22 +50,22 @@ test('locateTranscripts: clean absence is not an error', async () => {
 
 test('locateTranscripts: probe or read errors are explicit', async () => {
   const probeError = await locateTranscripts(
-    { prDir: CONVERSATIONS_DIR },
+    { prDir: PR_DIR },
     { probe: async () => { throw new Error('boom') }, readFile: async () => null }
   )
   assert.equal(probeError.found, false)
   assert.equal(probeError.error, true)
 
   const readError = await locateTranscripts(
-    { prDir: CONVERSATIONS_DIR },
-    { probe: async () => [`${CONVERSATIONS_DIR}/a.jsonl`], readFile: async () => { throw new Error('io') } }
+    { prDir: PR_DIR },
+    { probe: async () => [`${PR_DIR}/a.jsonl`], readFile: async () => { throw new Error('io') } }
   )
   assert.equal(readError.found, false)
   assert.equal(readError.error, true)
 })
 
 test('locateTranscripts: equal timestamps tie-break alphabetically by path', async () => {
-  const prDir = CONVERSATIONS_DIR
+  const prDir = PR_DIR
   const probe = async () => [`${prDir}/z.jsonl`, `${prDir}/a.jsonl`]
   const readFile = async () => '{"timestamp":"2026-06-01T00:00:00Z"}'
   const r = await locateTranscripts({ prDir }, { probe, readFile })

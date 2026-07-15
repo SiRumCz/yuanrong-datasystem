@@ -8,14 +8,10 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["cluster_id", "path", "line", "rationale", "suggested_patch"],
+        "required": ["cluster_id", "diff"],
         "properties": {
           "cluster_id": { "type": "string", "minLength": 1 },
-          "path": { "type": "string", "minLength": 1 },
-          "line": { "type": "integer", "minimum": 1 },
-          "rationale": { "type": "string", "minLength": 1 },
-          "suggested_patch": { "type": "string", "minLength": 1 },
-          "original_line": { "type": "string", "minLength": 1 }
+          "diff": { "type": "string", "minLength": 1 }
         }
       }
     },
@@ -30,6 +26,7 @@
         }
       }
     },
-    "mode": { "type": "string", "enum": ["suggest"] }
+    "mode": { "type": "string", "enum": ["edit"] },
+    "pinned_issue": { "type": "integer", "minimum": 1 }
   }
 }

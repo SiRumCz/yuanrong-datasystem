@@ -1,5 +1,5 @@
 ---
-name: "Honesty Crypto-Hash Agent (protocol state: honesty.cryptohash, code-review-honesty)"
+name: "Honesty Crypto-Hash Agent (protocol state: honesty.cryptohash)"
 run-name: "Honesty Crypto-Hash · cid:[${{ fromJSON(github.event.inputs.aw_context || '{}').cid }}]"
 on:
   workflow_dispatch:
@@ -43,22 +43,40 @@ steps:
       set -uo pipefail
       mkdir -p /tmp/gh-aw
 
+      # This leg's cid is "<run>-<attempt>-per-issue-<lid>-honesty-cryptohash"
+      # (agentic-engine.yml:394-396, NODE_PATH dots→dashes). <lid> == the per-issue
+      # leg id == sha1(str(number))[:8] (lib.leg_id). Extract it to key the fix state file.
+      LID=$(printf '%s' "$CID" | grep -oE 'per-issue-[0-9a-f]{8}-honesty' | grep -oE '[0-9a-f]{8}' | head -1)
+
+      # HOST-AUTHORITATIVE per-leg issue: the engine stages this leg's item at fanout
+      # entry to code-review/pr-<PR>/per-issue.<lid>.issue.item.json ({number,title}) on
+      # agentic-state (lib.stage_item). cryptohash's proof is the fix-run/hash, so the
+      # issue number is only logged here — but source it from the HOST, never from the
+      # fix agent's asserted pinned_issue (the adversary this gate defends against).
+      # Best-effort: a transient miss only drops the log line, never the hash.
+      AUTH_ISSUE=""
+      if [ -n "${LID:-}" ]; then
+        ITEM=$(gh api "repos/$REPO/contents/code-review/pr-$PR/per-issue.$LID.issue.item.json?ref=agentic-state" --jq .content 2>/dev/null) || true
+        AUTH_ISSUE=$(printf '%s' "${ITEM:-}" | base64 -d 2>/dev/null | python3 -c "import json,sys;print(json.load(sys.stdin).get('number',''))" 2>/dev/null) || true
+        [ -n "${AUTH_ISSUE:-}" ] && echo "cryptohash leg $LID host-authoritative issue=$AUTH_ISSUE"
+      fi
+
       # 1. State file (authoritative): the engine records each phase's real run
       # id in the state branch, so read it straight from there instead of
       # inferring it from a cid. In the parallel graph this leg's OWN
-      # aw_context.cid (e.g. "<run>-1-honesty-cryptohash") is NOT the fix run's
+      # aw_context.cid (e.g. "<run>-<attempt>-per-issue-<lid>-honesty-cryptohash") is NOT the fix run's
       # cid (e.g. "<run>-1-fix") -- matching cids against fix run titles below
       # always misses. Retried: the fix phase's state-branch push can race this
       # leg's startup.
       RUN_ID=""
       attempt=1
       while [ "$attempt" -le 3 ]; do
-        CONTENT=$(gh api "repos/$REPO/contents/code-review-honesty/pr-$PR/fix.yaml?ref=agentic-state" --jq .content 2>/dev/null) || true
+        CONTENT=$(gh api "repos/$REPO/contents/code-review/pr-$PR/per-issue.$LID.fix.yaml?ref=agentic-state" --jq .content 2>/dev/null) || true
         if [ -n "${CONTENT:-}" ]; then
           RUN_ID=$(printf '%s' "$CONTENT" | base64 -d 2>/dev/null | grep -oE "agent_run_id: *'?[0-9]+'?" | tail -1 | grep -oE '[0-9]+') || true
         fi
         if [ -n "${RUN_ID:-}" ]; then
-          echo "fix run $RUN_ID discovered from engine state (code-review-honesty/pr-$PR/fix.yaml)"
+          echo "fix run $RUN_ID discovered from engine state (code-review/pr-$PR/per-issue.$LID.fix.yaml)"
           break
         fi
         if [ "$attempt" -lt 3 ]; then
@@ -72,7 +90,7 @@ steps:
       # Fix" run whose display title carries this leg's cid -- usually a miss
       # in the parallel graph (see above), which is why (1) is tried first.
       if [ -z "${RUN_ID:-}" ]; then
-        RUNS=$(gh run list --repo "$REPO" --workflow "honesty-demo-fix-agent.lock.yml" -L 50 \
+        RUNS=$(gh run list --repo "$REPO" --workflow "fix-agent.lock.yml" -L 50 \
                  --json databaseId,displayTitle 2>/dev/null || echo '[]')
         RUN_ID=$(python3 .github/agent-factory/engine/lib.py match-run-by-cid "$RUNS" "$CID" 2>/dev/null || true)
         if [ "$RUN_ID" = "null" ]; then
@@ -89,6 +107,11 @@ steps:
         if gh run download "$RUN_ID" --repo "$REPO" -n evidence -D /tmp/gh-aw/fixdl \
              && cp /tmp/gh-aw/fixdl/evidence.json /tmp/gh-aw/fix-evidence.json; then
           echo "fix evidence from run $RUN_ID"
+          PINNED=$(python3 -c "import json;print(json.load(open('/tmp/gh-aw/fix-evidence.json')).get('pinned_issue',''))" 2>/dev/null) || true
+          echo "cryptohash leg fix-agent pinned_issue=$PINNED (advisory; host-authoritative issue=${AUTH_ISSUE:-unresolved})"
+          if [ -n "${PINNED:-}" ] && [ -n "${AUTH_ISSUE:-}" ] && [ "$PINNED" != "$AUTH_ISSUE" ]; then
+            echo "::warning::cryptohash: fix agent asserted pinned_issue=$PINNED but host-authoritative issue is $AUTH_ISSUE (advisory only; cryptohash proof is the fix-run hash)"
+          fi
         else
           echo "::warning::download failed for run $RUN_ID; cryptohash will see empty fix evidence"
           echo '{}' > /tmp/gh-aw/fix-evidence.json
@@ -122,7 +145,7 @@ steps:
       STDIO=$(find /tmp/gh-aw/agentdl -name agent-stdio.log 2>/dev/null | head -1) || true
       python3 - "${STDIO:-}" <<'PY'
       import sys, json
-      sys.path.insert(0, ".github/agent-factory/protocols/code-review-honesty/checks")
+      sys.path.insert(0, ".github/agent-factory/protocols/code-review/checks")
       import _crypto
       log = ""
       try: log = open(sys.argv[1]).read()
@@ -155,7 +178,7 @@ post-steps:
       set -uo pipefail
       python3 - <<'PY'
       import json, sys
-      sys.path.insert(0, ".github/agent-factory/protocols/code-review-honesty/checks")
+      sys.path.insert(0, ".github/agent-factory/protocols/code-review/checks")
       import _crypto
       try:
           rec = json.load(open("/tmp/gh-aw/recognized-test-run.json"))
@@ -181,6 +204,7 @@ post-steps:
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
 timeout-minutes: 10
+source: golivax/agentic-protocol-poc/.github/workflows/honesty-cryptohash-agent.md@c6ecf5dad176860d8088573b8be7f5e65e21e3dc
 ---
 
 # Honesty-Crypto-Verification — hash the recognized test run

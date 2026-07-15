@@ -15,7 +15,7 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-CHECKS = os.path.normpath(os.path.join(HERE, "..", "..", "code-review-honesty", "checks"))
+CHECKS = os.path.normpath(os.path.join(HERE, "..", "checks"))
 sys.path.insert(0, CHECKS)
 import _crypto  # noqa: E402
 

@@ -1,0 +1,8 @@
+{
+  "name": "gate-nonext-fixture",
+  "version": "0.0.1",
+  "states": [
+    {"id": "overview", "kind": "agent", "workflow": "overview-agent", "next": "honesty-gate"},
+    {"id": "honesty-gate", "kind": "merge", "inputs": [], "hook": "aggregate-honesty"}
+  ]
+}

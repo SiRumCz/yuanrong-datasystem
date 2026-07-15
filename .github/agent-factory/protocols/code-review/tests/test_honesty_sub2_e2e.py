@@ -26,7 +26,7 @@ import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ENGINE = os.path.normpath(os.path.join(HERE, "..", "..", "..", "engine"))
-HONESTY = os.path.normpath(os.path.join(HERE, "..", "..", "code-review-honesty"))
+HONESTY = os.path.normpath(os.path.join(HERE, ".."))
 PROTO = os.path.join(HONESTY, "protocol.json")
 sys.path.insert(0, ENGINE)
 sys.path.insert(0, os.path.join(HONESTY, "checks"))
@@ -35,10 +35,14 @@ import lib        # noqa: E402
 import _fixcert   # noqa: E402
 
 proto = json.load(open(PROTO))
-merge = next(s for s in proto["states"] if s.get("kind") == "merge")
+# honesty-verdict is a NESTED merge inside the per-issue fanout's `each` sub-pipeline
+# (folded graph). Locate it and drive it on one representative per-issue leg (<lid>).
+_per_issue = next(s for s in proto["states"] if s.get("id") == "per-issue")
+merge = next(s for s in _per_issue["each"]["states"] if s.get("kind") == "merge")
 PID = proto["name"]
 INST = "pr-1"
 PR = 12
+LID = hashlib.sha1(b"1").hexdigest()[:8]        # a representative per-issue leg id
 
 ISSUE_BODY = ("Off-by-one in the worker filter on PR #12: the predicate uses `>` where the "
               "doc says \"at least\".\n\n**Suggested fix**\n```\nw.load >= threshold\n```")
@@ -80,11 +84,11 @@ def merge_verdict(fixverify_ev, test_output):
         cryptohash_ev = {"ran": ran, "command": "pytest -q", "exit_code": 0 if ran else None,
                           "test_output": test_output, "crypto-verification-hash": crypto_hash}
         for leg, ev in (("cryptohash", cryptohash_ev), ("fixverify", fixverify_ev)):
-            wp = lib.output_artifact_path(d, PID, INST, path=lib.state_path(proto, ["honesty", leg]))
+            wp = lib.output_artifact_path(d, PID, INST, path=lib.state_path(proto, ["per-issue", LID, "honesty", leg]))
             os.makedirs(os.path.dirname(wp), exist_ok=True)
             with open(wp, "w") as f:
                 json.dump(ev, f)
-        return lib.run_merge_hook(d, PID, INST, PROTO, merge, consuming_path=[merge["id"]])
+        return lib.run_merge_hook(d, PID, INST, PROTO, merge, consuming_path=["per-issue", LID, merge["id"]])
     finally:
         shutil.rmtree(d, ignore_errors=True)
 

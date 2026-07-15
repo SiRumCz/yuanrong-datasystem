@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+# conclude test double for the nested-conclude fixture. Proves the engine invoked
+# a NESTED sub-pipeline state's `conclude` hook: writes a marker at $MARKER_FILE
+# recording whether the state's declared inputs were materialized (CONCLUDE_INPUTS_DIR
+# with triage.json present). Emits a genuine {conclusion,summary,blocked} verdict.
+# Makes NO git/network calls — it never touches the real conclude-fix/git path.
+import json, os, sys
+
+marker = os.environ.get("MARKER_FILE", "")
+inputs_dir = os.environ.get("CONCLUDE_INPUTS_DIR", "")
+triage_seen = bool(inputs_dir) and os.path.isfile(os.path.join(inputs_dir, "triage.json"))
+if marker:
+    with open(marker, "w") as fh:
+        json.dump({"ran": True, "inputs_dir": inputs_dir, "triage_seen": triage_seen}, fh)
+print(json.dumps({"conclusion": "success", "summary": "stub conclude ran", "blocked": False}))

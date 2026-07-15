@@ -42,6 +42,7 @@ post-steps:
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
 timeout-minutes: 10
+source: golivax/agentic-protocol-poc/.github/workflows/preflight-gate-agent.md@c6ecf5dad176860d8088573b8be7f5e65e21e3dc
 ---
 
 # Preflight Gate — synthesize the cluster branch outputs into one consolidated evidence

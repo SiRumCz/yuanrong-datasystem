@@ -1,85 +1,71 @@
 #!/usr/bin/env python3
-"""Pure patch-applier for the demo fix phase. No git, no network — only file edits.
+"""Patch-applier for the demo fix phase. Each fix carries a unified `git diff`
+of the edit-and-test agent's own change for that cluster (see
+fix.evidence.schema.json) -- not a single-anchor suggested_patch/original_line
+pair. conclude-fix clones the PR head into a git workdir before calling
+apply_all, so we apply each fix's diff there with `git apply` rather than
+editing files by hand.
 
-Safety model: a fix MUST carry `original_line` (the exact current content of the
-target line). The applier verifies it and NEVER trusts the agent's line number
-blindly — if the agent's `line` doesn't match `original_line`, it RE-ANCHORS by
-searching the file for that exact content:
-  - exactly one match  -> apply there (detail "reanchored")
-  - zero matches       -> skip (detail "not-found")   [wrong/hallucinated line]
-  - many matches       -> skip (detail "ambiguous")    [can't disambiguate]
-A fix without `original_line` is skipped (detail "no-original") — we refuse to
-edit a line we cannot verify. This prevents corrupting an unrelated line when the
-LLM emits a wrong line number.
+Safety model: `git apply --check` runs first (a dry run that writes nothing) to
+decide applied vs skipped; only if that succeeds do we run the real apply. A
+diff that is missing/empty, malformed, or doesn't match the current file
+content (stale context, already applied, wrong file) is skipped with a clear
+detail -- never a partial write.
 
-apply_all maps over a list of fixes and returns one result dict each. Fixes apply
-in order, so a multiline patch shifts later same-file line numbers; the
-re-anchor/verify step then skips a now-mismatched fix rather than corrupting.
+apply_all maps over a list of fixes and returns one result dict each.
 """
-import os
+import re
+import subprocess
+
+_PLUS_HEADER_RE = re.compile(r"^\+\+\+ (.+)$", re.MULTILINE)
+
+
+def _diff_paths(diff):
+    """Best-effort list of paths a unified diff touches, read from its `+++`
+    headers. Used only to scope the commit after a successful apply."""
+    paths = []
+    for m in _PLUS_HEADER_RE.finditer(diff):
+        path = m.group(1).strip()
+        if path == "/dev/null":
+            continue
+        if path.startswith("b/"):
+            path = path[2:]
+        paths.append(path)
+    return paths
 
 
 def apply_fix(workdir, fix):
     cid = fix.get("cluster_id")
-    rel = fix.get("path") or ""
-    line = fix.get("line")
-    patch = fix.get("suggested_patch")
-    expected = fix.get("original_line")
-    out = {"cluster_id": cid, "path": rel, "status": "skipped", "detail": "", "applied_line": None}
+    diff = fix.get("diff")
+    out = {"cluster_id": cid, "status": "skipped", "detail": "", "paths": []}
 
-    if not isinstance(rel, str) or not rel or not isinstance(line, int) or line < 1 \
-            or not isinstance(patch, str):
+    if not workdir or not isinstance(workdir, str):
+        out["detail"] = "no-workdir"
+        return out
+    if not isinstance(diff, str) or not diff.strip():
         out["detail"] = "malformed-fix"
         return out
 
-    target = os.path.join(workdir, rel)
-    if not os.path.isfile(target):
-        out["detail"] = "missing-file"
+    check = subprocess.run(
+        ["git", "-C", workdir, "apply", "--check", "--whitespace=nowarn"],
+        input=diff, text=True, capture_output=True,
+    )
+    if check.returncode != 0:
+        out["detail"] = "apply-failed"
         return out
 
-    try:
-        with open(target) as fh:
-            lines = fh.readlines()  # each retains its "\n"
-    except OSError:
-        out["detail"] = "io-error"
-        return out
-
-    # Require verifiable content — never edit a line we can't confirm.
-    if not isinstance(expected, str) or expected == "":
-        out["detail"] = "no-original"
-        return out
-    exp = expected.rstrip("\n")
-
-    # Locate the line to edit: trust the agent's number only if it matches;
-    # otherwise re-anchor by exact content.
-    if 1 <= line <= len(lines) and lines[line - 1].rstrip("\n") == exp:
-        idx = line - 1
-    else:
-        matches = [i for i, l in enumerate(lines) if l.rstrip("\n") == exp]
-        if len(matches) == 1:
-            idx = matches[0]
-            out["detail"] = "reanchored"
-        elif not matches:
-            out["detail"] = "not-found"
-            return out
-        else:
-            out["detail"] = "ambiguous"
-            return out
-
-    trailing_nl = lines[idx].endswith("\n")
-    new_block = [seg + "\n" for seg in patch.split("\n")]
-    if not trailing_nl:
-        new_block[-1] = new_block[-1].rstrip("\n")
-    lines[idx:idx + 1] = new_block
-    try:
-        with open(target, "w") as fh:
-            fh.writelines(lines)
-    except OSError:
-        out["detail"] = "write-error"
+    applied = subprocess.run(
+        ["git", "-C", workdir, "apply", "--whitespace=nowarn"],
+        input=diff, text=True, capture_output=True,
+    )
+    if applied.returncode != 0:
+        # --check passed but the real apply failed -- still a skip, never a
+        # partial write (a single `git apply` invocation is all-or-nothing).
+        out["detail"] = "apply-failed"
         return out
 
     out["status"] = "applied"
-    out["applied_line"] = idx + 1
+    out["paths"] = _diff_paths(diff)
     return out
 
 

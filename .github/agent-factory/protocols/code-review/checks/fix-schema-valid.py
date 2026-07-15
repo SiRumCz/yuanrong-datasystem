@@ -8,10 +8,6 @@ def _non_empty_str(v):
     return isinstance(v, str) and bool(v)
 
 
-def _pos_int(v):
-    return isinstance(v, int) and not isinstance(v, bool) and v >= 1
-
-
 def main():
     try:
         with open(sys.argv[1] if len(sys.argv) > 1 else "") as fh:
@@ -24,8 +20,12 @@ def main():
         return
 
     p = []
-    if ev.get("mode") != "suggest":
-        p.append("mode must be 'suggest'")
+    if ev.get("mode") != "edit":
+        p.append("mode must be 'edit'")
+
+    pin = ev.get("pinned_issue")
+    if pin is not None and (not isinstance(pin, int) or isinstance(pin, bool) or pin < 1):
+        p.append("pinned_issue must be a positive integer when present")
 
     fixes = ev.get("fixes")
     if not isinstance(fixes, list):
@@ -47,17 +47,8 @@ def main():
             p.append(f"{fp}.cluster_id missing/empty")
         else:
             fixed_ids.append(fix.get("cluster_id"))
-        if not _non_empty_str(fix.get("path")):
-            p.append(f"{fp}.path missing/empty")
-        if not _pos_int(fix.get("line")):
-            p.append(f"{fp}.line must be an integer >= 1")
-        if not _non_empty_str(fix.get("rationale")):
-            p.append(f"{fp}.rationale missing/empty")
-        if not _non_empty_str(fix.get("suggested_patch")):
-            p.append(f"{fp}.suggested_patch missing/empty")
-        ol = fix.get("original_line")
-        if ol is not None and (not isinstance(ol, str) or ol == ""):
-            p.append(f"fixes[{i}].original_line must be a non-empty string when present")
+        if not _non_empty_str(fix.get("diff")):
+            p.append(f"{fp}.diff missing/empty")
         if len(p) > 8:
             break
 
