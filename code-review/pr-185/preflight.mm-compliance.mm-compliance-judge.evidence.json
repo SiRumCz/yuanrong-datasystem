@@ -1,0 +1,15 @@
+{
+  "leg": "mm-compliance",
+  "scope": {},
+  "gather_verdict": "diverges",
+  "graded_findings": [
+    {
+      "ref": "0",
+      "severity": "blocking",
+      "rationale": "The finding identifies an operator-facing behavior that will usually tail the wrong path or filename because it bypasses the documented worker configuration and logging lifecycle. That is a substantive adherence gap for process-mode operability, not a cosmetic mismatch."
+    }
+  ],
+  "examined": [
+    "0"
+  ]
+}
