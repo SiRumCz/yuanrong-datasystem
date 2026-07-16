@@ -1,21 +1,10 @@
 {
   "local": false,
-  "n_fixes": 1,
+  "n_fixes": 0,
   "env": {
     "repo": "SiRumCz/yuanrong-datasystem",
     "pr": "185",
     "has_token": true
   },
-  "head": "test/review-dscli-logs",
-  "clone_rc": 0,
-  "clone_err": "Cloning into '/tmp/fix-apply-k85kqrxj'...",
-  "apply": [
-    {
-      "status": "applied",
-      "detail": ""
-    }
-  ],
-  "applied_n": 1,
-  "push_ok": true,
-  "push_detail": ""
+  "stop": "no fixes"
 }
