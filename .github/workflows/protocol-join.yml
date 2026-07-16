@@ -54,7 +54,10 @@ jobs:
           # repository_dispatch that triggers a workflow, which the default GITHUB_TOKEN
           # cannot do. It needs the dispatch-capable PAT (held already via STATE_REMOTE).
           GH_TOKEN: ${{ secrets.POC_DISPATCH_TOKEN }}
-          PUBLISH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # _gh_dispatch fires the repository_dispatch via the PUBLISH_TOKEN pool
+          # (it overrides GH_TOKEN), so this MUST be the dispatch-capable PAT — not
+          # GITHUB_TOKEN, which cannot trigger a workflow (matches agentic-engine.yml).
+          PUBLISH_TOKEN: ${{ secrets.POC_DISPATCH_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           PR: ${{ steps.head.outputs.pr }}
           PR_HEAD_SHA: ${{ steps.head.outputs.sha }}
