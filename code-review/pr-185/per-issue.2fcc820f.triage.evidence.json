@@ -1,0 +1,48 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "Hard-coded worker log location duplicates configurable logging knowledge",
+      "dimension": [
+        "maintainability"
+      ],
+      "severity": "medium",
+      "paths": [
+        "cli/logs.py"
+      ],
+      "member_findings": [
+        {
+          "dimension": "maintainability",
+          "path": "cli/logs.py",
+          "line": 26,
+          "severity": "medium",
+          "category": "maintainability",
+          "title": "Hard-coded worker log location duplicates configurable logging knowledge",
+          "impact": "The new command bakes in /opt/yuanrong/datasystem/log and later constructs <address>.log, while worker startup and the logging subsystem already treat log_dir and log_filename as configurable. Future logging layout changes now need to be remembered in this CLI command as well, and the comments/spec can mislead maintainers into thinking this is the canonical worker log path.",
+          "fix": "Resolve the log directory and filename from the same worker configuration/command-line flags used by start/logging, or factor a small CLI helper that derives the active worker log path from existing worker config defaults instead of hard-coding a parallel convention."
+        }
+      ],
+      "rank": 1
+    }
+  ],
+  "summary": {
+    "present": [
+      "maintainability"
+    ],
+    "missing": [
+      "correctness",
+      "test",
+      "performance",
+      "security"
+    ],
+    "clusters": 1,
+    "total_findings": 1,
+    "by_severity": {
+      "medium": 1
+    },
+    "by_dimension": {
+      "maintainability": 1
+    }
+  },
+  "pinned_issue": 191
+}
