@@ -1,11 +1,12 @@
 protocol: code-review
 instance: pr-185
 head_sha: 236d631bc8e50077e16ef38efb03b2bbabea1fa9
-phase: preflight-gate
+phase: overview
 joined: true
-phase_label: "\u26D4 blocked"
+phase_label: guided overview + risk
 status_comment_id: 4993188372
-halted:
-  phase: preflight-gate
-  reason: blocked
-  sha: 236d631bc8e50077e16ef38efb03b2bbabea1fa9
+overrides:
+- phase: preflight-gate
+  actor: haoxianghz
+  reason: "test PR \u2014 deliberately hygiene-light (weak test/thin docs) to exercise\
+    \ the downstream dimensions; advancing past preflight to reach the deep review."
