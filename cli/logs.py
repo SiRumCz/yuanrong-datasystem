@@ -13,6 +13,7 @@
 # limitations under the License.
 """``dscli logs`` subcommand: print recent log lines for a worker service."""
 
+import argparse
 import os
 import re
 import subprocess
@@ -26,6 +27,30 @@ _PGREP_TIMEOUT_S = 5
 _DEFAULT_LINES = 100
 # Workers write their logs under this directory, one file per worker address.
 _LOG_DIR = "/opt/yuanrong/datasystem/log"
+_WORKER_ADDRESS_RE = re.compile(r"^[A-Za-z0-9.-]+:[0-9]+$")
+_MIN_PORT = 1
+_MAX_PORT = 65535
+
+
+def _parse_positive_int(value):
+    """Return ``value`` as a positive integer for argparse validation."""
+    try:
+        parsed = int(str(value).strip())
+    except (TypeError, ValueError) as exc:
+        raise argparse.ArgumentTypeError("lines must be a positive integer") from exc
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError("lines must be a positive integer")
+    return parsed
+
+
+def _validate_worker_address(address):
+    """Validate and return a worker address in host:port form."""
+    if not isinstance(address, str) or not _WORKER_ADDRESS_RE.fullmatch(address):
+        raise ValueError("worker_address must be in host:port form")
+    port = int(address.rsplit(":", 1)[1])
+    if port < _MIN_PORT or port > _MAX_PORT:
+        raise ValueError("worker_address port must be between 1 and 65535")
+    return address
 
 
 class Command(BaseCommand):
@@ -41,20 +66,25 @@ class Command(BaseCommand):
             help="address (host:port) of the worker whose log to print",
         )
         parser.add_argument(
-            "-n", "--lines", metavar="N", default=_DEFAULT_LINES,
+            "-n", "--lines", metavar="N", default=_DEFAULT_LINES, type=_parse_positive_int,
             help="number of trailing log lines to print",
         )
 
     def run(self, args):
         """Print the tail of the worker's log to stdout."""
-        address = args.worker_address
+        try:
+            address = _validate_worker_address(args.worker_address)
+            lines = _parse_positive_int(args.lines)
+        except (ValueError, argparse.ArgumentTypeError) as exc:
+            self.logger.error(str(exc))
+            return BaseCommand.FAILURE
+
         if self.find_worker_pid(address) is None:
             self.logger.warning(f"No running worker @ {address}; showing last log")
 
         log_path = os.path.join(_LOG_DIR, f"{address}.log")
         result = subprocess.run(
-            f"tail -n {args.lines} {log_path}",
-            shell=True, capture_output=True, text=True,
+            ["tail", "-n", str(lines), log_path], capture_output=True, text=True,
         )
         if result.returncode != 0:
             self.logger.error(f"Failed to read log for {address}: {result.stderr}")

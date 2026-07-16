@@ -33,6 +33,30 @@ class TestLogsCommand(unittest.TestCase):
         rc = cmd.run(args)
 
         self.assertEqual(rc, logs.BaseCommand.SUCCESS)
+        mock_run.assert_called_once_with(
+            ["tail", "-n", "100", "/opt/yuanrong/datasystem/log/127.0.0.1:31501.log"],
+            capture_output=True, text=True,
+        )
+
+    @mock.patch("yr.datasystem.cli.logs.subprocess.run")
+    def test_run_rejects_invalid_worker_address(self, mock_run):
+        """A malformed worker address is rejected before running tail."""
+        cmd = logs.Command()
+        args = mock.Mock(worker_address="127.0.0.1:31501;touch /tmp/pwned", lines=100)
+        rc = cmd.run(args)
+
+        self.assertEqual(rc, logs.BaseCommand.FAILURE)
+        mock_run.assert_not_called()
+
+    @mock.patch("yr.datasystem.cli.logs.subprocess.run")
+    def test_run_rejects_invalid_line_count(self, mock_run):
+        """A malformed line count is rejected before running tail."""
+        cmd = logs.Command()
+        args = mock.Mock(worker_address="127.0.0.1:31501", lines="100;touch /tmp/pwned")
+        rc = cmd.run(args)
+
+        self.assertEqual(rc, logs.BaseCommand.FAILURE)
+        mock_run.assert_not_called()
 
 
 if __name__ == "__main__":
