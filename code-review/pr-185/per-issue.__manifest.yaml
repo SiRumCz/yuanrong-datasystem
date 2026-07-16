@@ -1,0 +1,81 @@
+count: 14
+legs:
+- id: 4afa8f9e
+  key: 206
+  item:
+    number: 206
+    title: '[ai-review][security] Missing worker still prints the default worker log'
+- id: 5f1cd7c3
+  key: 205
+  item:
+    number: 205
+    title: '[ai-review][security] Worker discovery trusts any process with a spoofed
+      worker_address flag'
+- id: a165fbd6
+  key: 203
+  item:
+    number: 203
+    title: '[ai-review][maintainability] Duplicate gflag parsing logic added in a
+      second CLI command'
+- id: 1cc64195
+  key: 204
+  item:
+    number: 204
+    title: '[ai-review][maintainability] Design spec documents a different log path
+      than the implementation'
+- id: 1e7b95c5
+  key: 202
+  item:
+    number: 202
+    title: '[ai-review][test] Worker discovery is mocked out with no direct regression
+      coverage'
+- id: 7f03f3f2
+  key: 201
+  item:
+    number: 201
+    title: '[ai-review][performance] Log tail output is fully buffered in memory'
+- id: 9f9af029
+  key: 200
+  item:
+    number: 200
+    title: '[ai-review][correctness] Stopped workers can return an unrelated default
+      log'
+- id: 61188f24
+  key: 197
+  item:
+    number: 197
+    title: '[ai-review][maintainability] Hard-coded log path diverges from the existing
+      log configuration model'
+- id: 4dea1dae
+  key: 196
+  item:
+    number: 196
+    title: '[ai-review][test] Missing test for unreadable or absent worker log'
+- id: 14bb99f8
+  key: 193
+  item:
+    number: 193
+    title: '[ai-review][maintainability] Worker process discovery is copied instead
+      of shared with stop'
+- id: 19a448c0
+  key: 192
+  item:
+    number: 192
+    title: '[ai-review][correctness] Log command tails a filename workers do not write'
+- id: 2fcc820f
+  key: 191
+  item:
+    number: 191
+    title: '[ai-review][maintainability] Hard-coded worker log location duplicates
+      configurable logging knowledge'
+- id: e54183e2
+  key: 189
+  item:
+    number: 189
+    title: '[ai-review][performance] Tail output is fully buffered in Python'
+- id: acf1fffc
+  key: 188
+  item:
+    number: 188
+    title: '[ai-review][test] The new logs test does not assert the command''s observable
+      behavior'
