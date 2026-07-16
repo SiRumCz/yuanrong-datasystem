@@ -1,0 +1,15 @@
+{
+  "dimension": "test",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": "cli/logs.py",
+      "line": 87,
+      "severity": "medium",
+      "category": "test",
+      "title": "Missing test for unreadable or absent worker log",
+      "impact": "The new command has a distinct failure path when `tail` cannot read the selected log file, but the added tests only cover successful tail output and argument validation. A regression that returns success, prints stale output, or drops the diagnostic when the log file is missing or unreadable would not be caught.",
+      "fix": "Add a unit test that mocks `subprocess.run` with a nonzero return code and stderr, then asserts `Command.run` returns `BaseCommand.FAILURE` and logs the failure message."
+    }
+  ]
+}
