@@ -1,7 +1,14 @@
 protocol: code-review
 instance: pr-185
-state: overview
+state: done
 iteration: 1
 gates: {}
 head_sha: 2684ff119e72f613c44482ebb52c840bc85edb03
-history: []
+history:
+- iteration: 1
+  agent_run_id: '29523482773'
+  checks:
+    evidence-present: pass
+    overview-schema-valid: pass
+    cohort-partition-complete: pass
+  feedback: ''
