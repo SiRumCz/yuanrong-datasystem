@@ -1,6 +1,6 @@
 protocol: code-review
 instance: pr-185
-state: review
+state: done
 iteration: 2
 gates: {}
 history:
@@ -11,4 +11,11 @@ history:
     review-schema-valid: pass
     review-findings-anchored: fail
   feedback: 'unanchored findings: findings[0] line 194 not on RIGHT side of ''cli/logs.py'''
+- iteration: 2
+  agent_run_id: '29531479560'
+  checks:
+    evidence-present: pass
+    review-schema-valid: pass
+    review-findings-anchored: pass
+  feedback: ''
 head_sha: a58917c35055becbe9c5d4cfc10ae333d0ac989a

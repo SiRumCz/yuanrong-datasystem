@@ -1,0 +1,24 @@
+{
+  "dimension": "security",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": "cli/logs.py",
+      "line": 175,
+      "severity": "medium",
+      "category": "security",
+      "title": "Worker discovery trusts any process with a spoofed worker_address flag",
+      "impact": "find_worker_pid returns the first non-dscli process whose command line contains the requested -worker_address value. A local process can include that argument, plus attacker-chosen --log_dir/--log_filename flags, and be selected as the worker. When an operator then runs dscli logs for the real address, the command tails the spoofed path instead of a verified datasystem_worker log, which can expose unrelated local files or misleading log content.",
+      "fix": "Require a unique match and verify the matched process is the expected datasystem_worker executable, for example by checking /proc/<pid>/exe or argv[0] against the installed worker binary before using its log flags. If zero or multiple verified workers match, fail instead of selecting the first process."
+    },
+    {
+      "path": "cli/logs.py",
+      "line": 74,
+      "severity": "medium",
+      "category": "security",
+      "title": "Missing worker still prints the default worker log",
+      "impact": "When no process matches the requested worker address, run only logs a warning and then resolves a default log path. A caller can provide any syntactically valid address and receive the tail of the default worker INFO log, even though that address was not associated with the log being printed. In deployments where logs contain tenant identifiers, object keys, or operational details, this leaks unrelated local worker output through an address-scoped command.",
+      "fix": "Fail when the requested worker address cannot be mapped to a specific worker log, or persist and consult an address-to-log mapping created by the worker startup path so stopped-worker logs are only served when the address-to-file association is known."
+    }
+  ]
+}
