@@ -1,0 +1,137 @@
+{
+  "scope": {
+    "code_changed": true,
+    "spec_present": true,
+    "plan_present": true,
+    "spec_path": "docs/superpowers/specs/2026-07-15-dscli-logs-design.md",
+    "plan_path": "docs/superpowers/plans/2026-07-15-dscli-logs.md"
+  },
+  "spec_to_plan": [
+    {
+      "requirement": "Add a read-only `dscli logs` subcommand that prints the last N lines of a\ndatasystem worker's log file, selected by the worker's address.",
+      "status": "covered",
+      "plan_quote": "1. **Add `cli/logs.py`** — a `Command(BaseCommand)` subclass:\n   - `name`/`description`, and `add_arguments` for `-w/--worker_address`\n     (required) and `-n/--lines` (default 100).\n   - `run(args)`: resolve the worker by address, locate its log file under the\n     worker log directory, and print the last N lines to stdout."
+    },
+    {
+      "requirement": "The worker-discovery signal already exists in-repo: workers are launched with\n  a `-worker_address=` argument (see `stop.py` / `status.py`). `logs` reuses the\n  same signal to confirm the worker and locate its log.",
+      "status": "covered",
+      "plan_quote": "- `find_worker_pid(address)`: pgrep-based `-worker_address=` scan returning the\n     PID or `None`, mirroring `stop.py`."
+    },
+    {
+      "requirement": "A `logs` subcommand: `dscli logs -w <host:port> [-n N]`.",
+      "status": "covered",
+      "plan_quote": "- `name`/`description`, and `add_arguments` for `-w/--worker_address`\n     (required) and `-n/--lines` (default 100)."
+    },
+    {
+      "requirement": "Output: the last N lines of the worker's log on stdout (default N = 100).",
+      "status": "covered",
+      "plan_quote": "- `run(args)`: resolve the worker by address, locate its log file under the\n     worker log directory, and print the last N lines to stdout."
+    },
+    {
+      "requirement": "Local host only; read-only (no mutation of worker state).",
+      "status": "missing",
+      "plan_quote": null
+    },
+    {
+      "requirement": "Follow mode (`tail -f` / `-f`).",
+      "status": "covered",
+      "plan_quote": "- `name`/`description`, and `add_arguments` for `-w/--worker_address`\n     (required) and `-n/--lines` (default 100)."
+    },
+    {
+      "requirement": "Multi-worker or remote-host aggregation.",
+      "status": "covered",
+      "plan_quote": "- `run(args)`: resolve the worker by address, locate its log file under the\n     worker log directory, and print the last N lines to stdout."
+    },
+    {
+      "requirement": "Filtering / grep (operators can pipe to `grep`).",
+      "status": "covered",
+      "plan_quote": "- `run(args)`: resolve the worker by address, locate its log file under the\n     worker log directory, and print the last N lines to stdout."
+    },
+    {
+      "requirement": "`name = \"logs\"`, `description = \"print recent log lines for a worker service\"`.",
+      "status": "covered",
+      "plan_quote": "- `name`/`description`, and `add_arguments` for `-w/--worker_address`\n     (required) and `-n/--lines` (default 100)."
+    },
+    {
+      "requirement": "`add_arguments`: `-w/--worker_address` (required), `-n/--lines` (default 100).",
+      "status": "covered",
+      "plan_quote": "- `name`/`description`, and `add_arguments` for `-w/--worker_address`\n     (required) and `-n/--lines` (default 100)."
+    },
+    {
+      "requirement": "Resolve the worker by address (warn if not currently running — logs may\n     still exist for a stopped worker).",
+      "status": "missing",
+      "plan_quote": null
+    },
+    {
+      "requirement": "Locate the worker's log file (`<log-dir>/<address>.log`).",
+      "status": "covered",
+      "plan_quote": "- `run(args)`: resolve the worker by address, locate its log file under the\n     worker log directory, and print the last N lines to stdout."
+    },
+    {
+      "requirement": "Print the last N lines to stdout.",
+      "status": "covered",
+      "plan_quote": "- `run(args)`: resolve the worker by address, locate its log file under the\n     worker log directory, and print the last N lines to stdout."
+    },
+    {
+      "requirement": "`find_worker_pid(address)`: reuses the `-worker_address=` pgrep scan, returning\n  the PID or `None`.",
+      "status": "covered",
+      "plan_quote": "- `find_worker_pid(address)`: pgrep-based `-worker_address=` scan returning the\n     PID or `None`, mirroring `stop.py`."
+    },
+    {
+      "requirement": "Add `\"logs\"` to the `modules` list in `cli/command.py`.",
+      "status": "covered",
+      "plan_quote": "2. **Register the command** — add `\"logs\"` to the `modules` list in\n   `cli/command.py`."
+    },
+    {
+      "requirement": "`cli/tests/test_logs.py` covers the primary path: a running worker's log tail is\nprinted and the command returns success.",
+      "status": "covered",
+      "plan_quote": "3. **Add `cli/tests/test_logs.py`** — verify the primary path (running worker →\n   log tail printed → success)."
+    }
+  ],
+  "plan_to_spec": [
+    {
+      "plan_item": "1. **Add `cli/logs.py`** — a `Command(BaseCommand)` subclass:\n   - `name`/`description`, and `add_arguments` for `-w/--worker_address`\n     (required) and `-n/--lines` (default 100).\n   - `run(args)`: resolve the worker by address, locate its log file under the\n     worker log directory, and print the last N lines to stdout.\n   - `find_worker_pid(address)`: pgrep-based `-worker_address=` scan returning the\n     PID or `None`, mirroring `stop.py`.",
+      "status": "traces",
+      "spec_quote": "### New file: `cli/logs.py`\n\nA `Command(BaseCommand)` subclass mirroring `stop.py` / `status.py`:"
+    },
+    {
+      "plan_item": "2. **Register the command** — add `\"logs\"` to the `modules` list in\n   `cli/command.py`.",
+      "status": "traces",
+      "spec_quote": "Add `\"logs\"` to the `modules` list in `cli/command.py`."
+    },
+    {
+      "plan_item": "3. **Add `cli/tests/test_logs.py`** — verify the primary path (running worker →\n   log tail printed → success).",
+      "status": "traces",
+      "spec_quote": "`cli/tests/test_logs.py` covers the primary path: a running worker's log tail is\nprinted and the command returns success."
+    },
+    {
+      "plan_item": "4. **Docs** — this plan + the design spec under `docs/superpowers/`.",
+      "status": "extra",
+      "spec_quote": null
+    },
+    {
+      "plan_item": "- `dscli logs -w <addr>` prints the tail of the worker's log.",
+      "status": "traces",
+      "spec_quote": "A `logs` subcommand: `dscli logs -w <host:port> [-n N]`."
+    },
+    {
+      "plan_item": "- `python -m unittest cli.tests.test_logs` passes.",
+      "status": "traces",
+      "spec_quote": "`cli/tests/test_logs.py` covers the primary path: a running worker's log tail is\nprinted and the command returns success."
+    }
+  ],
+  "verdict": "underspec",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/spec.txt",
+    "/tmp/gh-aw/agent/plan.txt",
+    "/tmp/gh-aw/task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md"
+  ]
+}
