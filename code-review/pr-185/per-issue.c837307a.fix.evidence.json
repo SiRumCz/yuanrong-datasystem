@@ -1,0 +1,11 @@
+{
+  "fixes": [
+    {
+      "cluster_id": "c1",
+      "diff": "diff --git a/cli/logs.py b/cli/logs.py\nindex 595318e..78beaf9 100644\n--- a/cli/logs.py\n+++ b/cli/logs.py\n@@ -21,7 +21,7 @@ import subprocess\n from yr.datasystem.cli.command import BaseCommand\n \n # Every worker is launched with a ``-worker_address=`` argument; reuse that\n-# signal (as ``stop``/``status`` do) to locate the running process.\n+# signal (as ``stop`` does) to locate the running process.\n _WORKER_ADDRESS_ARG = \"-worker_address=\"\n _PGREP_TIMEOUT_S = 5\n _DEFAULT_LINES = 100\ndiff --git a/docs/superpowers/specs/2026-07-15-dscli-logs-design.md b/docs/superpowers/specs/2026-07-15-dscli-logs-design.md\nindex 436c7af..1b429b1 100644\n--- a/docs/superpowers/specs/2026-07-15-dscli-logs-design.md\n+++ b/docs/superpowers/specs/2026-07-15-dscli-logs-design.md\n@@ -8,16 +8,16 @@\n \n Add a read-only `dscli logs` subcommand that prints the last N lines of a\n datasystem worker's log file, selected by the worker's address. This fills the\n-gap between `start`/`stop`/`status` and operators falling back to locating log\n-files by hand.\n+gap between `start`/`stop` and operators falling back to locating log files by\n+hand.\n \n ## Motivation\n \n-- `dscli` can manage a worker's lifecycle and (via `status`) list what's\n-  running, but offers no way to see a worker's recent output.\n+- `dscli` can manage a worker's lifecycle, but offers no way to see a worker's\n+  recent output.\n - The worker-discovery signal already exists in-repo: workers are launched with\n-  a `-worker_address=` argument (see `stop.py` / `status.py`). `logs` reuses the\n-  same signal to confirm the worker and locate its log.\n+  a `-worker_address=` argument (see `stop.py`). `logs` reuses the same signal\n+  to confirm the worker and locate its log.\n \n ## Scope\n \n@@ -35,7 +35,7 @@ files by hand.\n \n ### New file: `cli/logs.py`\n \n-A `Command(BaseCommand)` subclass mirroring `stop.py` / `status.py`:\n+A `Command(BaseCommand)` subclass mirroring `stop.py`:\n \n - `name = \"logs\"`, `description = \"print recent log lines for a worker service\"`.\n - `add_arguments`: `-w/--worker_address` (required), `-n/--lines` (default 100).\n"
+    }
+  ],
+  "skipped": [],
+  "mode": "edit",
+  "pinned_issue": 198
+}
