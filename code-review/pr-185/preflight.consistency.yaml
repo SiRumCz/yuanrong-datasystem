@@ -1,7 +1,7 @@
 protocol: code-review
 instance: pr-185
-state: done
-sub_state: consistency-rollup
+state: preflight
+sub_state: consistency-intro
 iteration: 1
 gates: {}
 history: []
