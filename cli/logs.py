@@ -23,7 +23,7 @@ import yr.datasystem.cli.common.util as util
 from yr.datasystem.cli.command import BaseCommand
 
 # Every worker is launched with a ``-worker_address=`` argument; reuse that
-# signal (as ``stop``/``status`` do) to locate the running process.
+# signal (as ``stop`` does) to locate the running process.
 _WORKER_ADDRESS_ARG = "-worker_address="
 _PGREP_TIMEOUT_S = 5
 _DEFAULT_LINES = 100

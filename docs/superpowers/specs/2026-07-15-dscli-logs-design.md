@@ -8,16 +8,16 @@
 
 Add a read-only `dscli logs` subcommand that prints the last N lines of a
 datasystem worker's log file, selected by the worker's address. This fills the
-gap between `start`/`stop`/`status` and operators falling back to locating log
-files by hand.
+gap between `start`/`stop` and operators falling back to locating log files by
+hand.
 
 ## Motivation
 
-- `dscli` can manage a worker's lifecycle and (via `status`) list what's
-  running, but offers no way to see a worker's recent output.
+- `dscli` can manage a worker's lifecycle, but offers no way to see a worker's
+  recent output.
 - The worker-discovery signal already exists in-repo: workers are launched with
-  a `-worker_address=` argument (see `stop.py` / `status.py`). `logs` reuses the
-  same signal to confirm the worker and locate its log.
+  a `-worker_address=` argument (see `stop.py`). `logs` reuses the same signal
+  to confirm the worker and locate its log.
 
 ## Scope
 
@@ -35,7 +35,7 @@ files by hand.
 
 ### New file: `cli/logs.py`
 
-A `Command(BaseCommand)` subclass mirroring `stop.py` / `status.py`:
+A `Command(BaseCommand)` subclass mirroring `stop.py`:
 
 - `name = "logs"`, `description = "print recent log lines for a worker service"`.
 - `add_arguments`: `-w/--worker_address` (required), `-n/--lines` (default 100).
