@@ -1,0 +1,43 @@
+{
+  "cluster": "consistency",
+  "legs": [
+    {
+      "leg": "docs-updated-appropriately",
+      "scope": {
+        "code_changed": true
+      },
+      "gather_verdict": "inadequate",
+      "graded_findings": [
+        {
+          "ref": "docs/superpowers/specs/2026-07-15-dscli-logs-design.md",
+          "severity": "noise",
+          "rationale": "The gather finding says this new design spec was updated appropriately and contains the expected command behavior, registration, and test intent. That is not an adherence gap."
+        },
+        {
+          "ref": "docs/superpowers/plans/2026-07-15-dscli-logs.md",
+          "severity": "noise",
+          "rationale": "The gather finding says this implementation plan tracks the relevant files, tests, and verification. That is not a merge-blocking documentation problem."
+        },
+        {
+          "ref": "docs/source_zh_cn/deployment/dscli.md",
+          "severity": "blocking",
+          "rationale": "The operator-facing dscli reference is missing the new dscli logs command and its -w/-n options. That leaves user-visible command documentation incomplete for a code change adding CLI behavior."
+        }
+      ]
+    },
+    {
+      "leg": "tests-updated-appropriately",
+      "scope": {
+        "code_changed": true
+      },
+      "gather_verdict": "inadequate",
+      "graded_findings": [
+        {
+          "ref": "cli/tests/test_logs.py",
+          "severity": "blocking",
+          "rationale": "The changed logs command behavior is user-visible, and the test only verifies that tail is invoked and returns success. Without asserting the returned log lines are written to stdout, the test would miss the core output contract."
+        }
+      ]
+    }
+  ]
+}
