@@ -1,6 +1,6 @@
 protocol: code-review
 instance: pr-185
-state: adherence-fanout
+state: done
 iteration: 2
 gates: {}
 head_sha: 236d631bc8e50077e16ef38efb03b2bbabea1fa9
@@ -20,3 +20,10 @@ history:
     55 of cli/logs.py (code-implements-plan); existing_code does not match RIGHT line(s)
     24 of cli/tests/test_logs.py (code-implements-plan); existing_code does not match
     RIGHT line(s) 34 of cli/tests/test_logs.py (code-implements-plan)'
+- iteration: 2
+  agent_run_id: '29464337311'
+  checks:
+    evidence-present: pass
+    code-plan-coverage: pass
+    traces-exist-in-diff: pass
+  feedback: ''
