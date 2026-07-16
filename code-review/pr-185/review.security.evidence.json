@@ -1,0 +1,15 @@
+{
+  "dimension": "security",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "cli/logs.py",
+      "line": 54,
+      "severity": "high",
+      "category": "security",
+      "title": "Avoid shelling out with unvalidated log arguments",
+      "impact": "The new command builds `tail -n {args.lines} {log_path}` from CLI-controlled `--lines` and `--worker_address` and runs it with `shell=True`. A local user who can invoke `dscli logs` can include shell metacharacters in either argument and execute arbitrary commands with the dscli user's privileges before or instead of reading the intended log.",
+      "fix": "Validate `worker_address` as a host:port value and parse `--lines` as a positive integer, then call tail without a shell, for example `subprocess.run([\"tail\", \"-n\", str(lines), log_path], ...)`; alternatively implement the tail in Python after resolving and constraining the log path under the log directory."
+    }
+  ]
+}
