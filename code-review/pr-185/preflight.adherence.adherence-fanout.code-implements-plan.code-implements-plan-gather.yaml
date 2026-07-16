@@ -1,7 +1,22 @@
 protocol: code-review
 instance: pr-185
 state: adherence-fanout
-iteration: 1
+iteration: 2
 gates: {}
 head_sha: 236d631bc8e50077e16ef38efb03b2bbabea1fa9
-history: []
+history:
+- iteration: 1
+  agent_run_id: '29464083408'
+  checks:
+    evidence-present: pass
+    code-plan-coverage: pass
+    traces-exist-in-diff: fail
+  feedback: 'Unverifiable claims: examined identifier not in cli/command.py''s diff
+    (code-implements-plan): ''modules''; existing_code does not match RIGHT line(s)
+    32 of cli/logs.py (code-implements-plan); existing_code does not match RIGHT line(s)
+    35 of cli/logs.py (code-implements-plan); existing_code does not match RIGHT line(s)
+    40 of cli/logs.py (code-implements-plan); existing_code does not match RIGHT line(s)
+    49 of cli/logs.py (code-implements-plan); existing_code does not match RIGHT line(s)
+    55 of cli/logs.py (code-implements-plan); existing_code does not match RIGHT line(s)
+    24 of cli/tests/test_logs.py (code-implements-plan); existing_code does not match
+    RIGHT line(s) 34 of cli/tests/test_logs.py (code-implements-plan)'
