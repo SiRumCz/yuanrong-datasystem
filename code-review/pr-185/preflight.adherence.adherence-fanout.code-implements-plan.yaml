@@ -1,6 +1,6 @@
 protocol: code-review
 instance: pr-185
-state: adherence-fanout
+state: done
 sub_state: code-implements-plan-judge
 iteration: 1
 gates: {}
