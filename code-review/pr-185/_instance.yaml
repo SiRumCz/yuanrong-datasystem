@@ -1,9 +1,9 @@
 protocol: code-review
 instance: pr-185
 head_sha: a58917c35055becbe9c5d4cfc10ae333d0ac989a
-phase: overview
+phase: review
 joined: true
-phase_label: guided overview + risk
+phase_label: multi-dimension review
 status_comment_id: 4995839404
 overrides:
 - phase: preflight-gate
