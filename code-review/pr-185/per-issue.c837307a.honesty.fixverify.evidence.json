@@ -1,0 +1,1 @@
+{"check": "fixverify", "pass": true, "reason": "fix verified: On the finding's condition, a maintainer reading the patched discovery comments and matching design text sees the worker-address discovery described as reusing the worker launch signal and as mirroring stop.py; no added discovery comment or design premise references a status command. (issue #198)"}
