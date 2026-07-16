@@ -1,0 +1,31 @@
+{
+  "scope": { "code_changed": true },
+  "items": [
+    {
+      "path": "docs/source_zh_cn/deployment/dscli.md",
+      "status": "missing",
+      "reason": "The PR adds `dscli logs`, but the exhaustive dscli command reference and TOC still omit the new command and its `--worker_address`/`--lines` options."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md",
+    ".repo_context/modules/overview/repository-overview.md",
+    "README.md",
+    "docs/source_zh_cn/deployment/dscli.md",
+    "docs/source_zh_cn/deployment/dsbench.md",
+    "docs/source_zh_cn/deployment/deploy.md",
+    "docs/superpowers/plans/2026-07-15-dscli-logs.md",
+    "docs/superpowers/specs/2026-07-15-dscli-logs-design.md"
+  ]
+}
