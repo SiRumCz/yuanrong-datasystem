@@ -77,15 +77,33 @@ def evaluate(ev, diff_text, changed_files, *, body, repo, pr):
     if plan_present and plan_text is None:
         return (False, "plan fetch failed (cannot verify plan_item quotes)")
 
+    # plan_items that a CODE finding actually traces into the diff. A cell marked
+    # 'missing' whose plan_item is nonetheless traced is self-contradictory (plan
+    # side: unimplemented; code side: present) — a hallucinated 'missing' that would
+    # otherwise manufacture a spurious 'underplan' floor. Reject such a gather.
+    traced_items = set()
+    for entry in (leg_files or []):
+        if not isinstance(entry, dict):
+            continue
+        for v in (entry.get("verdicts") or []):
+            for f in (v.get("findings") or []):
+                if isinstance(f, dict) and f.get("status") == "traces" and f.get("plan_item"):
+                    traced_items.add(_diff.norm(str(f.get("plan_item"))))
+
     bad = []
     has_missing = False
     for cell in p2c:
         if not isinstance(cell, dict):
             bad.append("malformed plan_to_code cell"); continue
-        if not _verbatim(cell.get("plan_item"), plan_text):
-            bad.append(f"plan_item not verbatim in plan: {cell.get('plan_item')!r}")
+        pi = cell.get("plan_item")
+        if not _verbatim(pi, plan_text):
+            bad.append(f"plan_item not verbatim in plan: {pi!r}")
         if cell.get("status") == "missing":
-            has_missing = True
+            if pi is not None and _diff.norm(str(pi)) in traced_items:
+                bad.append("plan_item marked 'missing' but a code finding traces it "
+                           f"(self-contradictory): {pi!r}")
+            else:
+                has_missing = True
 
     # overplan signal: any finding that traces to no plan_item (null) or is flagged extra
     has_extra = False

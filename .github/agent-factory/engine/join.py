@@ -110,8 +110,13 @@ def _nested_join(dir_, instance, proto_path, pid):
         lib._gh_dispatch("protocol-join", fields)
         return
 
-    # Policy satisfied → advance to the sub-state the join's `.next` names.
+    # Policy satisfied → advance to the state after the join. Prefer the join's
+    # explicit `.next`; otherwise fall through to the join's next SIBLING in the
+    # enclosing sub-pipeline array (e.g. a `*-rollup` declared right after the join,
+    # which must still run). Only when neither exists does the leg end here.
     nxt = (join_state or {}).get("next")
+    if not nxt and (join_state or {}).get("id"):
+        nxt = paths.next_sibling(protocol, parent_path + [join_state["id"]])
 
     lib.write_join(dir_, pid, instance, marker_file_path, {"joined": True})
     cur = lib.load_yaml(cursor_sf) if os.path.isfile(cursor_sf) else {}
