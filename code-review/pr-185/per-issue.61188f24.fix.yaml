@@ -1,7 +1,14 @@
 protocol: code-review
 instance: pr-185
 state: per-issue
-iteration: 1
+iteration: 2
 gates: {}
 head_sha: 2684ff119e72f613c44482ebb52c840bc85edb03
-history: []
+history:
+- iteration: 1
+  agent_run_id: '29525581016'
+  checks:
+    evidence-present: fail
+    fix-schema-valid: fail
+  feedback: 'evidence shape: missing required key `fixes`; missing required key `mode`;
+    fix schema invalid: mode must be ''edit''; `fixes` must be an array'
