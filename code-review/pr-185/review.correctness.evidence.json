@@ -1,0 +1,15 @@
+{
+  "dimension": "correctness",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "cli/logs.py",
+      "line": 94,
+      "severity": "high",
+      "category": "correctness",
+      "title": "Stopped workers can return an unrelated default log",
+      "impact": "When `find_worker_pid` returns `None`, `run` still calls `resolve_log_path(pid)`. With no process argv available, `resolve_log_path` falls back to default config values and `datasystem_worker.INFO.log`, so `dscli logs -w <addr>` can succeed while printing a different worker's default log or a stale package-default path instead of the requested worker's log.",
+      "fix": "Do not tail a guessed log when the worker process is absent; either fail with an actionable error, or require a config/log path source that can deterministically map the requested address to the worker's actual log_dir/log_filename."
+    }
+  ]
+}
