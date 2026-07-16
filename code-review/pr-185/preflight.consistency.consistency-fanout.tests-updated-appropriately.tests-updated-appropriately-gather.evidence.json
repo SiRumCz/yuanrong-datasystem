@@ -1,0 +1,20 @@
+{
+  "scope": { "code_changed": true },
+  "items": [
+    {
+      "path": "cli/tests/test_logs.py",
+      "status": "inadequate",
+      "reason": "The new test only checks the success return and does not assert the tail command, printed output, error path, or worker discovery behavior introduced by dscli logs."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    "cli/command.py",
+    "cli/stop.py",
+    "cli/tests/test_logs.py"
+  ]
+}
