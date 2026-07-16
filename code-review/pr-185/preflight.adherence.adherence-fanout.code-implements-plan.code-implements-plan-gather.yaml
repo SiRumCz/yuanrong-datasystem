@@ -1,6 +1,6 @@
 protocol: code-review
 instance: pr-185
-state: adherence-fanout
+state: done
 iteration: 2
 gates: {}
 head_sha: 2684ff119e72f613c44482ebb52c840bc85edb03
@@ -23,3 +23,10 @@ history:
     (code-implements-plan); line 160 not on RIGHT side of cli/tests/test_logs.py''s
     diff (code-implements-plan); line 168 not on RIGHT side of cli/tests/test_logs.py''s
     diff (code-implements-plan)'
+- iteration: 2
+  agent_run_id: '29521614018'
+  checks:
+    evidence-present: pass
+    code-plan-coverage: pass
+    traces-exist-in-diff: pass
+  feedback: ''
