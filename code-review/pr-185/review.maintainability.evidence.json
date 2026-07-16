@@ -1,0 +1,24 @@
+{
+  "dimension": "maintainability",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": "cli/logs.py",
+      "line": 47,
+      "severity": "medium",
+      "category": "maintainability",
+      "title": "Hard-coded log path diverges from the existing log configuration model",
+      "impact": "The new command bakes in `/opt/yuanrong/datasystem/log` and the `<address>.log` naming convention, while the existing worker config and logging code use configurable `log_dir` and `log_filename` values such as `datasystem_worker.INFO.log`. Future changes to the worker logging layout will have to remember this separate convention, and readers cannot tell which source of truth owns log discovery.",
+      "fix": "Derive the log directory and filename from the same worker configuration/process flags used by `start` and the logging subsystem, or centralize a helper that documents the supported log-file naming contract instead of duplicating a hard-coded path."
+    },
+    {
+      "path": "cli/logs.py",
+      "line": 42,
+      "severity": "low",
+      "category": "maintainability",
+      "title": "Discovery comments point to a non-existent status command",
+      "impact": "The comment says this mirrors `stop`/`status`, but the current CLI modules and registration list do not contain a `status` command. Future maintainers following the comment will search for a non-existent implementation and may misunderstand which discovery behavior is actually being reused.",
+      "fix": "Update the code comment and matching design text to reference only the existing `stop.py` behavior, or add the shared status/discovery helper if that command is intended to exist."
+    }
+  ]
+}
