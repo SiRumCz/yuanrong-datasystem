@@ -1,13 +1,6 @@
 protocol: code-review
 instance: pr-185
-head_sha: 2684ff119e72f613c44482ebb52c840bc85edb03
-phase: per-issue
+head_sha: a58917c35055becbe9c5d4cfc10ae333d0ac989a
+phase: preflight
 joined: false
-phase_label: "per-issue triage \u2192 fix (one leg per open [ai-review] issue)"
-status_comment_id: 4994855320
-overrides:
-- phase: preflight-gate
-  actor: haoxianghz
-  reason: 'test PR: preflight block is legitimate for this crafted test case (no plan/spec,
-    docs/tests thin by design); bypassing to exercise the downstream per-issue phase
-    under the iterate re-thread fix (#194).'
+phase_label: pre-flight adherence chain

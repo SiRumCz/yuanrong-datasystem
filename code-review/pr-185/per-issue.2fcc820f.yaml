@@ -1,7 +1,0 @@
-protocol: code-review
-instance: pr-185
-state: failed
-sub_state: triage
-iteration: 1
-gates: {}
-history: []
