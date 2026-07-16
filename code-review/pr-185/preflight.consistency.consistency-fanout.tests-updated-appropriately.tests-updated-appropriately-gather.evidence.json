@@ -1,0 +1,32 @@
+{
+  "scope": {
+    "code_changed": true
+  },
+  "items": [
+    {
+      "path": "cli/tests/test_logs.py",
+      "status": "inadequate",
+      "reason": "The new dscli logs test mocks tail and checks success/invocation, but does not assert that stdout receives the returned log lines."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/modules/quality/tests-and-reproduction.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md",
+    "cli/command.py",
+    "cli/logs.py (from pr.diff)",
+    "cli/tests/test_logs.py (from pr.diff)",
+    "cli/stop.py",
+    "cli/collect_log.py"
+  ]
+}
