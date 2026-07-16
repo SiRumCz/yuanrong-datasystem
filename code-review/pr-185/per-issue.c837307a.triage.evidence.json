@@ -1,0 +1,33 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "Discovery comments point to a non-existent status command",
+      "dimension": ["maintainability"],
+      "severity": "low",
+      "paths": ["cli/logs.py"],
+      "member_findings": [
+        {
+          "dimension": "maintainability",
+          "path": "cli/logs.py",
+          "line": 42,
+          "severity": "low",
+          "category": "maintainability",
+          "title": "Discovery comments point to a non-existent status command",
+          "impact": "The comment says this mirrors `stop`/`status`, but the current CLI modules and registration list do not contain a `status` command. Future maintainers following the comment will search for a non-existent implementation and may misunderstand which discovery behavior is actually being reused.",
+          "fix": "Update the code comment and matching design text to reference only the existing `stop.py` behavior, or add the shared status/discovery helper if that command is intended to exist."
+        }
+      ],
+      "rank": 1
+    }
+  ],
+  "summary": {
+    "present": ["maintainability"],
+    "missing": ["correctness", "test", "performance", "security"],
+    "clusters": 1,
+    "total_findings": 1,
+    "by_severity": { "low": 1 },
+    "by_dimension": { "maintainability": 1 }
+  },
+  "pinned_issue": 198
+}
