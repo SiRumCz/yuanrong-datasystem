@@ -1,0 +1,38 @@
+{
+  "cluster": "consistency",
+  "legs": [
+    {
+      "leg": "docs-updated-appropriately",
+      "scope": {
+        "code_changed": true
+      },
+      "gather_verdict": "inadequate",
+      "graded_findings": [
+        {
+          "ref": "docs/superpowers/specs/2026-07-15-dscli-logs-design.md",
+          "severity": "blocking",
+          "rationale": "The spec describes a log path resolution contract that differs from the implementation behavior reported by the gather. That is a substantive design/implementation mismatch and should stop merge until corrected."
+        },
+        {
+          "ref": "docs/source_zh_cn/deployment/dscli.md",
+          "severity": "blocking",
+          "rationale": "The canonical dscli command reference omitted the new logs command despite code changes adding user-visible CLI behavior. This leaves operator-facing documentation incomplete for a new operational command."
+        }
+      ]
+    },
+    {
+      "leg": "tests-updated-appropriately",
+      "scope": {
+        "code_changed": true
+      },
+      "gather_verdict": "inadequate",
+      "graded_findings": [
+        {
+          "ref": "cli/tests/test_logs.py",
+          "severity": "blocking",
+          "rationale": "The finding identifies an untested CLI dispatch registration path, so a missing or broken dscli logs subcommand import could pass the current tests. That is a real test adherence gap for a changed user-facing command surface."
+        }
+      ]
+    }
+  ]
+}
