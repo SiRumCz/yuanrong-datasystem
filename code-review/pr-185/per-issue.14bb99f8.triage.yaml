@@ -1,12 +1,22 @@
 protocol: code-review
 instance: pr-185
-state: per-issue
+state: failed
 iteration: 2
 gates: {}
 head_sha: 236d631bc8e50077e16ef38efb03b2bbabea1fa9
 history:
 - iteration: 1
   agent_run_id: '29511912300'
+  checks:
+    evidence-present: fail
+    triage-schema-valid: fail
+  feedback: 'evidence shape: missing required key `clusters`; missing required key
+    `summary`; triage schema invalid: `clusters` must be an array; `summary` must
+    be an object; summary.present must be a dimension array; summary.missing must
+    be a dimension array; summary.present and summary.missing must partition all dimensions;
+    summary.clusters must equal len(clusters)'
+- iteration: 2
+  agent_run_id: '29512396704'
   checks:
     evidence-present: fail
     triage-schema-valid: fail
