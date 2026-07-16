@@ -1,0 +1,23 @@
+{
+  "scope": { "code_changed": true },
+  "items": [
+    {
+      "path": "cli/tests/test_logs.py",
+      "status": "inadequate",
+      "reason": "The added test only checks success return code and does not assert tail invocation/output, failure handling, stopped-worker behavior, PID discovery, or command registration."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    ".repo_context/modules/quality/tests-and-reproduction.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    "cli/command.py",
+    "cli/stop.py",
+    "cli/collect_log.py",
+    "cli/tests/test_logs.py"
+  ]
+}
