@@ -58,6 +58,11 @@ jobs:
           # (it overrides GH_TOKEN), so this MUST be the dispatch-capable PAT — not
           # GITHUB_TOKEN, which cannot trigger a workflow (matches agentic-engine.yml).
           PUBLISH_TOKEN: ${{ secrets.POC_DISPATCH_TOKEN }}
+          # Optional write-token pool: set POC_DISPATCH_TOKEN_2 (a second dispatch PAT
+          # from a DIFFERENT account — GitHub's 5k/hr limit is per-user, so a same-account
+          # token adds no headroom) and joins fail over to it on a 403/429 rate-limit.
+          # Unset => single-token behavior. Matches agentic-engine.yml. Add _3, _4, … too.
+          PUBLISH_TOKEN_2: ${{ secrets.POC_DISPATCH_TOKEN_2 }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           PR: ${{ steps.head.outputs.pr }}
           PR_HEAD_SHA: ${{ steps.head.outputs.sha }}
