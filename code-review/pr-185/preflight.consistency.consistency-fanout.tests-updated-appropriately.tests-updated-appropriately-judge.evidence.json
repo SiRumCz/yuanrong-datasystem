@@ -1,0 +1,17 @@
+{
+  "leg": "tests-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": "cli/tests/test_logs.py",
+      "severity": "blocking",
+      "rationale": "The test change does not exercise or assert the behavior introduced by the code path, so it would pass even if the logs command failed to tail, discover PIDs, handle stopped workers, or register correctly. That is a substantive coverage gap for changed CLI behavior and should stop merge until meaningful assertions are added."
+    }
+  ],
+  "examined": [
+    "cli/tests/test_logs.py"
+  ]
+}
