@@ -1,0 +1,1 @@
+{"check": "fixverify", "pass": true, "reason": "fix verified: For a matched worker, resolve_log_path reads log_dir and log_filename from the worker argv; if either is missing it uses worker config defaults, normalizes the directory, substitutes the process name when log_filename is empty, and returns log_dir/log_filename.INFO.log for tail to read. (issue #195)"}
