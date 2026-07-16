@@ -1,11 +1,13 @@
 protocol: code-review
 instance: pr-185
 head_sha: 2684ff119e72f613c44482ebb52c840bc85edb03
-phase: preflight-gate
+phase: overview
 joined: true
-phase_label: "\u26D4 blocked"
+phase_label: guided overview + risk
 status_comment_id: 4994855320
-halted:
-  phase: preflight-gate
-  reason: blocked
-  sha: 2684ff119e72f613c44482ebb52c840bc85edb03
+overrides:
+- phase: preflight-gate
+  actor: haoxianghz
+  reason: 'test PR: preflight block is legitimate for this crafted test case (no plan/spec,
+    docs/tests thin by design); bypassing to exercise the downstream per-issue phase
+    under the iterate re-thread fix (#194).'
