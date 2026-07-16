@@ -1,0 +1,141 @@
+{
+  "leg": "plan-implements-spec",
+  "scope": {
+    "code_changed": true,
+    "spec_present": true,
+    "plan_present": true,
+    "spec_path": "docs/superpowers/specs/2026-07-15-dscli-logs-design.md",
+    "plan_path": "docs/superpowers/plans/2026-07-15-dscli-logs.md"
+  },
+  "gather_verdict": "underspec",
+  "graded_findings": [
+    {
+      "ref": "Add a read-only `dscli logs` subcommand that prints the last N lines of a\ndatasystem worker's log file, selected by the worker's address.",
+      "severity": "noise",
+      "rationale": "The plan directly covers adding a dscli logs command that resolves a worker by address and prints the tail of its log. This row does not identify a substantive adherence gap."
+    },
+    {
+      "ref": "- A `logs` subcommand: `dscli logs -w <host:port> [-n N]`.",
+      "severity": "noise",
+      "rationale": "The plan covers the command shape and worker-address argument. Any minor omission of the optional syntax in the quote is not a merge-blocking gap."
+    },
+    {
+      "ref": "- Output: the last N lines of the worker's log on stdout (default N = 100).",
+      "severity": "noise",
+      "rationale": "The plan explicitly says to print the last N lines to stdout and sets the default line count in argument handling. This is covered substance."
+    },
+    {
+      "ref": "- Local host only; read-only (no mutation of worker state).",
+      "severity": "blocking",
+      "rationale": "This is an explicit operational safety requirement and the plan has no corresponding constraint. For infrastructure tooling, omitting locality and read-only guarantees is a real adherence gap."
+    },
+    {
+      "ref": "- `name = \"logs\"`, `description = \"print recent log lines for a worker service\"`.",
+      "severity": "noise",
+      "rationale": "The plan covers name and description for the command. No substantive implementation risk is identified by this row."
+    },
+    {
+      "ref": "- `add_arguments`: `-w/--worker_address` (required), `-n/--lines` (default 100).",
+      "severity": "noise",
+      "rationale": "The plan explicitly lists the required worker address argument and default line count. This row is covered."
+    },
+    {
+      "ref": "  1. Resolve the worker by address (warn if not currently running — logs may\n     still exist for a stopped worker).",
+      "severity": "advisory",
+      "rationale": "The plan covers resolving the worker by address but omits the warning behavior for stopped workers. That is useful operator feedback, but the core log-tail functionality can still be implemented correctly without it."
+    },
+    {
+      "ref": "  2. Locate the worker's log file (`<log-dir>/<address>.log`).",
+      "severity": "noise",
+      "rationale": "The plan states that it will locate the worker log file under the worker log directory. This row is substantively covered."
+    },
+    {
+      "ref": "  3. Print the last N lines to stdout.",
+      "severity": "noise",
+      "rationale": "The plan explicitly includes printing the last N log lines to stdout. There is no adherence issue in this row."
+    },
+    {
+      "ref": "- `find_worker_pid(address)`: reuses the `-worker_address=` pgrep scan, returning\n  the PID or `None`.",
+      "severity": "noise",
+      "rationale": "The plan mirrors the required pgrep-based helper and return behavior. This is covered."
+    },
+    {
+      "ref": "Add `\"logs\"` to the `modules` list in `cli/command.py`.",
+      "severity": "noise",
+      "rationale": "The plan explicitly includes registering logs in cli/command.py. This row is covered."
+    },
+    {
+      "ref": "`cli/tests/test_logs.py` covers the primary path: a running worker's log tail is\nprinted and the command returns success.",
+      "severity": "noise",
+      "rationale": "The plan includes adding the named test for the primary running-worker success path. This row is covered."
+    },
+    {
+      "ref": "1. **Add `cli/logs.py`** — a `Command(BaseCommand)` subclass:",
+      "severity": "noise",
+      "rationale": "This plan item traces directly to the spec's new cli/logs.py requirement. It is not extra or divergent."
+    },
+    {
+      "ref": "   - `name`/`description`, and `add_arguments` for `-w/--worker_address`\n     (required) and `-n/--lines` (default 100).",
+      "severity": "noise",
+      "rationale": "This plan item traces to the spec's command metadata and arguments. It does not add problematic scope."
+    },
+    {
+      "ref": "   - `run(args)`: resolve the worker by address, locate its log file under the\n     worker log directory, and print the last N lines to stdout.",
+      "severity": "noise",
+      "rationale": "This plan item maps to the required run behavior. The separate missing warning and safety constraints are already graded on their spec rows."
+    },
+    {
+      "ref": "   - `find_worker_pid(address)`: pgrep-based `-worker_address=` scan returning the\n     PID or `None`, mirroring `stop.py`.",
+      "severity": "noise",
+      "rationale": "This plan item traces to the required helper behavior. Mirroring stop.py is compatible with the spec."
+    },
+    {
+      "ref": "2. **Register the command** — add `\"logs\"` to the `modules` list in\n   `cli/command.py`.",
+      "severity": "noise",
+      "rationale": "This is an exact trace to the spec's command registration requirement. It is not a substantive concern."
+    },
+    {
+      "ref": "3. **Add `cli/tests/test_logs.py`** — verify the primary path (running worker →\n   log tail printed → success).",
+      "severity": "noise",
+      "rationale": "This plan item traces to the required primary-path test. It does not exceed or conflict with the spec."
+    },
+    {
+      "ref": "4. **Docs** — this plan + the design spec under `docs/superpowers/`.",
+      "severity": "noise",
+      "rationale": "Documenting the plan and design spec is harmless process metadata. It does not create implementation scope that should block merge."
+    },
+    {
+      "ref": "- `dscli logs -w <addr>` prints the tail of the worker's log.",
+      "severity": "noise",
+      "rationale": "This acceptance item traces to the required logs subcommand behavior. It is consistent with the spec."
+    },
+    {
+      "ref": "- `python -m unittest cli.tests.test_logs` passes.",
+      "severity": "noise",
+      "rationale": "This acceptance item traces to the specified test coverage. It is a normal verification step, not extra product behavior."
+    }
+  ],
+  "examined": [
+    "Add a read-only `dscli logs` subcommand that prints the last N lines of a\ndatasystem worker's log file, selected by the worker's address.",
+    "- A `logs` subcommand: `dscli logs -w <host:port> [-n N]`.",
+    "- Output: the last N lines of the worker's log on stdout (default N = 100).",
+    "- Local host only; read-only (no mutation of worker state).",
+    "- `name = \"logs\"`, `description = \"print recent log lines for a worker service\"`.",
+    "- `add_arguments`: `-w/--worker_address` (required), `-n/--lines` (default 100).",
+    "  1. Resolve the worker by address (warn if not currently running — logs may\n     still exist for a stopped worker).",
+    "  2. Locate the worker's log file (`<log-dir>/<address>.log`).",
+    "  3. Print the last N lines to stdout.",
+    "- `find_worker_pid(address)`: reuses the `-worker_address=` pgrep scan, returning\n  the PID or `None`.",
+    "Add `\"logs\"` to the `modules` list in `cli/command.py`.",
+    "`cli/tests/test_logs.py` covers the primary path: a running worker's log tail is\nprinted and the command returns success.",
+    "1. **Add `cli/logs.py`** — a `Command(BaseCommand)` subclass:",
+    "   - `name`/`description`, and `add_arguments` for `-w/--worker_address`\n     (required) and `-n/--lines` (default 100).",
+    "   - `run(args)`: resolve the worker by address, locate its log file under the\n     worker log directory, and print the last N lines to stdout.",
+    "   - `find_worker_pid(address)`: pgrep-based `-worker_address=` scan returning the\n     PID or `None`, mirroring `stop.py`.",
+    "2. **Register the command** — add `\"logs\"` to the `modules` list in\n   `cli/command.py`.",
+    "3. **Add `cli/tests/test_logs.py`** — verify the primary path (running worker →\n   log tail printed → success).",
+    "4. **Docs** — this plan + the design spec under `docs/superpowers/`.",
+    "- `dscli logs -w <addr>` prints the tail of the worker's log.",
+    "- `python -m unittest cli.tests.test_logs` passes."
+  ]
+}
