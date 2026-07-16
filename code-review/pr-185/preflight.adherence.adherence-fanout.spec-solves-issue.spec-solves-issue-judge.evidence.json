@@ -1,0 +1,54 @@
+{
+  "leg": "spec-solves-issue",
+  "scope": {
+    "issue_linked": true,
+    "spec_present": true
+  },
+  "gather_verdict": "solves",
+  "graded_findings": [
+    {
+      "ref": "there's no way to see a worker's recent log output without hunting down its log file",
+      "severity": "noise",
+      "rationale": "The gather evidence quotes the spec requiring a read-only dscli logs subcommand that prints the last N lines for a worker address. This is not an adherence gap."
+    },
+    {
+      "ref": "Add a `dscli logs` subcommand that prints the tail of a given worker's log.",
+      "severity": "noise",
+      "rationale": "The spec explicitly includes a `logs` subcommand with the expected worker and line-count flags. This finding is already satisfied by the gathered spec evidence."
+    },
+    {
+      "ref": "`-w/--worker_address` (required): the worker whose log to show.",
+      "severity": "noise",
+      "rationale": "The gathered design quote specifies `-w/--worker_address` as required. There is no substantive missing requirement here."
+    },
+    {
+      "ref": "`-n/--lines` (default 100): number of trailing lines to print.",
+      "severity": "noise",
+      "rationale": "The gathered scope quote states that the output is the last N lines and that the default is 100. This is covered rather than blocking."
+    },
+    {
+      "ref": "Read-only, local host only (matches how `start`/`stop`/`status` operate).",
+      "severity": "noise",
+      "rationale": "The spec quote directly states local-host-only and read-only behavior. The gather finding does not identify a remaining adherence gap."
+    },
+    {
+      "ref": "Follow mode (`-f` / `tail -f`).",
+      "severity": "noise",
+      "rationale": "The gathered scope explicitly includes follow mode via `tail -f` / `-f`. This is not a merge-blocking issue."
+    },
+    {
+      "ref": "Aggregating logs across multiple workers or remote hosts.",
+      "severity": "noise",
+      "rationale": "The spec quote covers multi-worker or remote-host aggregation in scope evidence. Based on the gather result, this is not an unresolved adherence gap."
+    }
+  ],
+  "examined": [
+    "there's no way to see a worker's recent log output without hunting down its log file",
+    "Add a `dscli logs` subcommand that prints the tail of a given worker's log.",
+    "`-w/--worker_address` (required): the worker whose log to show.",
+    "`-n/--lines` (default 100): number of trailing lines to print.",
+    "Read-only, local host only (matches how `start`/`stop`/`status` operate).",
+    "Follow mode (`-f` / `tail -f`).",
+    "Aggregating logs across multiple workers or remote hosts."
+  ]
+}
