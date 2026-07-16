@@ -3,6 +3,14 @@ name: "Honesty Fix-Verify Agent (protocol state: honesty.fixverify)"
 run-name: "Honesty Fix-Verify · cid:[${{ fromJSON(github.event.inputs.aw_context || '{}').cid }}]"
 on:
   workflow_dispatch:
+concurrency:
+  # Per-dispatch (cid) group so per-issue legs for DIFFERENT issues run in PARALLEL.
+  # gh-aw's default `gh-aw-${{ github.workflow }}` shares ONE group across every leg of
+  # this workflow; GitHub then keeps only 1 running + 1 pending and cancels the rest
+  # while pending, and the engine never re-dispatches a cancelled leg -> the per-issue
+  # join deadlocks. cid is unique per leg dispatch. Mirrors impl-feature-auto-*-agent.
+  group: "honesty-fixverify-agent-${{ fromJSON(github.event.inputs.aw_context || '{}').cid }}"
+  cancel-in-progress: false
 engine:
   id: codex
   model: gpt-5.5
