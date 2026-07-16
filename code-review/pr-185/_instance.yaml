@@ -3,5 +3,9 @@ instance: pr-185
 head_sha: 236d631bc8e50077e16ef38efb03b2bbabea1fa9
 phase: preflight-gate
 joined: true
-phase_label: pre-flight adherence gate
+phase_label: "\u26D4 blocked"
 status_comment_id: 4993188372
+halted:
+  phase: preflight-gate
+  reason: blocked
+  sha: 236d631bc8e50077e16ef38efb03b2bbabea1fa9
