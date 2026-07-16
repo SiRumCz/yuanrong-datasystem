@@ -1,0 +1,15 @@
+{
+  "leg": "mm-compliance",
+  "scope": {},
+  "gather_verdict": "diverges",
+  "graded_findings": [
+    {
+      "ref": "0",
+      "severity": "blocking",
+      "rationale": "The finding describes an operator-facing command hardcoding a log path and filename that do not match the configured LogManager output used by normal worker deployments. That is a real adherence gap because the feature can report or tail the wrong file instead of the actual worker logs."
+    }
+  ],
+  "examined": [
+    "0"
+  ]
+}
