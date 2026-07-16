@@ -14,10 +14,12 @@
 """``dscli logs`` subcommand: print recent log lines for a worker service."""
 
 import argparse
+import json
 import os
 import re
 import subprocess
 
+import yr.datasystem.cli.common.util as util
 from yr.datasystem.cli.command import BaseCommand
 
 # Every worker is launched with a ``-worker_address=`` argument; reuse that
@@ -25,8 +27,9 @@ from yr.datasystem.cli.command import BaseCommand
 _WORKER_ADDRESS_ARG = "-worker_address="
 _PGREP_TIMEOUT_S = 5
 _DEFAULT_LINES = 100
-# Workers write their logs under this directory, one file per worker address.
-_LOG_DIR = "/opt/yuanrong/datasystem/log"
+_DEFAULT_WORKER_PROCESS_NAME = "datasystem_worker"
+_FALLBACK_LOG_DIR = "~/.datasystem/logs"
+_INFO_LOG_SUFFIX = ".INFO.log"
 _WORKER_ADDRESS_RE = re.compile(r"^[A-Za-z0-9.-]+:[0-9]+$")
 _MIN_PORT = 1
 _MAX_PORT = 65535
@@ -79,10 +82,11 @@ class Command(BaseCommand):
             self.logger.error(str(exc))
             return BaseCommand.FAILURE
 
-        if self.find_worker_pid(address) is None:
+        pid = self.find_worker_pid(address)
+        if pid is None:
             self.logger.warning(f"No running worker @ {address}; showing last log")
 
-        log_path = os.path.join(_LOG_DIR, f"{address}.log")
+        log_path = self.resolve_log_path(pid)
         result = subprocess.run(
             ["tail", "-n", str(lines), log_path], capture_output=True, text=True,
         )
@@ -91,6 +95,71 @@ class Command(BaseCommand):
             return BaseCommand.FAILURE
         print(result.stdout, end="")
         return BaseCommand.SUCCESS
+
+    def resolve_log_path(self, pid):
+        """Resolve the worker INFO log path from cmdline flags or config defaults."""
+        args = self.get_process_args(pid) if pid is not None else []
+        log_dir = self.get_flag_value(args, "log_dir")
+        log_filename = self.get_flag_value(args, "log_filename")
+        defaults = self.load_worker_config_defaults()
+        if not log_dir:
+            log_dir = defaults.get("log_dir", _FALLBACK_LOG_DIR)
+        if not log_filename:
+            log_filename = defaults.get("log_filename", "")
+        log_dir = self.resolve_default_path(log_dir)
+        if not log_filename:
+            log_filename = self.get_process_name(args)
+        return os.path.join(log_dir, f"{log_filename}{_INFO_LOG_SUFFIX}")
+
+    def load_worker_config_defaults(self):
+        """Load default worker config values used by ``dscli start``."""
+        default_config_path = os.path.join(self._base_dir, "worker_config.json")
+        default_config_path = self.valid_safe_path(default_config_path)
+        try:
+            with open(default_config_path, "r") as f:
+                config = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            return {}
+        return {
+            key: str(item.get("value", "")).strip()
+            for key, item in config.items()
+            if isinstance(item, dict)
+        }
+
+    def resolve_default_path(self, path):
+        """Normalize default relative paths the same way ``dscli start`` does."""
+        if path.startswith("./"):
+            path = util.get_timestamped_path(path)
+        return os.path.realpath(os.path.expanduser(path))
+
+    def get_process_args(self, pid):
+        """Read process argv from procfs, returning an empty list if it vanished."""
+        try:
+            with open(f"/proc/{pid}/cmdline", "rb") as f:
+                raw_cmdline = f.read()
+        except OSError:
+            return []
+        return [arg.decode("utf-8", errors="ignore") for arg in raw_cmdline.split(b"\x00") if arg]
+
+    def get_flag_value(self, args, key):
+        """Return a gflag value from process argv, if present."""
+        prefixes = (f"--{key}=", f"-{key}=")
+        for arg in args:
+            for prefix in prefixes:
+                if arg.startswith(prefix):
+                    return arg[len(prefix):]
+        options = (f"--{key}", f"-{key}")
+        for idx, arg in enumerate(args[:-1]):
+            if arg in options:
+                return args[idx + 1]
+        return None
+
+    def get_process_name(self, args):
+        """Return argv[0]'s basename or the default worker process name."""
+        if not args:
+            return _DEFAULT_WORKER_PROCESS_NAME
+        process_name = os.path.basename(args[0])
+        return process_name or _DEFAULT_WORKER_PROCESS_NAME
 
     def find_worker_pid(self, address):
         """Return the PID of the worker at ``address``, or ``None`` if not found."""
