@@ -809,6 +809,27 @@ if COMMAND == "continue" and NODE_PATH:
                 proto_data, DIR, PID, INSTANCE,
                 consuming_branch=(_p[-2] if len(_p) >= 2 else None),
                 consuming_phase=None, inputs=declared, consuming_path=_p)
+        # A DYNAMIC-fanout leg's per-leg item is threaded by the expand matrix SEED
+        # (stage_item + project_matrix_item at fan-out time), NOT by a declared `from:`.
+        # The declared block above therefore misses it, so an ITERATE re-dispatch of a
+        # leg whose sub-state declares no inputs (e.g. code-review's `triage`) would go
+        # out with empty aw_context.inputs and the agent could not tell which item it
+        # owns — it noops, the leg's checks fail, and the iterate loop can never converge.
+        # Re-attach the staged item exactly as the fan-out surfaced it, reading the
+        # durable <as>.item.json stage_item wrote on the state branch (idempotent: a
+        # STATIC fanout has no expand → no `as` → skip; a plain agent has no enclosing
+        # fanout → skip; the file is absent for anything that was never seeded).
+        fpath = paths.enclosing_fanout_path(proto_data, _p)
+        if fpath:
+            exp = (paths.node_at_path(proto_data, fpath) or {}).get("expand") or {}
+            as_ = exp.get("as")
+            if as_:
+                leg_path = _p[:len(fpath) + 1]          # fanout_path + this leg's id
+                item_file = lib.output_artifact_path(
+                    DIR, PID, INSTANCE,
+                    path=lib.state_path(proto_data, leg_path), kind=f"{as_}.item")
+                if os.path.isfile(item_file):
+                    act.setdefault("inputs", []).append({"as": as_, "path": item_file})
         print(json.dumps(act))
         sys.exit(0)
     if _kind == "gate":
