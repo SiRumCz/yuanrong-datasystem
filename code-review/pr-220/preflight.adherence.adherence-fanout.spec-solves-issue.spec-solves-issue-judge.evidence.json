@@ -1,0 +1,10 @@
+{
+  "leg": "spec-solves-issue",
+  "scope": {
+    "issue_linked": false,
+    "spec_present": false
+  },
+  "gather_verdict": "n/a",
+  "graded_findings": [],
+  "examined": []
+}
