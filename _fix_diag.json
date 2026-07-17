@@ -8,14 +8,12 @@
   },
   "head": "test/review-dscli-logs",
   "clone_rc": 0,
-  "clone_err": "Cloning into '/tmp/fix-apply-4n3msuw9'...",
+  "clone_err": "Cloning into '/tmp/fix-apply-88zkuwrm'...",
   "apply": [
     {
-      "status": "applied",
-      "detail": ""
+      "status": "skipped",
+      "detail": "apply-failed"
     }
   ],
-  "applied_n": 1,
-  "push_ok": true,
-  "push_detail": ""
+  "applied_n": 0
 }
