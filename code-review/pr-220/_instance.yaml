@@ -1,11 +1,13 @@
 protocol: code-review
 instance: pr-220
 head_sha: 8e42b58ecc4e5b0ab63d1ee721a7ef70b3e6cccb
-phase: preflight-gate
+phase: overview
 joined: true
-phase_label: "\u26D4 blocked"
+phase_label: guided overview + risk
 status_comment_id: 5005244456
-halted:
-  phase: preflight-gate
-  reason: blocked
-  sha: 8e42b58ecc4e5b0ab63d1ee721a7ef70b3e6cccb
+overrides:
+- phase: preflight-gate
+  actor: haoxianghz
+  reason: "test PR: legitimate preflight block (no spec/plan/docs/tests by design;\
+    \ code-implements-plan fail-safe). Bypassing to exercise per-issue \u2192 honesty\
+    \ \u2192 mrp on the golivax-delivered engine."
