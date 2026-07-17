@@ -1,7 +1,13 @@
 protocol: code-review
 instance: pr-185
-state: consistency-fanout
+state: done
 iteration: 1
 gates: {}
 head_sha: a58917c35055becbe9c5d4cfc10ae333d0ac989a
-history: []
+history:
+- iteration: 1
+  agent_run_id: '29545721735'
+  checks:
+    evidence-present: pass
+    docs-coverage: pass
+  feedback: ''

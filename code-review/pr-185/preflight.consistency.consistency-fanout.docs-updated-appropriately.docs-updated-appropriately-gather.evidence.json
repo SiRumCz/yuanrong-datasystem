@@ -1,0 +1,38 @@
+{
+  "scope": {
+    "code_changed": true
+  },
+  "items": [
+    {
+      "path": "docs/source_zh_cn/deployment/dscli.md",
+      "status": "missing",
+      "reason": "The canonical dscli command reference lists supported subcommands but was not updated for the new dscli logs command or its -w/-n options."
+    },
+    {
+      "path": "docs/superpowers/specs/2026-07-15-dscli-logs-design.md",
+      "status": "inadequate",
+      "reason": "The changed spec says logs reads <log-dir>/<address>.log, but the implementation resolves <log_filename or process name>.INFO.log."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "cli/command.py",
+    "cli/logs.py",
+    "cli/tests/test_logs.py",
+    "docs/superpowers/plans/2026-07-15-dscli-logs.md",
+    "docs/superpowers/specs/2026-07-15-dscli-logs-design.md",
+    "docs/source_zh_cn/deployment/dscli.md",
+    "docs/source_zh_cn/deployment/deploy.md",
+    "README.md",
+    "README_EN.md",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md"
+  ]
+}
