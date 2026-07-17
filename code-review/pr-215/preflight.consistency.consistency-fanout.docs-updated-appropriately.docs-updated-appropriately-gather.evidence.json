@@ -1,0 +1,22 @@
+{
+  "scope": { "code_changed": true },
+  "items": [
+    {
+      "path": ".repo_context/generated/repo_index.md",
+      "status": "missing",
+      "reason": "The PR adds cli/net_check.py, but the generated repository index's cli file listing was not updated to include it."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "cli/command.py",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/repository-overview.md",
+    "docs/source_zh_cn/deployment/dscli.md",
+    "README.md",
+    "README_EN.md"
+  ]
+}
