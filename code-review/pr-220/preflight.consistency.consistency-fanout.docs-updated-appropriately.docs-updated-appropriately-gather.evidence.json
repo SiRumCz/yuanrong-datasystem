@@ -1,0 +1,20 @@
+{
+  "scope": { "code_changed": true },
+  "items": [],
+  "verdict": "adequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "cli/command.py",
+    "setup.py",
+    "docs/source_zh_cn/deployment/dscli.md",
+    "docs/source_zh_cn/deployment/deploy.md",
+    "docs/source_zh_cn/best_practices/best_practices_for_reliabilty.md",
+    "README.md",
+    "README_EN.md",
+    ".repo_context/modules/runtime/cluster-management.md",
+    ".repo_context/modules/infra/slot/README.md",
+    ".repo_context/modules/infra/l2cache/README.md"
+  ]
+}
