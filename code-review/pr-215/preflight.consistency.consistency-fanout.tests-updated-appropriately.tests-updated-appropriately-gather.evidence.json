@@ -1,0 +1,26 @@
+{
+  "scope": { "code_changed": true },
+  "items": [
+    {
+      "path": "tests/kvtest/tests/python/test_deploy_worker.py",
+      "status": "missing",
+      "reason": "New cli.net_check.ping_worker behavior has no PR test covering ping success, ping failure, or subprocess command arguments."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "cli/command.py",
+    "tests/kvtest/tests/python/test_deploy_worker.py",
+    "tests/kvtest/tests/python/test_deploy_client.py",
+    "tests/kvtest/tests/python/test_procmon.py",
+    "tests/python/test_ds_client.py",
+    "tests/ut/common/util/net_util_test.cpp",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/modules/quality/tests-and-reproduction.md",
+    ".repo_context/modules/quality/test-suite-design.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md"
+  ]
+}
