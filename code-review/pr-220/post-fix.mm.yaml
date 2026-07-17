@@ -1,7 +1,7 @@
 protocol: code-review
 instance: pr-220
-state: post-fix
-sub_state: mm-updater
+state: done
+sub_state: mm-gate
 iteration: 1
 gates: {}
 history: []
