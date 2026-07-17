@@ -1,0 +1,24 @@
+{
+  "plan_kts": "fun plan(repoRoot: String, baseRef: String, headRef: String): DocsCoherenceVerdict {\n    val contextReadme = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/README.md\")\n    val contextIndex = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/index.md\")\n    val contextMaintenance = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/maintenance.md\")\n    val repoIndex = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/generated/repo_index.md\")\n    val engineeringPrinciples = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/modules/overview/engineering-principles.md\")\n    val changedFiles = gitChangedFiles(repoRoot, baseRef, headRef)\n    val sourceDiff = gitDiff(repoRoot, baseRef, headRef)\n    val touchedDomains = inferTouchedDomains(changedFiles, repoIndex)\n    val relevantContextDocs = readRepoContextForDomains(repoRoot, touchedDomains)\n    val repositoryDocs = listFiles(repoRoot, listOf(\"README*\", \"docs/**\", \"*.md\", \".repo_context/**/*.md\"))\n    val changedDocs = filterDocumentationFiles(changedFiles)\n    val changedDocDiff = filterDiffForFiles(sourceDiff, changedDocs)\n    val codeImpact = classifyChangeForDocumentationNeed(sourceDiff, changedFiles, engineeringPrinciples)\n    val relevantDocFiles = selectRelevantDocumentation(repositoryDocs, touchedDomains, sourceDiff, contextIndex)\n    val relevantDocContents = readFiles(relevantDocFiles)\n    val existingReferences = searchDocsForChangedConcepts(repoRoot, codeImpact, relevantDocFiles)\n    val coherenceFindings = compareDocsToDiff(codeImpact, changedDocDiff, relevantDocContents, existingReferences, relevantContextDocs, contextMaintenance)\n    val verdict = buildDocsCoherenceVerdict(codeImpact, changedDocs, coherenceFindings)\n    return makeResult(verdict)\n}",
+  "examined": [
+    "readFile:/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/README.md",
+    "readFile:/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/index.md",
+    "readFile:/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/maintenance.md",
+    "readFile:/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/generated/repo_index.md",
+    "readFile:/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/modules/overview/engineering-principles.md",
+    "gitChangedFiles",
+    "gitDiff",
+    "inferTouchedDomains",
+    "readRepoContextForDomains",
+    "listFiles",
+    "filterDocumentationFiles",
+    "filterDiffForFiles",
+    "classifyChangeForDocumentationNeed",
+    "selectRelevantDocumentation",
+    "readFiles",
+    "searchDocsForChangedConcepts",
+    "compareDocsToDiff",
+    "buildDocsCoherenceVerdict",
+    "makeResult"
+  ]
+}
