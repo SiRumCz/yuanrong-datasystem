@@ -1,0 +1,33 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "Design doc describes a different log naming contract than the implementation",
+      "dimension": ["maintainability"],
+      "severity": "low",
+      "paths": ["docs/superpowers/specs/2026-07-15-dscli-logs-design.md"],
+      "member_findings": [
+        {
+          "dimension": "maintainability",
+          "path": "docs/superpowers/specs/2026-07-15-dscli-logs-design.md",
+          "line": 45,
+          "severity": "low",
+          "category": "maintainability",
+          "title": "Design doc describes a different log naming contract than the implementation",
+          "impact": "The spec says the command locates `<log-dir>/<address>.log`, but the new command and tests resolve `<log_filename>.INFO.log` under the worker log directory. Future maintainers will have two conflicting contracts in the same PR when changing log discovery or adding follow-up tests.",
+          "fix": "Update the design spec to describe the actual `log_dir` plus `log_filename`/process-name INFO log resolution, or change the implementation to match the documented address-based filename."
+        }
+      ],
+      "rank": 1
+    }
+  ],
+  "summary": {
+    "present": ["maintainability"],
+    "missing": ["correctness", "test", "performance", "security"],
+    "clusters": 1,
+    "total_findings": 1,
+    "by_severity": { "low": 1 },
+    "by_dimension": { "maintainability": 1 }
+  },
+  "pinned_issue": 213
+}
