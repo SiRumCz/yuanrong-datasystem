@@ -1,7 +1,7 @@
 protocol: code-review
 instance: pr-220
 state: per-issue
-sub_state: honesty
+sub_state: honesty-verdict
 iteration: 1
 gates: {}
 history: []
