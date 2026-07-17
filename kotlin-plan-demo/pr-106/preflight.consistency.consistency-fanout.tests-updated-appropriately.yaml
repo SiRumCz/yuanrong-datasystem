@@ -1,0 +1,7 @@
+protocol: kotlin-plan-demo
+instance: pr-106
+state: consistency-fanout
+sub_state: tests-updated-appropriately-gather
+iteration: 1
+gates: {}
+history: []
