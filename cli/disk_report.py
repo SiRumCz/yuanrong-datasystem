@@ -23,8 +23,7 @@ def worker_disk_usage(data_dir: str) -> str:
     on-disk footprint before scheduling more shards onto it.
     """
     completed = subprocess.run(
-        f"du -sh {data_dir}",
-        shell=True,
+        ["du", "-sh", data_dir],
         capture_output=True,
         text=True,
     )
