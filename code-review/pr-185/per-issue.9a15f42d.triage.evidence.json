@@ -1,0 +1,48 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "Worker config default parsing is duplicated in the new command",
+      "dimension": [
+        "maintainability"
+      ],
+      "severity": "low",
+      "paths": [
+        "cli/logs.py"
+      ],
+      "member_findings": [
+        {
+          "dimension": "maintainability",
+          "path": "cli/logs.py",
+          "line": 113,
+          "severity": "low",
+          "category": "maintainability",
+          "title": "Worker config default parsing is duplicated in the new command",
+          "impact": "`load_worker_config_defaults` hand-parses `worker_config.json` and `resolve_default_path` separately reimplements part of `dscli start`'s default-filling behavior. Any future change to worker config shape or default path normalization now has to be discovered and updated in multiple commands.",
+          "fix": "Extract the shared worker config value/default resolution into a common CLI helper used by `start` and `logs`, or reuse the existing start-side helper with a narrow wrapper for log resolution."
+        }
+      ],
+      "rank": 1
+    }
+  ],
+  "summary": {
+    "present": [
+      "maintainability"
+    ],
+    "missing": [
+      "correctness",
+      "test",
+      "performance",
+      "security"
+    ],
+    "clusters": 1,
+    "total_findings": 1,
+    "by_severity": {
+      "low": 1
+    },
+    "by_dimension": {
+      "maintainability": 1
+    }
+  },
+  "pinned_issue": 214
+}
