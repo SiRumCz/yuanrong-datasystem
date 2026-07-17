@@ -1,0 +1,48 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "Untrusted host is executed through the shell",
+      "dimension": [
+        "security"
+      ],
+      "severity": "high",
+      "paths": [
+        "cli/net_check.py"
+      ],
+      "member_findings": [
+        {
+          "dimension": "security",
+          "path": "cli/net_check.py",
+          "line": 26,
+          "severity": "high",
+          "category": "security",
+          "title": "Untrusted host is executed through the shell",
+          "impact": "Any caller-controlled host value can append shell metacharacters and run arbitrary commands on the machine executing dscli, because the value is interpolated into a command string passed to subprocess.run with shell=True.",
+          "fix": "Invoke ping with an argument list and shell=False, for example subprocess.run([\"ping\", \"-c\", str(count), host], ...), and validate host/count before invoking the binary."
+        }
+      ],
+      "rank": 1
+    }
+  ],
+  "summary": {
+    "present": [
+      "security"
+    ],
+    "missing": [
+      "correctness",
+      "test",
+      "performance",
+      "maintainability"
+    ],
+    "clusters": 1,
+    "total_findings": 1,
+    "by_severity": {
+      "high": 1
+    },
+    "by_dimension": {
+      "security": 1
+    }
+  },
+  "pinned_issue": 217
+}
