@@ -1,0 +1,28 @@
+{
+  "plan_kts": "data class Result(val verdict: String, val evidence: List<String>, val risks: List<String>)\n\ndata class DiffSummary(val changedFiles: List<String>, val productionFiles: List<String>, val testFiles: List<String>, val touchedModules: List<String>)\ndata class TestInventory(val directTests: List<String>, val nearbyTests: List<String>, val buildFiles: List<String>)\ndata class CoherenceReport(val verdict: String, val evidence: List<String>, val risks: List<String>)\n\nfun plan(): Result {\n    val repoReadme = readFile(\".repo_context/README.md\")\n    val repoIndex = readFile(\".repo_context/index.md\")\n    val maintenance = readFile(\".repo_context/maintenance.md\")\n    val generatedIndex = readFile(\".repo_context/generated/repo_index.md\")\n    val engineeringPrinciples = readFile(\".repo_context/modules/overview/engineering-principles.md\")\n    val selfVerification = readFile(\".repo_context/playbooks/upkeep/ai-self-verification.md\")\n\n    val status = gitStatusShort()\n    val baseRef = detectReviewBase(status)\n    val changedNames = gitDiffNameOnly(baseRef)\n    val changedDiff = gitDiffUnified(baseRef)\n    val diffSummary = summarizeDiff(changedNames, changedDiff)\n\n    val domainContextPaths = selectRepoContextForModules(diffSummary.touchedModules, generatedIndex, repoIndex)\n    val domainContexts = readFiles(domainContextPaths)\n\n    val candidateTestPaths = findRelevantTests(diffSummary.productionFiles, diffSummary.testFiles, domainContexts)\n    val testContents = readFiles(candidateTestPaths)\n    val buildPaths = findBuildAndTestConfigFiles(diffSummary.changedFiles, candidateTestPaths)\n    val buildContents = readFiles(buildPaths)\n    val testInventory = buildTestInventory(candidateTestPaths, testContents, buildPaths)\n\n    val sourceContracts = extractBehavioralContracts(changedDiff, domainContexts, engineeringPrinciples)\n    val testAssertions = extractTestAssertions(testContents, buildContents)\n    val hotPathAssessment = assessHotPathTestRisk(changedDiff, domainContexts, engineeringPrinciples)\n    val statefulAssessment = assessStatefulTestRisk(changedDiff, domainContexts, engineeringPrinciples)\n    val coherenceReport = evaluateTestsCoherence(diffSummary, testInventory, sourceContracts, testAssertions, hotPathAssessment, statefulAssessment)\n    val verification = applySelfVerification(selfVerification, coherenceReport)\n\n    return Result(verdict = verification.verdict, evidence = verification.evidence, risks = verification.risks)\n}",
+  "examined": [
+    "readFile:.repo_context/README.md",
+    "readFile:.repo_context/index.md",
+    "readFile:.repo_context/maintenance.md",
+    "readFile:.repo_context/generated/repo_index.md",
+    "readFile:.repo_context/modules/overview/engineering-principles.md",
+    "readFile:.repo_context/playbooks/upkeep/ai-self-verification.md",
+    "gitStatusShort",
+    "detectReviewBase",
+    "gitDiffNameOnly",
+    "gitDiffUnified",
+    "selectRepoContextForModules",
+    "readFiles:domain_contexts",
+    "findRelevantTests",
+    "readFiles:test_contents",
+    "findBuildAndTestConfigFiles",
+    "readFiles:build_contents",
+    "extractBehavioralContracts",
+    "extractTestAssertions",
+    "assessHotPathTestRisk",
+    "assessStatefulTestRisk",
+    "evaluateTestsCoherence",
+    "applySelfVerification",
+    "return Result"
+  ]
+}
