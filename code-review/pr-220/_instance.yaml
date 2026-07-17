@@ -1,9 +1,9 @@
 protocol: code-review
 instance: pr-220
 head_sha: 8e42b58ecc4e5b0ab63d1ee721a7ef70b3e6cccb
-phase: honesty-gate
+phase: post-fix
 joined: true
-phase_label: "\u26D4 blocked"
+phase_label: "context capture \u2225 mental-model update"
 status_comment_id: 5005244456
 overrides:
 - phase: preflight-gate
@@ -11,7 +11,8 @@ overrides:
   reason: "test PR: legitimate preflight block (no spec/plan/docs/tests by design;\
     \ code-implements-plan fail-safe). Bypassing to exercise per-issue \u2192 honesty\
     \ \u2192 mrp on the golivax-delivered engine."
-halted:
-  phase: honesty-gate
-  reason: blocked
-  sha: 6f9bbf46eb544360cf5016a891145bb35a6625ee
+- phase: honesty-gate
+  actor: haoxianghz
+  reason: "test PR: honesty-gate correctly evaluated the auto-fixes (2/3 flagged dishonest)\
+    \ \u2014 the honesty mechanism works. Overriding to reach the mrp phase (goal:\
+    \ confirm the pipeline reaches mrp; mrp itself to be tested separately)."
