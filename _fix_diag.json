@@ -1,19 +1,10 @@
 {
   "local": false,
-  "n_fixes": 1,
+  "n_fixes": 0,
   "env": {
     "repo": "SiRumCz/yuanrong-datasystem",
-    "pr": "185",
+    "pr": "215",
     "has_token": true
   },
-  "head": "test/review-dscli-logs",
-  "clone_rc": 0,
-  "clone_err": "Cloning into '/tmp/fix-apply-y10tab5_'...",
-  "apply": [
-    {
-      "status": "skipped",
-      "detail": "apply-failed"
-    }
-  ],
-  "applied_n": 0
+  "stop": "no fixes"
 }
