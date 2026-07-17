@@ -1,0 +1,6 @@
+protocol: kotlin-plan-demo
+instance: pr-106
+head_sha: b3df3311230021d68562acc0cff99c9ff8799ec9
+phase: plan
+joined: false
+phase_label: Plan
