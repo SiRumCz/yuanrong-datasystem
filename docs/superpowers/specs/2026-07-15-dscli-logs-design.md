@@ -42,7 +42,9 @@ A `Command(BaseCommand)` subclass mirroring `stop.py`:
 - `run(args)`:
   1. Resolve the worker by address (warn if not currently running — logs may
      still exist for a stopped worker).
-  2. Locate the worker's log file (`<log-dir>/<address>.log`).
+  2. Locate the worker INFO log by combining the worker's `log_dir` with
+     `log_filename` plus `.INFO.log`, falling back to the process name when
+     `log_filename` is unset.
   3. Print the last N lines to stdout.
 - `find_worker_pid(address)`: reuses the `-worker_address=` pgrep scan, returning
   the PID or `None`.
