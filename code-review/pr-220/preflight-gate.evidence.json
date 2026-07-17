@@ -1,0 +1,51 @@
+{
+  "legs": [
+    {
+      "leg": "spec-solves-issue",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence evidence was not available, so this leaf leg has no source verdict or scope to render."
+    },
+    {
+      "leg": "plan-implements-spec",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence evidence was not available, so this leaf leg has no source verdict or scope to render."
+    },
+    {
+      "leg": "code-implements-plan",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence evidence was not available, so this leaf leg has no source verdict or scope to render."
+    },
+    {
+      "leg": "mm-compliance",
+      "verdict": "diverges",
+      "scope": {},
+      "summary": "MM compliance rendered as diverges from the provided judge evidence. Divergence count: 1 graded finding."
+    },
+    {
+      "leg": "docs-updated-appropriately",
+      "verdict": "adequate",
+      "scope": {
+        "code_changed": true
+      },
+      "summary": "Docs consistency rendered as adequate for the provided scope where code changed. No graded findings were reported for this leaf leg."
+    },
+    {
+      "leg": "tests-updated-appropriately",
+      "verdict": "inadequate",
+      "scope": {
+        "code_changed": true
+      },
+      "summary": "Tests consistency rendered as inadequate for the provided scope where code changed. The source evidence reported one blocking graded finding about missing coverage for new CLI worker behavior."
+    },
+    {
+      "leg": "security",
+      "verdict": "PASS",
+      "scope": {},
+      "summary": "Security rendered as PASS from the provided judge evidence. No locked violations were reported."
+    }
+  ],
+  "examined": []
+}
