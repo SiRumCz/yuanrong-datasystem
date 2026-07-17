@@ -1,7 +1,12 @@
 protocol: code-review
 instance: pr-220
-state: preflight
+state: done
 iteration: 1
 gates: {}
 head_sha: 8e42b58ecc4e5b0ab63d1ee721a7ef70b3e6cccb
-history: []
+history:
+- iteration: 1
+  agent_run_id: '29596118934'
+  checks:
+    judge-coverage: pass
+  feedback: ''

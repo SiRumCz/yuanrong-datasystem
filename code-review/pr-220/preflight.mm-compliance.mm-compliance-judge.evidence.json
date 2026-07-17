@@ -1,0 +1,15 @@
+{
+  "leg": "mm-compliance",
+  "scope": {},
+  "gather_verdict": "diverges",
+  "graded_findings": [
+    {
+      "ref": "0",
+      "severity": "blocking",
+      "rationale": "The finding describes caller-controlled input interpolated into a shell command in an operator-facing disk helper, creating a concrete command-injection risk. That is a substantive security and operability adherence gap and should stop merge until the subprocess invocation avoids the shell and handles errors safely."
+    }
+  ],
+  "examined": [
+    "0"
+  ]
+}
