@@ -1,0 +1,17 @@
+{
+  "leg": "docs-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": ".repo_context/generated/repo_index.md",
+      "severity": "blocking",
+      "rationale": "The generated repository index is part of the shared repo context and should reflect newly added source files. Missing cli/net_check.py leaves documented repository structure stale for future codebase navigation."
+    }
+  ],
+  "examined": [
+    ".repo_context/generated/repo_index.md"
+  ]
+}
