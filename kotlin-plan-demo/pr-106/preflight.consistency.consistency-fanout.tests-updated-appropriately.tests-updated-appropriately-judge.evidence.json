@@ -1,0 +1,12 @@
+{
+  "plan_kts": "fun plan(repoRoot: String, repository: String, pullRequestNumber: Int): Verdict {\n    val contextReadme = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/README.md\")\n    val contextIndex = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/index.md\")\n    val maintenance = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/maintenance.md\")\n    val repoIndex = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/generated/repo_index.md\")\n    val principles = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/modules/overview/engineering-principles.md\")\n    val prMeta = githubReadPullRequest(repository, pullRequestNumber)\n    val prFiles = githubReadPullRequestFiles(repository, pullRequestNumber)\n    val prDiff = githubReadPullRequestDiff(repository, pullRequestNumber)\n    val touchedDomains = identifyTouchedDomains(prFiles, repoIndex)\n    val relevantContext = readRelevantRepoContext(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context\", touchedDomains)\n    val sourceChanges = filterSourceChanges(prDiff)\n    val testChanges = filterTestChanges(prDiff)\n    val buildFiles = filterBuildAndHarnessChanges(prDiff)\n    val existingTestPatterns = searchRepository(\"repo:SiRumCz/yuanrong-datasystem path:test OR path:src/test\")\n    val sourceBackedClaims = confirmClaimsAgainstDiff(sourceChanges, testChanges, existingTestPatterns, relevantContext)\n    val riskProfile = assessInfrastructureRisk(sourceChanges, buildFiles, principles)\n    val testAdequacy = evaluateTestsUpdatedAppropriately(sourceBackedClaims, riskProfile, testChanges, existingTestPatterns)\n    val verdict = makeTestsUpdatedVerdict(testAdequacy)\n    return verdict\n}",
+  "examined": [
+    "readFile",
+    "githubReadPullRequest",
+    "githubReadPullRequestFiles",
+    "githubReadPullRequestDiff",
+    "readRelevantRepoContext",
+    "searchRepository",
+    "makeTestsUpdatedVerdict"
+  ]
+}
