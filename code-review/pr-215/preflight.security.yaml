@@ -1,6 +1,6 @@
 protocol: code-review
 instance: pr-215
-state: preflight
+state: done
 sub_state: security-judge
 iteration: 1
 gates: {}
