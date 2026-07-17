@@ -8,14 +8,12 @@
   },
   "head": "test/e2e-final-check",
   "clone_rc": 0,
-  "clone_err": "Cloning into '/tmp/fix-apply-9x8m544q'...",
+  "clone_err": "Cloning into '/tmp/fix-apply-t47mcfwt'...",
   "apply": [
     {
-      "status": "applied",
-      "detail": ""
+      "status": "skipped",
+      "detail": "apply-failed"
     }
   ],
-  "applied_n": 1,
-  "push_ok": true,
-  "push_detail": ""
+  "applied_n": 0
 }
