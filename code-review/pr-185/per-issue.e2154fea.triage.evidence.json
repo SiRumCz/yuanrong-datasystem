@@ -1,0 +1,48 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "Tail failure path has no regression test",
+      "dimension": [
+        "test"
+      ],
+      "severity": "medium",
+      "paths": [
+        "cli/logs.py"
+      ],
+      "member_findings": [
+        {
+          "dimension": "test",
+          "path": "cli/logs.py",
+          "line": 88,
+          "severity": "medium",
+          "category": "test",
+          "title": "Tail failure path has no regression test",
+          "impact": "If tail cannot read the resolved log file, run should return BaseCommand.FAILURE and report the stderr. The current tests only cover successful tail output and validation failures before tail runs, so a change that ignores tail errors or still returns success would pass.",
+          "fix": "Add a run-path test with subprocess.run returning a non-zero returncode and stderr, then assert the command returns BaseCommand.FAILURE and does not print successful log output."
+        }
+      ],
+      "rank": 1
+    }
+  ],
+  "summary": {
+    "present": [
+      "test"
+    ],
+    "missing": [
+      "correctness",
+      "performance",
+      "security",
+      "maintainability"
+    ],
+    "clusters": 1,
+    "total_findings": 1,
+    "by_severity": {
+      "medium": 1
+    },
+    "by_dimension": {
+      "test": 1
+    }
+  },
+  "pinned_issue": 212
+}
