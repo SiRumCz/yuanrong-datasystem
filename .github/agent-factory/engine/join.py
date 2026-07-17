@@ -253,26 +253,33 @@ def main():
     policy = (join_state or {}).get("policy", "all")
     policy_ok = lib.join_policy_satisfied(policy, done_count, len(branches))
 
-    if policy_ok:
-        nxt = (join_state or {}).get("next")
-        # Only advance when .next names a real state in this protocol.
-        # deep-fanout has `next: done` where "done" is a sentinel, not a real state —
-        # guard against that by checking state_by_id returns something.
-        if nxt and lib.state_by_id(protocol, nxt):
-            instance_data["joined"] = True
-            instance_data["phase"] = nxt
-            lib.dump_yaml(inf, instance_data)
-            lib.ensure_phase_label(dir_, pid, instance, protocol, pr, nxt)
-            lib.cas_push(dir_, f"{instance}: join clear → continue {nxt}")
-            lib.dispatch_continue(pid, instance, path=nxt)
-            return
+    # A fan-out whose join declares a real `.next` (e.g. preflight → preflight-gate)
+    # must ALWAYS advance to it — EVEN when the policy is not satisfied. A FAILED leg
+    # (a dimension that exhausted its iterations, e.g. an agent that could not produce
+    # verifiable evidence) is a "could-not-verify" that the NEXT state — normally a
+    # gate — must surface for `/override`, exactly like a blocking finding. The old
+    # code advanced only on policy_ok and otherwise finalized in place; for a
+    # MULTI-PHASE pipeline that left the instance joined-but-not-advanced — a permanent
+    # WEDGE with no gate to override (the "not supported yet" gap noted below).
+    # Guard on state_by_id: deep-fanout uses `next: done` (a sentinel, not a real state).
+    nxt = (join_state or {}).get("next")
+    if nxt and lib.state_by_id(protocol, nxt):
+        instance_data["joined"] = True
+        instance_data["phase"] = nxt
+        lib.dump_yaml(inf, instance_data)
+        lib.ensure_phase_label(dir_, pid, instance, protocol, pr, nxt)
+        verdict = "clear" if policy_ok else f"failed-leg {done_count}/{len(branches)}"
+        lib.cas_push(dir_, f"{instance}: join {verdict} → continue {nxt}")
+        lib.dispatch_continue(pid, instance, path=nxt)
+        return
 
-        concl = "success"
-        title = "Review complete"
+    # No real `.next` → this fan-out is genuinely terminal (single-fan-out protocol);
+    # finalize the instance in place as success/failure.
+    if policy_ok:
+        concl, title = "success", "Review complete"
         summary = "All review branches completed."
     else:
-        concl = "failure"
-        title = "Review incomplete"
+        concl, title = "failure", "Review incomplete"
         summary = (f"Join policy '{policy}' not met "
                    f"({done_count}/{len(branches)} legs done); merge is gated.")
 
@@ -284,10 +291,6 @@ def main():
     body = lib.render_instance_status_body(dir_, pid, instance, proto)
     lib.upsert_status_comment(inf, pr, body)
 
-    # A fan-out phase is always terminal-before-join in the current model (its
-    # `.next` is the join state), so once all branches are terminal the instance
-    # is finalized here. A multi-fan-out pipeline would instead advance from the
-    # JOIN state's `.next`; that is intentionally not supported yet.
     instance_data["joined"] = True
     lib.dump_yaml(inf, instance_data)
     lib.ensure_phase_label(dir_, pid, instance, protocol, pr,
