@@ -1,0 +1,17 @@
+{
+  "plan_kts": "fun plan(workspace: String, transcriptPath: String, reviewPlanPath: String): SecurityGatherResult {\n    val repoContextReadme = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/README.md\")\n    val repoContextIndex = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/index.md\")\n    val repoMaintenance = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/maintenance.md\")\n    val repoGeneratedIndex = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/generated/repo_index.md\")\n    val engineeringPrinciples = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/modules/overview/engineering-principles.md\")\n    val agentTranscript = readFile(transcriptPath)\n    val preflightPlan = readFile(reviewPlanPath)\n    val changedFileList = gitChangedFiles(workspace)\n    val changedSourceSnippets = readChangedSourceFiles(workspace, changedFileList)\n    val securityRelevantSymbols = extractSecurityRelevantSymbols(changedSourceSnippets)\n    val sourceSinkCatalog = buildSourceSinkCatalog(securityRelevantSymbols, engineeringPrinciples)\n    val cedarToolCalls = extractToolCalls(agentTranscript)\n    val cedarPolicy = loadCedarPolicy(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/playbooks/security/cedar-tool-call-policy.md\")\n    val cedarAudit = runCedarToolCallAudit(cedarPolicy, cedarToolCalls, preflightPlan)\n    val guardiansConfig = loadGuardiansConfig(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/playbooks/security/guardians-taint-config.md\")\n    val guardiansInputs = buildGuardiansInputs(changedSourceSnippets, sourceSinkCatalog, guardiansConfig)\n    val guardiansTaintReport = runGuardiansTaintAnalysis(guardiansInputs)\n    val sourceBackedFindings = correlateSecurityEvidence(cedarAudit, guardiansTaintReport, changedSourceSnippets, repoContextReadme, repoContextIndex, repoMaintenance, repoGeneratedIndex)\n    val verdict = fuseSecurityVerdict(sourceBackedFindings)\n    return makeSecurityGatherResult(verdict)\n}",
+  "examined": [
+    "readFile(source: repo context)",
+    "readFile(source: agent transcript)",
+    "readFile(source: preflight plan)",
+    "gitChangedFiles(source: changed paths)",
+    "readChangedSourceFiles(source: changed code)",
+    "extractToolCalls",
+    "loadCedarPolicy",
+    "runCedarToolCallAudit",
+    "loadGuardiansConfig",
+    "runGuardiansTaintAnalysis",
+    "correlateSecurityEvidence",
+    "makeSecurityGatherResult"
+  ]
+}
