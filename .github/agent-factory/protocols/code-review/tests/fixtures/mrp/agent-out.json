@@ -1,7 +1,7 @@
 {
   "rationale": {
     "summary": "Switches the worker on URMA data-plane failure to keep the cache available.",
-    "keyPoints": [{ "point": "fails over to a standby worker", "source": "walkthrough" }],
+    "keyPoints": [{ "point": "fails over to a standby worker", "snippet": "switch to the standby worker on URMA data-plane failure", "source": "walkthrough" }],
     "intentMatch": "aligned"
   },
   "routed_spots": [

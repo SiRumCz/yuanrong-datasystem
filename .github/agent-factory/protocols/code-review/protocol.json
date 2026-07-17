@@ -449,6 +449,7 @@
       "max_iterations": 2,
       "inputs": [
         { "from": "preflight-gate", "as": "preflight" },
+        { "from": "mm-compliance", "as": "mm-compliance" },
         { "from": "overview",  "as": "overview" },
         { "from": "honesty-gate", "as": "honesty" },
         { "from": "context",   "as": "context" }
