@@ -1,0 +1,19 @@
+{
+  "plan_kts": "data class Verdict(val outcome: String, val confidence: String, val evidence: List<String>, val gaps: List<String>)\n\ndata class Result(val verdict: Verdict)\n\nfun plan(workspace: String): Result {\n    val repoReadme = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/README.md\")\n    val repoIndex = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/index.md\")\n    val maintenance = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/maintenance.md\")\n    val generatedIndex = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/generated/repo_index.md\")\n    val principles = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/modules/overview/engineering-principles.md\")\n    val reviewInputs = readReviewPreflightInputs(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem\")\n    val planArtifact = extractSubmittedPlan(reviewInputs)\n    val changedFiles = listChangedFiles(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem\")\n    val relevantContextPaths = selectRelevantRepoContext(planArtifact, changedFiles, repoIndex, generatedIndex)\n    val relevantContext = readFiles(relevantContextPaths)\n    val sourceSnapshots = readFiles(changedFiles)\n    val diff = readGitDiff(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem\")\n    val testSignals = readAvailableTestResults(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem\")\n    val implementationClaims = deriveImplementationClaims(diff, sourceSnapshots, relevantContext)\n    val planRequirements = derivePlanRequirements(planArtifact, repoReadme, maintenance, principles, relevantContext)\n    val coverageAssessment = compareCodeToPlan(planRequirements, implementationClaims, testSignals)\n    val hotPathAssessment = assessInfrastructureRisks(coverageAssessment, diff, sourceSnapshots)\n    val verdict = buildCodeImplementsPlanVerdict(coverageAssessment, hotPathAssessment)\n    return makeResult(verdict)\n}",
+  "examined": [
+    "readFile",
+    "readReviewPreflightInputs",
+    "extractSubmittedPlan",
+    "listChangedFiles",
+    "selectRelevantRepoContext",
+    "readFiles",
+    "readGitDiff",
+    "readAvailableTestResults",
+    "deriveImplementationClaims",
+    "derivePlanRequirements",
+    "compareCodeToPlan",
+    "assessInfrastructureRisks",
+    "buildCodeImplementsPlanVerdict",
+    "makeResult"
+  ]
+}
