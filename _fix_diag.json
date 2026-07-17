@@ -8,7 +8,7 @@
   },
   "head": "test/review-dscli-logs",
   "clone_rc": 0,
-  "clone_err": "Cloning into '/tmp/fix-apply-5hop5hkv'...",
+  "clone_err": "Cloning into '/tmp/fix-apply-83ny5ay0'...",
   "apply": [
     {
       "status": "applied",

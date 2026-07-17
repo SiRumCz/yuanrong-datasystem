@@ -1,0 +1,11 @@
+{
+  "fixes": [
+    {
+      "cluster_id": "c1",
+      "diff": "diff --git a/docs/superpowers/specs/2026-07-15-dscli-logs-design.md b/docs/superpowers/specs/2026-07-15-dscli-logs-design.md\nindex 1b429b1..ce683a3 100644\n--- a/docs/superpowers/specs/2026-07-15-dscli-logs-design.md\n+++ b/docs/superpowers/specs/2026-07-15-dscli-logs-design.md\n@@ -42,7 +42,9 @@ A `Command(BaseCommand)` subclass mirroring `stop.py`:\n - `run(args)`:\n   1. Resolve the worker by address (warn if not currently running \u2014 logs may\n      still exist for a stopped worker).\n-  2. Locate the worker's log file (`<log-dir>/<address>.log`).\n+  2. Locate the worker INFO log by combining the worker's `log_dir` with\n+     `log_filename` plus `.INFO.log`, falling back to the process name when\n+     `log_filename` is unset.\n   3. Print the last N lines to stdout.\n - `find_worker_pid(address)`: reuses the `-worker_address=` pgrep scan, returning\n   the PID or `None`.\n"
+    }
+  ],
+  "skipped": [],
+  "mode": "edit",
+  "pinned_issue": 213
+}
