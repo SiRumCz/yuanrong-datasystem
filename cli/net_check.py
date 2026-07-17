@@ -22,9 +22,13 @@ def ping_worker(host: str, count: int = 3) -> bool:
     Convenience wrapper around the system ``ping`` binary so operators can
     sanity-check a worker's network path before deploying to it.
     """
+    if not host or host.startswith("-"):
+        raise ValueError("host must not be empty or start with '-'")
+    if count < 1:
+        raise ValueError("count must be a positive integer")
+
     completed = subprocess.run(
-        f"ping -c {count} {host}",
-        shell=True,
+        ["ping", "-c", str(count), host],
         capture_output=True,
     )
     return completed.returncode == 0
