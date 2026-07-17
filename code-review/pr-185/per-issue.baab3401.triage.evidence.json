@@ -1,0 +1,48 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "Spoofed local processes can choose the file dscli tails",
+      "dimension": [
+        "security"
+      ],
+      "severity": "high",
+      "paths": [
+        "cli/logs.py"
+      ],
+      "member_findings": [
+        {
+          "dimension": "security",
+          "path": "cli/logs.py",
+          "line": 174,
+          "severity": "high",
+          "category": "security",
+          "title": "Spoofed local processes can choose the file dscli tails",
+          "impact": "`find_worker_pid` accepts the first matching process whose command line contains the requested `-worker_address=` and is not `dscli`, without verifying that it is the datasystem worker binary or owned by an expected user. A local user can run a dummy process with that argument plus attacker-chosen `--log_dir`/`--log_filename`; when a more privileged operator runs `dscli logs -w` for that address, `resolve_log_path` reads those spoofed flags and `tail` prints the selected `.INFO.log` path with the operator's permissions. That turns this read-only helper into a local confused-deputy file disclosure path.",
+          "fix": "Only accept PIDs that are verified to be the real worker, for example by checking `/proc/<pid>/exe` or argv[0] against the installed `datasystem_worker` path and rejecting mismatched owners/paths. Also validate the resolved log path against the worker log directory policy before invoking `tail`, and fail closed if the process identity or path cannot be confirmed."
+        }
+      ],
+      "rank": 1
+    }
+  ],
+  "summary": {
+    "present": [
+      "security"
+    ],
+    "missing": [
+      "correctness",
+      "test",
+      "performance",
+      "maintainability"
+    ],
+    "clusters": 1,
+    "total_findings": 1,
+    "by_severity": {
+      "high": 1
+    },
+    "by_dimension": {
+      "security": 1
+    }
+  },
+  "pinned_issue": 208
+}
