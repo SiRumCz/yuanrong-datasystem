@@ -1,7 +1,13 @@
 protocol: code-review
 instance: pr-185
-state: honesty
+state: done
 iteration: 1
 gates: {}
-history: []
+history:
+- iteration: 1
+  agent_run_id: '29548410227'
+  checks:
+    evidence-present: pass
+    crypto-hash-valid: pass
+  feedback: ''
 head_sha: a58917c35055becbe9c5d4cfc10ae333d0ac989a
