@@ -1,19 +1,497 @@
 {
   "name": "kotlin-plan-demo",
-  "version": "0.1.0",
-  "_note": "Minimal single-agent protocol demonstrating the plan-as-Kotlin prompt (prompts/kotlin-plan.md). The `plan` agent must emit its plan as a Kotlin .kts string in evidence.plan_kts; the deterministic kotlin-plan-present check verifies the FORM of that plan (analyzable-looking, literal sink destinations) before it would be handed to a taint verifier. Started by a `/kotlin-plan` comment on a PR (routed by lib.route via the orchestrator); driven offline from tests/test_kotlin_plan.py.",
+  "version": "0.2.0",
+  "max_depth": 6,
+  "_note": "Test protocol that replicates the code-review PREFLIGHT topology (4-cluster fanout: adherence[intro -> fanout(spec-solves-issue||plan-implements-spec||code-implements-plan) -> join -> rollup] || mm-compliance[gather->judge] || consistency[intro -> fanout(docs||tests) -> join -> rollup] || security[gather->judge]) -> join-preflight -> preflight-gate -> done, using dedicated test-kotlin-* STUB agents. Each stub emits {\"verdict\":\"pass\",\"examined\":[\"stub\"]}; every node's only check is evidence-present. No real analysis, no toolchains, no conclude hooks. Started by /kotlin-plan on a PR. The plan-as-Kotlin phase (prompts/kotlin-plan.md, kotlin-plan-agent) is retained on disk but no longer in the flow.",
   "triggers": [
-    { "on": "issue_comment", "comment_prefix": "/kotlin-plan", "command": "start" }
+    {
+      "on": "issue_comment",
+      "comment_prefix": "/kotlin-plan",
+      "command": "start"
+    }
   ],
   "states": [
     {
-      "id": "plan",
+      "id": "preflight",
+      "kind": "fanout",
+      "label": "pre-flight adherence chain",
+      "branches": [
+        {
+          "id": "adherence",
+          "states": [
+            {
+              "id": "adherence-intro",
+              "kind": "agent",
+              "workflow": "test-kotlin-adherence-intro-agent",
+              "evidence": "stub.evidence.schema.json",
+              "max_iterations": 2,
+              "params": {
+                "require": [
+                  "examined"
+                ]
+              },
+              "checks": [
+                {
+                  "run": "evidence-present",
+                  "on_fail": "iterate"
+                }
+              ]
+            },
+            {
+              "id": "adherence-fanout",
+              "kind": "fanout",
+              "next": "join-adherence",
+              "branches": [
+                {
+                  "id": "spec-solves-issue",
+                  "states": [
+                    {
+                      "id": "spec-solves-issue-gather",
+                      "kind": "agent",
+                      "workflow": "test-kotlin-spec-solves-issue-agent",
+                      "evidence": "stub.evidence.schema.json",
+                      "max_iterations": 2,
+                      "params": {
+                        "require": [
+                          "verdict",
+                          "examined"
+                        ]
+                      },
+                      "checks": [
+                        {
+                          "run": "evidence-present",
+                          "on_fail": "iterate"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "spec-solves-issue-judge",
+                      "kind": "agent",
+                      "workflow": "test-kotlin-spec-solves-issue-judge-agent",
+                      "evidence": "stub.evidence.schema.json",
+                      "max_iterations": 2,
+                      "inputs": [
+                        {
+                          "from": "spec-solves-issue-gather",
+                          "as": "gather"
+                        }
+                      ],
+                      "params": {
+                        "leg": "spec-solves-issue",
+                        "mode": "spec-solves"
+                      },
+                      "checks": [
+                        {
+                          "run": "evidence-present",
+                          "on_fail": "iterate"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "plan-implements-spec",
+                  "states": [
+                    {
+                      "id": "plan-implements-spec-gather",
+                      "kind": "agent",
+                      "workflow": "test-kotlin-plan-implements-spec-agent",
+                      "evidence": "stub.evidence.schema.json",
+                      "max_iterations": 2,
+                      "params": {
+                        "require": [
+                          "verdict",
+                          "examined"
+                        ]
+                      },
+                      "checks": [
+                        {
+                          "run": "evidence-present",
+                          "on_fail": "iterate"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "plan-implements-spec-judge",
+                      "kind": "agent",
+                      "workflow": "test-kotlin-plan-implements-spec-judge-agent",
+                      "evidence": "stub.evidence.schema.json",
+                      "max_iterations": 2,
+                      "inputs": [
+                        {
+                          "from": "plan-implements-spec-gather",
+                          "as": "gather"
+                        }
+                      ],
+                      "params": {
+                        "leg": "plan-implements-spec",
+                        "mode": "plan-spec"
+                      },
+                      "checks": [
+                        {
+                          "run": "evidence-present",
+                          "on_fail": "iterate"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "code-implements-plan",
+                  "states": [
+                    {
+                      "id": "code-implements-plan-gather",
+                      "kind": "agent",
+                      "workflow": "test-kotlin-code-implements-plan-agent",
+                      "evidence": "stub.evidence.schema.json",
+                      "max_iterations": 2,
+                      "params": {
+                        "require": [
+                          "verdict",
+                          "examined"
+                        ]
+                      },
+                      "checks": [
+                        {
+                          "run": "evidence-present",
+                          "on_fail": "iterate"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "code-implements-plan-judge",
+                      "kind": "agent",
+                      "workflow": "test-kotlin-code-implements-plan-judge-agent",
+                      "evidence": "stub.evidence.schema.json",
+                      "max_iterations": 2,
+                      "inputs": [
+                        {
+                          "from": "code-implements-plan-gather",
+                          "as": "gather"
+                        }
+                      ],
+                      "params": {
+                        "leg": "code-implements-plan",
+                        "mode": "code-plan"
+                      },
+                      "checks": [
+                        {
+                          "run": "evidence-present",
+                          "on_fail": "iterate"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "join-adherence",
+              "kind": "join",
+              "of": "adherence-fanout"
+            },
+            {
+              "id": "adherence-rollup",
+              "kind": "agent",
+              "workflow": "test-kotlin-adherence-rollup-agent",
+              "evidence": "stub.evidence.schema.json",
+              "max_iterations": 2,
+              "inputs": [
+                {
+                  "from": "spec-solves-issue",
+                  "as": "spec-solves-issue"
+                },
+                {
+                  "from": "plan-implements-spec",
+                  "as": "plan-implements-spec"
+                },
+                {
+                  "from": "code-implements-plan",
+                  "as": "code-implements-plan"
+                }
+              ],
+              "params": {
+                "legs": [
+                  "spec-solves-issue",
+                  "plan-implements-spec",
+                  "code-implements-plan"
+                ]
+              },
+              "checks": [
+                {
+                  "run": "evidence-present",
+                  "on_fail": "iterate"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "mm-compliance",
+          "states": [
+            {
+              "id": "mm-compliance-gather",
+              "kind": "agent",
+              "workflow": "test-kotlin-mm-compliance-gate",
+              "evidence": "stub.evidence.schema.json",
+              "max_iterations": 2,
+              "params": {
+                "require": [
+                  "verdict"
+                ]
+              },
+              "checks": [
+                {
+                  "run": "evidence-present",
+                  "on_fail": "iterate"
+                }
+              ]
+            },
+            {
+              "id": "mm-compliance-judge",
+              "kind": "agent",
+              "workflow": "test-kotlin-mm-compliance-judge-agent",
+              "evidence": "stub.evidence.schema.json",
+              "max_iterations": 2,
+              "inputs": [
+                {
+                  "from": "mm-compliance-gather",
+                  "as": "gather"
+                }
+              ],
+              "params": {
+                "leg": "mm-compliance",
+                "mode": "mm"
+              },
+              "checks": [
+                {
+                  "run": "evidence-present",
+                  "on_fail": "iterate"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "consistency",
+          "states": [
+            {
+              "id": "consistency-intro",
+              "kind": "agent",
+              "workflow": "test-kotlin-consistency-intro-agent",
+              "evidence": "stub.evidence.schema.json",
+              "max_iterations": 2,
+              "params": {
+                "require": [
+                  "examined"
+                ]
+              },
+              "checks": [
+                {
+                  "run": "evidence-present",
+                  "on_fail": "iterate"
+                }
+              ]
+            },
+            {
+              "id": "consistency-fanout",
+              "kind": "fanout",
+              "next": "join-consistency",
+              "branches": [
+                {
+                  "id": "docs-updated-appropriately",
+                  "states": [
+                    {
+                      "id": "docs-updated-appropriately-gather",
+                      "kind": "agent",
+                      "workflow": "test-kotlin-docs-coherence-agent",
+                      "evidence": "stub.evidence.schema.json",
+                      "max_iterations": 2,
+                      "params": {
+                        "require": [
+                          "verdict",
+                          "examined"
+                        ]
+                      },
+                      "checks": [
+                        {
+                          "run": "evidence-present",
+                          "on_fail": "iterate"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "docs-updated-appropriately-judge",
+                      "kind": "agent",
+                      "workflow": "test-kotlin-docs-updated-appropriately-judge-agent",
+                      "evidence": "stub.evidence.schema.json",
+                      "max_iterations": 2,
+                      "inputs": [
+                        {
+                          "from": "docs-updated-appropriately-gather",
+                          "as": "gather"
+                        }
+                      ],
+                      "params": {
+                        "leg": "docs-updated-appropriately",
+                        "mode": "coherence"
+                      },
+                      "checks": [
+                        {
+                          "run": "evidence-present",
+                          "on_fail": "iterate"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "tests-updated-appropriately",
+                  "states": [
+                    {
+                      "id": "tests-updated-appropriately-gather",
+                      "kind": "agent",
+                      "workflow": "test-kotlin-tests-coherence-agent",
+                      "evidence": "stub.evidence.schema.json",
+                      "max_iterations": 2,
+                      "params": {
+                        "require": [
+                          "verdict",
+                          "examined"
+                        ]
+                      },
+                      "checks": [
+                        {
+                          "run": "evidence-present",
+                          "on_fail": "iterate"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "tests-updated-appropriately-judge",
+                      "kind": "agent",
+                      "workflow": "test-kotlin-tests-updated-appropriately-judge-agent",
+                      "evidence": "stub.evidence.schema.json",
+                      "max_iterations": 2,
+                      "inputs": [
+                        {
+                          "from": "tests-updated-appropriately-gather",
+                          "as": "gather"
+                        }
+                      ],
+                      "params": {
+                        "leg": "tests-updated-appropriately",
+                        "mode": "coherence"
+                      },
+                      "checks": [
+                        {
+                          "run": "evidence-present",
+                          "on_fail": "iterate"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "join-consistency",
+              "kind": "join",
+              "of": "consistency-fanout"
+            },
+            {
+              "id": "consistency-rollup",
+              "kind": "agent",
+              "workflow": "test-kotlin-consistency-rollup-agent",
+              "evidence": "stub.evidence.schema.json",
+              "max_iterations": 2,
+              "inputs": [
+                {
+                  "from": "docs-updated-appropriately",
+                  "as": "docs-updated-appropriately"
+                },
+                {
+                  "from": "tests-updated-appropriately",
+                  "as": "tests-updated-appropriately"
+                }
+              ],
+              "params": {
+                "legs": [
+                  "docs-updated-appropriately",
+                  "tests-updated-appropriately"
+                ]
+              },
+              "checks": [
+                {
+                  "run": "evidence-present",
+                  "on_fail": "iterate"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "security",
+          "states": [
+            {
+              "id": "security-gather",
+              "kind": "agent",
+              "workflow": "test-kotlin-security-gather-agent",
+              "evidence": "stub.evidence.schema.json",
+              "max_iterations": 2,
+              "checks": [
+                {
+                  "run": "evidence-present",
+                  "on_fail": "iterate"
+                }
+              ]
+            },
+            {
+              "id": "security-judge",
+              "kind": "agent",
+              "workflow": "test-kotlin-security-judge-agent",
+              "evidence": "stub.evidence.schema.json",
+              "max_iterations": 2,
+              "inputs": [
+                {
+                  "from": "security-gather",
+                  "as": "gather"
+                }
+              ],
+              "params": {
+                "leg": "security",
+                "mode": "security"
+              },
+              "checks": [
+                {
+                  "run": "evidence-present",
+                  "on_fail": "iterate"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "next": "join-preflight"
+    },
+    {
+      "id": "join-preflight",
+      "kind": "join",
+      "of": "preflight",
+      "next": "preflight-gate"
+    },
+    {
+      "id": "preflight-gate",
       "kind": "agent",
-      "workflow": "kotlin-plan-agent",
-      "evidence": "plan.evidence.schema.json",
+      "label": "pre-flight adherence gate (stub, terminal)",
+      "workflow": "test-kotlin-preflight-gate-agent",
+      "evidence": "stub.evidence.schema.json",
       "max_iterations": 2,
       "checks": [
-        { "run": "kotlin-plan-present", "on_fail": "iterate" }
+        {
+          "run": "evidence-present",
+          "on_fail": "iterate"
+        }
       ]
     }
   ]

@@ -1,0 +1,5 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Permissive evidence schema shared by every test-kotlin-* preflight stub node. The stubs emit {\"verdict\":\"pass\",\"examined\":[\"stub\"]}; presence of the node's params.require keys is enforced by the evidence-present check, not here.",
+  "type": "object"
+}
