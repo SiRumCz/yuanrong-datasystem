@@ -1,6 +1,6 @@
 protocol: kotlin-plan-demo
 instance: pr-106
-state: adherence-fanout
+state: done
 sub_state: plan-implements-spec-judge
 iteration: 1
 gates: {}

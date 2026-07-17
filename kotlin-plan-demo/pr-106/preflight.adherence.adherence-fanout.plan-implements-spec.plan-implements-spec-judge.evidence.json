@@ -1,0 +1,16 @@
+{
+  "plan_kts": "fun plan(candidatePlanPath: String, implementationSpecPath: String, workspacePath: String): Verdict {\n    val contextReadme = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/README.md\")\n    val contextIndex = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/index.md\")\n    val maintenance = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/maintenance.md\")\n    val repoIndex = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/generated/repo_index.md\")\n    val engineeringPrinciples = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/modules/overview/engineering-principles.md\")\n    val selfVerification = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/playbooks/upkeep/ai-self-verification.md\")\n    val candidatePlan = readFile(candidatePlanPath)\n    val implementationSpec = readFile(implementationSpecPath)\n    val repositoryFiles = listFiles(workspacePath)\n    val relevantPaths = identifyRelevantPaths(implementationSpec, candidatePlan, repoIndex, repositoryFiles)\n    val relevantSource = readFiles(relevantPaths)\n    val specRequirements = extractSpecRequirements(implementationSpec)\n    val planClaims = extractPlanClaims(candidatePlan)\n    val sourceFacts = extractSourceFacts(relevantSource, contextReadme, contextIndex, maintenance, engineeringPrinciples)\n    val coverage = comparePlanToSpec(planClaims, specRequirements, sourceFacts)\n    val infraRisks = assessInfrastructureRisks(planClaims, sourceFacts)\n    val verificationFindings = runSelfVerificationChecklist(coverage, infraRisks, selfVerification)\n    val verdict = makePlanImplementsSpecVerdict(coverage, infraRisks, verificationFindings)\n    return verdict\n}",
+  "examined": [
+    "readFile",
+    "listFiles",
+    "readFiles",
+    "identifyRelevantPaths",
+    "extractSpecRequirements",
+    "extractPlanClaims",
+    "extractSourceFacts",
+    "comparePlanToSpec",
+    "assessInfrastructureRisks",
+    "runSelfVerificationChecklist",
+    "makePlanImplementsSpecVerdict"
+  ]
+}
