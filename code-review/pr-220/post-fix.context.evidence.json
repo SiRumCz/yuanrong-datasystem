@@ -1,0 +1,1 @@
+{"transcript_present":false,"phases":[],"meta":{"pr_number":220,"head_sha":"6f9bbf46eb544360cf5016a891145bb35a6625ee"},"session_export":{"path":"/tmp/gh-aw/session-export.json","error":true,"summary":"No transcript was found for this PR (enable the capture hook with CONTEXT_CAPTURE=1 \u2014 it writes to the conversations branch at <owner>/<repo>/pr-<number>/<session>.jsonl)."}}
