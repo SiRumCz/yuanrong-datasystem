@@ -1,0 +1,15 @@
+{
+  "dimension": "performance",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": "cli/logs.py",
+      "line": 82,
+      "severity": "medium",
+      "category": "performance",
+      "title": "Log tail output is fully buffered in memory",
+      "impact": "The command accepts any positive -n value and then runs tail with capture_output=True, so a large log tail is accumulated in the Python process before anything is printed. An operator asking for a very large tail can cause high memory use or make the diagnostic command stall while buffering output.",
+      "fix": "Stream tail output directly to stdout/stderr instead of capturing it, or enforce a reasonable maximum line count before invoking tail."
+    }
+  ]
+}
