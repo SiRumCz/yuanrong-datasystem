@@ -1,9 +1,9 @@
 protocol: code-review
 instance: pr-220
 head_sha: 8e42b58ecc4e5b0ab63d1ee721a7ef70b3e6cccb
-phase: post-fix
-joined: false
-phase_label: "context capture \u2225 mental-model update"
+phase: mrp
+joined: true
+phase_label: merge-readiness pack (synthesis)
 status_comment_id: 5005244456
 overrides:
 - phase: preflight-gate
