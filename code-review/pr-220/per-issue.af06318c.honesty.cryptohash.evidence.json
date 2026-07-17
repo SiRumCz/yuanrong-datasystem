@@ -1,0 +1,1 @@
+{"ran": true, "command": "/bin/bash -lc 'python3 -m unittest tests.test_disk_report'", "exit_code": 0, "test_output": "..\n----------------------------------------------------------------------\nRan 2 tests in 0.006s\n\nOK\n", "crypto-verification-hash": "b70aaee4b98aed3c929b11d2edf077f243b297ed21e6fabbffb70bd38d82b0f9"}
