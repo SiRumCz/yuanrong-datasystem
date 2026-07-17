@@ -1,0 +1,48 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "Shell command injection in worker disk usage helper",
+      "dimension": [
+        "security"
+      ],
+      "severity": "high",
+      "paths": [
+        "cli/disk_report.py"
+      ],
+      "member_findings": [
+        {
+          "dimension": "security",
+          "path": "cli/disk_report.py",
+          "line": 24,
+          "severity": "high",
+          "category": "security",
+          "title": "Shell command injection in worker disk usage helper",
+          "impact": "If an operator-supplied or config-derived data_dir contains shell metacharacters such as ';', '$()', or backticks, this helper executes those tokens as part of the shell command. Any caller that passes untrusted worker directory input can turn a disk-usage check into arbitrary command execution with the dscli process privileges.",
+          "fix": "Avoid the shell and pass arguments as a list, for example subprocess.run([\"du\", \"-sh\", data_dir], shell=False, ...). If the path can come from external input, also validate or resolve it against the allowed worker data-directory roots before invoking du."
+        }
+      ],
+      "rank": 1
+    }
+  ],
+  "summary": {
+    "present": [
+      "security"
+    ],
+    "missing": [
+      "correctness",
+      "test",
+      "performance",
+      "maintainability"
+    ],
+    "clusters": 1,
+    "total_findings": 1,
+    "by_severity": {
+      "high": 1
+    },
+    "by_dimension": {
+      "security": 1
+    }
+  },
+  "pinned_issue": 222
+}
