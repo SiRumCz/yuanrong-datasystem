@@ -87,13 +87,10 @@ class Command(BaseCommand):
             self.logger.warning(f"No running worker @ {address}; showing last log")
 
         log_path = self.resolve_log_path(pid)
-        result = subprocess.run(
-            ["tail", "-n", str(lines), log_path], capture_output=True, text=True,
-        )
+        result = subprocess.run(["tail", "-n", str(lines), log_path])
         if result.returncode != 0:
-            self.logger.error(f"Failed to read log for {address}: {result.stderr}")
+            self.logger.error(f"Failed to read log for {address}")
             return BaseCommand.FAILURE
-        print(result.stdout, end="")
         return BaseCommand.SUCCESS
 
     def resolve_log_path(self, pid):

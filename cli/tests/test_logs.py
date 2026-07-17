@@ -36,7 +36,7 @@ class TestLogsCommand(unittest.TestCase):
     ):
         """A running worker's log tail is printed and the command succeeds."""
         mock_defaults.return_value = {"log_dir": "./datasystem/logs", "log_filename": ""}
-        mock_run.return_value = mock.Mock(returncode=0, stdout="a\nb\nc\n", stderr="")
+        mock_run.return_value = mock.Mock(returncode=0)
 
         cmd = logs.Command()
         args = mock.Mock(worker_address="127.0.0.1:31501", lines=100)
@@ -48,7 +48,6 @@ class TestLogsCommand(unittest.TestCase):
                 "tail", "-n", "100",
                 os.path.realpath("./datasystem/logs/datasystem_worker.INFO.log"),
             ],
-            capture_output=True, text=True,
         )
 
     @mock.patch.object(logs.Command, "load_worker_config_defaults")
@@ -69,7 +68,7 @@ class TestLogsCommand(unittest.TestCase):
     ):
         """Explicit worker log flags select the current INFO log file."""
         mock_defaults.return_value = {"log_dir": "./datasystem/logs", "log_filename": ""}
-        mock_run.return_value = mock.Mock(returncode=0, stdout="a\nb\nc\n", stderr="")
+        mock_run.return_value = mock.Mock(returncode=0)
 
         cmd = logs.Command()
         args = mock.Mock(worker_address="127.0.0.1:31501", lines=100)
@@ -78,7 +77,6 @@ class TestLogsCommand(unittest.TestCase):
         self.assertEqual(rc, logs.BaseCommand.SUCCESS)
         mock_run.assert_called_once_with(
             ["tail", "-n", "100", "/var/log/datasystem/custom_worker.INFO.log"],
-            capture_output=True, text=True,
         )
 
     @mock.patch("yr.datasystem.cli.logs.subprocess.run")
