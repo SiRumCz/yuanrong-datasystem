@@ -1,0 +1,7 @@
+protocol: kotlin-plan-demo
+instance: pr-106
+state: adherence-fanout
+sub_state: spec-solves-issue-gather
+iteration: 1
+gates: {}
+history: []
