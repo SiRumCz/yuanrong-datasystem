@@ -1,0 +1,21 @@
+{
+  "plan_kts": "fun plan(repository: String, issueNumber: Int, specPath: String): SpecSolvesIssueVerdict {\n    val repoReadme = readFile(\".repo_context/README.md\")\n    val repoIndex = readFile(\".repo_context/index.md\")\n    val repoMaintenance = readFile(\".repo_context/maintenance.md\")\n    val generatedIndex = readFile(\".repo_context/generated/repo_index.md\")\n    val engineeringPrinciples = readFile(\".repo_context/modules/overview/engineering-principles.md\")\n    val issue = readGitHubIssue(repository = repository, issueNumber = issueNumber)\n    val issueComments = readGitHubIssueComments(repository = repository, issueNumber = issueNumber)\n    val spec = readFile(specPath)\n    val referencedPaths = extractReferencedSourcePaths(spec)\n    val sourceEvidence = readRepositoryFiles(referencedPaths)\n    val issueRequirements = extractIssueRequirements(issue, issueComments)\n    val specCommitments = extractSpecCommitments(spec)\n    val sourceBackedSpecClaims = confirmClaimsAgainstSource(specCommitments, sourceEvidence)\n    val scopeComparison = compareRequirementCoverage(issueRequirements, sourceBackedSpecClaims)\n    val riskAssessment = assessUncoveredRequirements(scopeComparison, engineeringPrinciples)\n    val verdict = buildSpecSolvesIssueVerdict(scopeComparison, riskAssessment, repoReadme, repoIndex, repoMaintenance, generatedIndex)\n    return verdict\n}",
+  "examined": [
+    "readFile:.repo_context/README.md",
+    "readFile:.repo_context/index.md",
+    "readFile:.repo_context/maintenance.md",
+    "readFile:.repo_context/generated/repo_index.md",
+    "readFile:.repo_context/modules/overview/engineering-principles.md",
+    "readGitHubIssue",
+    "readGitHubIssueComments",
+    "readFile:specPath",
+    "extractReferencedSourcePaths",
+    "readRepositoryFiles",
+    "extractIssueRequirements",
+    "extractSpecCommitments",
+    "confirmClaimsAgainstSource",
+    "compareRequirementCoverage",
+    "assessUncoveredRequirements",
+    "buildSpecSolvesIssueVerdict"
+  ]
+}
