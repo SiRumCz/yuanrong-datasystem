@@ -1,0 +1,25 @@
+{
+  "plan_kts": "fun plan(workspace: String, repository: String, pullRequestNumber: Int?, issueNumber: Int?): JudgeVerdict {\n    val repoInstructions = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/AGENTS.md\")\n    val contextReadme = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/README.md\")\n    val contextIndex = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/index.md\")\n    val contextMaintenance = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/maintenance.md\")\n    val generatedRepoIndex = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/generated/repo_index.md\")\n    val engineeringPrinciples = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/modules/overview/engineering-principles.md\")\n    val selfVerification = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/playbooks/upkeep/ai-self-verification.md\")\n    val workflowContext = readGitHubWorkflowContext()\n    val targetRefs = resolveReviewTarget(workflowContext, repository, pullRequestNumber, issueNumber)\n    val issue = githubReadIssue(repository = \"SiRumCz/yuanrong-datasystem\", number = targetRefs.issueNumber)\n    val issueComments = githubReadIssueComments(repository = \"SiRumCz/yuanrong-datasystem\", number = targetRefs.issueNumber)\n    val pullRequest = githubReadPullRequest(repository = \"SiRumCz/yuanrong-datasystem\", number = targetRefs.pullRequestNumber)\n    val pullRequestFiles = githubReadPullRequestFiles(repository = \"SiRumCz/yuanrong-datasystem\", number = targetRefs.pullRequestNumber)\n    val pullRequestDiff = githubReadPullRequestDiff(repository = \"SiRumCz/yuanrong-datasystem\", number = targetRefs.pullRequestNumber)\n    val pullRequestChecks = githubReadPullRequestChecks(repository = \"SiRumCz/yuanrong-datasystem\", number = targetRefs.pullRequestNumber)\n    val candidateModules = identifyTouchedModules(pullRequestFiles, generatedRepoIndex)\n    val moduleContext = readRelevantRepoContext(candidateModules)\n    val sourceEvidence = readChangedSourceFiles(workspace, pullRequestFiles)\n    val testEvidence = readChangedAndRelatedTests(workspace, pullRequestFiles, candidateModules)\n    val issueRequirements = extractIssueRequirements(issue, issueComments)\n    val specClaims = extractSpecClaims(pullRequest, pullRequestDiff, sourceEvidence, testEvidence)\n    val behavioralCoverage = compareSpecToIssue(issueRequirements, specClaims)\n    val infraRiskReview = assessInfrastructureRisks(behavioralCoverage, sourceEvidence, engineeringPrinciples, moduleContext)\n    val testAdequacy = assessTestAdequacy(issueRequirements, testEvidence, pullRequestChecks)\n    val selfCheck = applySelfVerification(selfVerification, behavioralCoverage, infraRiskReview, testAdequacy)\n    val verdict = decidePassOrChanges(selfCheck)\n    return verdict\n}",
+  "examined": [
+    "readFile",
+    "readGitHubWorkflowContext",
+    "resolveReviewTarget",
+    "githubReadIssue",
+    "githubReadIssueComments",
+    "githubReadPullRequest",
+    "githubReadPullRequestFiles",
+    "githubReadPullRequestDiff",
+    "githubReadPullRequestChecks",
+    "identifyTouchedModules",
+    "readRelevantRepoContext",
+    "readChangedSourceFiles",
+    "readChangedAndRelatedTests",
+    "extractIssueRequirements",
+    "extractSpecClaims",
+    "compareSpecToIssue",
+    "assessInfrastructureRisks",
+    "assessTestAdequacy",
+    "applySelfVerification",
+    "decidePassOrChanges"
+  ]
+}
