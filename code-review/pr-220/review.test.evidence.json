@@ -1,0 +1,15 @@
+{
+  "dimension": "test",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "cli/disk_report.py",
+      "line": 18,
+      "severity": "medium",
+      "category": "test",
+      "title": "New disk-usage helper has no regression coverage",
+      "impact": "The PR adds worker_disk_usage(), which shells out to du and returns parsed stdout, but the diff adds no unit test for the command invocation, stdout handling, or subprocess failure behavior. A future change can break this operator-facing CLI helper without any test failing.",
+      "fix": "Add a focused Python unit test, for example under a CLI test module, that patches subprocess.run and asserts worker_disk_usage() passes the expected data_dir, strips stdout, and defines the expected behavior when du fails or returns stderr."
+    }
+  ]
+}
