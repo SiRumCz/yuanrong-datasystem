@@ -1,0 +1,51 @@
+{
+  "legs": [
+    {
+      "leg": "spec-solves-issue",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence evidence was not available for spec-solves-issue, so no leaf verdict was provided."
+    },
+    {
+      "leg": "plan-implements-spec",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence evidence was not available for plan-implements-spec, so no leaf verdict was provided."
+    },
+    {
+      "leg": "code-implements-plan",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence evidence was not available for code-implements-plan, so no leaf verdict was provided."
+    },
+    {
+      "leg": "mm-compliance",
+      "verdict": "diverges",
+      "scope": {},
+      "summary": "MM compliance reported verdict `diverges` with 1 divergence finding(s)."
+    },
+    {
+      "leg": "docs-updated-appropriately",
+      "verdict": "inadequate",
+      "scope": {
+        "code_changed": true
+      },
+      "summary": "Consistency leaf docs-updated-appropriately reported verdict `inadequate` from the supplied cluster evidence."
+    },
+    {
+      "leg": "tests-updated-appropriately",
+      "verdict": "inadequate",
+      "scope": {
+        "code_changed": true
+      },
+      "summary": "Consistency leaf tests-updated-appropriately reported verdict `inadequate` from the supplied cluster evidence."
+    },
+    {
+      "leg": "security",
+      "verdict": "PASS",
+      "scope": {},
+      "summary": "Security reported verdict `PASS` with 0 locked violation(s)."
+    }
+  ],
+  "examined": []
+}
