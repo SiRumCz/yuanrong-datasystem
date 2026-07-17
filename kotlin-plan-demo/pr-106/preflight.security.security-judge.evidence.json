@@ -1,0 +1,25 @@
+{
+  "plan_kts": "fun plan(workspace: String, repository: String, pullRequestNumber: String?): SecurityVerdict {\n    val repoReadme = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/README.md\")\n    val repoIndex = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/index.md\")\n    val maintenance = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/maintenance.md\")\n    val generatedIndex = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/generated/repo_index.md\")\n    val principles = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/modules/overview/engineering-principles.md\")\n    val reviewScope = readWorkflowContext(repository, pullRequestNumber)\n    val changedFiles = listChangedFiles(reviewScope)\n    val securityRelevantFiles = filterSecurityRelevantFiles(changedFiles)\n    val sourceSnapshots = readFiles(securityRelevantFiles)\n    val diff = readDiff(reviewScope)\n    val dependencyManifests = readMatchingFiles(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem\", listOf(\"**/build.gradle.kts\", \"**/pom.xml\", \"**/gradle.lockfile\", \"**/libs.versions.toml\"))\n    val securityContext = buildSecurityContext(repoReadme, repoIndex, maintenance, generatedIndex, principles)\n    val taintFindings = inspectInputTrustBoundaries(diff, sourceSnapshots, securityContext)\n    val authzFindings = inspectAuthnAuthzChanges(diff, sourceSnapshots, securityContext)\n    val cryptoFindings = inspectCryptoAndSecretHandling(diff, sourceSnapshots, securityContext)\n    val deserializationFindings = inspectParsingAndDeserialization(diff, sourceSnapshots, securityContext)\n    val persistenceFindings = inspectPersistenceAndRecoverySecurity(diff, sourceSnapshots, securityContext)\n    val dependencyFindings = inspectDependencyRisk(dependencyManifests, diff)\n    val concurrencyFindings = inspectSecurityImpactOfConcurrency(diff, sourceSnapshots, securityContext)\n    val combinedFindings = combineFindings(taintFindings, authzFindings, cryptoFindings, deserializationFindings, persistenceFindings, dependencyFindings, concurrencyFindings)\n    val verdict = judgeSecurityVerdict(combinedFindings, reviewScope)\n    val evidence = redactSensitiveEvidence(combinedFindings)\n    val report = formatSecurityJudgeReport(verdict, evidence)\n    return makeSecurityVerdict(verdict, report)\n}",
+  "examined": [
+    "readFile",
+    "readWorkflowContext",
+    "listChangedFiles",
+    "filterSecurityRelevantFiles",
+    "readFiles",
+    "readDiff",
+    "readMatchingFiles",
+    "buildSecurityContext",
+    "inspectInputTrustBoundaries",
+    "inspectAuthnAuthzChanges",
+    "inspectCryptoAndSecretHandling",
+    "inspectParsingAndDeserialization",
+    "inspectPersistenceAndRecoverySecurity",
+    "inspectDependencyRisk",
+    "inspectSecurityImpactOfConcurrency",
+    "combineFindings",
+    "judgeSecurityVerdict",
+    "redactSensitiveEvidence",
+    "formatSecurityJudgeReport",
+    "makeSecurityVerdict"
+  ]
+}
