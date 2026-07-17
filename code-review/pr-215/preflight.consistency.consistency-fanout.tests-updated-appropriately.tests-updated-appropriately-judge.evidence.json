@@ -1,0 +1,17 @@
+{
+  "leg": "tests-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": "tests/kvtest/tests/python/test_deploy_worker.py",
+      "severity": "blocking",
+      "rationale": "The gather finding identifies new cli.net_check.ping_worker behavior with no PR test coverage for success, failure, or subprocess command arguments. For infrastructure-facing CLI behavior, that is a substantive adherence gap and should block merge until covered."
+    }
+  ],
+  "examined": [
+    "tests/kvtest/tests/python/test_deploy_worker.py"
+  ]
+}
