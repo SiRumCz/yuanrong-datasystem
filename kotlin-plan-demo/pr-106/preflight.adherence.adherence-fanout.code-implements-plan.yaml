@@ -1,7 +1,0 @@
-protocol: kotlin-plan-demo
-instance: pr-106
-state: done
-sub_state: code-implements-plan-judge
-iteration: 1
-gates: {}
-history: []
