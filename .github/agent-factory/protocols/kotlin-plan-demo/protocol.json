@@ -1,0 +1,20 @@
+{
+  "name": "kotlin-plan-demo",
+  "version": "0.1.0",
+  "_note": "Minimal single-agent protocol demonstrating the plan-as-Kotlin prompt (prompts/kotlin-plan.md). The `plan` agent must emit its plan as a Kotlin .kts string in evidence.plan_kts; the deterministic kotlin-plan-present check verifies the FORM of that plan (analyzable-looking, literal sink destinations) before it would be handed to a taint verifier. Started by a `/kotlin-plan` comment on a PR (routed by lib.route via the orchestrator); driven offline from tests/test_kotlin_plan.py.",
+  "triggers": [
+    { "on": "issue_comment", "comment_prefix": "/kotlin-plan", "command": "start" }
+  ],
+  "states": [
+    {
+      "id": "plan",
+      "kind": "agent",
+      "workflow": "kotlin-plan-agent",
+      "evidence": "plan.evidence.schema.json",
+      "max_iterations": 2,
+      "checks": [
+        { "run": "kotlin-plan-present", "on_fail": "iterate" }
+      ]
+    }
+  ]
+}

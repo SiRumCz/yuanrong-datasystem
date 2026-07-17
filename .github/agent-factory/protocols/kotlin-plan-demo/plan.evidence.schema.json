@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Evidence for the kotlin-plan-demo 'plan' phase: the agent's plan expressed as a single Kotlin .kts script, ready for deterministic taint verification before execution. plan_kts is the artifact; examined is the trace of tool functions / sources / sinks the plan uses.",
+  "type": "object",
+  "required": ["plan_kts", "examined"],
+  "properties": {
+    "plan_kts": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The complete plan as a single Kotlin script (a function whose body is a sequence of tool calls with data flowing through named val bindings)."
+    },
+    "examined": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Trace of the tool functions / sources / sinks referenced in the plan."
+    }
+  },
+  "additionalProperties": true
+}
