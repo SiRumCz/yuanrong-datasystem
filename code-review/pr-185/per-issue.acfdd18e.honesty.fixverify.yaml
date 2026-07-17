@@ -1,7 +1,14 @@
 protocol: code-review
 instance: pr-185
-state: honesty
+state: failed
 iteration: 1
 gates: {}
-history: []
+history:
+- iteration: 1
+  agent_run_id: '29548507320'
+  checks:
+    evidence-present: fail
+    honesty-check-valid: fail
+  feedback: 'evidence shape: missing required key `check`; missing required key `pass`;
+    missing required key `reason`; check must be ''testhash'' or ''fixverify'''
 head_sha: 856e51dcb3974501fe1a4c1211b4534476dfad75
