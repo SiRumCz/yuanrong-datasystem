@@ -1,0 +1,11 @@
+{
+  "fixes": [
+    {
+      "cluster_id": "c1",
+      "diff": "diff --git a/cli/net_check.py b/cli/net_check.py\nindex 1c727d5..ac3434c 100644\n--- a/cli/net_check.py\n+++ b/cli/net_check.py\n@@ -22,9 +22,13 @@ def ping_worker(host: str, count: int = 3) -> bool:\n     Convenience wrapper around the system ``ping`` binary so operators can\n     sanity-check a worker's network path before deploying to it.\n     \"\"\"\n+    if not host or host.startswith(\"-\"):\n+        raise ValueError(\"host must not be empty or start with '-'\")\n+    if count < 1:\n+        raise ValueError(\"count must be a positive integer\")\n+\n     completed = subprocess.run(\n-        f\"ping -c {count} {host}\",\n-        shell=True,\n+        [\"ping\", \"-c\", str(count), host],\n         capture_output=True,\n     )\n     return completed.returncode == 0\n"
+    }
+  ],
+  "skipped": [],
+  "mode": "edit",
+  "pinned_issue": 217
+}
