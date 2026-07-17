@@ -1,0 +1,6 @@
+protocol: code-review
+instance: pr-220
+head_sha: 8e42b58ecc4e5b0ab63d1ee721a7ef70b3e6cccb
+phase: preflight
+joined: false
+phase_label: pre-flight adherence chain
