@@ -1,0 +1,7 @@
+protocol: kotlin-plan-demo
+instance: pr-106
+state: preflight
+sub_state: adherence-intro
+iteration: 1
+gates: {}
+history: []

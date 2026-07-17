@@ -1,6 +1,7 @@
 protocol: kotlin-plan-demo
 instance: pr-106
+state: preflight
+iteration: 1
+gates: {}
 head_sha: b3df3311230021d68562acc0cff99c9ff8799ec9
-phase: preflight
-joined: false
-phase_label: pre-flight adherence chain
+history: []
