@@ -1,0 +1,24 @@
+{
+  "plan_kts": "data class LegInput(val name: String, val path: String)\ndata class RollupVerdict(val verdict: String, val rationale: String, val blockingFindings: List<String>)\n\nfun plan(): RollupVerdict {\n    val specSolvesIssuePath = \"/tmp/gh-aw/agent/spec-solves-issue.json\"\n    val planImplementsSpecPath = \"/tmp/gh-aw/agent/plan-implements-spec.json\"\n    val codeImplementsPlanPath = \"/tmp/gh-aw/agent/code-implements-plan.json\"\n    val issueContextPath = \"/tmp/gh-aw/agent/review-context.json\"\n\n    val repoContextReadme = readFile(\".repo_context/README.md\")\n    val repoContextIndex = readFile(\".repo_context/index.md\")\n    val repoContextMaintenance = readFile(\".repo_context/maintenance.md\")\n    val repoIndex = readFile(\".repo_context/generated/repo_index.md\")\n    val engineeringPrinciples = readFile(\".repo_context/modules/overview/engineering-principles.md\")\n    val selfVerificationPlaybook = readFile(\".repo_context/playbooks/upkeep/ai-self-verification.md\")\n\n    val issueContext = readJson(issueContextPath)\n    val specSolvesIssueRaw = readJson(specSolvesIssuePath)\n    val planImplementsSpecRaw = readJson(planImplementsSpecPath)\n    val codeImplementsPlanRaw = readJson(codeImplementsPlanPath)\n\n    val specSolvesIssue = normalizeAdherenceLeg(\"spec-solves-issue\", specSolvesIssueRaw)\n    val planImplementsSpec = normalizeAdherenceLeg(\"plan-implements-spec\", planImplementsSpecRaw)\n    val codeImplementsPlan = normalizeAdherenceLeg(\"code-implements-plan\", codeImplementsPlanRaw)\n\n    val repoRules = extractRollupRelevantRules(repoContextReadme, repoContextIndex, repoContextMaintenance, repoIndex, engineeringPrinciples)\n    val sourceBackedChecks = verifyLegClaimsAgainstInputs(issueContext, specSolvesIssue, planImplementsSpec, codeImplementsPlan, repoRules)\n    val consistencyReport = compareLegsForContradictions(specSolvesIssue, planImplementsSpec, codeImplementsPlan, sourceBackedChecks)\n    val blockingFindings = collectBlockingAdherenceFailures(specSolvesIssue, planImplementsSpec, codeImplementsPlan, consistencyReport)\n    val verdict = decideClusterVerdict(blockingFindings, consistencyReport)\n    val selfCheck = applySelfVerification(selfVerificationPlaybook, verdict, blockingFindings)\n    val finalVerdict = finalizeRollupVerdict(verdict, blockingFindings, selfCheck)\n\n    writeFile(\"/tmp/gh-aw/agent/adherence-rollup-verdict.json\", serializeJson(finalVerdict))\n    return finalVerdict\n}",
+  "examined": [
+    "readFile:.repo_context/README.md",
+    "readFile:.repo_context/index.md",
+    "readFile:.repo_context/maintenance.md",
+    "readFile:.repo_context/generated/repo_index.md",
+    "readFile:.repo_context/modules/overview/engineering-principles.md",
+    "readFile:.repo_context/playbooks/upkeep/ai-self-verification.md",
+    "readJson:/tmp/gh-aw/agent/review-context.json",
+    "readJson:/tmp/gh-aw/agent/spec-solves-issue.json",
+    "readJson:/tmp/gh-aw/agent/plan-implements-spec.json",
+    "readJson:/tmp/gh-aw/agent/code-implements-plan.json",
+    "normalizeAdherenceLeg",
+    "extractRollupRelevantRules",
+    "verifyLegClaimsAgainstInputs",
+    "compareLegsForContradictions",
+    "collectBlockingAdherenceFailures",
+    "decideClusterVerdict",
+    "applySelfVerification",
+    "finalizeRollupVerdict",
+    "writeFile:/tmp/gh-aw/agent/adherence-rollup-verdict.json"
+  ]
+}
