@@ -25,13 +25,15 @@ tools:
 steps:
   - uses: actions/checkout@v5
     with: { persist-credentials: false }
-  - name: Materialize task context
+  - name: Materialize task context + stage the plan spec
     env:
       CTX: ${{ github.event.inputs.aw_context }}
     run: |
-      mkdir -p /tmp/gh-aw
+      mkdir -p /tmp/gh-aw/agent /tmp/gh-aw
       if [ -z "$CTX" ]; then CTX='{}'; fi
       printf '%s' "$CTX" > /tmp/gh-aw/task-context.json
+      cp .github/agent-factory/protocols/kotlin-plan-demo/prompts/kotlin-plan.md \
+         /tmp/gh-aw/agent/kotlin-plan.md
       cat /tmp/gh-aw/task-context.json
 post-steps:
   - name: Upload evidence artifact
@@ -44,19 +46,22 @@ post-steps:
 timeout-minutes: 10
 ---
 
-# Test Kotlin: mm compliance gate — preflight stub
+# Test Kotlin: mm compliance gate — plan your work as Kotlin (.kts); do NOT execute
 
-You are a **structural stub** for the `test-kotlin-mm-compliance-gate` node of the `kotlin-plan-demo`
-preflight test protocol. You do NO analysis; you exist only to exercise the engine's
-preflight fanout/join/gate topology.
+You are the **mm-compliance gather** step of the code-review preflight, running here as a
+**PLAN-ONLY** agent. Your real job: gather mental-model compliance evidence: read the repo's mental model and the PR diff, and check the change complies with it.
 
-## Task
+Read the plan-as-Kotlin authoring spec staged at `/tmp/gh-aw/agent/kotlin-plan.md`
+(`cat` it) and follow its rules. Then author — as a single Kotlin `.kts` script — the
+plan of the tool calls you WOULD run to do that job: read the inputs you'd need,
+analyze them, and produce your verdict. Make the steps realistic for THIS role, with
+data flowing through named `val` bindings. Do **not** actually execute anything — no
+real analysis, no tool runs — we only want the plan (to save time and tokens).
 
-Write exactly this object to `/tmp/gh-aw/evidence.json` using the `edit` tool:
+Write `/tmp/gh-aw/evidence.json` as ONE JSON object using the `edit` tool:
 
 ```json
-{ "verdict": "pass", "examined": ["stub"] }
+{ "plan_kts": "fun plan(...) { ... }", "examined": ["<tool functions / sources / sinks in your plan>"] }
 ```
 
-Then call `noop`. Do NOT post comments, do NOT read the diff, do NOT do any analysis.
-Write nothing else.
+Then call `noop`. Do NOT post comments or run any analysis. Write nothing else.
