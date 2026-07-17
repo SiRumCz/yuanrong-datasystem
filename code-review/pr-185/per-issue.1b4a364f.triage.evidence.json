@@ -1,0 +1,48 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "logs rejects supported IPv6 worker addresses",
+      "dimension": [
+        "correctness"
+      ],
+      "severity": "high",
+      "paths": [
+        "cli/logs.py"
+      ],
+      "member_findings": [
+        {
+          "dimension": "correctness",
+          "path": "cli/logs.py",
+          "line": 43,
+          "severity": "high",
+          "category": "correctness",
+          "title": "logs rejects supported IPv6 worker addresses",
+          "impact": "Existing CLI address validation accepts bracketed IPv6 worker addresses such as [::1]:31501, and the public API docs describe worker addresses as IPv4 or IPv6. This new validator only accepts a single host token followed by one colon, so `dscli logs -w [::1]:31501` fails before process lookup even when the worker is running and `dscli stop` can target the same address.",
+          "fix": "Reuse the existing `yr.datasystem.cli.common.util.is_valid_address_port` helper, or implement equivalent IPv4/bracketed-IPv6 host:port parsing, before escaping the address for `pgrep`."
+        }
+      ],
+      "rank": 1
+    }
+  ],
+  "summary": {
+    "present": [
+      "correctness"
+    ],
+    "missing": [
+      "test",
+      "performance",
+      "security",
+      "maintainability"
+    ],
+    "clusters": 1,
+    "total_findings": 1,
+    "by_severity": {
+      "high": 1
+    },
+    "by_dimension": {
+      "correctness": 1
+    }
+  },
+  "pinned_issue": 211
+}
