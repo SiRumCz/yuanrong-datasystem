@@ -110,18 +110,12 @@ class Command(BaseCommand):
 
     def load_worker_config_defaults(self):
         """Load default worker config values used by ``dscli start``."""
-        default_config_path = os.path.join(self._base_dir, "worker_config.json")
-        default_config_path = self.valid_safe_path(default_config_path)
+        defaults = {}
         try:
-            with open(default_config_path, "r") as f:
-                config = json.load(f)
+            util.fill_worker_config_defaults(self._base_dir, defaults)
         except (OSError, json.JSONDecodeError):
             return {}
-        return {
-            key: str(item.get("value", "")).strip()
-            for key, item in config.items()
-            if isinstance(item, dict)
-        }
+        return defaults
 
     def resolve_default_path(self, path):
         """Normalize default relative paths the same way ``dscli start`` does."""
