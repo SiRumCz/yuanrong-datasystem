@@ -58,7 +58,7 @@ post-steps:
       name: evidence
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
-source: golivax/agentic-protocol-poc/.github/workflows/mm-compliance-gate.md@c6ecf5dad176860d8088573b8be7f5e65e21e3dc
+source: golivax/agentic-protocol-poc/.github/workflows/mm-compliance-gate.md@b99138c649a12218fb6020303a6dec371f244e31
 ---
 
 # Mental-Model Compliance Gate

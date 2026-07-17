@@ -35,13 +35,20 @@ def _validate_rationale(r, problems):
         return
     if not is_str(r.get("summary")):
         problems.append("rationale.summary is not a string")
+    im = r.get("intentMatch")
+    if im is not None and im not in ("aligned", "partial", "unclear"):
+        problems.append("rationale.intentMatch not in aligned/partial/unclear")
     kps = r.get("keyPoints")
     if not isinstance(kps, list):
         problems.append("rationale.keyPoints is not a list")
     else:
         for i, kp in enumerate(kps):
-            if not isinstance(kp, dict) or not is_str(kp.get("point")) or not is_str(kp.get("source")):
-                problems.append(f"rationale.keyPoints[{i}] missing string point/source")
+            # Each key point must carry a verbatim snippet + its source (conversation|walkthrough),
+            # matching the custody clear-rationale shape.
+            if (not isinstance(kp, dict) or not is_str(kp.get("point"))
+                    or not is_str(kp.get("snippet"))
+                    or kp.get("source") not in ("conversation", "walkthrough")):
+                problems.append(f"rationale.keyPoints[{i}] missing string point/snippet or source not in conversation/walkthrough")
                 break
 
 
