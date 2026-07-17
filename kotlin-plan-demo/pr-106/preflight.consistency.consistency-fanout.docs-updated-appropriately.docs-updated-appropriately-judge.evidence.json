@@ -1,0 +1,22 @@
+{
+  "plan_kts": "fun plan(repoRoot: String, pullRequestNumber: Int): Verdict {\\n    val repoContextReadme = readFile(\\\".repo_context/README.md\\\")\\n    val repoContextIndex = readFile(\\\".repo_context/index.md\\\")\\n    val repoContextMaintenance = readFile(\\\".repo_context/maintenance.md\\\")\\n    val generatedRepoIndex = readFile(\\\".repo_context/generated/repo_index.md\\\")\\n    val engineeringPrinciples = readFile(\\\".repo_context/modules/overview/engineering-principles.md\\\")\\n    val changedFiles = githubListPullRequestFiles(owner = \\\"SiRumCz\\\", repo = \\\"yuanrong-datasystem\\\", pullRequestNumber = pullRequestNumber)\\n    val pullRequestDiff = githubReadPullRequestDiff(owner = \\\"SiRumCz\\\", repo = \\\"yuanrong-datasystem\\\", pullRequestNumber = pullRequestNumber)\\n    val touchedDomains = inferTouchedDomains(changedFiles, generatedRepoIndex)\\n    val relevantContextPaths = selectRepoContextForDomains(touchedDomains, repoContextIndex)\\n    val relevantContext = readFiles(relevantContextPaths)\\n    val sourceClaims = extractBehavioralAndOperationalClaims(pullRequestDiff)\\n    val documentationChanges = filterDocumentationChanges(changedFiles, pullRequestDiff)\\n    val docExpectations = deriveDocumentationExpectations(sourceClaims, engineeringPrinciples, relevantContext, repoContextMaintenance)\\n    val coherenceFindings = compareDocsToCodeChanges(documentationChanges, docExpectations, relevantContext)\\n    val staleContextFindings = detectStaleOrMissingRepoContextUpdates(changedFiles, sourceClaims, relevantContext, repoContextMaintenance)\\n    val verdict = judgeDocsUpdatedAppropriately(coherenceFindings, staleContextFindings)\\n    val evidence = buildVerdictEvidence(verdict, coherenceFindings, staleContextFindings)\\n    return makeVerdict(evidence)\\n}",
+  "examined": [
+    "readFile:.repo_context/README.md",
+    "readFile:.repo_context/index.md",
+    "readFile:.repo_context/maintenance.md",
+    "readFile:.repo_context/generated/repo_index.md",
+    "readFile:.repo_context/modules/overview/engineering-principles.md",
+    "githubListPullRequestFiles",
+    "githubReadPullRequestDiff",
+    "inferTouchedDomains",
+    "selectRepoContextForDomains",
+    "readFiles",
+    "extractBehavioralAndOperationalClaims",
+    "filterDocumentationChanges",
+    "deriveDocumentationExpectations",
+    "compareDocsToCodeChanges",
+    "detectStaleOrMissingRepoContextUpdates",
+    "judgeDocsUpdatedAppropriately",
+    "makeVerdict"
+  ]
+}
