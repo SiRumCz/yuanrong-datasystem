@@ -1,0 +1,23 @@
+{
+  "leg": "docs-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": "docs/source_zh_cn/deployment/dscli.md",
+      "severity": "blocking",
+      "rationale": "The gather found that the canonical dscli command reference omits the new logs subcommand and its documented options. For a user-facing CLI addition, missing command reference coverage is a substantive documentation adherence gap."
+    },
+    {
+      "ref": "docs/superpowers/specs/2026-07-15-dscli-logs-design.md",
+      "severity": "blocking",
+      "rationale": "The gather found the spec describes a different log path contract than the implementation uses. A stale or contradictory design spec for a new command can mislead implementation review and future maintenance, so this should block merge."
+    }
+  ],
+  "examined": [
+    "docs/source_zh_cn/deployment/dscli.md",
+    "docs/superpowers/specs/2026-07-15-dscli-logs-design.md"
+  ]
+}
