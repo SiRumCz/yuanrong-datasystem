@@ -1,0 +1,182 @@
+{
+  "scope": {
+    "code_changed": true,
+    "plan_present": true,
+    "plan_path": "docs/superpowers/plans/2026-07-15-dscli-logs.md",
+    "code_files": [
+      "cli/command.py",
+      "cli/logs.py"
+    ]
+  },
+  "plan_to_code": [
+    {
+      "plan_item": "1. **Add `cli/logs.py`** — a `Command(BaseCommand)` subclass:",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "2. **Register the command** — add `\"logs\"` to the `modules` list in",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "3. **Add `cli/tests/test_logs.py`** — verify the primary path (running worker →",
+      "status": "implemented"
+    },
+    {
+      "plan_item": "4. **Docs** — this plan + the design spec under `docs/superpowers/`.",
+      "status": "implemented"
+    }
+  ],
+  "files": [
+    {
+      "path": "cli/command.py",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "\"logs\""
+          ],
+          "findings": [
+            {
+              "plan_item": "2. **Register the command** — add `\"logs\"` to the `modules` list in",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 153,
+              "existing_code": "        \"logs\","
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "cli/logs.py",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "Command",
+            "add_arguments",
+            "run",
+            "find_worker_pid"
+          ],
+          "findings": [
+            {
+              "plan_item": "1. **Add `cli/logs.py`** — a `Command(BaseCommand)` subclass:",
+              "status": "traces",
+              "side": "RIGHT",
+              "start_line": 59,
+              "line": 63,
+              "existing_code": "class Command(BaseCommand):\n    \"\"\"Print the last N lines of a worker's log file to stdout.\"\"\"\n\n    name = \"logs\"\n    description = \"print recent log lines for a worker service\""
+            },
+            {
+              "plan_item": "1. **Add `cli/logs.py`** — a `Command(BaseCommand)` subclass:",
+              "status": "traces",
+              "side": "RIGHT",
+              "start_line": 65,
+              "line": 74,
+              "existing_code": "    def add_arguments(self, parser):\n        \"\"\"Add ``logs`` arguments to the parser.\"\"\"\n        parser.add_argument(\n            \"-w\", \"--worker_address\", metavar=\"ADDR\", required=True,\n            help=\"address (host:port) of the worker whose log to print\",\n        )\n        parser.add_argument(\n            \"-n\", \"--lines\", metavar=\"N\", default=_DEFAULT_LINES, type=_parse_positive_int,\n            help=\"number of trailing log lines to print\",\n        )"
+            },
+            {
+              "plan_item": "1. **Add `cli/logs.py`** — a `Command(BaseCommand)` subclass:",
+              "status": "traces",
+              "side": "RIGHT",
+              "start_line": 85,
+              "line": 97,
+              "existing_code": "        pid = self.find_worker_pid(address)\n        if pid is None:\n            self.logger.warning(f\"No running worker @ {address}; showing last log\")\n\n        log_path = self.resolve_log_path(pid)\n        result = subprocess.run(\n            [\"tail\", \"-n\", str(lines), log_path], capture_output=True, text=True,\n        )\n        if result.returncode != 0:\n            self.logger.error(f\"Failed to read log for {address}: {result.stderr}\")\n            return BaseCommand.FAILURE\n        print(result.stdout, end=\"\")\n        return BaseCommand.SUCCESS"
+            },
+            {
+              "plan_item": "1. **Add `cli/logs.py`** — a `Command(BaseCommand)` subclass:",
+              "status": "traces",
+              "side": "RIGHT",
+              "start_line": 99,
+              "line": 112,
+              "existing_code": "    def resolve_log_path(self, pid):\n        \"\"\"Resolve the worker INFO log path from cmdline flags or config defaults.\"\"\"\n        args = self.get_process_args(pid) if pid is not None else []\n        log_dir = self.get_flag_value(args, \"log_dir\")\n        log_filename = self.get_flag_value(args, \"log_filename\")\n        defaults = self.load_worker_config_defaults()\n        if not log_dir:\n            log_dir = defaults.get(\"log_dir\", _FALLBACK_LOG_DIR)\n        if not log_filename:\n            log_filename = defaults.get(\"log_filename\", \"\")\n        log_dir = self.resolve_default_path(log_dir)\n        if not log_filename:\n            log_filename = self.get_process_name(args)\n        return os.path.join(log_dir, f\"{log_filename}{_INFO_LOG_SUFFIX}\")"
+            },
+            {
+              "plan_item": "1. **Add `cli/logs.py`** — a `Command(BaseCommand)` subclass:",
+              "status": "traces",
+              "side": "RIGHT",
+              "start_line": 164,
+              "line": 178,
+              "existing_code": "    def find_worker_pid(self, address):\n        \"\"\"Return the PID of the worker at ``address``, or ``None`` if not found.\"\"\"\n        target = re.escape(f\"{_WORKER_ADDRESS_ARG}{address}\")\n        cmd = [\"pgrep\", \"-fa\", \"--\", target]\n        try:\n            output = subprocess.check_output(\n                cmd, stderr=subprocess.STDOUT, timeout=_PGREP_TIMEOUT_S, text=True,\n            )\n        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):\n            return None\n        for line in output.strip().splitlines():\n            parts = line.split(\" \", 1)\n            if len(parts) == 2 and \"dscli\" not in parts[1]:\n                return int(parts[0])\n        return None"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "cli/tests/test_logs.py",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "test_run_prints_recent_lines_from_default_worker_info_log"
+          ],
+          "findings": [
+            {
+              "plan_item": "3. **Add `cli/tests/test_logs.py`** — verify the primary path (running worker →",
+              "status": "traces",
+              "side": "RIGHT",
+              "start_line": 33,
+              "line": 52,
+              "existing_code": "    @mock.patch.object(logs.Command, \"find_worker_pid\", return_value=4321)\n    def test_run_prints_recent_lines_from_default_worker_info_log(\n        self, _mock_pid, mock_run, _mock_args, mock_defaults\n    ):\n        \"\"\"A running worker's log tail is printed and the command succeeds.\"\"\"\n        mock_defaults.return_value = {\"log_dir\": \"./datasystem/logs\", \"log_filename\": \"\"}\n        mock_run.return_value = mock.Mock(returncode=0, stdout=\"a\\nb\\nc\\n\", stderr=\"\")\n\n        cmd = logs.Command()\n        args = mock.Mock(worker_address=\"127.0.0.1:31501\", lines=100)\n        rc = cmd.run(args)\n\n        self.assertEqual(rc, logs.BaseCommand.SUCCESS)\n        mock_run.assert_called_once_with(\n            [\n                \"tail\", \"-n\", \"100\",\n                os.path.realpath(\"./datasystem/logs/datasystem_worker.INFO.log\"),\n            ],\n            capture_output=True, text=True,\n        )"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/superpowers/plans/2026-07-15-dscli-logs.md",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "Implementation Plan"
+          ],
+          "findings": [
+            {
+              "plan_item": "4. **Docs** — this plan + the design spec under `docs/superpowers/`.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 1,
+              "existing_code": "# `dscli logs` Subcommand — Implementation Plan"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/superpowers/specs/2026-07-15-dscli-logs-design.md",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "Design Spec"
+          ],
+          "findings": [
+            {
+              "plan_item": "4. **Docs** — this plan + the design spec under `docs/superpowers/`.",
+              "status": "traces",
+              "side": "RIGHT",
+              "line": 1,
+              "existing_code": "# `dscli logs` Subcommand — Design Spec"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "verdict": "adheres",
+  "examined": [
+    "scope.json",
+    "plan.txt",
+    "pr.diff",
+    "task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md"
+  ]
+}
