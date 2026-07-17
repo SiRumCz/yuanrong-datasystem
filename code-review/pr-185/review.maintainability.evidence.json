@@ -1,0 +1,24 @@
+{
+  "dimension": "maintainability",
+  "verdict": "COMMENT",
+  "findings": [
+    {
+      "path": "docs/superpowers/specs/2026-07-15-dscli-logs-design.md",
+      "line": 45,
+      "severity": "low",
+      "category": "maintainability",
+      "title": "Design doc describes a different log naming contract than the implementation",
+      "impact": "The spec says the command locates `<log-dir>/<address>.log`, but the new command and tests resolve `<log_filename>.INFO.log` under the worker log directory. Future maintainers will have two conflicting contracts in the same PR when changing log discovery or adding follow-up tests.",
+      "fix": "Update the design spec to describe the actual `log_dir` plus `log_filename`/process-name INFO log resolution, or change the implementation to match the documented address-based filename."
+    },
+    {
+      "path": "cli/logs.py",
+      "line": 113,
+      "severity": "low",
+      "category": "maintainability",
+      "title": "Worker config default parsing is duplicated in the new command",
+      "impact": "`load_worker_config_defaults` hand-parses `worker_config.json` and `resolve_default_path` separately reimplements part of `dscli start`'s default-filling behavior. Any future change to worker config shape or default path normalization now has to be discovered and updated in multiple commands.",
+      "fix": "Extract the shared worker config value/default resolution into a common CLI helper used by `start` and `logs`, or reuse the existing start-side helper with a narrow wrapper for log resolution."
+    }
+  ]
+}
