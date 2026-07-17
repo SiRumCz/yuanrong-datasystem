@@ -1,0 +1,17 @@
+{
+  "leg": "tests-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": "cli/tests/test_logs.py",
+      "severity": "blocking",
+      "rationale": "The changed CLI registration is not exercised through the dscli parser/import dispatch path, so a broken or missing logs registration could still pass. That is a real test adherence gap for the behavior introduced by the change."
+    }
+  ],
+  "examined": [
+    "cli/tests/test_logs.py"
+  ]
+}
