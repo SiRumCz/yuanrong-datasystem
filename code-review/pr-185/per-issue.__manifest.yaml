@@ -1,0 +1,40 @@
+count: 7
+legs:
+- id: 9a15f42d
+  key: 214
+  item:
+    number: 214
+    title: '[ai-review][maintainability] Worker config default parsing is duplicated
+      in the new command'
+- id: 135debd4
+  key: 210
+  item:
+    number: 210
+    title: '[ai-review][test] Worker discovery is untested'
+- id: 1b4a364f
+  key: 211
+  item:
+    number: 211
+    title: '[ai-review][correctness] logs rejects supported IPv6 worker addresses'
+- id: e2154fea
+  key: 212
+  item:
+    number: 212
+    title: '[ai-review][test] Tail failure path has no regression test'
+- id: 19187dc9
+  key: 213
+  item:
+    number: 213
+    title: '[ai-review][maintainability] Design doc describes a different log naming
+      contract than the implementation'
+- id: acfdd18e
+  key: 209
+  item:
+    number: 209
+    title: '[ai-review][performance] Log tail output is fully buffered in memory'
+- id: baab3401
+  key: 208
+  item:
+    number: 208
+    title: '[ai-review][security] Spoofed local processes can choose the file dscli
+      tails'
