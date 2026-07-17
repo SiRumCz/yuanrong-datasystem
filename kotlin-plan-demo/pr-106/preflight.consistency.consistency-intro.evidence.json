@@ -1,0 +1,17 @@
+{
+  "plan_kts": "fun plan(prNumber: Int): ConsistencyVerdict {\n    val repoContextPaths = listOf(\n        \".repo_context/README.md\",\n        \".repo_context/index.md\",\n        \".repo_context/maintenance.md\",\n        \".repo_context/generated/repo_index.md\",\n        \".repo_context/modules/overview/engineering-principles.md\"\n    )\n    val repoContext = readFiles(repoContextPaths)\n    val prMetadata = githubReadPullRequest(owner = \"SiRumCz\", repo = \"yuanrong-datasystem\", pullNumber = prNumber)\n    val prFiles = githubReadPullRequestFiles(owner = \"SiRumCz\", repo = \"yuanrong-datasystem\", pullNumber = prNumber)\n    val prDiff = githubReadPullRequestDiff(owner = \"SiRumCz\", repo = \"yuanrong-datasystem\", pullNumber = prNumber)\n    val changedDomains = classifyChangedDomains(prFiles, repoContext)\n    val relevantContextPaths = selectRelevantRepoContext(changedDomains, repoContext)\n    val relevantContext = readFiles(relevantContextPaths)\n    val docCandidatePaths = selectDocumentationCandidates(changedDomains, prFiles, repoContext, relevantContext)\n    val docCandidateState = readFiles(docCandidatePaths)\n    val docsVerdict = checkDocsUpdatedAppropriately(prMetadata, prFiles, prDiff, repoContext, relevantContext, docCandidateState)\n    val testCandidatePaths = selectTestCandidates(changedDomains, prFiles, repoContext, relevantContext)\n    val testCandidateState = readFiles(testCandidatePaths)\n    val testsVerdict = checkTestsUpdatedAppropriately(prMetadata, prFiles, prDiff, repoContext, relevantContext, testCandidateState)\n    val combinedVerdict = combineConsistencyVerdicts(docsVerdict, testsVerdict)\n    return makeResult(combinedVerdict)\n}",
+  "examined": [
+    "readFiles",
+    "githubReadPullRequest",
+    "githubReadPullRequestFiles",
+    "githubReadPullRequestDiff",
+    "classifyChangedDomains",
+    "selectRelevantRepoContext",
+    "selectDocumentationCandidates",
+    "checkDocsUpdatedAppropriately",
+    "selectTestCandidates",
+    "checkTestsUpdatedAppropriately",
+    "combineConsistencyVerdicts",
+    "makeResult"
+  ]
+}
