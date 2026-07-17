@@ -1,0 +1,23 @@
+{
+  "plan_kts": "fun plan(repoPath: String, owner: String, repo: String, pullNumber: Int): Result {\n    val contextReadme = readFile(\".repo_context/README.md\")\n    val contextIndex = readFile(\".repo_context/index.md\")\n    val maintenance = readFile(\".repo_context/maintenance.md\")\n    val repoIndex = readFile(\".repo_context/generated/repo_index.md\")\n    val engineeringPrinciples = readFile(\".repo_context/modules/overview/engineering-principles.md\")\n    val selfVerificationPlaybook = readFile(\".repo_context/playbooks/upkeep/ai-self-verification.md\")\n    val pullRequest = githubPullRequestRead(owner = owner, repo = repo, pullNumber = pullNumber, method = \"get\")\n    val pullRequestFiles = githubPullRequestRead(owner = owner, repo = repo, pullNumber = pullNumber, method = \"get_files\")\n    val pullRequestDiff = githubPullRequestRead(owner = owner, repo = repo, pullNumber = pullNumber, method = \"get_diff\")\n    val pullRequestComments = githubPullRequestRead(owner = owner, repo = repo, pullNumber = pullNumber, method = \"get_comments\")\n    val reviewThreads = githubPullRequestRead(owner = owner, repo = repo, pullNumber = pullNumber, method = \"get_review_comments\")\n    val linkedIssueRefs = extractLinkedIssueRefs(pullRequest, pullRequestComments)\n    val linkedIssues = githubIssueReadMany(owner = owner, repo = repo, issueRefs = linkedIssueRefs, method = \"get\")\n    val changedDomains = mapChangedFilesToRepoContext(repoIndex, pullRequestFiles)\n    val domainContext = readRelevantRepoContext(repoPath, changedDomains)\n    val sourceSnippets = readChangedSourceFiles(repoPath, pullRequestFiles)\n    val statedSpec = synthesizeSpecFromIssueAndPr(linkedIssues, pullRequest, pullRequestComments, domainContext)\n    val statedPlan = synthesizeImplementationPlanFromPr(pullRequest, pullRequestFiles, pullRequestDiff, domainContext)\n    val implementedBehavior = synthesizeImplementedBehavior(pullRequestDiff, sourceSnippets, engineeringPrinciples)\n    val specSolvesIssue = planSubagentCheck(name = \"spec-solves-issue\", issue = linkedIssues, spec = statedSpec, context = domainContext)\n    val planImplementsSpec = planSubagentCheck(name = \"plan-implements-spec\", spec = statedSpec, plan = statedPlan, context = domainContext)\n    val codeImplementsPlan = planSubagentCheck(name = \"code-implements-plan\", plan = statedPlan, code = implementedBehavior, diff = pullRequestDiff, context = domainContext)\n    val hotPathAssessment = assessHotPathConcerns(pullRequestFiles, pullRequestDiff, engineeringPrinciples)\n    val statefulAssessment = assessStatefulConcerns(pullRequestFiles, pullRequestDiff, engineeringPrinciples)\n    val sharedStateAssessment = assessSharedStateConcerns(pullRequestFiles, pullRequestDiff, engineeringPrinciples)\n    val combinedVerdict = combineAdherenceVerdicts(specSolvesIssue, planImplementsSpec, codeImplementsPlan, hotPathAssessment, statefulAssessment, sharedStateAssessment)\n    val verifiedVerdict = applySelfVerification(combinedVerdict, selfVerificationPlaybook)\n    return makeResult(verifiedVerdict)\n}",
+  "examined": [
+    "readFile:.repo_context/README.md",
+    "readFile:.repo_context/index.md",
+    "readFile:.repo_context/maintenance.md",
+    "readFile:.repo_context/generated/repo_index.md",
+    "readFile:.repo_context/modules/overview/engineering-principles.md",
+    "readFile:.repo_context/playbooks/upkeep/ai-self-verification.md",
+    "githubPullRequestRead:get",
+    "githubPullRequestRead:get_files",
+    "githubPullRequestRead:get_diff",
+    "githubPullRequestRead:get_comments",
+    "githubPullRequestRead:get_review_comments",
+    "githubIssueReadMany:get",
+    "readRelevantRepoContext",
+    "readChangedSourceFiles",
+    "planSubagentCheck:spec-solves-issue",
+    "planSubagentCheck:plan-implements-spec",
+    "planSubagentCheck:code-implements-plan",
+    "makeResult"
+  ]
+}
