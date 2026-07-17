@@ -1,0 +1,27 @@
+{
+  "scope": {
+    "code_changed": true
+  },
+  "items": [
+    {
+      "path": "cli/tests/test_logs.py",
+      "status": "inadequate",
+      "reason": "The tests call logs.Command.run() directly but do not exercise dscli parser/import dispatch, so the new cli/command.py logs registration could be broken without failing."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    ".repo_context/modules/quality/tests-and-reproduction.md",
+    ".repo_context/modules/quality/test-suite-design.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md",
+    "cli/command.py",
+    "cli/stop.py",
+    "cli/start.py",
+    "cli/tests/test_logs.py"
+  ]
+}
