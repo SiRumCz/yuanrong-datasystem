@@ -273,22 +273,10 @@ class Command(BaseCommand):
         Raises:
             ValueError: If the configuration file format is incorrect.
         """
-        default_config_path = os.path.join(self._base_dir, "worker_config.json")
         try:
-            with open(default_config_path, "r") as f:
-                default_config = json.load(f)
+            util.fill_worker_config_defaults(self._base_dir, params, self._home_dir)
         except json.JSONDecodeError as e:
             raise ValueError("The configuration file format is incorrect.") from e
-        for key, item in default_config.items():
-            if key in params:
-                continue
-            params[key] = str(item.get("value", ""))
-            if not params[key].startswith("./"):
-                continue
-            if self._home_dir:
-                params[key] = os.path.join(self._home_dir, params[key][2:])
-            else:
-                params[key] = os.path.realpath(util.get_timestamped_path(params[key]))
         self.logger.info(f"Log directory configured at: {params['log_dir']}")
 
     def start_worker(

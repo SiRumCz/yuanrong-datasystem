@@ -359,6 +359,24 @@ def get_timestamped_path(original_path: str) -> str:
     return original_path
 
 
+def fill_worker_config_defaults(base_dir: str, params: Dict[str, str], home_dir: str = ""):
+    """Fill missing worker params from the default worker configuration."""
+    default_config_path = os.path.join(base_dir, "worker_config.json")
+    default_config_path = valid_safe_path(default_config_path)
+    with open(default_config_path, "r") as f:
+        default_config = json.load(f)
+    for key, item in default_config.items():
+        if key in params:
+            continue
+        params[key] = str(item.get("value", ""))
+        if not params[key].startswith("./"):
+            continue
+        if home_dir:
+            params[key] = os.path.join(home_dir, params[key][2:])
+        else:
+            params[key] = os.path.realpath(get_timestamped_path(params[key]))
+
+
 def compare_and_process_config(
     home_dir: str, config: Dict[str, Any], default_config: Dict[str, Any]
 ) -> Dict[str, Any]:
