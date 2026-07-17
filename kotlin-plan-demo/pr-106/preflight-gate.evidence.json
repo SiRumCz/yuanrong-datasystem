@@ -1,0 +1,29 @@
+{
+  "plan_kts": "fun plan(): GateResult {\n    val repositoryInstructions = readFile(path = \"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/AGENTS.md\")\n    val contextReadme = readFile(path = \"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/README.md\")\n    val contextIndex = readFile(path = \"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/index.md\")\n    val contextMaintenance = readFile(path = \"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/maintenance.md\")\n    val repoIndex = readFile(path = \"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/generated/repo_index.md\")\n    val engineeringPrinciples = readFile(path = \"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/modules/overview/engineering-principles.md\")\n    val selfVerificationPlaybook = readFile(path = \"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/playbooks/upkeep/ai-self-verification.md\")\n    val adherenceCluster = readFile(path = \"/tmp/gh-aw/agent/preflight/adherence.json\")\n    val mmComplianceCluster = readFile(path = \"/tmp/gh-aw/agent/preflight/mm-compliance.json\")\n    val consistencyCluster = readFile(path = \"/tmp/gh-aw/agent/preflight/consistency.json\")\n    val securityCluster = readFile(path = \"/tmp/gh-aw/agent/preflight/security.json\")\n    val parsedAdherence = parseClusterReport(name = \"adherence\", report = adherenceCluster)\n    val parsedMmCompliance = parseClusterReport(name = \"mm-compliance\", report = mmComplianceCluster)\n    val parsedConsistency = parseClusterReport(name = \"consistency\", report = consistencyCluster)\n    val parsedSecurity = parseClusterReport(name = \"security\", report = securityCluster)\n    val repoPolicy = extractPreflightPolicy(repositoryInstructions, contextReadme, contextIndex, contextMaintenance, repoIndex, engineeringPrinciples, selfVerificationPlaybook)\n    val clusterSet = combineClusterReports(parsedAdherence, parsedMmCompliance, parsedConsistency, parsedSecurity)\n    val normalizedFindings = normalizeFindings(clusterSet, repoPolicy)\n    val criticalFindings = selectBlockingFindings(normalizedFindings, severities = listOf(\"critical\", \"high\"))\n    val missingInputs = findMissingRequiredInputs(clusterSet, required = listOf(\"adherence\", \"mm-compliance\", \"consistency\", \"security\"))\n    val overrideSignals = readFile(path = \"/tmp/gh-aw/agent/preflight/override.json\")\n    val parsedOverride = parseOverrideRequest(overrideSignals)\n    val verdict = decideGateVerdict(blockers = criticalFindings, missingInputs = missingInputs, override = parsedOverride)\n    val verification = verifyGateDecision(verdict, normalizedFindings, repoPolicy)\n    val report = renderGateReport(verdict, normalizedFindings, verification)\n    writeFile(path = \"/tmp/gh-aw/agent/preflight-gate-verdict.json\", content = report)\n    return makeGateResult(verdict, report)\n}",
+  "examined": [
+    "readFile:/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/AGENTS.md",
+    "readFile:/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/README.md",
+    "readFile:/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/index.md",
+    "readFile:/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/maintenance.md",
+    "readFile:/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/generated/repo_index.md",
+    "readFile:/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/modules/overview/engineering-principles.md",
+    "readFile:/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/playbooks/upkeep/ai-self-verification.md",
+    "readFile:/tmp/gh-aw/agent/preflight/adherence.json",
+    "readFile:/tmp/gh-aw/agent/preflight/mm-compliance.json",
+    "readFile:/tmp/gh-aw/agent/preflight/consistency.json",
+    "readFile:/tmp/gh-aw/agent/preflight/security.json",
+    "parseClusterReport",
+    "extractPreflightPolicy",
+    "combineClusterReports",
+    "normalizeFindings",
+    "selectBlockingFindings",
+    "findMissingRequiredInputs",
+    "readFile:/tmp/gh-aw/agent/preflight/override.json",
+    "parseOverrideRequest",
+    "decideGateVerdict",
+    "verifyGateDecision",
+    "renderGateReport",
+    "writeFile:/tmp/gh-aw/agent/preflight-gate-verdict.json",
+    "makeGateResult"
+  ]
+}

@@ -3,5 +3,5 @@ instance: pr-106
 head_sha: b3df3311230021d68562acc0cff99c9ff8799ec9
 phase: preflight-gate
 joined: true
-phase_label: pre-flight gate (plan-only, terminal)
+phase_label: "\u2705 done"
 status_comment_id: 5007019714
