@@ -1,0 +1,24 @@
+{
+  "dimension": "test",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "cli/logs.py",
+      "line": 161,
+      "severity": "high",
+      "category": "test",
+      "title": "Worker discovery is untested",
+      "impact": "The new command depends on find_worker_pid to map the requested worker address to the right local process, but every run-path test mocks this method out. Regressions in pgrep invocation, dscli self-filtering, empty output handling, or multi-line process output would not fail any test even though they make dscli logs select the wrong log or fall back to stale defaults.",
+      "fix": "Add focused unit tests for find_worker_pid by mocking subprocess.check_output, covering a matching worker line, dscli self-match filtering, no-match CalledProcessError, timeout, and multiple pgrep rows."
+    },
+    {
+      "path": "cli/logs.py",
+      "line": 88,
+      "severity": "medium",
+      "category": "test",
+      "title": "Tail failure path has no regression test",
+      "impact": "If tail cannot read the resolved log file, run should return BaseCommand.FAILURE and report the stderr. The current tests only cover successful tail output and validation failures before tail runs, so a change that ignores tail errors or still returns success would pass.",
+      "fix": "Add a run-path test with subprocess.run returning a non-zero returncode and stderr, then assert the command returns BaseCommand.FAILURE and does not print successful log output."
+    }
+  ]
+}
