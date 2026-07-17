@@ -1,0 +1,16 @@
+{
+  "plan_kts": "fun plan(docsReportPath: String, testsReportPath: String, reviewContextPath: String): Result {\n    val docsReport = readFile(docsReportPath)\n    val testsReport = readFile(testsReportPath)\n    val reviewContext = readFile(reviewContextPath)\n    val docsFindings = parseDocsLeg(docsReport)\n    val testFindings = parseTestsLeg(testsReport)\n    val changedAreas = extractChangedAreas(reviewContext)\n    val consistencySignals = compareDocsAndTests(docsFindings, testFindings, changedAreas)\n    val clusterVerdict = buildConsistencyRollupVerdict(consistencySignals)\n    val evidenceSummary = summarizeVerdictForEvidence(clusterVerdict)\n    val persisted = writeFile(path = \"/tmp/gh-aw/agent/consistency-rollup-verdict.json\", content = evidenceSummary)\n    return makeResult(clusterVerdict, persisted)\n}",
+  "examined": [
+    "readFile(docsReportPath)",
+    "readFile(testsReportPath)",
+    "readFile(reviewContextPath)",
+    "parseDocsLeg",
+    "parseTestsLeg",
+    "extractChangedAreas",
+    "compareDocsAndTests",
+    "buildConsistencyRollupVerdict",
+    "summarizeVerdictForEvidence",
+    "writeFile(path = \"/tmp/gh-aw/agent/consistency-rollup-verdict.json\", content = evidenceSummary)",
+    "makeResult"
+  ]
+}
