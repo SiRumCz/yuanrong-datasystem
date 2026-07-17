@@ -1,0 +1,23 @@
+{
+  "scope": { "code_changed": true },
+  "items": [
+    {
+      "path": "tests/python/test_ds_client.py",
+      "status": "missing",
+      "reason": "PR adds cli.disk_report.worker_disk_usage but no test covers subprocess invocation, output stripping, or path handling."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    ".repo_context/modules/quality/tests-and-reproduction.md",
+    ".repo_context/modules/quality/test-suite-design.md",
+    ".repo_context/playbooks/features/quality/test-implementation.md",
+    "cli/disk_report.py (new file in diff)",
+    "tests/python/test_ds_client.py",
+    "repo test path search via rg --files"
+  ]
+}
