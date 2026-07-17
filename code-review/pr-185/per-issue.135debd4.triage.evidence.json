@@ -1,0 +1,48 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "Worker discovery is untested",
+      "dimension": [
+        "test"
+      ],
+      "severity": "high",
+      "paths": [
+        "cli/logs.py"
+      ],
+      "member_findings": [
+        {
+          "dimension": "test",
+          "path": "cli/logs.py",
+          "line": 161,
+          "severity": "high",
+          "category": "test",
+          "title": "Worker discovery is untested",
+          "impact": "The new command depends on find_worker_pid to map the requested worker address to the right local process, but every run-path test mocks this method out. Regressions in pgrep invocation, dscli self-filtering, empty output handling, or multi-line process output would not fail any test even though they make dscli logs select the wrong log or fall back to stale defaults.",
+          "fix": "Add focused unit tests for find_worker_pid by mocking subprocess.check_output, covering a matching worker line, dscli self-match filtering, no-match CalledProcessError, timeout, and multiple pgrep rows."
+        }
+      ],
+      "rank": 1
+    }
+  ],
+  "summary": {
+    "present": [
+      "test"
+    ],
+    "missing": [
+      "correctness",
+      "performance",
+      "security",
+      "maintainability"
+    ],
+    "clusters": 1,
+    "total_findings": 1,
+    "by_severity": {
+      "high": 1
+    },
+    "by_dimension": {
+      "test": 1
+    }
+  },
+  "pinned_issue": 210
+}
