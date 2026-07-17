@@ -1,0 +1,15 @@
+{
+  "dimension": "correctness",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "cli/disk_report.py",
+      "line": 24,
+      "severity": "medium",
+      "category": "correctness",
+      "title": "Disk usage command treats invalid or spaced paths as successful output",
+      "impact": "When data_dir is missing, unreadable, or contains spaces, du can fail or interpret the path as multiple operands, but the function ignores the non-zero return code and returns only stripped stdout. Callers can receive an empty string or a report for the wrong path and treat it as a valid worker disk-usage result.",
+      "fix": "Invoke du with an argument list such as subprocess.run([\"du\", \"-sh\", data_dir], check=True, capture_output=True, text=True) and propagate or convert CalledProcessError into the repository's expected CLI error path instead of returning stdout unconditionally."
+    }
+  ]
+}
