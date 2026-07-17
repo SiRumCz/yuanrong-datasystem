@@ -1,10 +1,21 @@
 {
   "local": false,
-  "n_fixes": 0,
+  "n_fixes": 1,
   "env": {
     "repo": "SiRumCz/yuanrong-datasystem",
     "pr": "220",
     "has_token": true
   },
-  "stop": "no fixes"
+  "head": "test/e2e-final-check",
+  "clone_rc": 0,
+  "clone_err": "Cloning into '/tmp/fix-apply-9x8m544q'...",
+  "apply": [
+    {
+      "status": "applied",
+      "detail": ""
+    }
+  ],
+  "applied_n": 1,
+  "push_ok": true,
+  "push_detail": ""
 }

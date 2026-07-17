@@ -1,0 +1,11 @@
+{
+  "fixes": [
+    {
+      "cluster_id": "c1",
+      "diff": "diff --git a/cli/disk_report.py b/cli/disk_report.py\nindex dfe798f..b034d2b 100644\n--- a/cli/disk_report.py\n+++ b/cli/disk_report.py\n@@ -23,8 +23,7 @@ def worker_disk_usage(data_dir: str) -> str:\n     on-disk footprint before scheduling more shards onto it.\n     \"\"\"\n     completed = subprocess.run(\n-        f\"du -sh {data_dir}\",\n-        shell=True,\n+        [\"du\", \"-sh\", data_dir],\n         capture_output=True,\n         text=True,\n     )\n"
+    }
+  ],
+  "skipped": [],
+  "mode": "edit",
+  "pinned_issue": 222
+}
