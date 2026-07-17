@@ -1,0 +1,25 @@
+{
+  "plan_kts": "fun plan(workspacePath: String, baseRef: String, headRef: String): EvidenceResult {\n    val repoContextReadme = readFile(\".repo_context/README.md\")\n    val repoContextIndex = readFile(\".repo_context/index.md\")\n    val repoContextMaintenance = readFile(\".repo_context/maintenance.md\")\n    val repoIndex = readFile(\".repo_context/generated/repo_index.md\")\n    val engineeringPrinciples = readFile(\".repo_context/modules/overview/engineering-principles.md\")\n    val taskBrief = readFile(\"/tmp/gh-aw/agent/task.md\")\n    val implementationPlan = readFile(\"/tmp/gh-aw/agent/plan.md\")\n    val prDiff = gitDiff(base = baseRef, head = headRef)\n    val changedFiles = extractChangedFiles(prDiff)\n    val relevantModuleContext = selectRelevantRepoContext(changedFiles, repoContextIndex, repoIndex)\n    val changedSource = readFiles(changedFiles)\n    val planSteps = extractPlanSteps(implementationPlan)\n    val diffFacts = summarizeDiff(prDiff, changedSource)\n    val mappedSteps = mapPlanStepsToChangedCode(planSteps, diffFacts, relevantModuleContext)\n    val missingOrDivergentSteps = findUnimplementedPlanSteps(planSteps, mappedSteps)\n    val extraBehavior = identifyUnplannedBehavior(diffFacts, planSteps)\n    val riskAssessment = assessInfraRisks(mappedSteps, missingOrDivergentSteps, extraBehavior, engineeringPrinciples)\n    val verdict = decideCodeImplementsPlan(mappedSteps, missingOrDivergentSteps, extraBehavior, riskAssessment)\n    val evidence = buildEvidenceReport(verdict, mappedSteps, missingOrDivergentSteps, extraBehavior, riskAssessment)\n    return makeResult(evidence)\n}",
+  "examined": [
+    "readFile:.repo_context/README.md",
+    "readFile:.repo_context/index.md",
+    "readFile:.repo_context/maintenance.md",
+    "readFile:.repo_context/generated/repo_index.md",
+    "readFile:.repo_context/modules/overview/engineering-principles.md",
+    "readFile:/tmp/gh-aw/agent/task.md",
+    "readFile:/tmp/gh-aw/agent/plan.md",
+    "gitDiff",
+    "extractChangedFiles",
+    "selectRelevantRepoContext",
+    "readFiles",
+    "extractPlanSteps",
+    "summarizeDiff",
+    "mapPlanStepsToChangedCode",
+    "findUnimplementedPlanSteps",
+    "identifyUnplannedBehavior",
+    "assessInfraRisks",
+    "decideCodeImplementsPlan",
+    "buildEvidenceReport",
+    "makeResult"
+  ]
+}
