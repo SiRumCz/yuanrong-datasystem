@@ -1,0 +1,15 @@
+{
+  "leg": "mm-compliance",
+  "scope": {},
+  "gather_verdict": "diverges",
+  "graded_findings": [
+    {
+      "ref": "0",
+      "severity": "blocking",
+      "rationale": "The finding identifies caller-controlled shell execution in privileged operator tooling, which is a substantive security and operational-adherence gap for infrastructure code. The proposed fix is straightforward and aligns with existing safer subprocess patterns, so this should block merge until corrected."
+    }
+  ],
+  "examined": [
+    "0"
+  ]
+}
