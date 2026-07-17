@@ -1,0 +1,15 @@
+{
+  "dimension": "test",
+  "verdict": "REQUEST_CHANGES",
+  "findings": [
+    {
+      "path": "cli/net_check.py",
+      "line": 24,
+      "severity": "medium",
+      "category": "test",
+      "title": "New ping helper has no regression coverage",
+      "impact": "The PR adds new dscli reachability behavior, including command construction from both host and count, but the diff adds no corresponding unit test. Regressions such as ignoring the count argument, returning the wrong boolean for nonzero ping exits, or unsafe command construction could ship without any failing test.",
+      "fix": "Add a focused Python test for ping_worker that mocks subprocess.run, covers success and failure return codes, verifies the count argument is reflected in the invoked ping command, and includes a hostile host string case as a regression guard for command construction."
+    }
+  ]
+}
