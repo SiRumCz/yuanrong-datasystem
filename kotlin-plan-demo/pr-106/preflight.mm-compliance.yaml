@@ -1,6 +1,6 @@
 protocol: kotlin-plan-demo
 instance: pr-106
-state: preflight
+state: done
 sub_state: mm-compliance-judge
 iteration: 1
 gates: {}

@@ -1,0 +1,21 @@
+{
+  "plan_kts": "fun plan(): MmComplianceVerdict {\n    val repoContextReadme = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/README.md\")\n    val repoContextIndex = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/index.md\")\n    val repoContextMaintenance = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/maintenance.md\")\n    val generatedRepoIndex = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/generated/repo_index.md\")\n    val engineeringPrinciples = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/modules/overview/engineering-principles.md\")\n    val selfVerificationPlaybook = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/playbooks/upkeep/ai-self-verification.md\")\n    val githubContext = readWorkflowContext(\"github-context\")\n    val reviewTarget = resolveReviewTarget(githubContext)\n    val changedFiles = readGitHubChangedFiles(reviewTarget)\n    val changedDiff = readGitHubDiff(reviewTarget)\n    val gatherEvidenceCandidates = findFiles(\"/tmp/gh-aw/agent\", \"*mm*compliance*evidence*.json\")\n    val gatherEvidence = readJsonFiles(gatherEvidenceCandidates)\n    val relevantContext = selectRelevantRepoContext(changedFiles, repoContextIndex, generatedRepoIndex)\n    val sourceClaims = extractMmComplianceClaims(gatherEvidence)\n    val sourceBackedClaims = verifyClaimsAgainstDiff(sourceClaims, changedFiles, changedDiff)\n    val hotPathAssessment = assessHotPathImplications(sourceBackedClaims, engineeringPrinciples, relevantContext)\n    val statefulAssessment = assessStatefulImplications(sourceBackedClaims, engineeringPrinciples, relevantContext)\n    val concurrencyAssessment = assessConcurrencyAndLifetime(sourceBackedClaims, engineeringPrinciples, relevantContext)\n    val evidenceQuality = judgeEvidenceCompleteness(sourceBackedClaims, hotPathAssessment, statefulAssessment, concurrencyAssessment)\n    val selfCheck = runSelfVerificationChecklist(evidenceQuality, selfVerificationPlaybook)\n    val verdict = buildMmComplianceVerdict(evidenceQuality, selfCheck)\n    return verdict\n}",
+  "examined": [
+    "readFile",
+    "readWorkflowContext",
+    "resolveReviewTarget",
+    "readGitHubChangedFiles",
+    "readGitHubDiff",
+    "findFiles",
+    "readJsonFiles",
+    "selectRelevantRepoContext",
+    "extractMmComplianceClaims",
+    "verifyClaimsAgainstDiff",
+    "assessHotPathImplications",
+    "assessStatefulImplications",
+    "assessConcurrencyAndLifetime",
+    "judgeEvidenceCompleteness",
+    "runSelfVerificationChecklist",
+    "buildMmComplianceVerdict"
+  ]
+}
