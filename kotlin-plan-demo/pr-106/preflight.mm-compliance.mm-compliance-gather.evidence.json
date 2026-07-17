@@ -1,0 +1,24 @@
+{
+  "plan_kts": "fun plan(repoRoot: String, prRef: String): Verdict {\n    val contextReadme = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/README.md\")\n    val contextIndex = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/index.md\")\n    val contextMaintenance = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/maintenance.md\")\n    val generatedRepoIndex = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/generated/repo_index.md\")\n    val engineeringPrinciples = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/modules/overview/engineering-principles.md\")\n    val currentBranch = gitRevParse(\"HEAD\")\n    val mergeBase = gitMergeBase(\"HEAD\", \"origin/main\")\n    val changedFiles = gitDiffNameOnly(mergeBase, currentBranch)\n    val relevantContextPaths = selectRepoContextForChangedFiles(generatedRepoIndex, changedFiles)\n    val relevantContext = readFiles(relevantContextPaths)\n    val prDiff = gitDiff(mergeBase, currentBranch)\n    val sourceSnippets = readChangedSourceFiles(changedFiles)\n    val mentalModel = buildMentalModel(contextReadme, contextIndex, contextMaintenance, generatedRepoIndex, engineeringPrinciples, relevantContext)\n    val complianceEvidence = compareDiffToMentalModel(mentalModel, prDiff, sourceSnippets)\n    val hotPathAssessment = assessHotPathImpact(complianceEvidence, prDiff, sourceSnippets)\n    val statefulAssessment = assessStatefulCorrectness(complianceEvidence, prDiff, sourceSnippets)\n    val sharedStateAssessment = assessSharedStateSafety(complianceEvidence, prDiff, sourceSnippets)\n    val verificationPlan = readFile(\"/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/playbooks/upkeep/ai-self-verification.md\")\n    val verdict = buildMmComplianceVerdict(complianceEvidence, hotPathAssessment, statefulAssessment, sharedStateAssessment, verificationPlan)\n    return verdict\n}",
+  "examined": [
+    "readFile:/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/README.md",
+    "readFile:/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/index.md",
+    "readFile:/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/maintenance.md",
+    "readFile:/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/generated/repo_index.md",
+    "readFile:/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/modules/overview/engineering-principles.md",
+    "gitRevParse",
+    "gitMergeBase",
+    "gitDiffNameOnly",
+    "selectRepoContextForChangedFiles",
+    "readFiles",
+    "gitDiff",
+    "readChangedSourceFiles",
+    "buildMentalModel",
+    "compareDiffToMentalModel",
+    "assessHotPathImpact",
+    "assessStatefulCorrectness",
+    "assessSharedStateSafety",
+    "readFile:/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.repo_context/playbooks/upkeep/ai-self-verification.md",
+    "buildMmComplianceVerdict"
+  ]
+}
