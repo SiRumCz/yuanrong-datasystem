@@ -1,0 +1,8 @@
+{
+  "leg": "security",
+  "scope": {},
+  "gather_verdict": "PASS",
+  "graded_findings": [],
+  "examined": [],
+  "plan_kts": "fun plan(): Verdict {\n    val taskContext = readFile(path = \"/tmp/gh-aw/task-context.json\")\n    val gather = readGather(taskContext)\n    val violations = readViolations(gather)\n    val gradedFindings = gradeViolations(violations)\n    val evidence = makeEvidence(leg = \"security\", scope = emptyMap(), gatherVerdict = \"PASS\", gradedFindings = gradedFindings, examined = emptyList())\n    val written = writeFile(path = \"/tmp/gh-aw/evidence.json\", value = evidence)\n    val completion = noop(message = \"Security judge complete: gather verdict PASS with no violations to grade.\")\n    return makeVerdict(written, completion)\n}"
+}
