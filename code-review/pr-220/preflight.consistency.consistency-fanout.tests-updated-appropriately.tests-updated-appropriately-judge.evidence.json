@@ -1,0 +1,18 @@
+{
+  "leg": "tests-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": "tests/kvtest/tests/python/test_deploy_worker.py",
+      "severity": "blocking",
+      "rationale": "The PR adds subprocess-based cli/disk_report.py behavior without a unit test for the du invocation or stdout handling. That is a real test coverage gap for new user-visible CLI behavior and should block until covered."
+    }
+  ],
+  "examined": [
+    "tests/kvtest/tests/python/test_deploy_worker.py"
+  ],
+  "plan_kts": "fun plan(): Verdict {\n    val taskContext = readFile(path = \"/tmp/gh-aw/task-context.json\")\n    val gather = extractGather(taskContext)\n    val feedback = extractFeedback(taskContext)\n    val gradedFindings = gradeFindings(gather, feedback)\n    val evidence = makeEvidence(gather, gradedFindings)\n    val written = writeFile(path = \"/tmp/gh-aw/evidence.json\", contents = evidence)\n    val signal = noop(message = \"Tests-updated-appropriately judge evidence written; one gather finding graded blocking.\")\n    return makeVerdict(written, signal)\n}"
+}
