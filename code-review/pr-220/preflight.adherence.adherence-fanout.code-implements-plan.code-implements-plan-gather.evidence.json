@@ -1,0 +1,49 @@
+{
+  "scope": {
+    "code_changed": true,
+    "plan_present": false,
+    "plan_path": null,
+    "code_files": [
+      "cli/disk_report.py"
+    ]
+  },
+  "plan_to_code": [],
+  "files": [
+    {
+      "path": "cli/disk_report.py",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "worker_disk_usage"
+          ],
+          "findings": [
+            {
+              "plan_item": null,
+              "status": "extra",
+              "side": "RIGHT",
+              "start_line": 19,
+              "line": 30,
+              "existing_code": "def worker_disk_usage(data_dir: str) -> str:\n    \"\"\"Return the human-readable disk usage of a worker's ``data_dir``.\n\n    Convenience wrapper around ``du`` so operators can spot-check a worker's\n    on-disk footprint before scheduling more shards onto it.\n    \"\"\"\n    completed = subprocess.run(\n        [\"du\", \"-sh\", data_dir],\n        capture_output=True,\n        text=True,\n    )\n    return completed.stdout.strip()"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "verdict": "underplan",
+  "examined": [
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md",
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/plan.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json"
+  ],
+  "plan_kts": "fun plan(pr: String): Verdict {\n    val repoContext = readSpec(path = \".repo_context/README.md\")\n    val index = readSpec(path = \".repo_context/index.md\")\n    val maintenance = readSpec(path = \".repo_context/maintenance.md\")\n    val repoIndex = readSpec(path = \".repo_context/generated/repo_index.md\")\n    val principles = readSpec(path = \".repo_context/modules/overview/engineering-principles.md\")\n    val reviewPlaybook = readSpec(path = \".repo_context/playbooks/reviews/pr-review-checklist.md\")\n    val selfVerification = readSpec(path = \".repo_context/playbooks/upkeep/ai-self-verification.md\")\n    val scope = readFile(path = \"/tmp/gh-aw/agent/scope.json\")\n    val planText = readPlan(path = \"/tmp/gh-aw/agent/plan.txt\")\n    val diff = readDiff(path = \"/tmp/gh-aw/agent/pr.diff\")\n    val taskContext = readFile(path = \"/tmp/gh-aw/task-context.json\")\n    val analysis = analyzeCodeImplementsPlan(scope, planText, diff, taskContext, repoContext, index, maintenance, repoIndex, principles, reviewPlaybook, selfVerification)\n    val evidence = makeVerdict(analysis)\n    writeFile(path = \"/tmp/gh-aw/evidence.json\", content = evidence)\n    return evidence\n}"
+}
