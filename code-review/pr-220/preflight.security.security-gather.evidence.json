@@ -1,0 +1,26 @@
+{
+  "scope": {},
+  "cedar": {
+    "status": "n/a",
+    "flags": []
+  },
+  "guardians": {
+    "ok": true,
+    "violations": [],
+    "warnings": []
+  },
+  "engine_report": {
+    "violations": [],
+    "summary": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0
+    }
+  },
+  "verdict": "PASS",
+  "examined": [
+    "policy/cedar/default",
+    "policy/guardians/default.policy.yaml"
+  ],
+  "plan_kts": "fun plan(): Verdict {\n    val engineReport = readFile(path = \"/tmp/gh-aw/agent/engine-report.json\")\n    val cedar = readFile(path = \"/tmp/gh-aw/agent/cedar.json\")\n    val guardiansPlan = readFile(path = \"/tmp/gh-aw/agent/guardians.json\")\n    val guardiansTranscript = readFile(path = \"/tmp/gh-aw/agent/guardians-transcript.json\")\n    val pr = readFile(path = \"/tmp/gh-aw/agent/pr.json\")\n    val taskContext = readFile(path = \"/tmp/gh-aw/task-context.json\")\n    val verdict = computeVerdict(engineReport, guardiansPlan, guardiansTranscript)\n    val evidence = makeEvidence(scope = emptyMap(), cedar = cedar, guardians = guardiansPlan, engineReport = engineReport, verdict = verdict, examined = listOf(\"policy/cedar/default\", \"policy/guardians/default.policy.yaml\"))\n    writeFile(path = \"/tmp/gh-aw/evidence.json\", value = evidence)\n    val completion = noop(message = \"Security gather evidence written with PASS verdict; no GitHub action required beyond completion signal.\")\n    return verdict\n}"
+}
