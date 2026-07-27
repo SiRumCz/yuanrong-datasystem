@@ -1,18 +1,6 @@
 protocol: code-review
 instance: pr-220
-head_sha: 8e42b58ecc4e5b0ab63d1ee721a7ef70b3e6cccb
-phase: mrp
-joined: true
-phase_label: "\u2705 done"
-status_comment_id: 5005244456
-overrides:
-- phase: preflight-gate
-  actor: haoxianghz
-  reason: "test PR: legitimate preflight block (no spec/plan/docs/tests by design;\
-    \ code-implements-plan fail-safe). Bypassing to exercise per-issue \u2192 honesty\
-    \ \u2192 mrp on the golivax-delivered engine."
-- phase: honesty-gate
-  actor: haoxianghz
-  reason: "test PR: honesty-gate correctly evaluated the auto-fixes (2/3 flagged dishonest)\
-    \ \u2014 the honesty mechanism works. Overriding to reach the mrp phase (goal:\
-    \ confirm the pipeline reaches mrp; mrp itself to be tested separately)."
+head_sha: 6f9bbf46eb544360cf5016a891145bb35a6625ee
+phase: preflight
+joined: false
+phase_label: pre-flight adherence chain
