@@ -1,0 +1,14 @@
+{
+  "leg": "plan-implements-spec",
+  "scope": {
+    "code_changed": true,
+    "spec_present": false,
+    "plan_present": false,
+    "spec_path": null,
+    "plan_path": null
+  },
+  "gather_verdict": "underspec",
+  "graded_findings": [],
+  "examined": [],
+  "plan_kts": "fun plan(contextPath: String): Evidence {\n    val taskContext = readFile(path = \"/tmp/gh-aw/task-context.json\")\n    val gather = parseGather(taskContext)\n    val scope = readScope(gather)\n    val verdict = readVerdict(gather)\n    val findings = gradeFindings(gather)\n    val evidence = makeEvidence(scope, verdict, findings)\n    val written = writeFile(path = \"/tmp/gh-aw/evidence.json\", evidence)\n    val completion = emitNoop(message = \"Plan-implements-spec judge evidence written with no graded findings because gather reported no spec_to_plan or plan_to_spec cells.\")\n    return evidence\n}"
+}
