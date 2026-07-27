@@ -1,0 +1,15 @@
+{
+  "leg": "code-implements-plan",
+  "scope": {
+    "code_changed": true,
+    "plan_present": false,
+    "plan_path": null,
+    "code_files": [
+      "cli/disk_report.py"
+    ]
+  },
+  "gather_verdict": "underplan",
+  "graded_findings": [],
+  "examined": [],
+  "plan_kts": "fun plan(): Evidence {\n    val taskContext = readFile(path = \"/tmp/gh-aw/task-context.json\")\n    val gather = readGather(taskContext)\n    val feedback = readFeedback(taskContext)\n    val findings = readPlanToCodeCells(gather)\n    val gradedFindings = gradeFindings(findings, feedback)\n    val evidence = makeEvidence(gather, gradedFindings)\n    writeFile(path = \"/tmp/gh-aw/evidence.json\", content = evidence)\n    val completion = noop(message = \"Code-implements-plan judge complete: evidence written with no gather findings to grade.\")\n    return evidence\n}"
+}
