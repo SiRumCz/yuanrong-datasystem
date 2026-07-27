@@ -1,0 +1,34 @@
+{
+  "cluster": "consistency",
+  "legs": [
+    {
+      "leg": "docs-updated-appropriately",
+      "scope": {
+        "code_changed": true
+      },
+      "gather_verdict": "inadequate",
+      "graded_findings": [
+        {
+          "ref": ".repo_context/generated/repo_index.md",
+          "severity": "blocking",
+          "rationale": "The generated repository index is required shared AI context, and the added cli/disk_report.py changed indexed source structure without the corresponding index update. That is a real docs/context adherence gap for this repository, not a cosmetic issue."
+        }
+      ]
+    },
+    {
+      "leg": "tests-updated-appropriately",
+      "scope": {
+        "code_changed": true
+      },
+      "gather_verdict": "inadequate",
+      "graded_findings": [
+        {
+          "ref": "tests/kvtest/tests/python/test_deploy_worker.py",
+          "severity": "blocking",
+          "rationale": "The PR adds subprocess-based cli/disk_report.py behavior without a unit test for the du invocation or stdout handling. That is a real test coverage gap for new user-visible CLI behavior and should block until covered."
+        }
+      ]
+    }
+  ],
+  "plan_kts": "fun plan(): Evidence {\n    val taskContext = readFile(path = \"/tmp/gh-aw/task-context.json\")\n    val docsEvidence = readInput(taskContext, leg = \"docs-updated-appropriately\")\n    val testsEvidence = readInput(taskContext, leg = \"tests-updated-appropriately\")\n    val rollup = makeConsistencyRollup(docsEvidence, testsEvidence)\n    val written = writeFile(path = \"/tmp/gh-aw/evidence.json\", value = rollup)\n    val signal = noop(message = \"Consistency rollup evidence written; no GitHub action needed.\")\n    return written\n}"
+}
