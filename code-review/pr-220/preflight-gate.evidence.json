@@ -1,0 +1,68 @@
+{
+  "legs": [
+    {
+      "leg": "spec-solves-issue",
+      "verdict": "n/a",
+      "scope": {
+        "issue_linked": false,
+        "spec_present": false
+      },
+      "summary": "Adherence evidence reports no linked issue or spec present, so the leg verdict is n/a as supplied."
+    },
+    {
+      "leg": "plan-implements-spec",
+      "verdict": "underspec",
+      "scope": {
+        "code_changed": true,
+        "spec_present": false,
+        "plan_present": false,
+        "spec_path": null,
+        "plan_path": null
+      },
+      "summary": "Adherence evidence reports code changes but no spec or plan paths, so the supplied verdict is underspec."
+    },
+    {
+      "leg": "code-implements-plan",
+      "verdict": "underplan",
+      "scope": {
+        "code_changed": true,
+        "plan_present": false,
+        "plan_path": null,
+        "code_files": [
+          "cli/disk_report.py"
+        ]
+      },
+      "summary": "Adherence evidence reports cli/disk_report.py changed with no plan present, so the supplied verdict is underplan."
+    },
+    {
+      "leg": "mm-compliance",
+      "verdict": "compliant",
+      "scope": {},
+      "summary": "MM compliance evidence reports compliant with 0 divergence(s) recorded."
+    },
+    {
+      "leg": "docs-updated-appropriately",
+      "verdict": "inadequate",
+      "scope": {
+        "code_changed": true
+      },
+      "summary": "Consistency evidence reports documentation/context updates inadequate with 1 graded finding(s)."
+    },
+    {
+      "leg": "tests-updated-appropriately",
+      "verdict": "inadequate",
+      "scope": {
+        "code_changed": true
+      },
+      "summary": "Consistency evidence reports test updates inadequate with 1 graded finding(s)."
+    },
+    {
+      "leg": "security",
+      "verdict": "PASS",
+      "scope": {},
+      "summary": "Security evidence reports verdict PASS with 0 locked violation(s) recorded."
+    }
+  ],
+  "examined": [],
+  "plan_kts": "fun plan(): Evidence {\n    val taskContext = readFile(path = \"/tmp/gh-aw/task-context.json\")\n    val adherence = readInput(taskContext, name = \"adherence\")\n    val mmCompliance = readInput(taskContext, name = \"mm-compliance\")\n    val consistency = readInput(taskContext, name = \"consistency\")\n    val security = readInput(taskContext, name = \"security\")\n    val legs = renderLeafCells(adherence, mmCompliance, consistency, security)\n    val evidence = makeEvidence(legs = legs, examined = emptyList())\n    val written = writeFile(path = \"/tmp/gh-aw/evidence.json\", value = evidence)\n    val completion = noop(message = \"No action needed: consolidated preflight evidence written to /tmp/gh-aw/evidence.json.\")\n    return evidence\n}"
+}
