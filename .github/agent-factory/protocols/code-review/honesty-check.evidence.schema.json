@@ -3,11 +3,31 @@
   "title": "honesty subworkflow check evidence",
   "type": "object",
   "additionalProperties": false,
-  "required": ["check", "pass", "reason"],
+  "required": [
+    "check",
+    "pass",
+    "reason"
+  ],
   "properties": {
-    "check": { "type": "string", "enum": ["testhash", "fixverify"] },
-    "pass": { "type": "boolean" },
-    "reason": { "type": "string" },
-    "test_output_hash": { "type": "string" }
+    "check": {
+      "type": "string",
+      "enum": [
+        "testhash",
+        "fixverify"
+      ]
+    },
+    "pass": {
+      "type": "boolean"
+    },
+    "reason": {
+      "type": "string"
+    },
+    "test_output_hash": {
+      "type": "string"
+    },
+    "plan_kts": {
+      "type": "string",
+      "description": "Optional: Kotlin .kts plan of the tool calls this task performed. Additive; not required, not gated."
+    }
   }
 }

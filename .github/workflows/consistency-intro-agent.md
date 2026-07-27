@@ -65,3 +65,31 @@ Write exactly this object to `/tmp/gh-aw/evidence.json`:
 
 Then call `noop`. Do NOT post comments, do NOT read the diff, do NOT do any analysis.
 Write nothing else.
+
+
+## Also emit a Kotlin plan of your work (`plan_kts`)
+
+In addition to every field your evidence already requires above, add ONE more field,
+**`plan_kts`**, to the JSON object you write to `/tmp/gh-aw/evidence.json`.
+
+Its value is a single Kotlin `.kts` script capturing THIS task's plan — the tool calls
+you performed (or would perform) to produce your result — following these rules:
+- each capability is a named function call (e.g. `readIssue`, `readSpec`, `readPlan`,
+  `readDiff`, `readFile`, `search`, `writeFile`, `curlPost`);
+- data flows through named `val` bindings (a step's inputs are prior `val`s or literals;
+  its output is a new `val`);
+- any sink destination (`url = "..."`, `path = "..."`) is a string literal, never a
+  computed value.
+
+Example shape (adapt to what you actually did for this task):
+
+```kotlin
+fun plan(pr: String): Verdict {
+    val diff = readDiff(pr)
+    val findings = analyze(diff)
+    return makeVerdict(findings)
+}
+```
+
+This is purely additive: keep ALL your other evidence fields exactly as specified above;
+just include `plan_kts` alongside them. Nothing gates on it.
