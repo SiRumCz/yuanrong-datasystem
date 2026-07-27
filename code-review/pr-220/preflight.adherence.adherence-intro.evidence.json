@@ -1,0 +1,5 @@
+{
+  "cluster": "adherence",
+  "examined": ["cluster entry — fans out to the cluster's legs"],
+  "plan_kts": "fun plan(): Verdict {\n    val evidence = makeEvidence(cluster = \"adherence\", examined = listOf(\"cluster entry — fans out to the cluster's legs\"))\n    val written = writeFile(path = \"/tmp/gh-aw/evidence.json\", content = evidence)\n    val signal = noop(message = \"No action needed: adherence cluster entry evidence written; fanout legs perform analysis\")\n    return makeVerdict(written, signal)\n}\n"
+}
