@@ -1,0 +1,71 @@
+{
+  "leg": "mm-compliance",
+  "scope": {},
+  "gather_verdict": "compliant",
+  "graded_findings": [],
+  "examined": [],
+  "plan_kts": "fun plan(): Evidence {\n    val taskContext = readFile(path = \"/tmp/gh-aw/task-context.json\")\n    val gather = readGather(input = taskContext)\n    val feedback = readFeedback(input = taskContext)\n    val grades = gradeFindings(gather = gather, feedback = feedback)\n    val evidence = makeEvidence(gather = gather, grades = grades)\n    writeFile(path = \"/tmp/gh-aw/evidence.json\", input = evidence)\n    return evidence\n}",
+  "plan_ast": {
+    "steps": [
+      {
+        "tool": "readFile",
+        "args": {
+          "path": "/tmp/gh-aw/task-context.json"
+        },
+        "result": "taskContext"
+      },
+      {
+        "tool": "readGather",
+        "args": {
+          "input": {
+            "$ref": "taskContext"
+          }
+        },
+        "result": "gather"
+      },
+      {
+        "tool": "readFeedback",
+        "args": {
+          "input": {
+            "$ref": "taskContext"
+          }
+        },
+        "result": "feedback"
+      },
+      {
+        "tool": "gradeFindings",
+        "args": {
+          "gather": {
+            "$ref": "gather"
+          },
+          "feedback": {
+            "$ref": "feedback"
+          }
+        },
+        "result": "grades"
+      },
+      {
+        "tool": "makeEvidence",
+        "args": {
+          "gather": {
+            "$ref": "gather"
+          },
+          "grades": {
+            "$ref": "grades"
+          }
+        },
+        "result": "evidence"
+      },
+      {
+        "tool": "writeFile",
+        "args": {
+          "path": "/tmp/gh-aw/evidence.json",
+          "input": {
+            "$ref": "evidence"
+          }
+        },
+        "result": "writeResult"
+      }
+    ]
+  }
+}
