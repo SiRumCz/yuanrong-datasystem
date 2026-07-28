@@ -25,13 +25,9 @@
     "test_output_hash": {
       "type": "string"
     },
-    "plan_kts": {
-      "type": "string",
-      "description": "Optional: Kotlin .kts plan of the tool calls this task performed. Additive; not required, not gated."
-    },
-    "plan_ast": {
+    "agent_security": {
       "type": "object",
-      "description": "Optional: the plan as a restricted workflow AST {steps:[{tool,args,result}]} for static data-flow verification. Additive; not required, not gated."
+      "description": "Security bundle (plan_kts/plan_ast/cert + guardians/cert_verify/cedar verdicts). Additive; not gated."
     }
   }
 }

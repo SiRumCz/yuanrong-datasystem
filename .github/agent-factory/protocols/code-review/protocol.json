@@ -5,9 +5,21 @@
   "max_depth": 6,
   "_note": "The full custody pipeline plus the mental-model gates, wired as engine phases: preflight fanout(4 cluster branches: adherence[spec-solves-issue||plan-implements-spec||code-implements-plan]->adherence-rollup, mm-compliance[gather->judge], consistency[docs||tests]->consistency-rollup, security[gather->judge]) -> join-preflight -> preflight-gate -> overview(+risk) -> review fanout(5 dims; publish-review opens one [ai-review] issue per finding) -> join -> per-issue(DYNAMIC fanout, one leg per open [ai-review] issue: triage(fix-triage-agent) -> fix(edit/commit) -> honesty fanout[cryptohash||fixverify] -> join-honesty -> honesty-verdict) -> join-per-issue -> honesty-gate -> post-fix fanout[context || mm-updater->mm-gate] -> join -> mrp -> done. Each phase pairs the generic `evidence-present` form check with a deterministic per-phase gate: preflight (a 4-cluster nested fanout joined under preflight-gate, whose conclude-preflight runs a deterministic block-gaps/warn-extras rollup over the issue->spec->plan->code chain + mm-compliance, posts one consolidated comment, and halts via on_blocked:halt until /override), overview (schema + cohort-partition + a deterministic `conclude-overview` risk scorer porting score.js/diffusion.js that owns the authoritative band and halts only on a garbled/unknown run; the agent's risk_band is an advisory hint), the 5 review dims (schema + findings-anchored + publish-review; the fanout's params.status_note flags request-changes legs in the status header), and then a per-issue dynamic fanout runs, for each open [ai-review] issue, triage (fix-triage-agent, host-authoritatively pinned to the leg's issue; schema + conclude-triage), fix (edit/commit -- conclude-fix commits the diff to the PR head with rebase-retry and closes the issue), and honesty (a cryptohash proof-of-work that a real test ran AND a fixverify semi-formal fix certificate, ANDed per issue by conclude-honesty). The per-issue legs join under honesty-gate, whose aggregate-honesty reducer HALTS the pipeline (on_blocked:halt, /override-able) if ANY issue's fix is dishonest; issue selection is host-authoritative and the verdict is tamper-evident (both fail closed; a nested-leg conclude hook runs so fix/triage actually commit+close). The post-fix fanout runs context (schema-valid only, advisory -- a fanout leg runs NO conclude hook, so conclude-context.py is unused here) in PARALLEL with mm-updater (evidence-present + mm-questions-present; a gh-aw create-pull-request safe-output opens an [mm] PR when mm_changed, the mm-gate then holds for a human /mm-answer, else the empty gate auto-skips); the join waits for both before mrp (schema + conclude-mrp + a deterministic acceptance_plan: engine inputs[] deliver prior-phase evidence, per-cohort bands are re-derived via the shared _risk_score, and the custody-shaped pack is emitted as the merge-readiness-pack artifact). Remaining simplification: review findings are opened as [ai-review] issues but not yet posted as inline PR comments. Agent workflows live in .github/workflows/.",
   "triggers": [
-    { "on": "issue_comment", "comment_prefix": "/review", "command": "start" },
-    { "on": "issue_comment", "comment_prefix": "/override", "command": "override" },
-    { "on": "issue_comment", "comment_prefix": "/mm-answer", "command": "answer" }
+    {
+      "on": "issue_comment",
+      "comment_prefix": "/review",
+      "command": "start"
+    },
+    {
+      "on": "issue_comment",
+      "comment_prefix": "/override",
+      "command": "override"
+    },
+    {
+      "on": "issue_comment",
+      "comment_prefix": "/mm-answer",
+      "command": "answer"
+    }
   ],
   "states": [
     {
@@ -24,8 +36,29 @@
               "workflow": "adherence-intro-agent",
               "evidence": "cluster-intro.evidence.schema.json",
               "max_iterations": 2,
-              "params": { "require": ["examined"] },
-              "checks": [ { "run": "evidence-present", "on_fail": "iterate" } ]
+              "params": {
+                "require": [
+                  "examined"
+                ]
+              },
+              "checks": [
+                {
+                  "run": "evidence-present",
+                  "on_fail": "iterate"
+                },
+                {
+                  "run": "plan-ast-guardians",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-cert-verify",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-ast-cedar",
+                  "on_fail": "advisory"
+                }
+              ]
             },
             {
               "id": "adherence-fanout",
@@ -41,10 +74,33 @@
                       "workflow": "spec-solves-issue-agent",
                       "evidence": "spec-solves-issue.evidence.schema.json",
                       "max_iterations": 2,
-                      "params": { "require": ["verdict", "examined"] },
+                      "params": {
+                        "require": [
+                          "verdict",
+                          "examined"
+                        ]
+                      },
                       "checks": [
-                        { "run": "evidence-present",           "on_fail": "iterate" },
-                        { "run": "spec-solves-issue-coverage", "on_fail": "iterate" }
+                        {
+                          "run": "evidence-present",
+                          "on_fail": "iterate"
+                        },
+                        {
+                          "run": "spec-solves-issue-coverage",
+                          "on_fail": "iterate"
+                        },
+                        {
+                          "run": "plan-ast-guardians",
+                          "on_fail": "advisory"
+                        },
+                        {
+                          "run": "plan-cert-verify",
+                          "on_fail": "advisory"
+                        },
+                        {
+                          "run": "plan-ast-cedar",
+                          "on_fail": "advisory"
+                        }
                       ]
                     },
                     {
@@ -53,9 +109,34 @@
                       "workflow": "spec-solves-issue-judge-agent",
                       "evidence": "judge.evidence.schema.json",
                       "max_iterations": 2,
-                      "inputs": [ { "from": "spec-solves-issue-gather", "as": "gather" } ],
-                      "params": { "leg": "spec-solves-issue", "mode": "spec-solves" },
-                      "checks": [ { "run": "judge-coverage", "on_fail": "iterate" } ]
+                      "inputs": [
+                        {
+                          "from": "spec-solves-issue-gather",
+                          "as": "gather"
+                        }
+                      ],
+                      "params": {
+                        "leg": "spec-solves-issue",
+                        "mode": "spec-solves"
+                      },
+                      "checks": [
+                        {
+                          "run": "judge-coverage",
+                          "on_fail": "iterate"
+                        },
+                        {
+                          "run": "plan-ast-guardians",
+                          "on_fail": "advisory"
+                        },
+                        {
+                          "run": "plan-cert-verify",
+                          "on_fail": "advisory"
+                        },
+                        {
+                          "run": "plan-ast-cedar",
+                          "on_fail": "advisory"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -68,10 +149,33 @@
                       "workflow": "plan-implements-spec-agent",
                       "evidence": "plan-implements-spec.evidence.schema.json",
                       "max_iterations": 2,
-                      "params": { "require": ["verdict", "examined"] },
+                      "params": {
+                        "require": [
+                          "verdict",
+                          "examined"
+                        ]
+                      },
                       "checks": [
-                        { "run": "evidence-present",   "on_fail": "iterate" },
-                        { "run": "plan-spec-coverage", "on_fail": "iterate" }
+                        {
+                          "run": "evidence-present",
+                          "on_fail": "iterate"
+                        },
+                        {
+                          "run": "plan-spec-coverage",
+                          "on_fail": "iterate"
+                        },
+                        {
+                          "run": "plan-ast-guardians",
+                          "on_fail": "advisory"
+                        },
+                        {
+                          "run": "plan-cert-verify",
+                          "on_fail": "advisory"
+                        },
+                        {
+                          "run": "plan-ast-cedar",
+                          "on_fail": "advisory"
+                        }
                       ]
                     },
                     {
@@ -80,9 +184,34 @@
                       "workflow": "plan-implements-spec-judge-agent",
                       "evidence": "judge.evidence.schema.json",
                       "max_iterations": 2,
-                      "inputs": [ { "from": "plan-implements-spec-gather", "as": "gather" } ],
-                      "params": { "leg": "plan-implements-spec", "mode": "plan-spec" },
-                      "checks": [ { "run": "judge-coverage", "on_fail": "iterate" } ]
+                      "inputs": [
+                        {
+                          "from": "plan-implements-spec-gather",
+                          "as": "gather"
+                        }
+                      ],
+                      "params": {
+                        "leg": "plan-implements-spec",
+                        "mode": "plan-spec"
+                      },
+                      "checks": [
+                        {
+                          "run": "judge-coverage",
+                          "on_fail": "iterate"
+                        },
+                        {
+                          "run": "plan-ast-guardians",
+                          "on_fail": "advisory"
+                        },
+                        {
+                          "run": "plan-cert-verify",
+                          "on_fail": "advisory"
+                        },
+                        {
+                          "run": "plan-ast-cedar",
+                          "on_fail": "advisory"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -95,11 +224,37 @@
                       "workflow": "code-implements-plan-agent",
                       "evidence": "code-implements-plan.evidence.schema.json",
                       "max_iterations": 2,
-                      "params": { "require": ["verdict", "examined"] },
+                      "params": {
+                        "require": [
+                          "verdict",
+                          "examined"
+                        ]
+                      },
                       "checks": [
-                        { "run": "evidence-present",     "on_fail": "iterate" },
-                        { "run": "code-plan-coverage",   "on_fail": "iterate" },
-                        { "run": "traces-exist-in-diff", "on_fail": "iterate" }
+                        {
+                          "run": "evidence-present",
+                          "on_fail": "iterate"
+                        },
+                        {
+                          "run": "code-plan-coverage",
+                          "on_fail": "iterate"
+                        },
+                        {
+                          "run": "traces-exist-in-diff",
+                          "on_fail": "iterate"
+                        },
+                        {
+                          "run": "plan-ast-guardians",
+                          "on_fail": "advisory"
+                        },
+                        {
+                          "run": "plan-cert-verify",
+                          "on_fail": "advisory"
+                        },
+                        {
+                          "run": "plan-ast-cedar",
+                          "on_fail": "advisory"
+                        }
                       ]
                     },
                     {
@@ -108,15 +263,44 @@
                       "workflow": "code-implements-plan-judge-agent",
                       "evidence": "judge.evidence.schema.json",
                       "max_iterations": 2,
-                      "inputs": [ { "from": "code-implements-plan-gather", "as": "gather" } ],
-                      "params": { "leg": "code-implements-plan", "mode": "code-plan" },
-                      "checks": [ { "run": "judge-coverage", "on_fail": "iterate" } ]
+                      "inputs": [
+                        {
+                          "from": "code-implements-plan-gather",
+                          "as": "gather"
+                        }
+                      ],
+                      "params": {
+                        "leg": "code-implements-plan",
+                        "mode": "code-plan"
+                      },
+                      "checks": [
+                        {
+                          "run": "judge-coverage",
+                          "on_fail": "iterate"
+                        },
+                        {
+                          "run": "plan-ast-guardians",
+                          "on_fail": "advisory"
+                        },
+                        {
+                          "run": "plan-cert-verify",
+                          "on_fail": "advisory"
+                        },
+                        {
+                          "run": "plan-ast-cedar",
+                          "on_fail": "advisory"
+                        }
+                      ]
                     }
                   ]
                 }
               ]
             },
-            { "id": "join-adherence", "kind": "join", "of": "adherence-fanout" },
+            {
+              "id": "join-adherence",
+              "kind": "join",
+              "of": "adherence-fanout"
+            },
             {
               "id": "adherence-rollup",
               "kind": "agent",
@@ -124,12 +308,44 @@
               "evidence": "cluster.evidence.schema.json",
               "max_iterations": 2,
               "inputs": [
-                { "from": "spec-solves-issue",   "as": "spec-solves-issue" },
-                { "from": "plan-implements-spec", "as": "plan-implements-spec" },
-                { "from": "code-implements-plan", "as": "code-implements-plan" }
+                {
+                  "from": "spec-solves-issue",
+                  "as": "spec-solves-issue"
+                },
+                {
+                  "from": "plan-implements-spec",
+                  "as": "plan-implements-spec"
+                },
+                {
+                  "from": "code-implements-plan",
+                  "as": "code-implements-plan"
+                }
               ],
-              "params": { "legs": ["spec-solves-issue", "plan-implements-spec", "code-implements-plan"] },
-              "checks": [ { "run": "cluster-coverage", "on_fail": "iterate" } ]
+              "params": {
+                "legs": [
+                  "spec-solves-issue",
+                  "plan-implements-spec",
+                  "code-implements-plan"
+                ]
+              },
+              "checks": [
+                {
+                  "run": "cluster-coverage",
+                  "on_fail": "iterate"
+                },
+                {
+                  "run": "plan-ast-guardians",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-cert-verify",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-ast-cedar",
+                  "on_fail": "advisory"
+                }
+              ]
             }
           ]
         },
@@ -142,9 +358,28 @@
               "workflow": "mm-compliance-gate",
               "evidence": "mm-compliance.evidence.schema.json",
               "max_iterations": 2,
-              "params": { "require": ["verdict"] },
+              "params": {
+                "require": [
+                  "verdict"
+                ]
+              },
               "checks": [
-                { "run": "evidence-present", "on_fail": "iterate" }
+                {
+                  "run": "evidence-present",
+                  "on_fail": "iterate"
+                },
+                {
+                  "run": "plan-ast-guardians",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-cert-verify",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-ast-cedar",
+                  "on_fail": "advisory"
+                }
               ]
             },
             {
@@ -153,9 +388,34 @@
               "workflow": "mm-compliance-judge-agent",
               "evidence": "judge.evidence.schema.json",
               "max_iterations": 2,
-              "inputs": [ { "from": "mm-compliance-gather", "as": "gather" } ],
-              "params": { "leg": "mm-compliance", "mode": "mm" },
-              "checks": [ { "run": "judge-coverage", "on_fail": "iterate" } ]
+              "inputs": [
+                {
+                  "from": "mm-compliance-gather",
+                  "as": "gather"
+                }
+              ],
+              "params": {
+                "leg": "mm-compliance",
+                "mode": "mm"
+              },
+              "checks": [
+                {
+                  "run": "judge-coverage",
+                  "on_fail": "iterate"
+                },
+                {
+                  "run": "plan-ast-guardians",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-cert-verify",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-ast-cedar",
+                  "on_fail": "advisory"
+                }
+              ]
             }
           ]
         },
@@ -168,8 +428,29 @@
               "workflow": "consistency-intro-agent",
               "evidence": "cluster-intro.evidence.schema.json",
               "max_iterations": 2,
-              "params": { "require": ["examined"] },
-              "checks": [ { "run": "evidence-present", "on_fail": "iterate" } ]
+              "params": {
+                "require": [
+                  "examined"
+                ]
+              },
+              "checks": [
+                {
+                  "run": "evidence-present",
+                  "on_fail": "iterate"
+                },
+                {
+                  "run": "plan-ast-guardians",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-cert-verify",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-ast-cedar",
+                  "on_fail": "advisory"
+                }
+              ]
             },
             {
               "id": "consistency-fanout",
@@ -185,10 +466,33 @@
                       "workflow": "docs-coherence-agent",
                       "evidence": "docs-coherence.evidence.schema.json",
                       "max_iterations": 2,
-                      "params": { "require": ["verdict", "examined"] },
+                      "params": {
+                        "require": [
+                          "verdict",
+                          "examined"
+                        ]
+                      },
                       "checks": [
-                        { "run": "evidence-present", "on_fail": "iterate" },
-                        { "run": "docs-coverage",    "on_fail": "iterate" }
+                        {
+                          "run": "evidence-present",
+                          "on_fail": "iterate"
+                        },
+                        {
+                          "run": "docs-coverage",
+                          "on_fail": "iterate"
+                        },
+                        {
+                          "run": "plan-ast-guardians",
+                          "on_fail": "advisory"
+                        },
+                        {
+                          "run": "plan-cert-verify",
+                          "on_fail": "advisory"
+                        },
+                        {
+                          "run": "plan-ast-cedar",
+                          "on_fail": "advisory"
+                        }
                       ]
                     },
                     {
@@ -197,9 +501,34 @@
                       "workflow": "docs-updated-appropriately-judge-agent",
                       "evidence": "judge.evidence.schema.json",
                       "max_iterations": 2,
-                      "inputs": [ { "from": "docs-updated-appropriately-gather", "as": "gather" } ],
-                      "params": { "leg": "docs-updated-appropriately", "mode": "coherence" },
-                      "checks": [ { "run": "judge-coverage", "on_fail": "iterate" } ]
+                      "inputs": [
+                        {
+                          "from": "docs-updated-appropriately-gather",
+                          "as": "gather"
+                        }
+                      ],
+                      "params": {
+                        "leg": "docs-updated-appropriately",
+                        "mode": "coherence"
+                      },
+                      "checks": [
+                        {
+                          "run": "judge-coverage",
+                          "on_fail": "iterate"
+                        },
+                        {
+                          "run": "plan-ast-guardians",
+                          "on_fail": "advisory"
+                        },
+                        {
+                          "run": "plan-cert-verify",
+                          "on_fail": "advisory"
+                        },
+                        {
+                          "run": "plan-ast-cedar",
+                          "on_fail": "advisory"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -212,10 +541,33 @@
                       "workflow": "tests-coherence-agent",
                       "evidence": "tests-coherence.evidence.schema.json",
                       "max_iterations": 2,
-                      "params": { "require": ["verdict", "examined"] },
+                      "params": {
+                        "require": [
+                          "verdict",
+                          "examined"
+                        ]
+                      },
                       "checks": [
-                        { "run": "evidence-present", "on_fail": "iterate" },
-                        { "run": "tests-coverage",   "on_fail": "iterate" }
+                        {
+                          "run": "evidence-present",
+                          "on_fail": "iterate"
+                        },
+                        {
+                          "run": "tests-coverage",
+                          "on_fail": "iterate"
+                        },
+                        {
+                          "run": "plan-ast-guardians",
+                          "on_fail": "advisory"
+                        },
+                        {
+                          "run": "plan-cert-verify",
+                          "on_fail": "advisory"
+                        },
+                        {
+                          "run": "plan-ast-cedar",
+                          "on_fail": "advisory"
+                        }
                       ]
                     },
                     {
@@ -224,15 +576,44 @@
                       "workflow": "tests-updated-appropriately-judge-agent",
                       "evidence": "judge.evidence.schema.json",
                       "max_iterations": 2,
-                      "inputs": [ { "from": "tests-updated-appropriately-gather", "as": "gather" } ],
-                      "params": { "leg": "tests-updated-appropriately", "mode": "coherence" },
-                      "checks": [ { "run": "judge-coverage", "on_fail": "iterate" } ]
+                      "inputs": [
+                        {
+                          "from": "tests-updated-appropriately-gather",
+                          "as": "gather"
+                        }
+                      ],
+                      "params": {
+                        "leg": "tests-updated-appropriately",
+                        "mode": "coherence"
+                      },
+                      "checks": [
+                        {
+                          "run": "judge-coverage",
+                          "on_fail": "iterate"
+                        },
+                        {
+                          "run": "plan-ast-guardians",
+                          "on_fail": "advisory"
+                        },
+                        {
+                          "run": "plan-cert-verify",
+                          "on_fail": "advisory"
+                        },
+                        {
+                          "run": "plan-ast-cedar",
+                          "on_fail": "advisory"
+                        }
+                      ]
                     }
                   ]
                 }
               ]
             },
-            { "id": "join-consistency", "kind": "join", "of": "consistency-fanout" },
+            {
+              "id": "join-consistency",
+              "kind": "join",
+              "of": "consistency-fanout"
+            },
             {
               "id": "consistency-rollup",
               "kind": "agent",
@@ -240,11 +621,39 @@
               "evidence": "cluster.evidence.schema.json",
               "max_iterations": 2,
               "inputs": [
-                { "from": "docs-updated-appropriately",  "as": "docs-updated-appropriately" },
-                { "from": "tests-updated-appropriately", "as": "tests-updated-appropriately" }
+                {
+                  "from": "docs-updated-appropriately",
+                  "as": "docs-updated-appropriately"
+                },
+                {
+                  "from": "tests-updated-appropriately",
+                  "as": "tests-updated-appropriately"
+                }
               ],
-              "params": { "legs": ["docs-updated-appropriately", "tests-updated-appropriately"] },
-              "checks": [ { "run": "cluster-coverage", "on_fail": "iterate" } ]
+              "params": {
+                "legs": [
+                  "docs-updated-appropriately",
+                  "tests-updated-appropriately"
+                ]
+              },
+              "checks": [
+                {
+                  "run": "cluster-coverage",
+                  "on_fail": "iterate"
+                },
+                {
+                  "run": "plan-ast-guardians",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-cert-verify",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-ast-cedar",
+                  "on_fail": "advisory"
+                }
+              ]
             }
           ]
         },
@@ -258,8 +667,26 @@
               "evidence": "security-gather.evidence.schema.json",
               "max_iterations": 2,
               "checks": [
-                { "run": "evidence-present",        "on_fail": "iterate" },
-                { "run": "security-gather-coverage", "on_fail": "iterate" }
+                {
+                  "run": "evidence-present",
+                  "on_fail": "iterate"
+                },
+                {
+                  "run": "security-gather-coverage",
+                  "on_fail": "iterate"
+                },
+                {
+                  "run": "plan-ast-guardians",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-cert-verify",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-ast-cedar",
+                  "on_fail": "advisory"
+                }
               ]
             },
             {
@@ -268,16 +695,46 @@
               "workflow": "security-judge-agent",
               "evidence": "judge.evidence.schema.json",
               "max_iterations": 2,
-              "inputs": [ { "from": "security-gather", "as": "gather" } ],
-              "params": { "leg": "security", "mode": "security" },
-              "checks": [ { "run": "judge-coverage", "on_fail": "iterate" } ]
+              "inputs": [
+                {
+                  "from": "security-gather",
+                  "as": "gather"
+                }
+              ],
+              "params": {
+                "leg": "security",
+                "mode": "security"
+              },
+              "checks": [
+                {
+                  "run": "judge-coverage",
+                  "on_fail": "iterate"
+                },
+                {
+                  "run": "plan-ast-guardians",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-cert-verify",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-ast-cedar",
+                  "on_fail": "advisory"
+                }
+              ]
             }
           ]
         }
       ],
       "next": "join-preflight"
     },
-    { "id": "join-preflight", "kind": "join", "of": "preflight", "next": "preflight-gate" },
+    {
+      "id": "join-preflight",
+      "kind": "join",
+      "of": "preflight",
+      "next": "preflight-gate"
+    },
     {
       "id": "preflight-gate",
       "kind": "agent",
@@ -286,15 +743,55 @@
       "evidence": "preflight-gate.evidence.schema.json",
       "max_iterations": 2,
       "inputs": [
-        { "from": "adherence",    "as": "adherence" },
-        { "from": "mm-compliance", "as": "mm-compliance" },
-        { "from": "consistency",  "as": "consistency" },
-        { "from": "security",     "as": "security" }
+        {
+          "from": "adherence",
+          "as": "adherence"
+        },
+        {
+          "from": "mm-compliance",
+          "as": "mm-compliance"
+        },
+        {
+          "from": "consistency",
+          "as": "consistency"
+        },
+        {
+          "from": "security",
+          "as": "security"
+        }
       ],
-      "params": { "legs": ["spec-solves-issue", "plan-implements-spec", "code-implements-plan", "mm-compliance", "docs-updated-appropriately", "tests-updated-appropriately", "security"] },
+      "params": {
+        "legs": [
+          "spec-solves-issue",
+          "plan-implements-spec",
+          "code-implements-plan",
+          "mm-compliance",
+          "docs-updated-appropriately",
+          "tests-updated-appropriately",
+          "security"
+        ]
+      },
       "checks": [
-        { "run": "preflight-gate-coverage", "on_fail": "iterate"  },
-        { "run": "local-review-evidence",   "on_fail": "advisory" }
+        {
+          "run": "preflight-gate-coverage",
+          "on_fail": "iterate"
+        },
+        {
+          "run": "local-review-evidence",
+          "on_fail": "advisory"
+        },
+        {
+          "run": "plan-ast-guardians",
+          "on_fail": "advisory"
+        },
+        {
+          "run": "plan-cert-verify",
+          "on_fail": "advisory"
+        },
+        {
+          "run": "plan-ast-cedar",
+          "on_fail": "advisory"
+        }
       ],
       "conclude": "conclude-preflight",
       "on_blocked": "halt",
@@ -307,11 +804,41 @@
       "workflow": "overview-agent",
       "evidence": "overview.evidence.schema.json",
       "max_iterations": 2,
-      "params": { "require": ["cohorts", "summary"], "non_empty": ["cohorts", "summary"] },
+      "params": {
+        "require": [
+          "cohorts",
+          "summary"
+        ],
+        "non_empty": [
+          "cohorts",
+          "summary"
+        ]
+      },
       "checks": [
-        { "run": "evidence-present",         "on_fail": "iterate" },
-        { "run": "overview-schema-valid",     "on_fail": "iterate" },
-        { "run": "cohort-partition-complete", "on_fail": "iterate" }
+        {
+          "run": "evidence-present",
+          "on_fail": "iterate"
+        },
+        {
+          "run": "overview-schema-valid",
+          "on_fail": "iterate"
+        },
+        {
+          "run": "cohort-partition-complete",
+          "on_fail": "iterate"
+        },
+        {
+          "run": "plan-ast-guardians",
+          "on_fail": "advisory"
+        },
+        {
+          "run": "plan-cert-verify",
+          "on_fail": "advisory"
+        },
+        {
+          "run": "plan-ast-cedar",
+          "on_fail": "advisory"
+        }
       ],
       "conclude": "conclude-overview",
       "on_blocked": "halt",
@@ -321,92 +848,517 @@
       "id": "review",
       "kind": "fanout",
       "label": "multi-dimension review",
-      "params": { "status_note": { "verdict_field": "verdict", "flag_verdicts": ["REQUEST_CHANGES"], "severity_field": "severity", "flag_severities": ["critical", "high"], "label": "request-changes" } },
+      "params": {
+        "status_note": {
+          "verdict_field": "verdict",
+          "flag_verdicts": [
+            "REQUEST_CHANGES"
+          ],
+          "severity_field": "severity",
+          "flag_severities": [
+            "critical",
+            "high"
+          ],
+          "label": "request-changes"
+        }
+      },
       "branches": [
-        { "id": "correctness",     "workflow": "review-correctness-agent", "evidence": "review.evidence.schema.json", "max_iterations": 2, "params": { "dimension": "correctness",     "require": ["dimension", "verdict", "findings"], "non_empty": ["dimension", "verdict"] }, "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "review-schema-valid", "on_fail": "iterate" }, { "run": "review-findings-anchored", "on_fail": "iterate" } ], "publish": "publish-review" },
-        { "id": "test",            "workflow": "review-test-agent", "evidence": "review.evidence.schema.json", "max_iterations": 2, "params": { "dimension": "test",            "require": ["dimension", "verdict", "findings"], "non_empty": ["dimension", "verdict"] }, "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "review-schema-valid", "on_fail": "iterate" }, { "run": "review-findings-anchored", "on_fail": "iterate" } ], "publish": "publish-review" },
-        { "id": "performance",     "workflow": "review-performance-agent", "evidence": "review.evidence.schema.json", "max_iterations": 2, "params": { "dimension": "performance",     "require": ["dimension", "verdict", "findings"], "non_empty": ["dimension", "verdict"] }, "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "review-schema-valid", "on_fail": "iterate" }, { "run": "review-findings-anchored", "on_fail": "iterate" } ], "publish": "publish-review" },
-        { "id": "security",        "workflow": "review-security-agent", "evidence": "review.evidence.schema.json", "max_iterations": 2, "params": { "dimension": "security",        "require": ["dimension", "verdict", "findings"], "non_empty": ["dimension", "verdict"] }, "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "review-schema-valid", "on_fail": "iterate" }, { "run": "review-findings-anchored", "on_fail": "iterate" } ], "publish": "publish-review" },
-        { "id": "maintainability", "workflow": "review-maintainability-agent", "evidence": "review.evidence.schema.json", "max_iterations": 2, "params": { "dimension": "maintainability", "require": ["dimension", "verdict", "findings"], "non_empty": ["dimension", "verdict"] }, "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "review-schema-valid", "on_fail": "iterate" }, { "run": "review-findings-anchored", "on_fail": "iterate" } ], "publish": "publish-review" }
+        {
+          "id": "correctness",
+          "workflow": "review-correctness-agent",
+          "evidence": "review.evidence.schema.json",
+          "max_iterations": 2,
+          "params": {
+            "dimension": "correctness",
+            "require": [
+              "dimension",
+              "verdict",
+              "findings"
+            ],
+            "non_empty": [
+              "dimension",
+              "verdict"
+            ]
+          },
+          "checks": [
+            {
+              "run": "evidence-present",
+              "on_fail": "iterate"
+            },
+            {
+              "run": "review-schema-valid",
+              "on_fail": "iterate"
+            },
+            {
+              "run": "review-findings-anchored",
+              "on_fail": "iterate"
+            },
+            {
+              "run": "plan-ast-guardians",
+              "on_fail": "advisory"
+            },
+            {
+              "run": "plan-cert-verify",
+              "on_fail": "advisory"
+            },
+            {
+              "run": "plan-ast-cedar",
+              "on_fail": "advisory"
+            }
+          ],
+          "publish": "publish-review"
+        },
+        {
+          "id": "test",
+          "workflow": "review-test-agent",
+          "evidence": "review.evidence.schema.json",
+          "max_iterations": 2,
+          "params": {
+            "dimension": "test",
+            "require": [
+              "dimension",
+              "verdict",
+              "findings"
+            ],
+            "non_empty": [
+              "dimension",
+              "verdict"
+            ]
+          },
+          "checks": [
+            {
+              "run": "evidence-present",
+              "on_fail": "iterate"
+            },
+            {
+              "run": "review-schema-valid",
+              "on_fail": "iterate"
+            },
+            {
+              "run": "review-findings-anchored",
+              "on_fail": "iterate"
+            },
+            {
+              "run": "plan-ast-guardians",
+              "on_fail": "advisory"
+            },
+            {
+              "run": "plan-cert-verify",
+              "on_fail": "advisory"
+            },
+            {
+              "run": "plan-ast-cedar",
+              "on_fail": "advisory"
+            }
+          ],
+          "publish": "publish-review"
+        },
+        {
+          "id": "performance",
+          "workflow": "review-performance-agent",
+          "evidence": "review.evidence.schema.json",
+          "max_iterations": 2,
+          "params": {
+            "dimension": "performance",
+            "require": [
+              "dimension",
+              "verdict",
+              "findings"
+            ],
+            "non_empty": [
+              "dimension",
+              "verdict"
+            ]
+          },
+          "checks": [
+            {
+              "run": "evidence-present",
+              "on_fail": "iterate"
+            },
+            {
+              "run": "review-schema-valid",
+              "on_fail": "iterate"
+            },
+            {
+              "run": "review-findings-anchored",
+              "on_fail": "iterate"
+            },
+            {
+              "run": "plan-ast-guardians",
+              "on_fail": "advisory"
+            },
+            {
+              "run": "plan-cert-verify",
+              "on_fail": "advisory"
+            },
+            {
+              "run": "plan-ast-cedar",
+              "on_fail": "advisory"
+            }
+          ],
+          "publish": "publish-review"
+        },
+        {
+          "id": "security",
+          "workflow": "review-security-agent",
+          "evidence": "review.evidence.schema.json",
+          "max_iterations": 2,
+          "params": {
+            "dimension": "security",
+            "require": [
+              "dimension",
+              "verdict",
+              "findings"
+            ],
+            "non_empty": [
+              "dimension",
+              "verdict"
+            ]
+          },
+          "checks": [
+            {
+              "run": "evidence-present",
+              "on_fail": "iterate"
+            },
+            {
+              "run": "review-schema-valid",
+              "on_fail": "iterate"
+            },
+            {
+              "run": "review-findings-anchored",
+              "on_fail": "iterate"
+            },
+            {
+              "run": "plan-ast-guardians",
+              "on_fail": "advisory"
+            },
+            {
+              "run": "plan-cert-verify",
+              "on_fail": "advisory"
+            },
+            {
+              "run": "plan-ast-cedar",
+              "on_fail": "advisory"
+            }
+          ],
+          "publish": "publish-review"
+        },
+        {
+          "id": "maintainability",
+          "workflow": "review-maintainability-agent",
+          "evidence": "review.evidence.schema.json",
+          "max_iterations": 2,
+          "params": {
+            "dimension": "maintainability",
+            "require": [
+              "dimension",
+              "verdict",
+              "findings"
+            ],
+            "non_empty": [
+              "dimension",
+              "verdict"
+            ]
+          },
+          "checks": [
+            {
+              "run": "evidence-present",
+              "on_fail": "iterate"
+            },
+            {
+              "run": "review-schema-valid",
+              "on_fail": "iterate"
+            },
+            {
+              "run": "review-findings-anchored",
+              "on_fail": "iterate"
+            },
+            {
+              "run": "plan-ast-guardians",
+              "on_fail": "advisory"
+            },
+            {
+              "run": "plan-cert-verify",
+              "on_fail": "advisory"
+            },
+            {
+              "run": "plan-ast-cedar",
+              "on_fail": "advisory"
+            }
+          ],
+          "publish": "publish-review"
+        }
       ],
       "next": "join-review"
     },
-    { "id": "join-review", "kind": "join", "of": "review", "next": "per-issue" },
+    {
+      "id": "join-review",
+      "kind": "join",
+      "of": "review",
+      "next": "per-issue"
+    },
     {
       "id": "per-issue",
       "kind": "fanout",
-      "label": "per-issue triage → fix (one leg per open [ai-review] issue)",
-      "expand": { "hook": "expand-issues", "as": "issue", "id_from": "$.number", "max_legs": 32, "matrix_fields": ["number"] },
-      "each": { "states": [
-        {
-          "id": "triage",
-          "kind": "agent",
-          "label": "per-issue triage (one cluster from the delivered issue)",
-          "workflow": "fix-triage-agent",
-          "evidence": "triage.evidence.schema.json",
-          "max_iterations": 2,
-          "params": { "require": ["clusters", "summary"] },
-          "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "triage-schema-valid", "on_fail": "iterate" } ],
-          "conclude": "conclude-triage",
-          "next": "fix"
-        },
-        {
-          "id": "fix",
-          "kind": "agent",
-          "label": "edit + commit remediation (edit mode)",
-          "workflow": "fix-agent",
-          "evidence": "fix.evidence.schema.json",
-          "max_iterations": 2,
-          "inputs": [ { "from": "triage", "as": "triage" } ],
-          "params": { "require": ["fixes", "mode"] },
-          "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "fix-schema-valid", "on_fail": "iterate" } ],
-          "conclude": "conclude-fix",
-          "next": "honesty"
-        },
-        {
-          "id": "honesty",
-          "kind": "fanout",
-          "next": "join-honesty",
-          "branches": [
-            { "id": "cryptohash", "workflow": "honesty-cryptohash-agent", "evidence": "crypto-verification.evidence.schema.json", "max_iterations": 2, "params": { "require": ["ran", "crypto-verification-hash"] }, "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "crypto-hash-valid", "on_fail": "iterate" } ] },
-            { "id": "fixverify", "workflow": "honesty-fixverify-agent", "evidence": "honesty-check.evidence.schema.json", "max_iterations": 1, "params": { "require": ["check", "pass", "reason"] }, "checks": [ { "run": "evidence-present", "on_fail": "iterate" }, { "run": "honesty-check-valid", "on_fail": "iterate" } ] }
-          ]
-        },
-        { "id": "join-honesty", "kind": "join", "of": "honesty", "policy": "all", "next": "honesty-verdict" },
-        {
-          "id": "honesty-verdict",
-          "kind": "merge",
-          "label": "per-issue honesty verdict (AND of the subworkflows)",
-          "hook": "conclude-honesty",
-          "inputs": [ { "from": "cryptohash", "as": "cryptohash" }, { "from": "fixverify", "as": "fixverify" }, { "from": "triage", "as": "triage" } ]
-        }
-      ] },
+      "label": "per-issue triage \u2192 fix (one leg per open [ai-review] issue)",
+      "expand": {
+        "hook": "expand-issues",
+        "as": "issue",
+        "id_from": "$.number",
+        "max_legs": 32,
+        "matrix_fields": [
+          "number"
+        ]
+      },
+      "each": {
+        "states": [
+          {
+            "id": "triage",
+            "kind": "agent",
+            "label": "per-issue triage (one cluster from the delivered issue)",
+            "workflow": "fix-triage-agent",
+            "evidence": "triage.evidence.schema.json",
+            "max_iterations": 2,
+            "params": {
+              "require": [
+                "clusters",
+                "summary"
+              ]
+            },
+            "checks": [
+              {
+                "run": "evidence-present",
+                "on_fail": "iterate"
+              },
+              {
+                "run": "triage-schema-valid",
+                "on_fail": "iterate"
+              },
+              {
+                "run": "plan-ast-guardians",
+                "on_fail": "advisory"
+              },
+              {
+                "run": "plan-cert-verify",
+                "on_fail": "advisory"
+              },
+              {
+                "run": "plan-ast-cedar",
+                "on_fail": "advisory"
+              }
+            ],
+            "conclude": "conclude-triage",
+            "next": "fix"
+          },
+          {
+            "id": "fix",
+            "kind": "agent",
+            "label": "edit + commit remediation (edit mode)",
+            "workflow": "fix-agent",
+            "evidence": "fix.evidence.schema.json",
+            "max_iterations": 2,
+            "inputs": [
+              {
+                "from": "triage",
+                "as": "triage"
+              }
+            ],
+            "params": {
+              "require": [
+                "fixes",
+                "mode"
+              ]
+            },
+            "checks": [
+              {
+                "run": "evidence-present",
+                "on_fail": "iterate"
+              },
+              {
+                "run": "fix-schema-valid",
+                "on_fail": "iterate"
+              },
+              {
+                "run": "plan-ast-guardians",
+                "on_fail": "advisory"
+              },
+              {
+                "run": "plan-cert-verify",
+                "on_fail": "advisory"
+              },
+              {
+                "run": "plan-ast-cedar",
+                "on_fail": "advisory"
+              }
+            ],
+            "conclude": "conclude-fix",
+            "next": "honesty"
+          },
+          {
+            "id": "honesty",
+            "kind": "fanout",
+            "next": "join-honesty",
+            "branches": [
+              {
+                "id": "cryptohash",
+                "workflow": "honesty-cryptohash-agent",
+                "evidence": "crypto-verification.evidence.schema.json",
+                "max_iterations": 2,
+                "params": {
+                  "require": [
+                    "ran",
+                    "crypto-verification-hash"
+                  ]
+                },
+                "checks": [
+                  {
+                    "run": "evidence-present",
+                    "on_fail": "iterate"
+                  },
+                  {
+                    "run": "crypto-hash-valid",
+                    "on_fail": "iterate"
+                  },
+                  {
+                    "run": "plan-ast-guardians",
+                    "on_fail": "advisory"
+                  },
+                  {
+                    "run": "plan-cert-verify",
+                    "on_fail": "advisory"
+                  },
+                  {
+                    "run": "plan-ast-cedar",
+                    "on_fail": "advisory"
+                  }
+                ]
+              },
+              {
+                "id": "fixverify",
+                "workflow": "honesty-fixverify-agent",
+                "evidence": "honesty-check.evidence.schema.json",
+                "max_iterations": 1,
+                "params": {
+                  "require": [
+                    "check",
+                    "pass",
+                    "reason"
+                  ]
+                },
+                "checks": [
+                  {
+                    "run": "evidence-present",
+                    "on_fail": "iterate"
+                  },
+                  {
+                    "run": "honesty-check-valid",
+                    "on_fail": "iterate"
+                  },
+                  {
+                    "run": "plan-ast-guardians",
+                    "on_fail": "advisory"
+                  },
+                  {
+                    "run": "plan-cert-verify",
+                    "on_fail": "advisory"
+                  },
+                  {
+                    "run": "plan-ast-cedar",
+                    "on_fail": "advisory"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "join-honesty",
+            "kind": "join",
+            "of": "honesty",
+            "policy": "all",
+            "next": "honesty-verdict"
+          },
+          {
+            "id": "honesty-verdict",
+            "kind": "merge",
+            "label": "per-issue honesty verdict (AND of the subworkflows)",
+            "hook": "conclude-honesty",
+            "inputs": [
+              {
+                "from": "cryptohash",
+                "as": "cryptohash"
+              },
+              {
+                "from": "fixverify",
+                "as": "fixverify"
+              },
+              {
+                "from": "triage",
+                "as": "triage"
+              }
+            ]
+          }
+        ]
+      },
       "next": "join-per-issue"
     },
-    { "id": "join-per-issue", "kind": "join", "of": "per-issue", "policy": "all", "next": "honesty-gate" },
+    {
+      "id": "join-per-issue",
+      "kind": "join",
+      "of": "per-issue",
+      "policy": "all",
+      "next": "honesty-gate"
+    },
     {
       "id": "honesty-gate",
       "kind": "merge",
       "label": "aggregate per-issue honesty (halt if any dishonest)",
       "hook": "aggregate-honesty",
-      "inputs": [ { "from_fanout": "per-issue", "as": "per-issue" } ],
+      "inputs": [
+        {
+          "from_fanout": "per-issue",
+          "as": "per-issue"
+        }
+      ],
       "on_blocked": "halt",
       "next": "post-fix"
     },
     {
       "id": "post-fix",
       "kind": "fanout",
-      "label": "context capture ∥ mental-model update",
+      "label": "context capture \u2225 mental-model update",
       "branches": [
         {
           "id": "context",
           "workflow": "context-agent",
           "evidence": "context.evidence.schema.json",
           "max_iterations": 2,
-          "params": { "require": ["phases", "transcript_present"] },
+          "params": {
+            "require": [
+              "phases",
+              "transcript_present"
+            ]
+          },
           "checks": [
-            { "run": "evidence-present", "on_fail": "advisory" },
-            { "run": "context-schema-valid", "on_fail": "advisory" }
+            {
+              "run": "evidence-present",
+              "on_fail": "advisory"
+            },
+            {
+              "run": "context-schema-valid",
+              "on_fail": "advisory"
+            },
+            {
+              "run": "plan-ast-guardians",
+              "on_fail": "advisory"
+            },
+            {
+              "run": "plan-cert-verify",
+              "on_fail": "advisory"
+            },
+            {
+              "run": "plan-ast-cedar",
+              "on_fail": "advisory"
+            }
           ]
         },
         {
@@ -419,10 +1371,33 @@
               "workflow": "mm-updater",
               "evidence": "mm-updater.evidence.schema.json",
               "max_iterations": 2,
-              "params": { "require": ["mm_changed", "rationale"] },
+              "params": {
+                "require": [
+                  "mm_changed",
+                  "rationale"
+                ]
+              },
               "checks": [
-                { "run": "evidence-present", "on_fail": "iterate" },
-                { "run": "mm-questions-present", "on_fail": "iterate" }
+                {
+                  "run": "evidence-present",
+                  "on_fail": "iterate"
+                },
+                {
+                  "run": "mm-questions-present",
+                  "on_fail": "iterate"
+                },
+                {
+                  "run": "plan-ast-guardians",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-cert-verify",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-ast-cedar",
+                  "on_fail": "advisory"
+                }
               ]
             },
             {
@@ -431,7 +1406,10 @@
               "label": "decide on the mental-model PR",
               "questions_from": "mm-updater",
               "checks": [
-                { "run": "answers-coverage", "on_fail": "iterate" }
+                {
+                  "run": "answers-coverage",
+                  "on_fail": "iterate"
+                }
               ]
             }
           ]
@@ -439,7 +1417,12 @@
       ],
       "next": "join-post-fix"
     },
-    { "id": "join-post-fix", "kind": "join", "of": "post-fix", "next": "mrp" },
+    {
+      "id": "join-post-fix",
+      "kind": "join",
+      "of": "post-fix",
+      "next": "mrp"
+    },
     {
       "id": "mrp",
       "kind": "agent",
@@ -448,16 +1431,57 @@
       "evidence": "mrp.evidence.schema.json",
       "max_iterations": 2,
       "inputs": [
-        { "from": "preflight-gate", "as": "preflight" },
-        { "from": "mm-compliance", "as": "mm-compliance" },
-        { "from": "overview",  "as": "overview" },
-        { "from": "honesty-gate", "as": "honesty" },
-        { "from": "context",   "as": "context" }
+        {
+          "from": "preflight-gate",
+          "as": "preflight"
+        },
+        {
+          "from": "mm-compliance",
+          "as": "mm-compliance"
+        },
+        {
+          "from": "overview",
+          "as": "overview"
+        },
+        {
+          "from": "honesty-gate",
+          "as": "honesty"
+        },
+        {
+          "from": "context",
+          "as": "context"
+        }
       ],
-      "params": { "require": ["rationale", "critique_ledger", "routed_questions", "acceptance", "acceptance_plan"] },
+      "params": {
+        "require": [
+          "rationale",
+          "critique_ledger",
+          "routed_questions",
+          "acceptance",
+          "acceptance_plan"
+        ]
+      },
       "checks": [
-        { "run": "evidence-present", "on_fail": "advisory" },
-        { "run": "mrp-schema-valid", "on_fail": "advisory" }
+        {
+          "run": "evidence-present",
+          "on_fail": "advisory"
+        },
+        {
+          "run": "mrp-schema-valid",
+          "on_fail": "advisory"
+        },
+        {
+          "run": "plan-ast-guardians",
+          "on_fail": "advisory"
+        },
+        {
+          "run": "plan-cert-verify",
+          "on_fail": "advisory"
+        },
+        {
+          "run": "plan-ast-cedar",
+          "on_fail": "advisory"
+        }
       ],
       "conclude": "conclude-mrp",
       "next": "done"

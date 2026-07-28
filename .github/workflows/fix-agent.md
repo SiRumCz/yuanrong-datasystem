@@ -68,6 +68,18 @@ steps:
       printf '%s' "$CTX" > /tmp/gh-aw/task-context.json
       cat /tmp/gh-aw/task-context.json
 post-steps:
+  - name: Set up Python 3.11 for Guardians
+    uses: actions/setup-python@v5
+    with: { python-version: '3.11' }
+  - name: Guardians verify plan_ast (advisory, fail-open)
+    if: always()
+    run: |
+      python3.11 -m pip install --quiet "git+https://github.com/metareflection/guardians@main" z3-solver pydantic pyyaml || true
+      SEC=.github/agent-factory/protocols/code-review/scripts/security
+      python3.11 "$SEC/verify-plan-ast.py" /tmp/gh-aw/evidence.json "$SEC/policy/guardians/default.policy.yaml" || true
+      python3.11 "$SEC/verify-plan-cert.py" /tmp/gh-aw/evidence.json || true
+      ( cd "$SEC" && npm install --no-audit --no-fund --silent ) || true
+      python3.11 "$SEC/verify-plan-cedar.py" /tmp/gh-aw/evidence.json "$SEC/policy/cedar/default" || true
   - name: Upload evidence artifact
     if: always()
     uses: actions/upload-artifact@v4
@@ -179,60 +191,32 @@ Write nothing else, then call `noop`.
 - `mode` is fixed to `edit`; do NOT push, open PRs, or post comments — your
   edits and test runs stay local to this run; the diff is the evidence.
 
+## Emit your security bundle (`agent_security`)
 
-## Also emit a Kotlin plan of your work (`plan_kts`)
-
-In addition to every field your evidence already requires above, add ONE more field,
-**`plan_kts`**, to the JSON object you write to `/tmp/gh-aw/evidence.json`.
-
-Its value is a single Kotlin `.kts` script capturing THIS task's plan — the tool calls
-you performed (or would perform) to produce your result — following these rules:
-- each capability is a named function call (e.g. `readIssue`, `readSpec`, `readPlan`,
-  `readDiff`, `readFile`, `search`, `writeFile`, `curlPost`);
-- data flows through named `val` bindings (a step's inputs are prior `val`s or literals;
-  its output is a new `val`);
-- any sink destination (`url = "..."`, `path = "..."`) is a string literal, never a
-  computed value.
-
-Example shape (adapt to what you actually did for this task):
-
-```kotlin
-fun plan(pr: String): Verdict {
-    val diff = readDiff(pr)
-    val findings = analyze(diff)
-    return makeVerdict(findings)
-}
-```
-
-This is purely additive: keep ALL your other evidence fields exactly as specified above;
-just include `plan_kts` alongside them. Nothing gates on it.
-
-
-## Also emit the plan as a workflow AST (`plan_ast`)
-
-In addition to `plan_kts` and every other field above, also add a **`plan_ast`** field
-to the JSON object you write to `/tmp/gh-aw/evidence.json`. This is THE SAME plan as
-`plan_kts`, expressed as a restricted **workflow AST** — the form a static data-flow
-verifier (e.g. Guardians) consumes to check source→sink safety before execution.
-
-Format: a JSON object `{ "steps": [ ... ] }`, where each step is one tool call:
-- `tool`: the tool/function name (e.g. `readIssue`, `readDiff`, `analyze`, `writeFile`, `curlPost`);
-- `args`: an object mapping each parameter to either a literal value, or a reference to a
-  prior step's result written as `{ "$ref": "<result-name>" }`;
-- `result`: the name this step's output is bound to (so later steps can `$ref` it).
-
-Example (mirrors the plan_kts example):
+Wrap all plan-safety artifacts in ONE `agent_security` object in the JSON you write to
+`/tmp/gh-aw/evidence.json` (additive — keep every other evidence field you already emit):
 
 ```json
 {
-  "steps": [
-    { "tool": "readDiff",    "args": { "pr": { "$ref": "pr" } },         "result": "diff" },
-    { "tool": "analyze",     "args": { "input": { "$ref": "diff" } },    "result": "findings" },
-    { "tool": "makeVerdict", "args": { "input": { "$ref": "findings" } }, "result": "verdict" }
-  ]
+  "agent_security": {
+    "plan_kts": "fun plan(...) { ... }",
+    "plan_ast": { "steps": [ { "tool": "readDiff", "args": { "pr": {"$ref":"pr"} }, "result": "diff" } ] },
+    "cert":     { "paths": [ ["diff","diff"], ["diff","findings"], ["diff","verdict"] ] }
+  }
 }
 ```
 
-Keep it faithful to `plan_kts`: the same tool calls and the same data flow (each `$ref`
-mirrors a Kotlin `val` dependency), with literal sink destinations. Purely additive;
+- **`plan_kts`** — your plan as a single Kotlin `.kts`: each capability a named function
+  call (`readIssue`/`readDiff`/`readFile`/`analyze`/`writeFile`/`curlPost`…), data through
+  named `val` bindings, and any sink destination (`url=`/`path=`) a string literal.
+- **`plan_ast`** — the SAME plan as a restricted workflow AST: one step per tool call;
+  `args` maps each param to a literal or `{"$ref":"<prior-result>"}`; `result` names the output.
+- **`cert`** — your safety certificate: the reachability set over `plan_ast`. For every
+  SOURCE step (a read of external/sensitive data), list every variable its data reaches by
+  following the `$ref → result` flows, including the source reaching itself. Each entry is
+  `[source-variable, reached-variable]`.
+
+A deterministic checker re-derives the facts from `plan_ast` and verifies `cert` (it
+rejects fabricated or omitted paths, so you cannot hide a leak). The engine records the
+results back under `agent_security` as `guardians`, `cert_verify`, and `cedar`. Purely additive;
 nothing gates on it.
