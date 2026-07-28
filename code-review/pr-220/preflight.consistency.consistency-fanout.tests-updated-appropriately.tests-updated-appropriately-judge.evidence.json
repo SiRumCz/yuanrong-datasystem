@@ -1,0 +1,88 @@
+{
+  "leg": "tests-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": "tests/python/test_ds_client.py",
+      "severity": "blocking",
+      "rationale": "The gather reports new cli/disk_report.py worker_disk_usage subprocess behavior without any corresponding test coverage. For infrastructure-facing CLI behavior around subprocess execution, a focused mocked subprocess.run test is a real adherence gap and should block merge."
+    }
+  ],
+  "examined": [
+    "tests/python/test_ds_client.py"
+  ],
+  "plan_kts": "fun plan(): Evidence {\n    val taskContext = readFile(path = \"/tmp/gh-aw/task-context.json\")\n    val gather = extractGather(taskContext)\n    val feedback = extractFeedback(taskContext)\n    val gradedFindings = gradeFindings(gather, feedback)\n    val evidence = makeEvidence(gather, gradedFindings)\n    val written = writeFile(path = \"/tmp/gh-aw/evidence.json\", input = evidence)\n    val signaled = noop(message = \"Tests-updated-appropriately judge complete: evidence.json written with one graded gather finding.\")\n    return written\n}\n",
+  "plan_ast": {
+    "steps": [
+      {
+        "tool": "readFile",
+        "args": {
+          "path": "/tmp/gh-aw/task-context.json"
+        },
+        "result": "taskContext"
+      },
+      {
+        "tool": "extractGather",
+        "args": {
+          "input": {
+            "$ref": "taskContext"
+          }
+        },
+        "result": "gather"
+      },
+      {
+        "tool": "extractFeedback",
+        "args": {
+          "input": {
+            "$ref": "taskContext"
+          }
+        },
+        "result": "feedback"
+      },
+      {
+        "tool": "gradeFindings",
+        "args": {
+          "gather": {
+            "$ref": "gather"
+          },
+          "feedback": {
+            "$ref": "feedback"
+          }
+        },
+        "result": "gradedFindings"
+      },
+      {
+        "tool": "makeEvidence",
+        "args": {
+          "gather": {
+            "$ref": "gather"
+          },
+          "gradedFindings": {
+            "$ref": "gradedFindings"
+          }
+        },
+        "result": "evidence"
+      },
+      {
+        "tool": "writeFile",
+        "args": {
+          "path": "/tmp/gh-aw/evidence.json",
+          "input": {
+            "$ref": "evidence"
+          }
+        },
+        "result": "written"
+      },
+      {
+        "tool": "noop",
+        "args": {
+          "message": "Tests-updated-appropriately judge complete: evidence.json written with one graded gather finding."
+        },
+        "result": "signaled"
+      }
+    ]
+  }
+}
