@@ -1,0 +1,89 @@
+{
+  "cluster": "adherence",
+  "legs": [
+    {
+      "leg": "spec-solves-issue",
+      "scope": {
+        "issue_linked": false,
+        "spec_present": false
+      },
+      "gather_verdict": "n/a",
+      "graded_findings": []
+    },
+    {
+      "leg": "plan-implements-spec",
+      "scope": {
+        "code_changed": true,
+        "spec_present": false,
+        "plan_present": false,
+        "spec_path": null,
+        "plan_path": null
+      },
+      "gather_verdict": "underspec",
+      "graded_findings": []
+    },
+    {
+      "leg": "code-implements-plan",
+      "scope": {
+        "code_changed": true,
+        "plan_present": false,
+        "plan_path": null,
+        "code_files": [
+          "cli/disk_report.py"
+        ]
+      },
+      "gather_verdict": "underplan",
+      "graded_findings": []
+    }
+  ],
+  "plan_kts": "fun plan(): Evidence {\n    val taskContext = readFile(path = \"/tmp/gh-aw/task-context.json\")\n    val inputs = parseInputs(input = taskContext)\n    val evidence = buildClusterEvidence(inputs = inputs)\n    val written = writeFile(path = \"/tmp/gh-aw/evidence.json\", content = evidence)\n    val signal = emitNoop(message = \"No action needed: adherence rollup evidence written to /tmp/gh-aw/evidence.json.\", after = written)\n    return evidence\n}\n",
+  "plan_ast": {
+    "steps": [
+      {
+        "tool": "readFile",
+        "args": {
+          "path": "/tmp/gh-aw/task-context.json"
+        },
+        "result": "taskContext"
+      },
+      {
+        "tool": "parseInputs",
+        "args": {
+          "input": {
+            "$ref": "taskContext"
+          }
+        },
+        "result": "inputs"
+      },
+      {
+        "tool": "buildClusterEvidence",
+        "args": {
+          "inputs": {
+            "$ref": "inputs"
+          }
+        },
+        "result": "evidence"
+      },
+      {
+        "tool": "writeFile",
+        "args": {
+          "path": "/tmp/gh-aw/evidence.json",
+          "content": {
+            "$ref": "evidence"
+          }
+        },
+        "result": "written"
+      },
+      {
+        "tool": "emitNoop",
+        "args": {
+          "message": "No action needed: adherence rollup evidence written to /tmp/gh-aw/evidence.json.",
+          "after": {
+            "$ref": "written"
+          }
+        },
+        "result": "signal"
+      }
+    ]
+  }
+}
