@@ -1,7 +1,0 @@
-{
-  "cluster": "consistency",
-  "examined": [
-    "cluster entry — fans out to the cluster's legs"
-  ],
-  "plan_kts": "fun plan(): Verdict {\n    val evidence = makeEvidence(\n        cluster = \"consistency\",\n        examined = listOf(\"cluster entry — fans out to the cluster's legs\")\n    )\n    val written = writeFile(path = \"/tmp/gh-aw/evidence.json\", content = evidence)\n    val completion = noop(message = \"No action needed: consistency cluster entry wrote structural evidence only\")\n    return makeVerdict(written, completion)\n}"
-}

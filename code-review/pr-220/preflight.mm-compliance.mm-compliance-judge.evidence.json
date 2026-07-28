@@ -1,8 +1,0 @@
-{
-  "leg": "mm-compliance",
-  "scope": {},
-  "gather_verdict": "compliant",
-  "graded_findings": [],
-  "examined": [],
-  "plan_kts": "data class Evidence(val leg: String, val scope: Map<String, String>, val gather_verdict: String, val graded_findings: List<String>, val examined: List<String>, val plan_kts: String)\n\nfun plan(): Evidence {\n    val taskContext = readFile(path = \"/tmp/gh-aw/task-context.json\")\n    val gather = readGather(taskContext)\n    val feedback = readFeedback(taskContext)\n    val findings = gradeFindings(gather, feedback)\n    val evidence = makeEvidence(leg = \"mm-compliance\", scope = emptyMap(), gather = gather, findings = findings)\n    writeFile(path = \"/tmp/gh-aw/evidence.json\", value = evidence)\n    val completion = noop(message = \"No action needed: mm-compliance judge evidence written with no gather divergences to grade\")\n    return evidence\n}"
-}
