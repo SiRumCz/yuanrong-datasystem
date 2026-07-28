@@ -1,7 +1,7 @@
 protocol: code-review
 instance: pr-220
 state: adherence-fanout
-sub_state: plan-implements-spec-gather
+sub_state: plan-implements-spec-judge
 iteration: 1
 gates: {}
 history: []
