@@ -1,0 +1,55 @@
+{
+  "matrix": [],
+  "verdict": "n/a",
+  "scope": {
+    "issue_linked": false,
+    "spec_present": false
+  },
+  "examined": [
+    "scope.json"
+  ],
+  "plan_kts": "fun plan(): Evidence {\n    val scope = readScope(path = \"/tmp/gh-aw/agent/scope.json\")\n    val evidence = makeNaEvidence(scope = scope, examined = listOf(\"scope.json\"))\n    val written = writeFile(path = \"/tmp/gh-aw/evidence.json\", content = evidence)\n    val reported = emitNoop(message = \"No action needed: spec-solves-issue leg is out of scope because no issue is linked.\", after = written)\n    return evidence\n}\n",
+  "plan_ast": {
+    "steps": [
+      {
+        "tool": "readScope",
+        "args": {
+          "path": "/tmp/gh-aw/agent/scope.json"
+        },
+        "result": "scope"
+      },
+      {
+        "tool": "makeNaEvidence",
+        "args": {
+          "scope": {
+            "$ref": "scope"
+          },
+          "examined": [
+            "scope.json"
+          ]
+        },
+        "result": "evidence"
+      },
+      {
+        "tool": "writeFile",
+        "args": {
+          "path": "/tmp/gh-aw/evidence.json",
+          "content": {
+            "$ref": "evidence"
+          }
+        },
+        "result": "written"
+      },
+      {
+        "tool": "emitNoop",
+        "args": {
+          "message": "No action needed: spec-solves-issue leg is out of scope because no issue is linked.",
+          "after": {
+            "$ref": "written"
+          }
+        },
+        "result": "reported"
+      }
+    ]
+  }
+}
