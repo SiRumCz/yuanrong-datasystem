@@ -1,0 +1,89 @@
+{
+  "cluster": "consistency",
+  "legs": [
+    {
+      "leg": "docs-updated-appropriately",
+      "scope": {
+        "code_changed": true
+      },
+      "gather_verdict": "adequate",
+      "graded_findings": []
+    },
+    {
+      "leg": "tests-updated-appropriately",
+      "scope": {
+        "code_changed": true
+      },
+      "gather_verdict": "inadequate",
+      "graded_findings": [
+        {
+          "ref": "tests/python/test_ds_client.py",
+          "severity": "blocking",
+          "rationale": "The gather reports new cli/disk_report.py worker_disk_usage subprocess behavior without any corresponding test coverage. For infrastructure-facing CLI behavior around subprocess execution, a focused mocked subprocess.run test is a real adherence gap and should block merge."
+        }
+      ]
+    }
+  ],
+  "plan_kts": "fun plan(): Evidence {\n    val taskContext = readFile(path = \"/tmp/gh-aw/task-context.json\")\n    val docsLeg = extractLeg(input = taskContext, leg = \"docs-updated-appropriately\")\n    val testsLeg = extractLeg(input = taskContext, leg = \"tests-updated-appropriately\")\n    val evidence = makeClusterEvidence(cluster = \"consistency\", docs = docsLeg, tests = testsLeg)\n    val written = writeFile(path = \"/tmp/gh-aw/evidence.json\", content = evidence)\n    val signaled = noop(message = \"Consistency rollup complete: evidence.json written from the two provided inner judge evidences.\")\n    return written\n}",
+  "plan_ast": {
+    "steps": [
+      {
+        "tool": "readFile",
+        "args": {
+          "path": "/tmp/gh-aw/task-context.json"
+        },
+        "result": "taskContext"
+      },
+      {
+        "tool": "extractLeg",
+        "args": {
+          "input": {
+            "$ref": "taskContext"
+          },
+          "leg": "docs-updated-appropriately"
+        },
+        "result": "docsLeg"
+      },
+      {
+        "tool": "extractLeg",
+        "args": {
+          "input": {
+            "$ref": "taskContext"
+          },
+          "leg": "tests-updated-appropriately"
+        },
+        "result": "testsLeg"
+      },
+      {
+        "tool": "makeClusterEvidence",
+        "args": {
+          "cluster": "consistency",
+          "docs": {
+            "$ref": "docsLeg"
+          },
+          "tests": {
+            "$ref": "testsLeg"
+          }
+        },
+        "result": "evidence"
+      },
+      {
+        "tool": "writeFile",
+        "args": {
+          "path": "/tmp/gh-aw/evidence.json",
+          "content": {
+            "$ref": "evidence"
+          }
+        },
+        "result": "written"
+      },
+      {
+        "tool": "noop",
+        "args": {
+          "message": "Consistency rollup complete: evidence.json written from the two provided inner judge evidences."
+        },
+        "result": "signaled"
+      }
+    ]
+  }
+}
