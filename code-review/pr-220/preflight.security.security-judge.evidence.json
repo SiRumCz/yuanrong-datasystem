@@ -1,0 +1,145 @@
+{
+  "leg": "security",
+  "scope": {},
+  "gather_verdict": "PASS",
+  "graded_findings": [],
+  "examined": [],
+  "plan_kts": "fun plan(): Verdict {\n    val repoReadme = readFile(path = \".repo_context/README.md\")\n    val repoIndex = readFile(path = \".repo_context/index.md\")\n    val maintenance = readFile(path = \".repo_context/maintenance.md\")\n    val generatedIndex = readFile(path = \".repo_context/generated/repo_index.md\")\n    val engineeringPrinciples = readFile(path = \".repo_context/modules/overview/engineering-principles.md\")\n    val selfVerification = readFile(path = \".repo_context/playbooks/upkeep/ai-self-verification.md\")\n    val taskContext = readFile(path = \"/tmp/gh-aw/task-context.json\")\n    val gather = extractGather(input = taskContext)\n    val feedback = extractFeedback(input = taskContext)\n    val violations = extractViolations(input = gather)\n    val gradedFindings = gradeViolations(violations = violations, feedback = feedback)\n    val evidence = assembleEvidence(scope = emptyMap(), gather = gather, gradedFindings = gradedFindings)\n    val writeResult = writeFile(path = \"/tmp/gh-aw/evidence.json\", content = evidence)\n    val completion = noop(message = \"Security judge complete: PASS gather verdict with no violations, evidence written.\")\n    return makeVerdict(evidence = evidence, writeResult = writeResult, completion = completion)\n}",
+  "plan_ast": {
+    "steps": [
+      {
+        "tool": "readFile",
+        "args": {
+          "path": ".repo_context/README.md"
+        },
+        "result": "repoReadme"
+      },
+      {
+        "tool": "readFile",
+        "args": {
+          "path": ".repo_context/index.md"
+        },
+        "result": "repoIndex"
+      },
+      {
+        "tool": "readFile",
+        "args": {
+          "path": ".repo_context/maintenance.md"
+        },
+        "result": "maintenance"
+      },
+      {
+        "tool": "readFile",
+        "args": {
+          "path": ".repo_context/generated/repo_index.md"
+        },
+        "result": "generatedIndex"
+      },
+      {
+        "tool": "readFile",
+        "args": {
+          "path": ".repo_context/modules/overview/engineering-principles.md"
+        },
+        "result": "engineeringPrinciples"
+      },
+      {
+        "tool": "readFile",
+        "args": {
+          "path": ".repo_context/playbooks/upkeep/ai-self-verification.md"
+        },
+        "result": "selfVerification"
+      },
+      {
+        "tool": "readFile",
+        "args": {
+          "path": "/tmp/gh-aw/task-context.json"
+        },
+        "result": "taskContext"
+      },
+      {
+        "tool": "extractGather",
+        "args": {
+          "input": {
+            "$ref": "taskContext"
+          }
+        },
+        "result": "gather"
+      },
+      {
+        "tool": "extractFeedback",
+        "args": {
+          "input": {
+            "$ref": "taskContext"
+          }
+        },
+        "result": "feedback"
+      },
+      {
+        "tool": "extractViolations",
+        "args": {
+          "input": {
+            "$ref": "gather"
+          }
+        },
+        "result": "violations"
+      },
+      {
+        "tool": "gradeViolations",
+        "args": {
+          "violations": {
+            "$ref": "violations"
+          },
+          "feedback": {
+            "$ref": "feedback"
+          }
+        },
+        "result": "gradedFindings"
+      },
+      {
+        "tool": "assembleEvidence",
+        "args": {
+          "scope": {},
+          "gather": {
+            "$ref": "gather"
+          },
+          "gradedFindings": {
+            "$ref": "gradedFindings"
+          }
+        },
+        "result": "evidence"
+      },
+      {
+        "tool": "writeFile",
+        "args": {
+          "path": "/tmp/gh-aw/evidence.json",
+          "content": {
+            "$ref": "evidence"
+          }
+        },
+        "result": "writeResult"
+      },
+      {
+        "tool": "noop",
+        "args": {
+          "message": "Security judge complete: PASS gather verdict with no violations, evidence written."
+        },
+        "result": "completion"
+      },
+      {
+        "tool": "makeVerdict",
+        "args": {
+          "evidence": {
+            "$ref": "evidence"
+          },
+          "writeResult": {
+            "$ref": "writeResult"
+          },
+          "completion": {
+            "$ref": "completion"
+          }
+        },
+        "result": "verdict"
+      }
+    ]
+  }
+}
