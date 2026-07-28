@@ -1,0 +1,32 @@
+{
+  "cluster": "adherence",
+  "examined": ["cluster entry — fans out to the cluster's legs"],
+  "plan_kts": "fun plan(): Verdict {\n    val evidence = writeFile(path = \"/tmp/gh-aw/evidence.json\", content = \"adherence cluster entry evidence with plan_kts and plan_ast\")\n    val completion = noop(message = \"No action needed: adherence cluster entry evidence written; no analysis performed.\")\n    return makeVerdict(evidence, completion)\n}",
+  "plan_ast": {
+    "steps": [
+      {
+        "tool": "writeFile",
+        "args": {
+          "path": "/tmp/gh-aw/evidence.json",
+          "content": "adherence cluster entry evidence with plan_kts and plan_ast"
+        },
+        "result": "evidence"
+      },
+      {
+        "tool": "noop",
+        "args": {
+          "message": "No action needed: adherence cluster entry evidence written; no analysis performed."
+        },
+        "result": "completion"
+      },
+      {
+        "tool": "makeVerdict",
+        "args": {
+          "evidence": { "$ref": "evidence" },
+          "completion": { "$ref": "completion" }
+        },
+        "result": "verdict"
+      }
+    ]
+  }
+}
