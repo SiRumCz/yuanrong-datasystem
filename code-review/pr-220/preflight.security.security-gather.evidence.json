@@ -1,0 +1,149 @@
+{
+  "scope": {},
+  "cedar": {
+    "status": "n/a",
+    "flags": []
+  },
+  "guardians": {
+    "ok": true,
+    "violations": [],
+    "warnings": []
+  },
+  "engine_report": {
+    "violations": [],
+    "summary": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0
+    }
+  },
+  "verdict": "PASS",
+  "examined": [
+    "policy/cedar/default",
+    "policy/guardians/default.policy.yaml"
+  ],
+  "plan_kts": "fun plan(): Verdict {\n    val engineReport = readFile(path = \"/tmp/gh-aw/agent/engine-report.json\")\n    val cedar = readFile(path = \"/tmp/gh-aw/agent/cedar.json\")\n    val guardians = readFile(path = \"/tmp/gh-aw/agent/guardians.json\")\n    val guardiansTranscript = readFile(path = \"/tmp/gh-aw/agent/guardians-transcript.json\")\n    val pr = readFile(path = \"/tmp/gh-aw/agent/pr.json\")\n    val taskContext = readFile(path = \"/tmp/gh-aw/task-context.json\")\n    val verdict = computeVerdict(engineReport = engineReport, guardians = guardians, guardiansTranscript = guardiansTranscript)\n    val examined = extractExamined(cedar = cedar, guardians = guardians, guardiansTranscript = guardiansTranscript)\n    val evidence = assembleEvidence(scope = emptyMap(), cedar = cedar, guardians = guardians, engineReport = engineReport, verdict = verdict, examined = examined, planInputs = listOf(pr, taskContext))\n    writeFile(path = \"/tmp/gh-aw/evidence.json\", content = evidence)\n    val completion = noop(message = \"Security gather complete: evidence object written with deterministic PASS verdict; no GitHub issue needed.\")\n    return verdict\n}",
+  "plan_ast": {
+    "steps": [
+      {
+        "tool": "readFile",
+        "args": {
+          "path": "/tmp/gh-aw/agent/engine-report.json"
+        },
+        "result": "engineReport"
+      },
+      {
+        "tool": "readFile",
+        "args": {
+          "path": "/tmp/gh-aw/agent/cedar.json"
+        },
+        "result": "cedar"
+      },
+      {
+        "tool": "readFile",
+        "args": {
+          "path": "/tmp/gh-aw/agent/guardians.json"
+        },
+        "result": "guardians"
+      },
+      {
+        "tool": "readFile",
+        "args": {
+          "path": "/tmp/gh-aw/agent/guardians-transcript.json"
+        },
+        "result": "guardiansTranscript"
+      },
+      {
+        "tool": "readFile",
+        "args": {
+          "path": "/tmp/gh-aw/agent/pr.json"
+        },
+        "result": "pr"
+      },
+      {
+        "tool": "readFile",
+        "args": {
+          "path": "/tmp/gh-aw/task-context.json"
+        },
+        "result": "taskContext"
+      },
+      {
+        "tool": "computeVerdict",
+        "args": {
+          "engineReport": {
+            "$ref": "engineReport"
+          },
+          "guardians": {
+            "$ref": "guardians"
+          },
+          "guardiansTranscript": {
+            "$ref": "guardiansTranscript"
+          }
+        },
+        "result": "verdict"
+      },
+      {
+        "tool": "extractExamined",
+        "args": {
+          "cedar": {
+            "$ref": "cedar"
+          },
+          "guardians": {
+            "$ref": "guardians"
+          },
+          "guardiansTranscript": {
+            "$ref": "guardiansTranscript"
+          }
+        },
+        "result": "examined"
+      },
+      {
+        "tool": "assembleEvidence",
+        "args": {
+          "scope": {},
+          "cedar": {
+            "$ref": "cedar"
+          },
+          "guardians": {
+            "$ref": "guardians"
+          },
+          "engineReport": {
+            "$ref": "engineReport"
+          },
+          "verdict": {
+            "$ref": "verdict"
+          },
+          "examined": {
+            "$ref": "examined"
+          },
+          "planInputs": [
+            {
+              "$ref": "pr"
+            },
+            {
+              "$ref": "taskContext"
+            }
+          ]
+        },
+        "result": "evidence"
+      },
+      {
+        "tool": "writeFile",
+        "args": {
+          "path": "/tmp/gh-aw/evidence.json",
+          "content": {
+            "$ref": "evidence"
+          }
+        },
+        "result": "writeResult"
+      },
+      {
+        "tool": "noop",
+        "args": {
+          "message": "Security gather complete: evidence object written with deterministic PASS verdict; no GitHub issue needed."
+        },
+        "result": "completion"
+      }
+    ]
+  }
+}
