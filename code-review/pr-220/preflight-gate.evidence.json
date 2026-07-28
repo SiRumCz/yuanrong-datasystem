@@ -1,0 +1,114 @@
+{
+  "legs": [
+    {
+      "leg": "spec-solves-issue",
+      "verdict": "n/a",
+      "scope": {
+        "issue_linked": false,
+        "spec_present": false
+      },
+      "summary": "spec-solves-issue verdict is n/a for the provided scope, with no graded findings."
+    },
+    {
+      "leg": "plan-implements-spec",
+      "verdict": "underspec",
+      "scope": {
+        "code_changed": true,
+        "spec_present": false,
+        "plan_present": false,
+        "spec_path": null,
+        "plan_path": null
+      },
+      "summary": "plan-implements-spec verdict is underspec for the provided scope, with no graded findings."
+    },
+    {
+      "leg": "code-implements-plan",
+      "verdict": "underplan",
+      "scope": {
+        "code_changed": true,
+        "plan_present": false,
+        "plan_path": null,
+        "code_files": [
+          "cli/disk_report.py"
+        ]
+      },
+      "summary": "code-implements-plan verdict is underplan for the provided scope, with no graded findings."
+    },
+    {
+      "leg": "mm-compliance",
+      "verdict": "compliant",
+      "scope": {},
+      "summary": "mm-compliance verdict is compliant, with 0 divergence(s) recorded."
+    },
+    {
+      "leg": "docs-updated-appropriately",
+      "verdict": "adequate",
+      "scope": {
+        "code_changed": true
+      },
+      "summary": "docs-updated-appropriately verdict is adequate for the provided scope, with no graded findings."
+    },
+    {
+      "leg": "tests-updated-appropriately",
+      "verdict": "inadequate",
+      "scope": {
+        "code_changed": true
+      },
+      "summary": "tests-updated-appropriately verdict is inadequate for the provided scope, with 1 graded finding(s)."
+    },
+    {
+      "leg": "security",
+      "verdict": "PASS",
+      "scope": {},
+      "summary": "security verdict is PASS, with no locked violations recorded."
+    }
+  ],
+  "examined": [],
+  "plan_kts": "fun plan(): Evidence {\n    val taskContext = readFile(path = \"/tmp/gh-aw/task-context.json\")\n    val inputs = parseInputs(input = taskContext)\n    val evidence = renderConsolidatedEvidence(inputs = inputs)\n    val written = writeFile(path = \"/tmp/gh-aw/evidence.json\", content = evidence)\n    val completion = noop(message = \"No action needed: consolidated preflight evidence written to /tmp/gh-aw/evidence.json.\")\n    return evidence\n}\n",
+  "plan_ast": {
+    "steps": [
+      {
+        "tool": "readFile",
+        "args": {
+          "path": "/tmp/gh-aw/task-context.json"
+        },
+        "result": "taskContext"
+      },
+      {
+        "tool": "parseInputs",
+        "args": {
+          "input": {
+            "$ref": "taskContext"
+          }
+        },
+        "result": "inputs"
+      },
+      {
+        "tool": "renderConsolidatedEvidence",
+        "args": {
+          "inputs": {
+            "$ref": "inputs"
+          }
+        },
+        "result": "evidence"
+      },
+      {
+        "tool": "writeFile",
+        "args": {
+          "path": "/tmp/gh-aw/evidence.json",
+          "content": {
+            "$ref": "evidence"
+          }
+        },
+        "result": "written"
+      },
+      {
+        "tool": "noop",
+        "args": {
+          "message": "No action needed: consolidated preflight evidence written to /tmp/gh-aw/evidence.json."
+        },
+        "result": "completion"
+      }
+    ]
+  }
+}
