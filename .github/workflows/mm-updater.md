@@ -159,3 +159,33 @@ fun plan(pr: String): Verdict {
 
 This is purely additive: keep ALL your other evidence fields exactly as specified above;
 just include `plan_kts` alongside them. Nothing gates on it.
+
+
+## Also emit the plan as a workflow AST (`plan_ast`)
+
+In addition to `plan_kts` and every other field above, also add a **`plan_ast`** field
+to the JSON object you write to `/tmp/gh-aw/evidence.json`. This is THE SAME plan as
+`plan_kts`, expressed as a restricted **workflow AST** — the form a static data-flow
+verifier (e.g. Guardians) consumes to check source→sink safety before execution.
+
+Format: a JSON object `{ "steps": [ ... ] }`, where each step is one tool call:
+- `tool`: the tool/function name (e.g. `readIssue`, `readDiff`, `analyze`, `writeFile`, `curlPost`);
+- `args`: an object mapping each parameter to either a literal value, or a reference to a
+  prior step's result written as `{ "$ref": "<result-name>" }`;
+- `result`: the name this step's output is bound to (so later steps can `$ref` it).
+
+Example (mirrors the plan_kts example):
+
+```json
+{
+  "steps": [
+    { "tool": "readDiff",    "args": { "pr": { "$ref": "pr" } },         "result": "diff" },
+    { "tool": "analyze",     "args": { "input": { "$ref": "diff" } },    "result": "findings" },
+    { "tool": "makeVerdict", "args": { "input": { "$ref": "findings" } }, "result": "verdict" }
+  ]
+}
+```
+
+Keep it faithful to `plan_kts`: the same tool calls and the same data flow (each `$ref`
+mirrors a Kotlin `val` dependency), with literal sink destinations. Purely additive;
+nothing gates on it.
