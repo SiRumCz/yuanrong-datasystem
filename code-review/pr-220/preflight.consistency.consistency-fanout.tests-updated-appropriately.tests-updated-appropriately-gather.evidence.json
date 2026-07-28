@@ -1,0 +1,198 @@
+{
+  "scope": {
+    "code_changed": true
+  },
+  "items": [
+    {
+      "path": "tests/python/test_ds_client.py",
+      "status": "missing",
+      "reason": "PR adds cli/disk_report.py worker_disk_usage subprocess behavior but changes no test; a focused Python unittest with subprocess.run mocked is missing."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/modules/quality/tests-and-reproduction.md",
+    ".repo_context/modules/quality/test-suite-design.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md",
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    "cli/command.py",
+    "cli/collect_log.py",
+    "cli/common/util.py",
+    "tests/python/test_ds_client.py",
+    "tests/kvtest/tests/python/test_procmon.py"
+  ],
+  "plan_kts": "fun plan(pr: String): Verdict {\n    val repoContext = readFile(path = \".repo_context/README.md\")\n    val contextIndex = readFile(path = \".repo_context/index.md\")\n    val maintenance = readFile(path = \".repo_context/maintenance.md\")\n    val repoIndex = readFile(path = \".repo_context/generated/repo_index.md\")\n    val principles = readFile(path = \".repo_context/modules/overview/engineering-principles.md\")\n    val testGuidance = readFile(path = \".repo_context/modules/quality/tests-and-reproduction.md\")\n    val testDesign = readFile(path = \".repo_context/modules/quality/test-suite-design.md\")\n    val reviewChecklist = readFile(path = \".repo_context/playbooks/reviews/pr-review-checklist.md\")\n    val selfVerification = readFile(path = \".repo_context/playbooks/upkeep/ai-self-verification.md\")\n    val scope = readFile(path = \"/tmp/gh-aw/agent/scope.json\")\n    val changedFiles = readFile(path = \"/tmp/gh-aw/agent/changed-files.txt\")\n    val taskContext = readFile(path = \"/tmp/gh-aw/task-context.json\")\n    val diff = readDiff(path = \"/tmp/gh-aw/agent/pr.diff\")\n    val testPaths = search(query = \"(^cli/|tests/.+(cli|disk|report)|(^|/)test_.*\\\\.py$|_test\\\\.py$|\\\\.test\\\\.py$|__tests__)\")\n    val cliFiles = search(query = \"cli source files and Python unittest subprocess mocking patterns\")\n    val findings = analyze(scope, changedFiles, taskContext, diff, testPaths, cliFiles, testGuidance, testDesign, reviewChecklist, selfVerification)\n    val evidence = makeVerdict(findings)\n    val written = writeFile(path = \"/tmp/gh-aw/evidence.json\", input = evidence)\n    return written\n}\n",
+  "plan_ast": {
+    "steps": [
+      {
+        "tool": "readFile",
+        "args": {
+          "path": ".repo_context/README.md"
+        },
+        "result": "repoContext"
+      },
+      {
+        "tool": "readFile",
+        "args": {
+          "path": ".repo_context/index.md"
+        },
+        "result": "contextIndex"
+      },
+      {
+        "tool": "readFile",
+        "args": {
+          "path": ".repo_context/maintenance.md"
+        },
+        "result": "maintenance"
+      },
+      {
+        "tool": "readFile",
+        "args": {
+          "path": ".repo_context/generated/repo_index.md"
+        },
+        "result": "repoIndex"
+      },
+      {
+        "tool": "readFile",
+        "args": {
+          "path": ".repo_context/modules/overview/engineering-principles.md"
+        },
+        "result": "principles"
+      },
+      {
+        "tool": "readFile",
+        "args": {
+          "path": ".repo_context/modules/quality/tests-and-reproduction.md"
+        },
+        "result": "testGuidance"
+      },
+      {
+        "tool": "readFile",
+        "args": {
+          "path": ".repo_context/modules/quality/test-suite-design.md"
+        },
+        "result": "testDesign"
+      },
+      {
+        "tool": "readFile",
+        "args": {
+          "path": ".repo_context/playbooks/reviews/pr-review-checklist.md"
+        },
+        "result": "reviewChecklist"
+      },
+      {
+        "tool": "readFile",
+        "args": {
+          "path": ".repo_context/playbooks/upkeep/ai-self-verification.md"
+        },
+        "result": "selfVerification"
+      },
+      {
+        "tool": "readFile",
+        "args": {
+          "path": "/tmp/gh-aw/agent/scope.json"
+        },
+        "result": "scope"
+      },
+      {
+        "tool": "readFile",
+        "args": {
+          "path": "/tmp/gh-aw/agent/changed-files.txt"
+        },
+        "result": "changedFiles"
+      },
+      {
+        "tool": "readFile",
+        "args": {
+          "path": "/tmp/gh-aw/task-context.json"
+        },
+        "result": "taskContext"
+      },
+      {
+        "tool": "readDiff",
+        "args": {
+          "path": "/tmp/gh-aw/agent/pr.diff"
+        },
+        "result": "diff"
+      },
+      {
+        "tool": "search",
+        "args": {
+          "query": "(^cli/|tests/.+(cli|disk|report)|(^|/)test_.*\\.py$|_test\\.py$|\\.test\\.py$|__tests__)"
+        },
+        "result": "testPaths"
+      },
+      {
+        "tool": "search",
+        "args": {
+          "query": "cli source files and Python unittest subprocess mocking patterns"
+        },
+        "result": "cliFiles"
+      },
+      {
+        "tool": "analyze",
+        "args": {
+          "scope": {
+            "$ref": "scope"
+          },
+          "changedFiles": {
+            "$ref": "changedFiles"
+          },
+          "taskContext": {
+            "$ref": "taskContext"
+          },
+          "diff": {
+            "$ref": "diff"
+          },
+          "testPaths": {
+            "$ref": "testPaths"
+          },
+          "cliFiles": {
+            "$ref": "cliFiles"
+          },
+          "testGuidance": {
+            "$ref": "testGuidance"
+          },
+          "testDesign": {
+            "$ref": "testDesign"
+          },
+          "reviewChecklist": {
+            "$ref": "reviewChecklist"
+          },
+          "selfVerification": {
+            "$ref": "selfVerification"
+          }
+        },
+        "result": "findings"
+      },
+      {
+        "tool": "makeVerdict",
+        "args": {
+          "input": {
+            "$ref": "findings"
+          }
+        },
+        "result": "evidence"
+      },
+      {
+        "tool": "writeFile",
+        "args": {
+          "path": "/tmp/gh-aw/evidence.json",
+          "input": {
+            "$ref": "evidence"
+          }
+        },
+        "result": "written"
+      }
+    ]
+  }
+}
