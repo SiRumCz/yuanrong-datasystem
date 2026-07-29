@@ -1,6 +1,6 @@
 protocol: code-review
 instance: pr-220
-state: adherence-fanout
+state: done
 iteration: 2
 gates: {}
 head_sha: 6f9bbf46eb544360cf5016a891145bb35a6625ee
@@ -18,3 +18,13 @@ history:
     cli/disk_report.py (code-implements-plan); existing_code does not match RIGHT
     line(s) 24 of cli/disk_report.py (code-implements-plan); existing_code does not
     match RIGHT line(s) 25 of cli/disk_report.py (code-implements-plan)'
+- iteration: 2
+  agent_run_id: '30485632100'
+  checks:
+    evidence-present: pass
+    code-plan-coverage: pass
+    traces-exist-in-diff: pass
+    plan-ast-guardians: pass
+    plan-cert-verify: pass
+    plan-ast-cedar: pass
+  feedback: ''
