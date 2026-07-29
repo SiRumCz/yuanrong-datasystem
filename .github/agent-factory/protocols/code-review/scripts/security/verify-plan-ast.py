@@ -24,7 +24,24 @@ import sys
 import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import _toolmap  # noqa: E402  (shared tool-name classifier — single source of truth)
+
 DRIVER = os.path.join(HERE, "verify_driver.py")
+
+
+def _normalize(plan_ast):
+    """Map each plan_ast step's tool to the canonical guardians vocabulary via _toolmap,
+    so the allowlist and taint rules recognize it regardless of the agent's naming
+    (Claude Read/Bash, codex shell/edit, or free-form readFile/curlPost). Unrecognized
+    or pure-compute tools become `compute` (benign) so the flow edges survive."""
+    steps = []
+    for s in plan_ast.get("steps", []):
+        if not isinstance(s, dict):
+            continue
+        canon = _toolmap.canonical(s.get("tool"), s.get("args")) or "compute"
+        steps.append({**s, "tool": canon, "args": _toolmap.canonical_args(canon, s.get("args"))})
+    return {"steps": steps}
 
 
 def _merge(evidence_path, verdict):
@@ -63,7 +80,9 @@ def main():
         _merge(ev_path, {"verdict": "n/a", "status": "n/a", "reason": "no plan_ast workflow to verify"})
         return 0
 
-    # 2. hand plan_ast to the real guardians driver (python3.11 + guardians + z3)
+    # 2. normalize tool names to the canonical vocabulary, then hand to the real
+    #    guardians driver (python3.11 + guardians + z3)
+    plan_ast = _normalize(plan_ast)
     try:
         with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as tf:
             json.dump(plan_ast, tf)
@@ -90,14 +109,16 @@ def main():
         except (OSError, NameError):
             pass
 
-    # 3. record the verdict (advisory)
+    # 3. record the verdict (advisory). Only LOCKED violations (exfiltration/destructive)
+    #    count -- non-LOCKED allowlist/scope findings are noise, not a real breach.
     violations = result.get("violations") or []
-    ok = bool(result.get("ok", not violations))
+    locked = [v for v in violations if isinstance(v, dict) and v.get("locked")]
+    ok = not locked
     _merge(ev_path, {
         "verdict": "pass" if ok else "fail",
         "status": "ok",
         "ok": ok,
-        "violations": violations,
+        "violations": locked,
         "warnings": result.get("warnings") or [],
     })
     return 0

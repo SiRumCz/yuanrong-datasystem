@@ -10,15 +10,16 @@
 // adapter classifies by tool-name shape + arg keys — the plan_ast analogue of
 // _transcript-actions.toAction. Reuses policy-merge.js + _cedar-decide.js verbatim.
 const fs = require('node:fs')
+const path = require('node:path')
 const { mergeCedar } = require('./policy-merge.js')
 const { decide } = require('./_cedar-decide.js')
 
-const SECRET_RE = /(^|\/)\.env|\.pem$|credentials|secret|\.key$|token/i
+// Single source of truth for tool-name -> canonical mapping (shared with guardians' _toolmap.py)
+const _MAP = JSON.parse(fs.readFileSync(path.join(__dirname, 'plan-tool-aliases.json'), 'utf8'))
+const _SECRET_RE = new RegExp(_MAP.secret_path_re, 'i')
+const _ALIAS = {}
+for (const [canon, al] of Object.entries(_MAP.aliases)) for (const a of al) _ALIAS[a] = canon
 const DESTRUCTIVE_RE = /\brm\s+-rf\b|git\s+push\s+--force|git\s+reset\s+--hard|\bmkfs\b|:\s*>\s*\//
-const NET = /(curlpost|networksend|httppost|upload|^post|^curl|send$)/i
-const FILE_WRITE = /(writefile|savefile|^write)/i
-const CMD = /(^bash|^run|exec|shell|^command)/i
-const READ = /^(read|fetch|load|get|search|web|tavily)/i
 
 function litArg(args, keys) {  // first literal string arg among the given param names
   for (const k of Object.keys(args || {})) {
@@ -27,29 +28,39 @@ function litArg(args, keys) {  // first literal string arg among the given param
   return ''
 }
 
+function canonical(tool, args) {  // mirrors _toolmap.canonical
+  const t = String(tool || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+  let canon = _ALIAS[t]
+  if (canon === undefined) {
+    for (const [a, c] of Object.entries(_ALIAS)) { if (t.startsWith(a)) { canon = c; break } }
+  }
+  if (canon === 'read') {
+    const p = Object.values(args || {}).filter(v => typeof v === 'string').join(' ')
+    return _SECRET_RE.test(p) ? 'read_secret' : 'read_repo_file'
+  }
+  return canon
+}
+
 // plan_ast step -> PARC-ish action (or null to skip a non-security-relevant step)
 function stepToAction(tool, args) {
-  const t = String(tool || '').toLowerCase()
   args = args || {}
-  if (NET.test(t)) {
+  const c = canonical(tool, args)
+  if (c === 'read_secret')
+    return { action: 'ReadSecret', resourceType: 'Secret', resource: litArg(args, ['path', 'file', 'filename']) || String(tool), touched_secret: true }
+  if (c === 'read_repo_file' || c === 'read_external')
+    return { action: 'ReadFile', resourceType: 'File', resource: litArg(args, ['path', 'file', 'filename', 'pr', 'issue', 'query']) || String(tool) }
+  if (c === 'network_send') {
     let host = litArg(args, ['url', 'host', 'endpoint', 'to'])
-    try { const h = new URL(host).host; if (h) host = h } catch { /* not a URL; use as-is */ }
+    try { const h = new URL(host).host; if (h) host = h } catch { /* not a URL */ }
     return { action: 'Network', resourceType: 'Host', resource: host || 'unknown', external_host: true }
   }
-  if (FILE_WRITE.test(t)) {
+  if (c === 'write_file')
     return { action: 'WriteFile', resourceType: 'File', resource: litArg(args, ['path', 'file', 'filename']) }
-  }
-  if (CMD.test(t)) {
+  if (c === 'run_command') {
     const cmd = litArg(args, ['command', 'argv', 'cmd', 'script'])
     return { action: 'RunCommand', resourceType: 'Command', resource: 'bash', destructive: DESTRUCTIVE_RE.test(cmd) }
   }
-  if (READ.test(t)) {
-    const p = litArg(args, ['path', 'file', 'filename', 'pr', 'issue', 'url', 'query'])
-    return (SECRET_RE.test(p) || SECRET_RE.test(t))
-      ? { action: 'ReadSecret', resourceType: 'Secret', resource: p || t, touched_secret: true }
-      : { action: 'ReadFile', resourceType: 'File', resource: p || t }
-  }
-  return null
+  return null  // compute / unrecognized -> not security-relevant
 }
 
 function analyzePlan(plan, { policiesText, allowedHosts = [], changedPaths = [] }) {
