@@ -1,7 +1,20 @@
 protocol: code-review
 instance: pr-220
 state: adherence-fanout
-iteration: 1
+iteration: 2
 gates: {}
 head_sha: 6f9bbf46eb544360cf5016a891145bb35a6625ee
-history: []
+history:
+- iteration: 1
+  agent_run_id: '30485057309'
+  checks:
+    evidence-present: pass
+    code-plan-coverage: pass
+    traces-exist-in-diff: fail
+    plan-ast-guardians: pass
+    plan-cert-verify: pass
+    plan-ast-cedar: pass
+  feedback: 'Unverifiable claims: existing_code does not match RIGHT line(s) 18 of
+    cli/disk_report.py (code-implements-plan); existing_code does not match RIGHT
+    line(s) 24 of cli/disk_report.py (code-implements-plan); existing_code does not
+    match RIGHT line(s) 25 of cli/disk_report.py (code-implements-plan)'
