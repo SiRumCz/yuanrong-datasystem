@@ -1,7 +1,16 @@
 protocol: code-review
 instance: pr-220
-state: consistency-fanout
+state: done
 iteration: 1
 gates: {}
 head_sha: 6f9bbf46eb544360cf5016a891145bb35a6625ee
-history: []
+history:
+- iteration: 1
+  agent_run_id: '30485035793'
+  checks:
+    evidence-present: pass
+    tests-coverage: pass
+    plan-ast-guardians: pass
+    plan-cert-verify: pass
+    plan-ast-cedar: pass
+  feedback: ''
