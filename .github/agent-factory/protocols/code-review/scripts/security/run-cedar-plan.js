@@ -54,6 +54,10 @@ function stepToAction(tool, args) {
     try { const h = new URL(host).host; if (h) host = h } catch { /* not a URL */ }
     return { action: 'Network', resourceType: 'Host', resource: host || 'unknown', external_host: true }
   }
+  if (c === 'publish') {  // external output channel (issue/PR/comment/file) — an egress sink
+    const ch = litArg(args, ['channel', 'to', 'target', 'repo', 'issue', 'url'])
+    return { action: 'Network', resourceType: 'Host', resource: ch || 'publish', external_host: true }
+  }
   if (c === 'write_file')
     return { action: 'WriteFile', resourceType: 'File', resource: litArg(args, ['path', 'file', 'filename']) }
   if (c === 'run_command') {

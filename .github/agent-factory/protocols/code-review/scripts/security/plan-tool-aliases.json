@@ -1,12 +1,16 @@
 {
   "_comment": "SINGLE SOURCE OF TRUTH for mapping any agent's plan_ast tool names to the guardians/cedar canonical vocabulary. Covers Claude Code names (Read/Write/Bash/WebFetch), codex names (shell/edit/view), and free-form plan prose (readFile/curlPost). A `read` bucket resolves to read_secret vs read_repo_file by path. compute/noop are benign pass-throughs (in allowed_tools, no source/sink). Update HERE, both guardians (_toolmap.py) and cedar (run-cedar-plan.js) pick it up.",
   "secret_path_re": "(^|/)\\.env|\\.pem$|credentials|secret|\\.key$|token|password",
+    "_note_canonical": "Each canonical name self-aliases so a grounded plan that already uses the registry vocabulary passes through unchanged (not re-bucketed).",
   "aliases": {
+    "read_secret":  ["readsecret"],
+    "read_repo_file":["readrepofile"],
     "read":         ["read", "readfile", "readdiff", "readplan", "readspec", "readissue", "readcontext", "view", "cat", "get", "load", "open", "fetchfile"],
     "read_external":["search", "websearch", "tavilysearch", "readexternal", "readuntrusted"],
     "network_send": ["networksend", "curlpost", "curl", "httppost", "post", "upload", "sendemail", "send", "webfetch", "fetch", "httpget"],
     "write_file":   ["writefile", "write", "edit", "applypatch", "apply_patch", "notebookedit", "savefile", "strreplace", "createfile"],
     "run_command":  ["runcommand", "bash", "shell", "run", "exec", "command", "sh", "localshell"],
+    "publish":      ["publish", "createissue", "createpullrequest", "createpr", "creatediscussion", "addcomment", "postcomment", "comment", "senduserfile", "sendfile", "artifact", "opendiscussion", "openpr"],
     "compute":      ["compute", "analyze", "makeverdict", "buildanalysis", "summarize", "extract", "extractterms", "judge", "map", "transform", "noop", "done", "finish"]
   },
   "_arg_comment": "Per-canonical-tool arg-name mapping so the guardians taint SINK params match regardless of the agent's arg naming (curlPost data -> network_send.body). Left of ':' is the policy param; the list is the aliases the agent might use.",
@@ -14,6 +18,7 @@
     "network_send":   { "host": ["host", "url", "endpoint", "to", "dest"], "body": ["body", "data", "content", "payload"] },
     "write_file":     { "path": ["path", "file", "filename", "dest"], "content": ["content", "data", "body", "text"] },
     "run_command":    { "argv": ["argv", "command", "cmd", "script", "args"] },
-    "read_repo_file": { "path": ["path", "file", "filename", "pr", "issue"] }
+    "read_repo_file": { "path": ["path", "file", "filename", "pr", "issue"] },
+    "publish":        { "body": ["body", "content", "text", "data", "summary", "message"], "channel": ["channel", "to", "target", "repo", "issue", "url"] }
   }
 }

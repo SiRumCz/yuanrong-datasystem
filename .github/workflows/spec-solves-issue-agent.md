@@ -25,6 +25,10 @@ tools:
 steps:
   - uses: actions/checkout@v5
     with: { persist-credentials: false }
+  - name: Stage plan tool registry (grounds plan_ast in the predefined tool set)
+    run: |
+      mkdir -p /tmp/gh-aw/agent
+      python3 .github/agent-factory/protocols/code-review/scripts/security/plan-tools-catalog.py > /tmp/gh-aw/agent/plan-tools.md 2>/dev/null || true
   - name: Prefetch PR + linked issue + spec text (scope the issue→spec chain)
     env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}", PR: "${{ fromJSON(github.event.inputs.aw_context || '{}').pr }}", REPO: "${{ github.repository }}" }
     run: |
@@ -165,16 +169,25 @@ Wrap all plan-safety artifacts in ONE `agent_security` object in the JSON you wr
 {
   "agent_security": {
     "plan_kts": "fun plan(...) { ... }",
-    "plan_ast": { "steps": [ { "tool": "readDiff", "args": { "pr": {"$ref":"pr"} }, "result": "diff" } ] },
+    "plan_ast": { "steps": [ { "tool": "read_repo_file", "args": { "path": {"$ref":"pr"} }, "result": "diff" } ] },
     "cert":     { "paths": [ ["diff","diff"], ["diff","findings"], ["diff","verdict"] ] }
   }
 }
 ```
 
-- **`plan_kts`** — your plan as a single Kotlin `.kts`: each capability a named function
-  call (`readIssue`/`readDiff`/`readFile`/`analyze`/`writeFile`/`curlPost`…), data through
-  named `val` bindings, and any sink destination (`url=`/`path=`) a string literal.
-- **`plan_ast`** — the SAME plan as a restricted workflow AST: one step per tool call;
+FIRST run `cat /tmp/gh-aw/agent/plan-tools.md` — it is the **tool registry**: the fixed,
+predefined set of tools your plan is allowed to use. Name every plan step from it; do not
+invent tools.
+
+- **`plan_kts`** — your plan as a single Kotlin `.kts` (a readable form): each capability a
+  named function call, data through named `val` bindings, any sink destination a string
+  literal. Use natural names here.
+- **`plan_ast`** — the SAME plan as a restricted workflow AST, **grounded in the registry**:
+  one step per tool call, and each step's `"tool"` MUST be EXACTLY one canonical tool from
+  `plan-tools.md` (`read_repo_file`/`read_secret`/`read_external`/`write_file`/`run_command`/
+  `network_send`/`publish`/`compute`) — never a made-up name. Use `compute` for any pure
+  reasoning/analysis step (it does no I/O). Use the arg names the registry shows (e.g.
+  `write_file` → `{path, content}`, `network_send`/`publish` → `{host|channel, body}`).
   `args` maps each param to a literal or `{"$ref":"<prior-result>"}`; `result` names the output.
 - **`cert`** — your safety certificate: the reachability set over `plan_ast`. For every
   SOURCE step (a read of external/sensitive data), list every variable its data reaches by
