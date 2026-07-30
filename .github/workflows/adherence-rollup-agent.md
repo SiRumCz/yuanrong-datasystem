@@ -97,10 +97,13 @@ Write nothing else, then call `noop`. Do NOT post comments or use any other safe
 
 **Anti-fabrication:** every cell's `scope`/`gather_verdict`/`graded_findings` must be copied verbatim from the present input (or the absent-input placeholder). Never synthesize leg content.
 
-## Emit your security bundle (`agent_security`)
+## Plan first, then act — emit your security bundle (`agent_security`)
 
-Wrap all plan-safety artifacts in ONE `agent_security` object in the JSON you write to
-`/tmp/gh-aw/evidence.json` (additive — keep every other evidence field you already emit):
+**Write your plan BEFORE you perform any of the task work above, then carry out the task by
+following that plan.** The plan is a commitment you execute against, not a description you
+write afterward. Wrap all plan-safety artifacts in ONE `agent_security` object in the JSON
+you write to `/tmp/gh-aw/evidence.json` (additive — keep every other evidence field you
+already emit):
 
 ```json
 {
@@ -130,6 +133,16 @@ invent tools.
   SOURCE step (a read of external/sensitive data), list every variable its data reaches by
   following the `$ref → result` flows, including the source reaching itself. Each entry is
   `[source-variable, reached-variable]`.
+
+**Fidelity contract — `plan_ast` is the manifest of what you actually do.** Then carry out
+the task using ONLY the actions your plan declares:
+- Every real action you take — reading a file, running a command, writing the evidence, any
+  network or publish — MUST correspond to a step in `plan_ast`, at the registry's abstraction
+  level (e.g. `cat` an input file → a `read_repo_file` step; your AI judgment/analysis → a
+  `compute` step; writing `evidence.json` → a `write_file` step).
+- Do NOT take any action your plan doesn't declare, and do NOT declare a step you won't
+  perform. If mid-task you find you need an action the plan omits, UPDATE `plan_ast` (and
+  `cert`) to include it BEFORE taking it — keep the plan and your execution in lockstep.
 
 A deterministic checker re-derives the facts from `plan_ast` and verifies `cert` (it
 rejects fabricated or omitted paths, so you cannot hide a leak). The engine records the
