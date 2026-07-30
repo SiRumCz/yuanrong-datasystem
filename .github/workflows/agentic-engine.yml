@@ -476,6 +476,28 @@ jobs:
             gh run download "${{ steps.meta.outputs.rid }}" \
               --repo "${{ github.repository }}" -n evidence -D /tmp/agent || echo "no evidence artifact"
           fi
+      - name: Download and normalize agent trajectory
+        env:
+          RID: ${{ steps.meta.outputs.rid }}
+          SOURCE_RUNTIME: codex   # the agent locks in this pipeline are codex; Claude nodes set this per-leg later
+        run: |
+          set -uo pipefail
+          mkdir -p /tmp/agentdl
+          if [ -n "${RID:-}" ] && gh run download "$RID" \
+               --repo "${{ github.repository }}" -n agent -D /tmp/agentdl; then
+            STDIO=$(find /tmp/agentdl -name agent-stdio.log 2>/dev/null | head -1)
+            if python3 .github/agent-factory/engine/actions.py "${STDIO:-/dev/null}" "$SOURCE_RUNTIME" \
+                 > /tmp/trajectory.json 2>/tmp/actions.err; then
+              :
+            else
+              echo "::warning::trajectory normalize failed for run ${RID:-<none>}"
+              cat /tmp/actions.err || true
+              echo '{"error":"trajectory-unavailable"}' > /tmp/trajectory.json
+            fi
+          else
+            echo '{"error":"trajectory-unavailable"}' > /tmp/trajectory.json
+          fi
+          echo "TRAJECTORY_PATH=/tmp/trajectory.json" >> "$GITHUB_ENV"
       - name: Fetch independent ground truth
         env:
           PR: ${{ needs.plan.outputs.pr }}

@@ -96,7 +96,22 @@ def main():
 
     params = (node or {}).get("params", {})
     params_json = json.dumps(params, separators=(",", ":"))
-    checks_list = (node or {}).get("checks", [])
+    checks_list = list((node or {}).get("checks", []))
+
+    # default_checks (Move B): a protocol may declare cross-cutting checks ONCE at
+    # the top level; the engine applies them to every agent (workflow-bearing) node
+    # so an author needn't stamp the same entry onto every node's `checks[]`. They
+    # are APPENDED after the node's own checks (preserves the node's primary-check
+    # ordering and any `checks[0]` assumption) and DEDUPED by `run` name (a node
+    # that declares the same `run` itself wins, so it can override severity and
+    # nothing runs twice). Non-agent nodes (gates/joins) are excluded — they carry
+    # their own checks (e.g. a gate's answers-coverage). Absent key -> no-op, so
+    # protocols without `default_checks` are unaffected.
+    if (node or {}).get("workflow"):
+        declared = {e.get("run") for e in checks_list if isinstance(e, dict)}
+        for dc in protocol.get("default_checks", []):
+            if isinstance(dc, dict) and dc.get("run") not in declared:
+                checks_list.append(dc)
 
     results = []
 

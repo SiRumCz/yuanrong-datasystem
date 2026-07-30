@@ -107,8 +107,8 @@ Tasks:
 Expected targeted commands after implementation:
 
 ```bash
-node --test .github/agent-factory/protocols/code-review/tests/context-locate.test.js
-node --test .github/agent-factory/protocols/code-review/tests/context-assemble.test.js
+node --test tests/protocols/code-review/js/context-locate.test.js
+node --test tests/protocols/code-review/js/context-assemble.test.js
 python3 .github/agent-factory/protocols/code-review/scripts/context/to-evidence.py <session-export.json> <evidence.json>
 python3 .github/agent-factory/protocols/code-review/checks/context-schema-valid.py <evidence.json> /dev/null /dev/null
 gh aw compile .github/workflows/context-agent.md

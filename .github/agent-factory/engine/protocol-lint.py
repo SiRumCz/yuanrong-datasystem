@@ -259,6 +259,17 @@ def build_tree(proto):
     depth = paths.max_static_depth(proto)
     cap = lib.effective_max_depth(proto)
     out.append(f"   depth: {depth} (max_depth={cap})")
+
+    default_checks = proto.get("default_checks") or []
+    if default_checks:
+        labelled = ", ".join(
+            f"{c.get('run', '?')}" + (f" [{c['on_fail']}]" if c.get("on_fail") else "")
+            for c in default_checks if isinstance(c, dict)
+        )
+        # These are injected by run-checks.py into every agent node's check list,
+        # so they do NOT appear on the per-node `checks:` lines below.
+        out.append(f"   default_checks (applied to every agent node): {labelled}")
+
     out.append("")
 
     states = proto.get("states") or []

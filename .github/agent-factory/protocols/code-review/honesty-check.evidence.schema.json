@@ -27,7 +27,7 @@
     },
     "agent_security": {
       "type": "object",
-      "description": "Security bundle (plan_kts/plan_ast/cert + guardians/cert_verify/cedar verdicts). Additive; not gated."
+      "description": "Security bundle: plan_kts/plan_ast/plan_cert (agent-emitted) + plan_ast_guardians/plan_cert_verify (recorded verdicts). Additive; not gated."
     }
   }
 }

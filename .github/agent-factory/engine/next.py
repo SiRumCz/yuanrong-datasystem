@@ -643,7 +643,10 @@ def do_answer():
     import tempfile
     empty_fd, empty = tempfile.mkstemp(prefix="answers-empty-")
     os.close(empty_fd)
-    cov = _sp.run([path, apath, empty, empty], text=True, capture_output=True)
+    try:
+        cov = _sp.run([path, apath, empty, empty], text=True, capture_output=True)
+    finally:
+        os.unlink(empty)   # don't leak the empty diff/files tempfile per answer
     verdict = json.loads(cov.stdout) if cov.stdout.strip() else {"pass": False, "feedback": "no verdict"}
 
     gdata["gates"].setdefault("history", []).append(

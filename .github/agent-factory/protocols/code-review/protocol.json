@@ -21,6 +21,13 @@
       "command": "answer"
     }
   ],
+  "default_checks": [
+    {
+      "_note": "Layer B honesty advisory (Move B): applied by the engine to every agent node, so it need not be stamped onto each node's checks[]. run-checks.py appends it (deduped by run-name) to every workflow-bearing node; the check self-computes divergence over agent_security.plan_ast + the global TRAJECTORY_PATH. Advisory-only; never gates.",
+      "run": "plan-honesty-valid",
+      "on_fail": "advisory"
+    }
+  ],
   "states": [
     {
       "id": "preflight",
