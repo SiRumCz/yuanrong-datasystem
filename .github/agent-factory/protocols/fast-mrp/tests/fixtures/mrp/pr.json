@@ -1,9 +1,0 @@
-{
-  "number": 3,
-  "headRefOid": "895c26d510c5583361d28a96a99484403fec2c1c",
-  "files": [
-    { "path": "src/client/a.cpp", "additions": 40, "deletions": 5 },
-    { "path": "src/client/b.cpp", "additions": 10, "deletions": 0 },
-    { "path": "README.md", "additions": 3, "deletions": 0 }
-  ]
-}
