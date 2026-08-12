@@ -1,19 +1,10 @@
 {
   "local": false,
-  "n_fixes": 1,
+  "n_fixes": 0,
   "env": {
     "repo": "SiRumCz/yuanrong-datasystem",
-    "pr": "220",
+    "pr": "215",
     "has_token": true
   },
-  "head": "test/e2e-final-check",
-  "clone_rc": 0,
-  "clone_err": "Cloning into '/tmp/fix-apply-t47mcfwt'...",
-  "apply": [
-    {
-      "status": "skipped",
-      "detail": "apply-failed"
-    }
-  ],
-  "applied_n": 0
+  "stop": "no fixes"
 }
