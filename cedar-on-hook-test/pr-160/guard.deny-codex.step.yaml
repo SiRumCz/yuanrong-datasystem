@@ -1,7 +1,16 @@
 protocol: cedar-on-hook-test
 instance: pr-160
-state: guard
+state: failed
 iteration: 1
 human_task: {}
 head_sha: aeae908d9dc468fe15521768e18828b3e593e0de
-history: []
+history:
+- iteration: 1
+  agent_run_id: '31628505562'
+  checks:
+    dispatched-run: fail
+    live-guard-enforced: fail
+  feedback: dispatched run failed
+outcome:
+  exit: 1
+  summary: exhausted 1 iterations
