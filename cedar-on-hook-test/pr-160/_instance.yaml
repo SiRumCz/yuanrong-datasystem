@@ -1,0 +1,6 @@
+protocol: cedar-on-hook-test
+instance: pr-160
+head_sha: aeae908d9dc468fe15521768e18828b3e593e0de
+phase: guard
+joined: false
+phase_label: "cedar guard: allow \u2225 deny"

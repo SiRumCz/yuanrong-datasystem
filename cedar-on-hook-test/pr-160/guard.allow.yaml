@@ -1,0 +1,7 @@
+protocol: cedar-on-hook-test
+instance: pr-160
+state: guard
+sub_state: step
+iteration: 1
+human_task: {}
+history: []
