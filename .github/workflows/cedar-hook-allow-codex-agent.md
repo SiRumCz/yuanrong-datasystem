@@ -31,6 +31,15 @@ engine:
     # On a fresh runner EVERY hook is untrusted, and an untrusted hook is skipped
     # with no warning and no error. This flag is what makes it run.
     - "--dangerously-bypass-hook-trust"
+    # Select the gateway provider whose table the wrapper appends. codex does NOT
+    # read OPENAI_BASE_URL — it needs a `model_provider`, and gh-aw only emits one
+    # when the awf sandbox is on (it points at the firewall proxy). With
+    # `sandbox.agent: false` there is none, so codex silently defaults to
+    # api.openai.com and 401s on the gateway key. This scalar is passed on the CLI
+    # rather than in the appended TOML because a top-level key written after a
+    # table would land INSIDE that table.
+    - "-c"
+    - "model_provider=gateway"
   env:
     OPENAI_BASE_URL: https://arcyleung-ubuntu.tailb940e6.ts.net/v1/
     CEDAR_LIVE_GUARD_LOG_DIR: /tmp/cedar-live-guard
@@ -84,6 +93,12 @@ pre-agent-steps:
       CFG="\${CODEX_HOME:?CODEX_HOME unset}/config.toml"
       mkdir -p "\$(dirname "\$CFG")"
       cat >> "\$CFG" <<TOML
+
+      [model_providers.gateway]
+      name = "gateway"
+      base_url = "https://arcyleung-ubuntu.tailb940e6.ts.net/v1"
+      env_key = "OPENAI_API_KEY"
+      wire_api = "responses"
 
       [[hooks.PreToolUse]]
       matcher = ".*"

@@ -18,6 +18,12 @@ engine:
   command: /tmp/cedar-live-guard/codex-with-guard
   args:
     - "--dangerously-bypass-hook-trust"
+    # See the allow-codex agent: codex does not read OPENAI_BASE_URL, and with
+    # `sandbox.agent: false` gh-aw emits no model_provider, so without this it
+    # defaults to api.openai.com and 401s. Passed on the CLI because a top-level
+    # key appended after a table would land inside that table.
+    - "-c"
+    - "model_provider=gateway"
   env:
     OPENAI_BASE_URL: https://arcyleung-ubuntu.tailb940e6.ts.net/v1/
     CEDAR_LIVE_GUARD_LOG_DIR: /tmp/cedar-live-guard
@@ -68,6 +74,12 @@ pre-agent-steps:
       CFG="\${CODEX_HOME:?CODEX_HOME unset}/config.toml"
       mkdir -p "\$(dirname "\$CFG")"
       cat >> "\$CFG" <<TOML
+
+      [model_providers.gateway]
+      name = "gateway"
+      base_url = "https://arcyleung-ubuntu.tailb940e6.ts.net/v1"
+      env_key = "OPENAI_API_KEY"
+      wire_api = "responses"
 
       [[hooks.PreToolUse]]
       matcher = ".*"
