@@ -1,6 +1,6 @@
 protocol: code-review
 instance: pr-215
-state: adherence-fanout
+state: failed
 iteration: 2
 human_task: {}
 head_sha: 54fcf0e987fd851dee9c2e7a49c2c2cdc13db205
@@ -18,3 +18,19 @@ history:
   feedback: 'dispatched run failed; evidence shape: missing required key `verdict`;
     missing required key `examined`; scope disagreement: agent={''code'':False,''plan'':False}
     recompute={''code'':True,''plan'':False}'
+- iteration: 2
+  agent_run_id: '31638441908'
+  checks:
+    evidence-present: pass
+    code-plan-coverage: pass
+    traces-exist-in-diff: fail
+    plan-ast-guardians: pass
+    plan-cert-verify: pass
+    plan-ast-cedar: pass
+  feedback: 'Unverifiable claims: existing_code does not match RIGHT line(s) 13 of
+    cli/net_check.py (code-implements-plan); existing_code does not match RIGHT line(s)
+    18 of cli/net_check.py (code-implements-plan); existing_code does not match RIGHT
+    line(s) 28-29 of cli/net_check.py (code-implements-plan)'
+outcome:
+  exit: 1
+  summary: exhausted 2 iterations
