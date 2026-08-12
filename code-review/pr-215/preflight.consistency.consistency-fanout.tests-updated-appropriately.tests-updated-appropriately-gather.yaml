@@ -1,6 +1,6 @@
 protocol: code-review
 instance: pr-215
-state: consistency-fanout
+state: failed
 iteration: 2
 human_task: {}
 head_sha: 54fcf0e987fd851dee9c2e7a49c2c2cdc13db205
@@ -17,3 +17,16 @@ history:
   feedback: 'dispatched run failed; evidence shape: missing required key `verdict`;
     missing required key `examined`; scope disagreement: agent code_changed=False
     recompute=True'
+- iteration: 2
+  agent_run_id: '31638143272'
+  checks:
+    dispatched-run: fail
+    evidence-present: pass
+    tests-coverage: pass
+    plan-ast-guardians: pass
+    plan-cert-verify: fail
+    plan-ast-cedar: pass
+  feedback: dispatched run failed
+outcome:
+  exit: 1
+  summary: exhausted 2 iterations
