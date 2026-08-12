@@ -1,6 +1,6 @@
 protocol: code-review
 instance: pr-215
-state: preflight
+state: done
 iteration: 2
 human_task: {}
 head_sha: 54fcf0e987fd851dee9c2e7a49c2c2cdc13db205
@@ -14,3 +14,14 @@ history:
     plan-cert-verify: pass
     plan-ast-cedar: pass
   feedback: dispatched run failed
+- iteration: 2
+  agent_run_id: '31638641861'
+  checks:
+    judge-coverage: pass
+    plan-ast-guardians: pass
+    plan-cert-verify: pass
+    plan-ast-cedar: pass
+  feedback: ''
+outcome:
+  exit: 0
+  summary: ''
