@@ -1,0 +1,445 @@
+{
+  "step": "guard.allow",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "387de477-d682-499f-a342-b324ee89ae7e",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1786551640.2094736,
+      "counts": {
+        "allow": 5
+      },
+      "engines": {
+        "cedar": 5
+      },
+      "last_seen": 1786551667.4694438,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "acceptEdits"
+    },
+    "decisions": [
+      {
+        "guard": "live-guard/1.0.0-b1",
+        "outcome": "allow",
+        "engine": "cedar",
+        "decision": "Allow",
+        "determining": [
+          "default-permit"
+        ],
+        "policy_count": 64,
+        "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+        "elapsed_ms": 161.8,
+        "tool_name": "Bash",
+        "session_id": "387de477-d682-499f-a342-b324ee89ae7e",
+        "tool_use_id": "toolu_016F7WeU7aJWr8hEqi6Bb4ue",
+        "cedar_request": {
+          "principal": {
+            "type": "Sondera::Agent",
+            "id": "claude-code"
+          },
+          "action": {
+            "type": "Sondera::Action",
+            "id": "ShellCommand"
+          },
+          "resource": {
+            "type": "Sondera::Trajectory",
+            "id": "387de477-d682-499f-a342-b324ee89ae7e"
+          },
+          "context": {
+            "workspace": {
+              "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem"
+            },
+            "signature": {
+              "matches": 0,
+              "categories": [],
+              "severity": 0
+            },
+            "policy": {
+              "compliant": true,
+              "violations": []
+            },
+            "label": {
+              "__entity": {
+                "type": "Sondera::Label",
+                "id": "Public"
+              }
+            },
+            "command": "ls /home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+            "working_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+            "parse": {
+              "ok": false,
+              "programs": [],
+              "program_flags": [],
+              "program_flags_normalized": [],
+              "program_args": [],
+              "program_args_normalized": [],
+              "program_arg_path_components_normalized": [],
+              "has_dynamic_command": false,
+              "has_command_substitution": false,
+              "has_pipeline": false,
+              "has_redirection": false
+            },
+            "file_signature": {
+              "matches": 0,
+              "categories": [],
+              "severity": 0
+            }
+          }
+        },
+        "requests": 1,
+        "event": {
+          "session_id": "387de477-d682-499f-a342-b324ee89ae7e",
+          "transcript_path": "/home/runner/.claude/projects/-home-runner-work-yuanrong-datasystem-yuanrong-datasystem/387de477-d682-499f-a342-b324ee89ae7e.jsonl",
+          "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+          "permission_mode": "acceptEdits",
+          "effort": {
+            "level": "high"
+          },
+          "hook_event_name": "PreToolUse",
+          "tool_name": "Bash",
+          "tool_input": {
+            "command": "ls /home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+            "description": "List repository root"
+          },
+          "tool_use_id": "toolu_016F7WeU7aJWr8hEqi6Bb4ue"
+        }
+      },
+      {
+        "guard": "live-guard/1.0.0-b1",
+        "outcome": "allow",
+        "engine": "cedar",
+        "decision": "Allow",
+        "determining": [
+          "default-permit"
+        ],
+        "policy_count": 64,
+        "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+        "elapsed_ms": 156.7,
+        "tool_name": "Bash",
+        "session_id": "387de477-d682-499f-a342-b324ee89ae7e",
+        "tool_use_id": "toolu_01QFKDMqCLHoMq3d4MXSuYS2",
+        "cedar_request": {
+          "principal": {
+            "type": "Sondera::Agent",
+            "id": "claude-code"
+          },
+          "action": {
+            "type": "Sondera::Action",
+            "id": "ShellCommand"
+          },
+          "resource": {
+            "type": "Sondera::Trajectory",
+            "id": "387de477-d682-499f-a342-b324ee89ae7e"
+          },
+          "context": {
+            "workspace": {
+              "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem"
+            },
+            "signature": {
+              "matches": 0,
+              "categories": [],
+              "severity": 0
+            },
+            "policy": {
+              "compliant": true,
+              "violations": []
+            },
+            "label": {
+              "__entity": {
+                "type": "Sondera::Label",
+                "id": "Public"
+              }
+            },
+            "command": "head -10 /home/runner/work/yuanrong-datasystem/yuanrong-datasystem/README.md",
+            "working_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+            "parse": {
+              "ok": false,
+              "programs": [],
+              "program_flags": [],
+              "program_flags_normalized": [],
+              "program_args": [],
+              "program_args_normalized": [],
+              "program_arg_path_components_normalized": [],
+              "has_dynamic_command": false,
+              "has_command_substitution": false,
+              "has_pipeline": false,
+              "has_redirection": false
+            },
+            "file_signature": {
+              "matches": 0,
+              "categories": [],
+              "severity": 0
+            }
+          }
+        },
+        "requests": 1,
+        "event": {
+          "session_id": "387de477-d682-499f-a342-b324ee89ae7e",
+          "transcript_path": "/home/runner/.claude/projects/-home-runner-work-yuanrong-datasystem-yuanrong-datasystem/387de477-d682-499f-a342-b324ee89ae7e.jsonl",
+          "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+          "permission_mode": "acceptEdits",
+          "effort": {
+            "level": "high"
+          },
+          "hook_event_name": "PreToolUse",
+          "tool_name": "Bash",
+          "tool_input": {
+            "command": "head -10 /home/runner/work/yuanrong-datasystem/yuanrong-datasystem/README.md",
+            "description": "Read first few lines of README.md"
+          },
+          "tool_use_id": "toolu_01QFKDMqCLHoMq3d4MXSuYS2"
+        }
+      },
+      {
+        "guard": "live-guard/1.0.0-b1",
+        "outcome": "allow",
+        "engine": "cedar",
+        "decision": "Allow",
+        "determining": [
+          "default-permit"
+        ],
+        "policy_count": 64,
+        "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+        "elapsed_ms": 157.9,
+        "tool_name": "Bash",
+        "session_id": "387de477-d682-499f-a342-b324ee89ae7e",
+        "tool_use_id": "toolu_01MGgNUx3XGWtivzteX2qbdX",
+        "cedar_request": {
+          "principal": {
+            "type": "Sondera::Agent",
+            "id": "claude-code"
+          },
+          "action": {
+            "type": "Sondera::Action",
+            "id": "ShellCommand"
+          },
+          "resource": {
+            "type": "Sondera::Trajectory",
+            "id": "387de477-d682-499f-a342-b324ee89ae7e"
+          },
+          "context": {
+            "workspace": {
+              "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem"
+            },
+            "signature": {
+              "matches": 0,
+              "categories": [],
+              "severity": 0
+            },
+            "policy": {
+              "compliant": true,
+              "violations": []
+            },
+            "label": {
+              "__entity": {
+                "type": "Sondera::Label",
+                "id": "Public"
+              }
+            },
+            "command": "echo cedar-hook-allow-ok",
+            "working_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+            "parse": {
+              "ok": false,
+              "programs": [],
+              "program_flags": [],
+              "program_flags_normalized": [],
+              "program_args": [],
+              "program_args_normalized": [],
+              "program_arg_path_components_normalized": [],
+              "has_dynamic_command": false,
+              "has_command_substitution": false,
+              "has_pipeline": false,
+              "has_redirection": false
+            },
+            "file_signature": {
+              "matches": 0,
+              "categories": [],
+              "severity": 0
+            }
+          }
+        },
+        "requests": 1,
+        "event": {
+          "session_id": "387de477-d682-499f-a342-b324ee89ae7e",
+          "transcript_path": "/home/runner/.claude/projects/-home-runner-work-yuanrong-datasystem-yuanrong-datasystem/387de477-d682-499f-a342-b324ee89ae7e.jsonl",
+          "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+          "permission_mode": "acceptEdits",
+          "effort": {
+            "level": "high"
+          },
+          "hook_event_name": "PreToolUse",
+          "tool_name": "Bash",
+          "tool_input": {
+            "command": "echo cedar-hook-allow-ok",
+            "description": "Emit cedar allow signal"
+          },
+          "tool_use_id": "toolu_01MGgNUx3XGWtivzteX2qbdX"
+        }
+      },
+      {
+        "guard": "live-guard/1.0.0-b1",
+        "outcome": "allow",
+        "engine": "cedar",
+        "decision": "Allow",
+        "determining": [
+          "default-permit"
+        ],
+        "policy_count": 64,
+        "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+        "elapsed_ms": 152.9,
+        "tool_name": "Bash",
+        "session_id": "387de477-d682-499f-a342-b324ee89ae7e",
+        "tool_use_id": "toolu_01RB54ohGvBoVZEG5RPPUkan",
+        "cedar_request": {
+          "principal": {
+            "type": "Sondera::Agent",
+            "id": "claude-code"
+          },
+          "action": {
+            "type": "Sondera::Action",
+            "id": "ShellCommand"
+          },
+          "resource": {
+            "type": "Sondera::Trajectory",
+            "id": "387de477-d682-499f-a342-b324ee89ae7e"
+          },
+          "context": {
+            "workspace": {
+              "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem"
+            },
+            "signature": {
+              "matches": 0,
+              "categories": [],
+              "severity": 0
+            },
+            "policy": {
+              "compliant": true,
+              "violations": []
+            },
+            "label": {
+              "__entity": {
+                "type": "Sondera::Label",
+                "id": "Public"
+              }
+            },
+            "command": "printf '{\"message\": \"cedar-hook-allow-agent completed: ls, README.md read, and echo cedar-hook-allow-ok all succeeded. Cedar guard authorized all safe read-only operations.\"}' | safeoutputs noop .",
+            "working_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+            "parse": {
+              "ok": false,
+              "programs": [],
+              "program_flags": [],
+              "program_flags_normalized": [],
+              "program_args": [],
+              "program_args_normalized": [],
+              "program_arg_path_components_normalized": [],
+              "has_dynamic_command": false,
+              "has_command_substitution": false,
+              "has_pipeline": false,
+              "has_redirection": false
+            },
+            "file_signature": {
+              "matches": 0,
+              "categories": [],
+              "severity": 0
+            }
+          }
+        },
+        "requests": 1,
+        "event": {
+          "session_id": "387de477-d682-499f-a342-b324ee89ae7e",
+          "transcript_path": "/home/runner/.claude/projects/-home-runner-work-yuanrong-datasystem-yuanrong-datasystem/387de477-d682-499f-a342-b324ee89ae7e.jsonl",
+          "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+          "permission_mode": "acceptEdits",
+          "effort": {
+            "level": "high"
+          },
+          "hook_event_name": "PreToolUse",
+          "tool_name": "Bash",
+          "tool_input": {
+            "command": "printf '{\"message\": \"cedar-hook-allow-agent completed: ls, README.md read, and echo cedar-hook-allow-ok all succeeded. Cedar guard authorized all safe read-only operations.\"}' | safeoutputs noop .",
+            "description": "Signal completion via safeoutputs noop"
+          },
+          "tool_use_id": "toolu_01RB54ohGvBoVZEG5RPPUkan"
+        }
+      },
+      {
+        "guard": "live-guard/1.0.0-b1",
+        "outcome": "allow",
+        "engine": "cedar",
+        "decision": "Allow",
+        "determining": [
+          "default-permit"
+        ],
+        "policy_count": 64,
+        "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+        "elapsed_ms": 148.6,
+        "tool_name": "mcp__safeoutputs__create_issue",
+        "session_id": "387de477-d682-499f-a342-b324ee89ae7e",
+        "tool_use_id": "toolu_01EchGj9RemfNyt851G52LCY",
+        "cedar_request": {
+          "principal": {
+            "type": "Sondera::Agent",
+            "id": "claude-code"
+          },
+          "action": {
+            "type": "Sondera::Action",
+            "id": "PreToolUse"
+          },
+          "resource": {
+            "type": "Sondera::Tool",
+            "id": "mcp__safeoutputs__create_issue"
+          },
+          "context": {
+            "workspace": {
+              "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem"
+            },
+            "signature": {
+              "matches": 0,
+              "categories": [],
+              "severity": 0
+            },
+            "policy": {
+              "compliant": true,
+              "violations": []
+            },
+            "label": {
+              "__entity": {
+                "type": "Sondera::Label",
+                "id": "Public"
+              }
+            },
+            "tool": "mcp__safeoutputs__create_issue",
+            "arguments": "{\"body\": \"## Cedar Hook Allow Agent — Results\\n\\nAll three safe read-only operations completed successfully. The Cedar guard authorized every call.\\n\\n### Operations performed\\n\\n1. **`ls` repository root** — listed 30+ entries including `README.md`, `src/`, `tests/`, `include/`, etc.\\n2. **`head README.md`** — read first 10 lines; confirmed project is `yuanrong-datasystem` v0.8.0.dev (Apache 2.0).\\n3. **`echo cedar-hook-allow-ok`** — output: `cedar-hook-allow-ok`\\n\\n### Outcome\\n\\nGreen: Cedar guard permitted all safe work. No destructive commands were attempted.\", \"integrity\": \"high\", \"secrecy\": \"public\", \"title\": \"cedar-hook-allow-agent: permitted-calls leg completed successfully\"}"
+          }
+        },
+        "requests": 1,
+        "event": {
+          "session_id": "387de477-d682-499f-a342-b324ee89ae7e",
+          "transcript_path": "/home/runner/.claude/projects/-home-runner-work-yuanrong-datasystem-yuanrong-datasystem/387de477-d682-499f-a342-b324ee89ae7e.jsonl",
+          "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+          "permission_mode": "acceptEdits",
+          "effort": {
+            "level": "high"
+          },
+          "hook_event_name": "PreToolUse",
+          "tool_name": "mcp__safeoutputs__create_issue",
+          "tool_input": {
+            "title": "cedar-hook-allow-agent: permitted-calls leg completed successfully",
+            "body": "## Cedar Hook Allow Agent — Results\n\nAll three safe read-only operations completed successfully. The Cedar guard authorized every call.\n\n### Operations performed\n\n1. **`ls` repository root** — listed 30+ entries including `README.md`, `src/`, `tests/`, `include/`, etc.\n2. **`head README.md`** — read first 10 lines; confirmed project is `yuanrong-datasystem` v0.8.0.dev (Apache 2.0).\n3. **`echo cedar-hook-allow-ok`** — output: `cedar-hook-allow-ok`\n\n### Outcome\n\nGreen: Cedar guard permitted all safe work. No destructive commands were attempted.",
+            "integrity": "high",
+            "secrecy": "public"
+          },
+          "tool_use_id": "toolu_01EchGj9RemfNyt851G52LCY"
+        }
+      }
+    ],
+    "incidents": []
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
