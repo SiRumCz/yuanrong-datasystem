@@ -1,7 +1,6 @@
 protocol: cedar-on-hook-test
 instance: pr-160
 head_sha: aeae908d9dc468fe15521768e18828b3e593e0de
-phase: record
-joined: true
-phase_label: record (ledger of both legs' guard events)
-status_comment_id: 5271145520
+phase: guard
+joined: false
+phase_label: "cedar guard: allow \u2225 deny"
