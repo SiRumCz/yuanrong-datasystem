@@ -1,9 +1,9 @@
 {
   "name": "code-review",
   "version": "0.2.0",
-  "min_engine_version": "1.0.0",
+  "min_engine_version": "7.0.0",
   "max_depth": 6,
-  "_note": "The full custody pipeline plus the mental-model gates, wired as engine phases: preflight fanout(4 cluster branches: adherence[spec-solves-issue||plan-implements-spec||code-implements-plan]->adherence-rollup, mm-compliance[gather->judge], consistency[docs||tests]->consistency-rollup, security[gather->judge]) -> join-preflight -> preflight-gate -> overview(+risk) -> review fanout(5 dims; publish-review opens one [ai-review] issue per finding) -> join -> per-issue(DYNAMIC fanout, one leg per open [ai-review] issue: triage(fix-triage-agent) -> fix(edit/commit) -> honesty fanout[cryptohash||fixverify] -> join-honesty -> honesty-verdict) -> join-per-issue -> honesty-gate -> post-fix fanout[context || mm-updater->mm-gate] -> join -> mrp -> done. Each phase pairs the generic `evidence-present` form check with a deterministic per-phase gate: preflight (a 4-cluster nested fanout joined under preflight-gate, whose conclude-preflight runs a deterministic block-gaps/warn-extras rollup over the issue->spec->plan->code chain + mm-compliance, posts one consolidated comment, and halts via on_blocked:halt until /override), overview (schema + cohort-partition + a deterministic `conclude-overview` risk scorer porting score.js/diffusion.js that owns the authoritative band and halts only on a garbled/unknown run; the agent's risk_band is an advisory hint), the 5 review dims (schema + findings-anchored + publish-review; the fanout's params.status_note flags request-changes legs in the status header), and then a per-issue dynamic fanout runs, for each open [ai-review] issue, triage (fix-triage-agent, host-authoritatively pinned to the leg's issue; schema + conclude-triage), fix (edit/commit -- conclude-fix commits the diff to the PR head with rebase-retry and closes the issue), and honesty (a cryptohash proof-of-work that a real test ran AND a fixverify semi-formal fix certificate, ANDed per issue by conclude-honesty). The per-issue legs join under honesty-gate, whose aggregate-honesty reducer HALTS the pipeline (on_blocked:halt, /override-able) if ANY issue's fix is dishonest; issue selection is host-authoritative and the verdict is tamper-evident (both fail closed; a nested-leg conclude hook runs so fix/triage actually commit+close). The post-fix fanout runs context (schema-valid only, advisory -- a fanout leg runs NO conclude hook, so conclude-context.py is unused here) in PARALLEL with mm-updater (evidence-present + mm-questions-present; a gh-aw create-pull-request safe-output opens an [mm] PR when mm_changed, the mm-gate then holds for a human /mm-answer, else the empty gate auto-skips); the join waits for both before mrp (schema + conclude-mrp + a deterministic acceptance_plan: engine inputs[] deliver prior-phase evidence, per-cohort bands are re-derived via the shared _risk_score, and the custody-shaped pack is emitted as the merge-readiness-pack artifact). Remaining simplification: review findings are opened as [ai-review] issues but not yet posted as inline PR comments. Agent workflows live in .github/workflows/.",
+  "_note": "The full custody pipeline plus the mental-model phases, wired as engine phases: preflight fanout(4 cluster branches: adherence[spec-solves-issue||plan-implements-spec||code-implements-plan]->adherence-rollup, mm-compliance[gather->judge], consistency[docs||tests]->consistency-rollup, security[gather->judge]) -> join-preflight -> preflight-verdict -> overview(+risk) -> review fanout(5 dims; publish-review opens one [ai-review] issue per finding) -> join -> per-issue(DYNAMIC fanout, one leg per open [ai-review] issue: triage(fix-triage-agent) -> fix(edit/commit) -> honesty fanout[cryptohash||fixverify] -> join-honesty -> honesty-verdict) -> join-per-issue -> honesty-verdict -> post-fix fanout[context || mm-updater->mm-route(choice)->mm-decision] -> join -> mrp -> done. Each phase pairs the generic `evidence-present` form check with a deterministic per-phase verdict: preflight (a 4-cluster nested fanout joined under preflight-verdict, whose conclude-preflight runs a deterministic block-gaps/warn-extras rollup over the issue->spec->plan->code chain + mm-compliance, posts one consolidated comment, and halts via on_blocked:halt until /override), overview (schema + cohort-partition + a deterministic `conclude-overview` risk scorer porting score.js/diffusion.js that owns the authoritative band and halts only on a garbled/unknown run; the agent's risk_band is an advisory hint), the 5 review dims (schema + findings-anchored + publish-review; the fanout's params.status_note flags request-changes legs in the status header), and then a per-issue dynamic fanout runs, for each open [ai-review] issue, triage (fix-triage-agent, host-authoritatively pinned to the leg's issue; schema + conclude-triage), fix (edit/commit -- conclude-fix commits the diff to the PR head with rebase-retry and closes the issue), and honesty (a cryptohash proof-of-work that a real test ran AND a fixverify semi-formal fix certificate, ANDed per issue by conclude-honesty). The per-issue legs join under honesty-verdict, whose aggregate-honesty reducer HALTS the pipeline (on_blocked:halt, /override-able) if ANY issue's fix is dishonest; issue selection is host-authoritative and the verdict is tamper-evident (both fail closed; a nested-leg conclude hook runs so fix/triage actually commit+close). The post-fix fanout runs context (schema-valid only, advisory; as of engine 4.0.0 a flat fanout leg DOES run its conclude hook, so a `conclude` declared here would fire -- the node does not declare one yet) in PARALLEL with mm-updater (evidence-present + mm-questions-present; a gh-aw create-pull-request safe-output opens an [mm] PR when mm_changed; the mm-route choice then routes true->mm-decision (hold for a human /mm-answer) or false->done, with no default so an unroutable verdict halts); the join waits for both before mrp (schema + conclude-mrp + a deterministic acceptance_plan: engine inputs[] deliver prior-phase evidence, per-cohort bands are re-derived via the shared _risk_score, and the custody-shaped pack is emitted as the merge-readiness-pack artifact). Remaining simplification: review findings are opened as [ai-review] issues but not yet posted as inline PR comments. Agent workflows live in .github/workflows/.",
   "triggers": [
     {
       "on": "issue_comment",
@@ -21,59 +21,24 @@
       "command": "answer"
     }
   ],
-  "default_checks": [
-    {
-      "_note": "Layer B honesty advisory (Move B): applied by the engine to every agent node, so it need not be stamped onto each node's checks[]. run-checks.py appends it (deduped by run-name) to every workflow-bearing node; the check self-computes divergence over agent_security.plan_ast + the global TRAJECTORY_PATH. Advisory-only; never gates.",
-      "run": "plan-honesty-valid",
-      "on_fail": "advisory"
-    }
-  ],
   "states": [
     {
       "id": "preflight",
-      "kind": "fanout",
+      "kind": "fork",
       "label": "pre-flight adherence chain",
       "branches": [
         {
           "id": "adherence",
+          "kind": "sequence",
           "states": [
             {
-              "id": "adherence-intro",
-              "kind": "agent",
-              "workflow": "adherence-intro-agent",
-              "evidence": "cluster-intro.evidence.schema.json",
-              "max_iterations": 2,
-              "params": {
-                "require": [
-                  "examined"
-                ]
-              },
-              "checks": [
-                {
-                  "run": "evidence-present",
-                  "on_fail": "iterate"
-                },
-                {
-                  "run": "plan-ast-guardians",
-                  "on_fail": "advisory"
-                },
-                {
-                  "run": "plan-cert-verify",
-                  "on_fail": "advisory"
-                },
-                {
-                  "run": "plan-ast-cedar",
-                  "on_fail": "advisory"
-                }
-              ]
-            },
-            {
               "id": "adherence-fanout",
-              "kind": "fanout",
+              "kind": "fork",
               "next": "join-adherence",
               "branches": [
                 {
                   "id": "spec-solves-issue",
+                  "kind": "sequence",
                   "states": [
                     {
                       "id": "spec-solves-issue-gather",
@@ -149,6 +114,7 @@
                 },
                 {
                   "id": "plan-implements-spec",
+                  "kind": "sequence",
                   "states": [
                     {
                       "id": "plan-implements-spec-gather",
@@ -224,6 +190,7 @@
                 },
                 {
                   "id": "code-implements-plan",
+                  "kind": "sequence",
                   "states": [
                     {
                       "id": "code-implements-plan-gather",
@@ -358,11 +325,12 @@
         },
         {
           "id": "mm-compliance",
+          "kind": "sequence",
           "states": [
             {
               "id": "mm-compliance-gather",
               "kind": "agent",
-              "workflow": "mm-compliance-gate",
+              "workflow": "mm-compliance-agent",
               "evidence": "mm-compliance.evidence.schema.json",
               "max_iterations": 2,
               "params": {
@@ -428,44 +396,16 @@
         },
         {
           "id": "consistency",
+          "kind": "sequence",
           "states": [
             {
-              "id": "consistency-intro",
-              "kind": "agent",
-              "workflow": "consistency-intro-agent",
-              "evidence": "cluster-intro.evidence.schema.json",
-              "max_iterations": 2,
-              "params": {
-                "require": [
-                  "examined"
-                ]
-              },
-              "checks": [
-                {
-                  "run": "evidence-present",
-                  "on_fail": "iterate"
-                },
-                {
-                  "run": "plan-ast-guardians",
-                  "on_fail": "advisory"
-                },
-                {
-                  "run": "plan-cert-verify",
-                  "on_fail": "advisory"
-                },
-                {
-                  "run": "plan-ast-cedar",
-                  "on_fail": "advisory"
-                }
-              ]
-            },
-            {
               "id": "consistency-fanout",
-              "kind": "fanout",
+              "kind": "fork",
               "next": "join-consistency",
               "branches": [
                 {
                   "id": "docs-updated-appropriately",
+                  "kind": "sequence",
                   "states": [
                     {
                       "id": "docs-updated-appropriately-gather",
@@ -541,6 +481,7 @@
                 },
                 {
                   "id": "tests-updated-appropriately",
+                  "kind": "sequence",
                   "states": [
                     {
                       "id": "tests-updated-appropriately-gather",
@@ -666,11 +607,12 @@
         },
         {
           "id": "security",
+          "kind": "sequence",
           "states": [
             {
               "id": "security-gather",
-              "kind": "agent",
-              "workflow": "security-gather-agent",
+              "kind": "code",
+              "workflow": "security-gather",
               "evidence": "security-gather.evidence.schema.json",
               "max_iterations": 2,
               "checks": [
@@ -681,18 +623,6 @@
                 {
                   "run": "security-gather-coverage",
                   "on_fail": "iterate"
-                },
-                {
-                  "run": "plan-ast-guardians",
-                  "on_fail": "advisory"
-                },
-                {
-                  "run": "plan-cert-verify",
-                  "on_fail": "advisory"
-                },
-                {
-                  "run": "plan-ast-cedar",
-                  "on_fail": "advisory"
                 }
               ]
             },
@@ -740,14 +670,14 @@
       "id": "join-preflight",
       "kind": "join",
       "of": "preflight",
-      "next": "preflight-gate"
+      "next": "preflight-verdict"
     },
     {
-      "id": "preflight-gate",
+      "id": "preflight-verdict",
       "kind": "agent",
-      "label": "pre-flight adherence gate",
-      "workflow": "preflight-gate-agent",
-      "evidence": "preflight-gate.evidence.schema.json",
+      "label": "pre-flight verdict (halts on an unmet floor)",
+      "workflow": "preflight-verdict-agent",
+      "evidence": "preflight-verdict.evidence.schema.json",
       "max_iterations": 2,
       "inputs": [
         {
@@ -780,7 +710,7 @@
       },
       "checks": [
         {
-          "run": "preflight-gate-coverage",
+          "run": "preflight-verdict-coverage",
           "on_fail": "iterate"
         },
         {
@@ -853,7 +783,7 @@
     },
     {
       "id": "review",
-      "kind": "fanout",
+      "kind": "fork",
       "label": "multi-dimension review",
       "params": {
         "status_note": {
@@ -872,228 +802,338 @@
       "branches": [
         {
           "id": "correctness",
-          "workflow": "review-correctness-agent",
-          "evidence": "review.evidence.schema.json",
-          "max_iterations": 2,
-          "params": {
-            "dimension": "correctness",
-            "require": [
-              "dimension",
-              "verdict",
-              "findings"
-            ],
-            "non_empty": [
-              "dimension",
-              "verdict"
-            ]
-          },
-          "checks": [
+          "kind": "sequence",
+          "states": [
             {
-              "run": "evidence-present",
-              "on_fail": "iterate"
+              "id": "review",
+              "kind": "agent",
+              "workflow": "review-correctness-agent",
+              "evidence": "review.evidence.schema.json",
+              "max_iterations": 2,
+              "params": {
+                "dimension": "correctness",
+                "require": [
+                  "dimension",
+                  "verdict",
+                  "findings"
+                ],
+                "non_empty": [
+                  "dimension",
+                  "verdict"
+                ]
+              },
+              "checks": [
+                {
+                  "run": "evidence-present",
+                  "on_fail": "iterate"
+                },
+                {
+                  "run": "review-schema-valid",
+                  "on_fail": "iterate"
+                },
+                {
+                  "run": "review-findings-anchored",
+                  "on_fail": "iterate"
+                },
+                {
+                  "run": "plan-ast-guardians",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-cert-verify",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-ast-cedar",
+                  "on_fail": "advisory"
+                }
+              ],
+              "next": "publish"
             },
             {
-              "run": "review-schema-valid",
-              "on_fail": "iterate"
-            },
-            {
-              "run": "review-findings-anchored",
-              "on_fail": "iterate"
-            },
-            {
-              "run": "plan-ast-guardians",
-              "on_fail": "advisory"
-            },
-            {
-              "run": "plan-cert-verify",
-              "on_fail": "advisory"
-            },
-            {
-              "run": "plan-ast-cedar",
-              "on_fail": "advisory"
+              "id": "publish",
+              "kind": "code",
+              "script": "publish-review",
+              "_note": "LEG-TERMINAL: its stdout IS the leg's output, so the hook passes the agent's evidence through alongside its verdict. Opens one GitHub issue per finding with a PAT.",
+              "inputs": [
+                {
+                  "from": "review",
+                  "as": "evidence"
+                }
+              ],
+              "env": [
+                "PUBLISH_TOKEN"
+              ]
             }
-          ],
-          "publish": "publish-review"
+          ]
         },
         {
           "id": "test",
-          "workflow": "review-test-agent",
-          "evidence": "review.evidence.schema.json",
-          "max_iterations": 2,
-          "params": {
-            "dimension": "test",
-            "require": [
-              "dimension",
-              "verdict",
-              "findings"
-            ],
-            "non_empty": [
-              "dimension",
-              "verdict"
-            ]
-          },
-          "checks": [
+          "kind": "sequence",
+          "states": [
             {
-              "run": "evidence-present",
-              "on_fail": "iterate"
+              "id": "review",
+              "kind": "agent",
+              "workflow": "review-test-agent",
+              "evidence": "review.evidence.schema.json",
+              "max_iterations": 2,
+              "params": {
+                "dimension": "test",
+                "require": [
+                  "dimension",
+                  "verdict",
+                  "findings"
+                ],
+                "non_empty": [
+                  "dimension",
+                  "verdict"
+                ]
+              },
+              "checks": [
+                {
+                  "run": "evidence-present",
+                  "on_fail": "iterate"
+                },
+                {
+                  "run": "review-schema-valid",
+                  "on_fail": "iterate"
+                },
+                {
+                  "run": "review-findings-anchored",
+                  "on_fail": "iterate"
+                },
+                {
+                  "run": "plan-ast-guardians",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-cert-verify",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-ast-cedar",
+                  "on_fail": "advisory"
+                }
+              ],
+              "next": "publish"
             },
             {
-              "run": "review-schema-valid",
-              "on_fail": "iterate"
-            },
-            {
-              "run": "review-findings-anchored",
-              "on_fail": "iterate"
-            },
-            {
-              "run": "plan-ast-guardians",
-              "on_fail": "advisory"
-            },
-            {
-              "run": "plan-cert-verify",
-              "on_fail": "advisory"
-            },
-            {
-              "run": "plan-ast-cedar",
-              "on_fail": "advisory"
+              "id": "publish",
+              "kind": "code",
+              "script": "publish-review",
+              "_note": "LEG-TERMINAL: its stdout IS the leg's output, so the hook passes the agent's evidence through alongside its verdict. Opens one GitHub issue per finding with a PAT.",
+              "inputs": [
+                {
+                  "from": "review",
+                  "as": "evidence"
+                }
+              ],
+              "env": [
+                "PUBLISH_TOKEN"
+              ]
             }
-          ],
-          "publish": "publish-review"
+          ]
         },
         {
           "id": "performance",
-          "workflow": "review-performance-agent",
-          "evidence": "review.evidence.schema.json",
-          "max_iterations": 2,
-          "params": {
-            "dimension": "performance",
-            "require": [
-              "dimension",
-              "verdict",
-              "findings"
-            ],
-            "non_empty": [
-              "dimension",
-              "verdict"
-            ]
-          },
-          "checks": [
+          "kind": "sequence",
+          "states": [
             {
-              "run": "evidence-present",
-              "on_fail": "iterate"
+              "id": "review",
+              "kind": "agent",
+              "workflow": "review-performance-agent",
+              "evidence": "review.evidence.schema.json",
+              "max_iterations": 2,
+              "params": {
+                "dimension": "performance",
+                "require": [
+                  "dimension",
+                  "verdict",
+                  "findings"
+                ],
+                "non_empty": [
+                  "dimension",
+                  "verdict"
+                ]
+              },
+              "checks": [
+                {
+                  "run": "evidence-present",
+                  "on_fail": "iterate"
+                },
+                {
+                  "run": "review-schema-valid",
+                  "on_fail": "iterate"
+                },
+                {
+                  "run": "review-findings-anchored",
+                  "on_fail": "iterate"
+                },
+                {
+                  "run": "plan-ast-guardians",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-cert-verify",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-ast-cedar",
+                  "on_fail": "advisory"
+                }
+              ],
+              "next": "publish"
             },
             {
-              "run": "review-schema-valid",
-              "on_fail": "iterate"
-            },
-            {
-              "run": "review-findings-anchored",
-              "on_fail": "iterate"
-            },
-            {
-              "run": "plan-ast-guardians",
-              "on_fail": "advisory"
-            },
-            {
-              "run": "plan-cert-verify",
-              "on_fail": "advisory"
-            },
-            {
-              "run": "plan-ast-cedar",
-              "on_fail": "advisory"
+              "id": "publish",
+              "kind": "code",
+              "script": "publish-review",
+              "_note": "LEG-TERMINAL: its stdout IS the leg's output, so the hook passes the agent's evidence through alongside its verdict. Opens one GitHub issue per finding with a PAT.",
+              "inputs": [
+                {
+                  "from": "review",
+                  "as": "evidence"
+                }
+              ],
+              "env": [
+                "PUBLISH_TOKEN"
+              ]
             }
-          ],
-          "publish": "publish-review"
+          ]
         },
         {
           "id": "security",
-          "workflow": "review-security-agent",
-          "evidence": "review.evidence.schema.json",
-          "max_iterations": 2,
-          "params": {
-            "dimension": "security",
-            "require": [
-              "dimension",
-              "verdict",
-              "findings"
-            ],
-            "non_empty": [
-              "dimension",
-              "verdict"
-            ]
-          },
-          "checks": [
+          "kind": "sequence",
+          "states": [
             {
-              "run": "evidence-present",
-              "on_fail": "iterate"
+              "id": "review",
+              "kind": "agent",
+              "workflow": "review-security-agent",
+              "evidence": "review.evidence.schema.json",
+              "max_iterations": 2,
+              "params": {
+                "dimension": "security",
+                "require": [
+                  "dimension",
+                  "verdict",
+                  "findings"
+                ],
+                "non_empty": [
+                  "dimension",
+                  "verdict"
+                ]
+              },
+              "checks": [
+                {
+                  "run": "evidence-present",
+                  "on_fail": "iterate"
+                },
+                {
+                  "run": "review-schema-valid",
+                  "on_fail": "iterate"
+                },
+                {
+                  "run": "review-findings-anchored",
+                  "on_fail": "iterate"
+                },
+                {
+                  "run": "plan-ast-guardians",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-cert-verify",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-ast-cedar",
+                  "on_fail": "advisory"
+                }
+              ],
+              "next": "publish"
             },
             {
-              "run": "review-schema-valid",
-              "on_fail": "iterate"
-            },
-            {
-              "run": "review-findings-anchored",
-              "on_fail": "iterate"
-            },
-            {
-              "run": "plan-ast-guardians",
-              "on_fail": "advisory"
-            },
-            {
-              "run": "plan-cert-verify",
-              "on_fail": "advisory"
-            },
-            {
-              "run": "plan-ast-cedar",
-              "on_fail": "advisory"
+              "id": "publish",
+              "kind": "code",
+              "script": "publish-review",
+              "_note": "LEG-TERMINAL: its stdout IS the leg's output, so the hook passes the agent's evidence through alongside its verdict. Opens one GitHub issue per finding with a PAT.",
+              "inputs": [
+                {
+                  "from": "review",
+                  "as": "evidence"
+                }
+              ],
+              "env": [
+                "PUBLISH_TOKEN"
+              ]
             }
-          ],
-          "publish": "publish-review"
+          ]
         },
         {
           "id": "maintainability",
-          "workflow": "review-maintainability-agent",
-          "evidence": "review.evidence.schema.json",
-          "max_iterations": 2,
-          "params": {
-            "dimension": "maintainability",
-            "require": [
-              "dimension",
-              "verdict",
-              "findings"
-            ],
-            "non_empty": [
-              "dimension",
-              "verdict"
-            ]
-          },
-          "checks": [
+          "kind": "sequence",
+          "states": [
             {
-              "run": "evidence-present",
-              "on_fail": "iterate"
+              "id": "review",
+              "kind": "agent",
+              "workflow": "review-maintainability-agent",
+              "evidence": "review.evidence.schema.json",
+              "max_iterations": 2,
+              "params": {
+                "dimension": "maintainability",
+                "require": [
+                  "dimension",
+                  "verdict",
+                  "findings"
+                ],
+                "non_empty": [
+                  "dimension",
+                  "verdict"
+                ]
+              },
+              "checks": [
+                {
+                  "run": "evidence-present",
+                  "on_fail": "iterate"
+                },
+                {
+                  "run": "review-schema-valid",
+                  "on_fail": "iterate"
+                },
+                {
+                  "run": "review-findings-anchored",
+                  "on_fail": "iterate"
+                },
+                {
+                  "run": "plan-ast-guardians",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-cert-verify",
+                  "on_fail": "advisory"
+                },
+                {
+                  "run": "plan-ast-cedar",
+                  "on_fail": "advisory"
+                }
+              ],
+              "next": "publish"
             },
             {
-              "run": "review-schema-valid",
-              "on_fail": "iterate"
-            },
-            {
-              "run": "review-findings-anchored",
-              "on_fail": "iterate"
-            },
-            {
-              "run": "plan-ast-guardians",
-              "on_fail": "advisory"
-            },
-            {
-              "run": "plan-cert-verify",
-              "on_fail": "advisory"
-            },
-            {
-              "run": "plan-ast-cedar",
-              "on_fail": "advisory"
+              "id": "publish",
+              "kind": "code",
+              "script": "publish-review",
+              "_note": "LEG-TERMINAL: its stdout IS the leg's output, so the hook passes the agent's evidence through alongside its verdict. Opens one GitHub issue per finding with a PAT.",
+              "inputs": [
+                {
+                  "from": "review",
+                  "as": "evidence"
+                }
+              ],
+              "env": [
+                "PUBLISH_TOKEN"
+              ]
             }
-          ],
-          "publish": "publish-review"
+          ]
         }
       ],
       "next": "join-review"
@@ -1106,7 +1146,7 @@
     },
     {
       "id": "per-issue",
-      "kind": "fanout",
+      "kind": "fork",
       "label": "per-issue triage \u2192 fix (one leg per open [ai-review] issue)",
       "expand": {
         "hook": "expand-issues",
@@ -1203,11 +1243,12 @@
           },
           {
             "id": "honesty",
-            "kind": "fanout",
+            "kind": "fork",
             "next": "join-honesty",
             "branches": [
               {
                 "id": "cryptohash",
+                "kind": "agent",
                 "workflow": "honesty-cryptohash-agent",
                 "evidence": "crypto-verification.evidence.schema.json",
                 "max_iterations": 2,
@@ -1242,6 +1283,7 @@
               },
               {
                 "id": "fixverify",
+                "kind": "agent",
                 "workflow": "honesty-fixverify-agent",
                 "evidence": "honesty-check.evidence.schema.json",
                 "max_iterations": 1,
@@ -1286,9 +1328,9 @@
           },
           {
             "id": "honesty-verdict",
-            "kind": "merge",
-            "label": "per-issue honesty verdict (AND of the subworkflows)",
-            "hook": "conclude-honesty",
+            "kind": "code",
+            "label": "per-issue honesty verdict (cryptohash AND fixverify)",
+            "script": "conclude-honesty",
             "inputs": [
               {
                 "from": "cryptohash",
@@ -1304,7 +1346,8 @@
               }
             ]
           }
-        ]
+        ],
+        "kind": "sequence"
       },
       "next": "join-per-issue"
     },
@@ -1313,16 +1356,16 @@
       "kind": "join",
       "of": "per-issue",
       "policy": "all",
-      "next": "honesty-gate"
+      "next": "honesty-verdict"
     },
     {
-      "id": "honesty-gate",
-      "kind": "merge",
-      "label": "aggregate per-issue honesty (halt if any dishonest)",
-      "hook": "aggregate-honesty",
+      "id": "honesty-verdict",
+      "kind": "code",
+      "label": "honesty verdict (halts if any fix is dishonest)",
+      "script": "aggregate-honesty",
       "inputs": [
         {
-          "from_fanout": "per-issue",
+          "from_fork": "per-issue",
           "as": "per-issue"
         }
       ],
@@ -1331,11 +1374,12 @@
     },
     {
       "id": "post-fix",
-      "kind": "fanout",
+      "kind": "fork",
       "label": "context capture \u2225 mental-model update",
       "branches": [
         {
           "id": "context",
+          "kind": "agent",
           "workflow": "context-agent",
           "evidence": "context.evidence.schema.json",
           "max_iterations": 2,
@@ -1370,6 +1414,7 @@
         },
         {
           "id": "mm",
+          "kind": "sequence",
           "states": [
             {
               "id": "mm-updater",
@@ -1405,12 +1450,33 @@
                   "run": "plan-ast-cedar",
                   "on_fail": "advisory"
                 }
+              ],
+              "next": "mm-route"
+            },
+            {
+              "id": "mm-route",
+              "kind": "choice",
+              "label": "route: did the updater open an [mm] PR?",
+              "_note": "BPMN Exclusive Gateway. Holds for a human iff the updater actually opened an [mm] PR. This condition used to live NOWHERE in the protocol: it was the engine's empty-DATA-gate auto-skip (advance.py) inferring the route from whether `questions` happened to be empty, guarded by the mm-questions-present check. Routing on the decision itself is the proposition we mean, so the bypass is structurally unreachable rather than merely guarded. No `default`: a missing/garbled mm_changed halts (recoverable via /override) instead of being guessed into an arm.",
+              "on": {
+                "from": "mm-updater",
+                "path": "$.mm_changed"
+              },
+              "cases": [
+                {
+                  "when": true,
+                  "next": "mm-decision"
+                },
+                {
+                  "when": false,
+                  "next": "done"
+                }
               ]
             },
             {
-              "id": "mm-gate",
-              "kind": "gate",
-              "label": "decide on the mental-model PR",
+              "id": "mm-decision",
+              "kind": "question",
+              "label": "human decision on the [mm] PR",
               "questions_from": "mm-updater",
               "checks": [
                 {
@@ -1439,7 +1505,7 @@
       "max_iterations": 2,
       "inputs": [
         {
-          "from": "preflight-gate",
+          "from": "preflight-verdict",
           "as": "preflight"
         },
         {
@@ -1451,7 +1517,7 @@
           "as": "overview"
         },
         {
-          "from": "honesty-gate",
+          "from": "honesty-verdict",
           "as": "honesty"
         },
         {
@@ -1490,7 +1556,19 @@
           "on_fail": "advisory"
         }
       ],
-      "conclude": "conclude-mrp",
+      "next": "emit-mrp"
+    },
+    {
+      "id": "emit-mrp",
+      "kind": "code",
+      "label": "emit the merge-readiness verdict artifact",
+      "script": "conclude-mrp",
+      "inputs": [
+        {
+          "from": "mrp",
+          "as": "evidence"
+        }
+      ],
       "next": "done"
     }
   ]

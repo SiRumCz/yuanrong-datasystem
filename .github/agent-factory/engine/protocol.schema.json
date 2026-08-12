@@ -2,12 +2,17 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://github.com/agent-factory/engine/protocol.schema.json",
   "title": "Agentic protocol",
-  "description": "Schema for a protocol.json — the data declaration the generic engine interprets. Authoring/editor aid: it is intentionally STRICTER than the engine (which ignores unknown keys) so it catches typos. See docs/PROTOCOL-DSL.md for the field reference.",
+  "description": "Schema for a protocol.json \u2014 the data declaration the generic engine interprets. Authoring/editor aid: it is intentionally STRICTER than the engine (which ignores unknown keys) so it catches typos. See docs/PROTOCOL-DSL.md for the field reference.",
   "type": "object",
-  "required": ["name", "states"],
+  "required": [
+    "name",
+    "states"
+  ],
   "additionalProperties": false,
   "properties": {
-    "$schema": { "type": "string" },
+    "$schema": {
+      "type": "string"
+    },
     "_note": {
       "type": "string",
       "description": "Free-text annotation ignored by the engine (JSON has no comments). Allowed on any object in a protocol."
@@ -32,27 +37,39 @@
     "phase_labels": {
       "type": "object",
       "description": "Optional overrides for the PR labels of terminal/structural phases (e.g. setup, done, failed, blocked).",
-      "additionalProperties": { "type": "string" }
+      "additionalProperties": {
+        "type": "string"
+      }
     },
     "triggers": {
       "type": "array",
       "description": "Event -> command entry points. The router scans every protocol's triggers to select one at runtime.",
-      "items": { "$ref": "#/definitions/trigger" }
+      "items": {
+        "$ref": "#/definitions/trigger"
+      }
     },
     "states": {
       "type": "array",
       "description": "The protocol's top-level sequence of nodes (the root is a sequence).",
       "minItems": 1,
-      "items": { "$ref": "#/definitions/node" }
+      "items": {
+        "$ref": "#/definitions/node"
+      }
     }
   },
   "definitions": {
     "trigger": {
       "type": "object",
-      "required": ["on", "command"],
+      "required": [
+        "on",
+        "command"
+      ],
       "additionalProperties": false,
       "properties": {
-        "_note": { "type": "string", "description": "Free-text annotation; ignored by the engine." },
+        "_note": {
+          "type": "string",
+          "description": "Free-text annotation; ignored by the engine."
+        },
         "on": {
           "type": "string",
           "description": "GitHub event name, e.g. issue_comment or pull_request."
@@ -64,27 +81,43 @@
         "actions": {
           "type": "array",
           "description": "For pull_request: only fire on these actions (e.g. [\"opened\"]). Empty/omitted matches any.",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "command": {
           "type": "string",
           "description": "Protocol command this event invokes.",
-          "enum": ["start", "reset", "override", "resolve-gate", "answer"]
+          "enum": [
+            "start",
+            "reset",
+            "override",
+            "resolve-human-task",
+            "answer"
+          ]
         },
         "target": {
           "type": "string",
           "description": "For issue_comment: whether this trigger fires on a comment on a PR (default) or on a plain issue. Plain-issue protocols (e.g. impl-feature-auto, keyed issue-<N>) set \"issue\".",
-          "enum": ["pr", "issue"]
+          "enum": [
+            "pr",
+            "issue"
+          ]
         }
       }
     },
     "check": {
       "type": "object",
-      "required": ["run"],
+      "required": [
+        "run"
+      ],
       "additionalProperties": false,
       "description": "A deterministic check over the agent's evidence. ABI: <check> <evidence.json> <diff.txt> <changed-files.txt> -> one JSON {check,pass,feedback}, always exit 0.",
       "properties": {
-        "_note": { "type": "string", "description": "Free-text annotation; ignored by the engine." },
+        "_note": {
+          "type": "string",
+          "description": "Free-text annotation; ignored by the engine."
+        },
         "run": {
           "type": "string",
           "description": "Check id. Resolved to checks/<run> or checks/<run>.* in the protocol dir (extension-agnostic) unless 'exec' is given."
@@ -96,38 +129,68 @@
         "on_fail": {
           "type": "string",
           "description": "Severity when this check fails. iterate (default) drives the retry loop; block stops the conclusion without iterating; advisory is recorded only.",
-          "enum": ["iterate", "block", "advisory"]
+          "enum": [
+            "iterate",
+            "block",
+            "advisory"
+          ]
         }
       }
     },
     "input": {
       "type": "object",
-      "required": ["as"],
+      "required": [
+        "as"
+      ],
       "additionalProperties": false,
-      "description": "Materialize an earlier node's evidence (or a gate's answers) as inputs/<as>.json for this node's agent. Exactly one of 'from' or 'from_fanout' must be set.",
+      "description": "Materialize an earlier node's evidence (or a question node's answers) as inputs/<as>.json for this node's agent. Exactly one of 'from' or 'from_fork' must be set.",
       "properties": {
-        "_note": { "type": "string", "description": "Free-text annotation; ignored by the engine." },
+        "_note": {
+          "type": "string",
+          "description": "Free-text annotation; ignored by the engine."
+        },
         "from": {
           "type": "string",
-          "description": "Source node id (a sibling sub-state, a fanout branch, or a phase)."
+          "description": "Source node id (a sibling sub-state, a fork branch, or a phase)."
         },
-        "from_fanout": {
+        "from_fork": {
           "type": "string",
-          "description": "merge: id of a fanout whose legs (per the manifest) are collected — one row per leg with its terminal state + persisted evidence — into inputs/<as>.json."
+          "description": "code: id of a fork whose legs (per the manifest) are collected \u2014 one row per leg with its terminal state + persisted evidence \u2014 into inputs/<as>.json."
         },
         "as": {
           "type": "string",
-          "description": "Alias — the basename under inputs/ the source is materialized as."
+          "description": "Alias \u2014 the basename under inputs/ the source is materialized as."
         }
       },
       "oneOf": [
-        { "required": ["from"], "not": { "required": ["from_fanout"] } },
-        { "required": ["from_fanout"], "not": { "required": ["from"] } }
+        {
+          "required": [
+            "from"
+          ],
+          "not": {
+            "required": [
+              "from_fork"
+            ]
+          }
+        },
+        {
+          "required": [
+            "from_fork"
+          ],
+          "not": {
+            "required": [
+              "from"
+            ]
+          }
+        }
       ]
     },
     "node": {
       "type": "object",
-      "required": ["id", "kind"],
+      "required": [
+        "id",
+        "kind"
+      ],
       "additionalProperties": false,
       "description": "One node in a sequence. The fields you may set depend on 'kind'.",
       "properties": {
@@ -141,7 +204,69 @@
         },
         "kind": {
           "type": "string",
-          "enum": ["agent", "fanout", "join", "gate", "merge"]
+          "description": "What this node does. The DSL tracks BPMN 2.0 \u2014 each kind maps to a BPMN construct: agent = Service Task (performed by an LLM); code = Script Task (a deterministic hook); choice = Exclusive Gateway (XOR: exactly one outgoing path, picked from an earlier node's evidence); fork = Parallel Gateway (diverging); join = Parallel Gateway (converging); approval = User Task (a human decides: /approve, /request-changes, /reject); question = User Task (a human supplies data via /answer); sequence = Embedded Subprocess (a group of steps entered as one unit).",
+          "enum": [
+            "agent",
+            "code",
+            "choice",
+            "fork",
+            "join",
+            "approval",
+            "question",
+            "sequence"
+          ]
+        },
+        "on": {
+          "type": "object",
+          "description": "choice: which value decides the route. `from` names an earlier node whose evidence is read; `path` is a simple $.dotted JSONPath into it (same restricted syntax as expand.id_from \u2014 no wildcards or filters).",
+          "required": [
+            "from",
+            "path"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "_note": {
+              "type": "string"
+            },
+            "from": {
+              "type": "string",
+              "description": "Id of the node whose evidence decides."
+            },
+            "path": {
+              "type": "string",
+              "pattern": "^\\$\\.",
+              "description": "A $.dotted path into that evidence, e.g. \"$.verdict\"."
+            }
+          }
+        },
+        "cases": {
+          "type": "array",
+          "description": "choice: the outgoing arms, tried in order. Exactly one is taken. `when` values must be unique.",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "when",
+              "next"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "_note": {
+                "type": "string"
+              },
+              "when": {
+                "description": "The value that selects this arm (compared to on.path's value)."
+              },
+              "next": {
+                "type": "string",
+                "description": "Sibling id to enter, or the implicit terminal done/failed."
+              }
+            }
+          }
+        },
+        "default": {
+          "type": "string",
+          "description": "choice: where to go when no case matches. Omit to make an unmatched value a HARD ERROR (the run halts) rather than a silent fall-through."
         },
         "label": {
           "type": "string",
@@ -153,54 +278,81 @@
         },
         "workflow": {
           "type": "string",
-          "description": "agent: the gh-aw agent workflow basename the engine dispatches."
+          "description": "agent: the gh-aw agent workflow basename the engine dispatches, as '<name>.lock.yml'. code (dispatched mode): a plain hand-written GitHub Actions workflow basename, dispatched as '<name>.yml' -- the peer of 'script' (inline mode). Exactly one of 'script'/'workflow' is required on a code node."
         },
         "evidence": {
           "type": "string",
-          "description": "agent: the *.evidence.schema.json filename (in the protocol dir) the agent must satisfy."
+          "description": "agent/code(workflow): the *.evidence.schema.json filename (in the protocol dir) the agent, or the dispatched workflow's uploaded artifact, must satisfy."
         },
         "max_iterations": {
           "type": "integer",
           "minimum": 1,
-          "description": "agent: max iterate-with-feedback rounds before the node is marked failed (default 3)."
+          "description": "agent/code(workflow): max iterate-with-feedback rounds before the node is marked failed (default 3)."
         },
         "params": {
           "type": "object",
-          "description": "agent: node-scoped config forwarded to checks via the CHECK_PARAMS env var (e.g. the rubric categories)."
+          "description": "agent/code(workflow): node-scoped config forwarded to checks via the CHECK_PARAMS env var (e.g. the rubric categories)."
         },
         "checks": {
           "type": "array",
-          "description": "agent/gate: deterministic checks run over the evidence.",
-          "items": { "$ref": "#/definitions/check" }
+          "description": "agent/question/code(workflow): deterministic checks run over the evidence.",
+          "items": {
+            "$ref": "#/definitions/check"
+          }
         },
         "conclude": {
           "type": "string",
-          "description": "agent: a trusted (zone 4) post-checks hook that may return blocked=true."
-        },
-        "publish": {
-          "type": "string",
-          "description": "agent: a trusted (zone 4) hook that publishes the verdict after checks pass."
+          "description": "agent ONLY: a trusted (zone 4) hook whose sole job is to read the evidence and decide the node's exit code. Nonzero = the step objects (red check-run); stdout (optional) becomes the check-run summary. 'blocked' is not part of its ABI. FORBIDDEN on a dispatched code node (workflow:) -- a dispatched job has a real exit code, which IS its verdict; a conclude hook would be a second, incoherent verdict source for the same node."
         },
         "on_blocked": {
           "type": "string",
-          "description": "agent: behavior when 'conclude' returns blocked=true. 'halt' stops the pipeline (overridable via /override).",
-          "enum": ["halt"]
+          "description": "agent/code: whether this node's objecting also stops the run -- a nonzero 'conclude' exit, a failed 'on_fail: \"block\"' check (no hook involved), or a nonzero code hook exit. 'halt' stops the pipeline (overridable via /override); omitted, a red node keeps flowing.",
+          "enum": [
+            "halt"
+          ]
         },
         "inputs": {
           "type": "array",
-          "description": "agent/gate/merge: earlier nodes' outputs to materialize for this node.",
-          "items": { "$ref": "#/definitions/input" }
+          "description": "agent/approval/question/code: earlier nodes' outputs to materialize for this node.",
+          "items": {
+            "$ref": "#/definitions/input"
+          }
+        },
+        "states": {
+          "type": "array",
+          "description": "sequence: the grouped steps, a nested sequence of full nodes. The group is entered as ONE unit: what follows it follows the whole group, not its last child.",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/node"
+          }
         },
         "branches": {
           "type": "array",
-          "description": "fanout (static): the parallel legs. Exactly one of 'branches' or 'expand'+'each' must be set.",
-          "items": { "$ref": "#/definitions/branch" }
+          "description": "fork (static): the parallel legs. Each leg is an ordinary node with a declared 'kind' — agent, code, or sequence. Exactly one of 'branches' or 'expand'+'each' must be set.",
+          "items": {
+            "allOf": [
+              { "$ref": "#/definitions/node" },
+              {
+                "properties": {
+                  "kind": { "enum": ["agent", "code", "sequence"] },
+                  "conclude": false,
+                  "next": false,
+                  "on_blocked": false
+                }
+              }
+            ]
+          }
         },
         "expand": {
           "type": "object",
-          "description": "fanout (dynamic): a trusted hook that expands into per-leg items. Exactly one of 'branches' or 'expand'+'each' must be set.",
+          "description": "fork (dynamic): a trusted hook that expands into per-leg items. Exactly one of 'branches' or 'expand'+'each' must be set.",
           "additionalProperties": false,
-          "required": ["hook", "as", "id_from", "max_legs"],
+          "required": [
+            "hook",
+            "as",
+            "id_from",
+            "max_legs"
+          ],
           "properties": {
             "hook": {
               "type": "string",
@@ -227,106 +379,156 @@
             },
             "matrix_fields": {
               "type": "array",
-              "items": { "type": "string", "minLength": 1 },
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
               "description": "Optional: which item keys are inlined into matrix.leg.inputs for the agent. Unset = the full item. The full item is always persisted on the state branch; this only trims what rides the GHA matrix (large re-fetchable fields stay out)."
             }
           }
         },
         "each": {
           "type": "object",
-          "description": "fanout (dynamic): the leg template applied per expanded item — a flat leg (workflow) XOR a sub-pipeline (states), like a 'branch' without 'id'."
+          "description": "fork (dynamic): the leg template applied per expanded item \u2014 a flat leg (workflow) XOR a sub-pipeline (states), like a 'branch' without 'id'."
         },
         "of": {
           "type": "string",
-          "description": "join: the id of the sibling fanout this join is an AND-barrier for."
+          "description": "join: the id of the sibling fork this join is an AND-barrier for."
         },
         "policy": {
           "type": "string",
           "pattern": "^(all|any|quorum:(\\d+|\\d+(\\.\\d+)?%))$",
-          "description": "join: the AND-barrier policy — 'all' (default), 'any', or 'quorum:<N|P%>'."
+          "description": "join: the AND-barrier policy \u2014 'all' (default), 'any', or 'quorum:<N|P%>'."
         },
         "questions_from": {
           "type": "string",
-          "description": "gate: makes this a DATA gate — names a sibling node whose evidence carries the questions to ask (answered via the command's /answer prefix). Omit for a human-APPROVAL gate."
+          "description": "question: names the sibling node whose evidence carries the questions to ask (answered via the command's /answer prefix)."
         },
         "channel": {
-          "enum": ["comment", "issue"],
-          "description": "gate: where to ask. 'comment' (default) posts on the PR; 'issue' opens a dedicated GitHub issue (for ref/UI-keyed runs with no PR) and routes the answer back via a marker in the issue body."
+          "enum": [
+            "comment",
+            "issue"
+          ],
+          "description": "question: where to ask. 'comment' (default) posts on the PR; 'issue' opens a dedicated GitHub issue (for ref/UI-keyed runs with no PR) and routes the answer back via a marker in the issue body."
         },
         "approve_excludes_author": {
           "type": "boolean",
-          "description": "gate (approval): if true, the PR author cannot approve their own gate."
+          "description": "approval: if true, the PR author cannot approve their own request."
         },
-        "hook": {
+        "env": {
+          "type": "array",
+          "description": "code (inline/script ONLY): environment variables to forward to the hook, BEYOND the least-privilege baseline (PATH, HOME, LANG, LC_ALL, PR, ENGINE_LOCAL, GITHUB_REPOSITORY). Name each secret the hook genuinely needs, e.g. [\"PUBLISH_TOKEN\"]; anything not listed is not forwarded. FORBIDDEN on a dispatched code node (workflow:) -- the dispatched workflow declares its own secrets via its own 'permissions:'/'secrets:' blocks; 'env' would forward a secret to an inline subprocess that does not exist here.",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "script": {
           "type": "string",
-          "description": "merge: the trusted (zone 4) reduce hook that combines the joined legs' inputs."
+          "description": "code (INLINE mode): the task body \u2014 the trusted (zone 4) script this node runs, resolved to scripts/<script> or scripts/<script>.* in the protocol dir (extension-agnostic). The peer of the dispatched mode's 'workflow'. Named a 'reduce' script when the node reduces a fork's legs via inputs[].from_fork, but a code node needs no fork \u2014 it may run any deterministic step. Exactly one of 'script'/'workflow' is required on a code node."
         }
       },
       "allOf": [
         {
-          "if": { "properties": { "kind": { "const": "agent" } } },
-          "then": { "required": ["workflow"] }
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "agent"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "workflow"
+            ]
+          }
         },
         {
-          "if": { "properties": { "kind": { "const": "fanout" } } },
-          "then": { "required": ["next"] }
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "fork"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "next"
+            ]
+          }
         },
         {
-          "if": { "properties": { "kind": { "const": "join" } } },
-          "then": { "required": ["of"] }
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "join"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "of"
+            ]
+          }
         },
         {
-          "if": { "properties": { "kind": { "const": "merge" } } },
-          "then": { "required": ["hook", "inputs"] }
-        }
-      ]
-    },
-    "branch": {
-      "type": "object",
-      "required": ["id"],
-      "additionalProperties": false,
-      "description": "A fanout leg. Either a FLAT leg (has 'workflow') or a SUB-PIPELINE leg (has its own 'states'). A branch has no 'kind'.",
-      "properties": {
-        "_note": {
-          "type": "string",
-          "description": "Free-text annotation; ignored by the engine."
-        },
-        "id": {
-          "type": "string",
-          "description": "Leg id, unique within the fanout."
-        },
-        "label": { "type": "string" },
-        "workflow": {
-          "type": "string",
-          "description": "Flat leg: the agent workflow basename."
-        },
-        "evidence": { "type": "string" },
-        "max_iterations": { "type": "integer", "minimum": 1 },
-        "params": { "type": "object" },
-        "checks": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/check" }
-        },
-        "publish": { "type": "string" },
-        "inputs": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/input" }
-        },
-        "states": {
-          "type": "array",
-          "description": "Sub-pipeline leg: a nested sequence of nodes.",
-          "minItems": 1,
-          "items": { "$ref": "#/definitions/node" }
-        }
-      },
-      "oneOf": [
-        {
-          "required": ["workflow"],
-          "not": { "required": ["states"] }
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "question"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "questions_from"
+            ]
+          }
         },
         {
-          "required": ["states"],
-          "not": { "required": ["workflow"] }
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "code"
+              }
+            }
+          },
+          "then": {
+            "_comment": "Exactly one of `script` (inline mode, the task body) or `workflow` (dispatched mode, a plain GitHub Actions workflow basename) is required — the two execution modes of a BPMN Script Task. `inputs` was mandatory when this kind was named `merge` and meant 'reduce the joined legs' — a code node with nothing to reduce was incoherent. As a general BPMN Script Task it is not: 'a protocol whose only step is a code script runs to done with no agent' needs no inputs at all. Requiring it forced authors to write `\"inputs\": []` to satisfy a validator, and made the reference's own `sequence` example fail the linter that same page tells you to run. NOTE (asymmetry, deliberate): this arm cannot ALSO express 'conclude is illegal only when workflow is present', or 'evidence/checks/params are illegal only when script is present', cleanly alongside additionalProperties:false without duplicating the whole property map above. Those four rules (conclude+workflow, env+workflow, evidence/checks/params+script) live ONLY in lib.validate_protocol (the semantic layer, which always runs and gives a better message naming the node id) — see tests/engine/test_dispatched_code_validation.py. Do not 'fix' this by trying to inline them here.",
+            "oneOf": [
+              { "required": ["script"] },
+              { "required": ["workflow"] }
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "choice"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "on",
+              "cases"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "sequence"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "states"
+            ]
+          }
         }
       ]
     }

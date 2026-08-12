@@ -28,7 +28,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)                                          # pack_map
-sys.path.insert(0, os.path.join(HERE, "..", "..", "publish"))    # _risk_score (engine scorer)
+sys.path.insert(0, os.path.join(HERE, ".."))    # _risk_score (engine scorer)
 import pack_map  # noqa: E402
 import _risk_score as rs  # noqa: E402
 

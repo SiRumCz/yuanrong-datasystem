@@ -1,13 +1,13 @@
 """protocol-paths.py — enumerate a protocol's traversals (the test surface).
 
 Deterministic, offline, read-only. A branch point is any node whose flow can
-diverge (a gate, an iterate/block check, or an on_blocked:halt node). A traversal
+diverge (a human task, an iterate/block check, or an on_blocked:halt node). A traversal
 is an ordered [(node_id, outcome)] walk to a terminal. Decision coverage = one
 all-happy baseline + one traversal per (branch point x each non-happy outcome).
 
 Terminals are a STATIC guess (see _terminal_for): `done`/`failed`/`halt` where
 the tree alone determines the outcome, and `runtime` where it does not — a
-divergence inside a fan-out (the join may tolerate the leg failure) or a gate's
+divergence inside a fan-out (the join may tolerate the leg failure) or a human task's
 own never-exhausting iterate check. `runtime` traversals still get crafted and
 WALKED by the testing skill; the walk is the oracle for their real terminal.
 
@@ -17,33 +17,32 @@ runtime value the enumerator cannot know — so branch points strictly inside a
 dynamic fan-out leg are not listed here. Those interiors are still exercised
 once by the happy-path walk; statically enumerating them is future work.
 """
-import json
 import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import paths  # noqa: E402  (sibling engine module: node-tree navigation)
+import lib  # noqa: E402  (the ONE normalizing seam — see lib.load_protocol)
 
 ENGINE_DIR = Path(__file__).resolve().parent
 
 
 def load(proto_path):
-    with open(proto_path) as fh:
-        return json.load(fh)
+    return lib.load_protocol(proto_path)
 
 
 def _walk_nodes(states, prefix=""):
     """Yield (id_path, node) for every node depth-first in document order.
 
     id_path is the dot-joined chain of node ids (the NODE_PATH convention),
-    single-dot separated at every nesting level (fanout legs and sub-pipelines).
+    single-dot separated at every nesting level (fork legs and sub-pipelines).
     """
     for node in states:
         nid = node.get("id", "")
         idpath = f"{prefix}.{nid}" if prefix else nid
         yield idpath, node
-        if node.get("kind") == "fanout":
+        if node.get("kind") == "fork":
             for br in node.get("branches", []):
                 yield from _walk_nodes([br], idpath)
         elif node.get("states"):
@@ -53,9 +52,20 @@ def _walk_nodes(states, prefix=""):
 def branch_points(proto):
     out = []
     for idpath, node in _walk_nodes(proto.get("states", [])):
-        if node.get("kind") == "gate":
-            outcomes = ["answer"] if node.get("questions_from") else ["approve", "reject", "request-changes"]
-            out.append({"path": idpath, "type": "gate", "outcomes": outcomes})
+        if node.get("kind") == "choice":
+            # An Exclusive Gateway is divergence BY DEFINITION: one outcome per
+            # declared arm, plus the default. Without this a choice contributes
+            # nothing and the tool reports full coverage of a surface it never
+            # walked — the arms simply go untested.
+            outs = [c.get("when") for c in (node.get("cases") or [])]
+            if node.get("default"):
+                outs.append("__default")
+            out.append({"path": idpath, "type": "choice", "outcomes": outs})
+        if paths.is_human_task(node.get("kind")):
+            # The KIND now names the flavor — no need to sniff `questions_from`.
+            outcomes = (["answer"] if node.get("kind") == "question"
+                        else ["approve", "reject", "request-changes"])
+            out.append({"path": idpath, "type": "human-task", "outcomes": outcomes})
         for chk in node.get("checks", []):
             of = chk.get("on_fail", "iterate")
             name = chk.get("run", chk.get("exec", "check"))
@@ -86,45 +96,51 @@ def _node_map(proto):
 
 
 def _branch_ctx(nodemap, bp_path):
-    """(node_kind, inside_fanout) for a branch-point path (`id.path::check` or
-    `id.path` or `id.path::__blocked`). `inside_fanout` is True iff any STRICT
-    ancestor node is a fanout — the enclosing join may then declare a real
+    """(node_kind, inside_fork) for a branch-point path (`id.path::check` or
+    `id.path` or `id.path::__blocked`). `inside_fork` is True iff any STRICT
+    ancestor node is a fork — the enclosing join may then declare a real
     `.next` that TOLERATES this leg's failure, so the pipeline terminal is not
     statically knowable."""
     idp = bp_path.split("::")[0]
     segs = idp.split(".")
     node_kind = nodemap.get(idp, {}).get("kind")
-    inside_fanout = any(
-        nodemap.get(".".join(segs[:i]), {}).get("kind") == "fanout"
+    inside_fork = any(
+        nodemap.get(".".join(segs[:i]), {}).get("kind") == "fork"
         for i in range(1, len(segs))
     )
-    return node_kind, inside_fanout
+    return node_kind, inside_fork
 
 
-def _terminal_for(btype, outcome, inside_fanout=False, node_kind=None):
+def _terminal_for(btype, outcome, inside_fork=False, node_kind=None):
     """Best STATIC guess at the pipeline terminal a branch reaches.
 
     The enumerator sees only the static tree — never a join's runtime `.next`
     tolerance or a conclude hook's fail-safe. So it declines to guess a
     definite terminal in the two cases where those layers routinely override a
     naive one, reporting `runtime` ("walk it to find out") instead:
-      * A divergence INSIDE a fanout — the enclosing join may absorb the failed
+      * A divergence INSIDE a fork — the enclosing join may absorb the failed
         leg (-> the pipeline still reaches done, or a downstream conclude hook
         blocks); a leg failure is NOT a pipeline failure (the two-axis design).
-      * A GATE's own iterate check (e.g. answers-coverage) — a gate has no
+      * A human task's own iterate check (e.g. answers-coverage) — a human task has no
         iteration counter and no max_iterations; an unsatisfiable answer parks
         it OPEN forever (do_answer records a partial answer and returns). It
         never exhausts to `failed`.
     Only a root-level (non-leg) agent-node iterate exhaust deterministically
-    fails the whole pipeline; a root gate reject fails, request-changes/
+    fails the whole pipeline; a root human-task reject fails, request-changes/
     on_blocked:halt halts."""
-    if inside_fanout:
+    if inside_fork:
         return _RUNTIME
-    if btype == "gate":
+    if btype == "choice":
+        # `runtime` for its OWN reason: which arm runs is a data question the
+        # static tree cannot answer. NOT the fork rationale (a join tolerating a
+        # failed leg) — under a choice exactly one arm runs and nothing absorbs
+        # its outcome; the unknown is WHICH, not WHETHER.
+        return _RUNTIME
+    if btype == "human-task":
         return _FAILED if outcome == "reject" else _HALT   # request-changes → halt
     if btype == "blocked":
         return _HALT
-    if node_kind == "gate":                                # gate's own iterate check
+    if paths.is_human_task(node_kind):                     # a human task's own iterate check
         return _RUNTIME
     return _FAILED   # root agent-node iterate:exhaust
 
@@ -135,15 +151,16 @@ def enumerate_traversals(proto):
     nodemap = _node_map(proto)
     nid = 1
     for bp in branch_points(proto):
-        node_kind, inside_fanout = _branch_ctx(nodemap, bp["path"])
+        node_kind, inside_fork = _branch_ctx(nodemap, bp["path"])
         for outcome in bp["outcomes"][1:]:   # skip the happy outcome
             decisions = dict(base["decisions"])
             decisions[bp["path"]] = outcome
             out.append({
                 "id": nid,
                 "decisions": decisions,
-                "terminal": _terminal_for(bp["type"], outcome, inside_fanout, node_kind),
-                "branch": {"path": bp["path"], "outcome": outcome},
+                "terminal": _terminal_for(bp["type"], outcome, inside_fork, node_kind),
+                "branch": {"path": bp["path"], "outcome": outcome,
+                           "type": bp["type"]},
             })
             nid += 1
     return out
@@ -157,7 +174,8 @@ def _top_level_ids(proto):
     ids = []
     for node in proto.get("states", []):
         nid = node.get("id", "")
-        tag = "[fanout]" if node.get("kind") == "fanout" else ("[gate]" if node.get("kind") == "gate" else "")
+        tag = ("[fork]" if node.get("kind") == "fork"
+               else f"[{node['kind']}]" if paths.is_human_task(node.get("kind")) else "")
         ids.append((nid, tag))
     return ids
 
@@ -173,9 +191,17 @@ def render(proto, traversal):
             seg += f"({branch['outcome']}: {branch['path']})"
         parts.append(seg)
     schematic = " → ".join(parts) + " → " + _TERM_SYMBOL[traversal["terminal"]]
-    if branch and traversal["terminal"] == _RUNTIME:
+    if branch and traversal["terminal"] == _RUNTIME and branch.get("type") == "choice":
+        # A choice's terminal is unknown for a DIFFERENT reason than a fork leg's:
+        # exactly one arm runs (nothing absorbs its outcome), but which arm is a
+        # data question the static tree cannot answer.
+        gloss = (f"At `{branch['path']}` take the `{branch['outcome']}` arm. "
+                 f"Exactly one arm runs, chosen at runtime from an earlier node's "
+                 f"evidence, so which terminal this reaches depends on what that "
+                 f"arm does. Walk it to see.")
+    elif branch and traversal["terminal"] == _RUNTIME:
         gloss = (f"At `{branch['path']}` take the `{branch['outcome']}` outcome. "
-                 f"This diverges inside a fan-out (or at a gate that never "
+                 f"This diverges inside a fan-out (or at a human task that never "
                  f"exhausts), so the pipeline terminal is runtime-determined — "
                  f"the enclosing join may tolerate the leg failure (→ done), a "
                  f"downstream conclude hook may block, or the run may park open. "

@@ -12,11 +12,9 @@ Env: AGENT_RUN_ID, GITHUB_REPOSITORY, PUBLISH_TOKEN (reviews+comments),
 import dataclasses
 import json
 import os
-import re
 import shutil
 import subprocess
 import sys
-import tempfile
 import typing
 
 # Import shared library from the same directory as this script.
@@ -43,7 +41,6 @@ class LegCtx:
     inf: str
     pr: str
     proto_path: str
-    cr_name: str
     max_iter: typing.Any
     github_repository: str
     sha: str
@@ -53,16 +50,63 @@ class LegCtx:
     proto: dict
 
 
+def _conclude_unless_dispatched(proto_path, proto, evid, instance, dir_, tree_path):
+    """Run the node's `conclude` hook — UNLESS the node is a dispatched `code`
+    node (`kind: "code"` + `workflow:`, per `lib.is_dispatched_code`).
+
+    Task 1's validator forbids the `conclude` key on a dispatched `code` node
+    (a real exit code needs no proxy verdict), so `lib.run_conclude_hook`
+    would already resolve nothing and return `None` (neutral) for one —
+    relying on that omission is fragile, though: it would silently do the
+    wrong thing the moment validation is bypassed (a hand-edited state
+    branch, a future relaxation of the schema) rather than failing loud.
+    Skip explicitly instead: a dispatched node's own exit status — folded
+    into `blocking` via the checks job's synthetic `dispatched-run` verdict
+    (Task 3) — IS its verdict; there is nothing for a second hook to add.
+
+    Used at every site in this file that used to call `run_conclude_hook`
+    unconditionally, now that a dispatched `code` node's LAST sub-pipeline
+    step (Task 4's fork-leg/mid-sequence shapes) can reach them too — not
+    just the two root-child (depth-1) sites this task's plan names."""
+    node = _paths.node_at_path(proto, tree_path)
+    if lib.is_dispatched_code(node or {}):
+        return None
+    return lib.run_conclude_hook(proto_path, proto, evid, instance,
+                                 dir_=dir_, tree_path=tree_path)
+
+
+def _is_agent_lane_root_phase(proto, tree_path):
+    """True iff `tree_path` names a ROOT-CHILD phase running in the AGENT
+    LANE: an `agent` node, or a `code` node DISPATCHED as a workflow
+    (`lib.is_dispatched_code`) — both are seeded/dispatched/advanced
+    identically (Task 4), so both must reach the depth-1 clear/exhaust
+    guards below (root-cursor advance, phase labels, halt-on-block).
+
+    Before Task 5 this was spelled `node_kind(...) == "agent"` — a POSITION
+    concern ("is this a top-level phase reached via the agent lane?")
+    mis-spelled as a KIND concern. The bug that mis-spelling caused: a
+    root-level dispatched `code` phase (e.g. this plan's `gather`) would
+    fall through to the KIND-AGNOSTIC 'remaining done case' further down,
+    which publishes a check-run and a status comment but never advances
+    `instance['phase']` or dispatches the next `protocol-continue` — the
+    pipeline would complete the phase and then STALL forever, silently,
+    with a green check-run lying about progress. See
+    test_dispatched_code_advance.py, which fails on the unwidened guard."""
+    return _paths.is_root_child(proto, tree_path) and (
+        _paths.node_kind(proto, tree_path) == "agent"
+        or lib.is_dispatched_code(_paths.node_at_path(proto, tree_path) or {}))
+
+
 def _join_path(proto, tree_path):
-    """Dot-joined path of the ENCLOSING fanout, but ONLY when it is NESTED
+    """Dot-joined path of the ENCLOSING fork, but ONLY when it is NESTED
     (tree path length > 1); else "". Carried as fire_join's client_payload[path]
-    so join.py evaluates the right barrier. The TOP fanout (length 1) and the
+    so join.py evaluates the right barrier. The TOP fork (length 1) and the
     legacy depth-<=3 path (tree_path is None) both yield "" → a path-less join,
     byte-identical to the legacy behavior."""
     if tree_path is None or proto is None:
         return ""
     import paths as _paths
-    fp = _paths.enclosing_fanout_path(proto, tree_path)
+    fp = _paths.enclosing_fork_path(proto, tree_path)
     return ".".join(fp) if fp and len(fp) > 1 else ""
 
 
@@ -106,13 +150,13 @@ def gh_api(*args):
         sys.exit(1)
 
 
-def fire_join(pid, instance, branch, fanout_path=""):
+def fire_join(pid, instance, branch, fork_path=""):
     """On a TERMINAL branch (done OR failed), signal the fan-out barrier.
     No-op for the single-agent path (branch empty).
 
-    `fanout_path` (dot-joined TREE path of the ENCLOSING fanout) is carried as
-    client_payload[path] ONLY for a NESTED fanout (path length > 1); join.py
-    (Task 12b) reads it to evaluate the right nested barrier. For the TOP fanout
+    `fork_path` (dot-joined TREE path of the ENCLOSING fork) is carried as
+    client_payload[path] ONLY for a NESTED fork (path length > 1); join.py
+    (Task 12b) reads it to evaluate the right nested barrier. For the TOP fork
     it is left empty so join.py's existing top-level evaluation is byte-identical.
     """
     if not branch:
@@ -123,8 +167,8 @@ def fire_join(pid, instance, branch, fanout_path=""):
         "-F", f"client_payload[protocol]={pid}",
         "-F", f"client_payload[instance]={instance}",
     ]
-    if fanout_path:
-        args += ["-F", f"client_payload[path]={fanout_path}"]
+    if fork_path:
+        args += ["-F", f"client_payload[path]={fork_path}"]
     gh_api(*args)
 
 
@@ -133,26 +177,56 @@ def complete_sequence(ctx, cur):
     Marks the leg cursor done, emits a status comment, CAS-pushes, and fires join.
     Called from advance_node when the last sub-state of branch finishes successfully.
 
-    When the enclosing fanout is NESTED (path length > 1) the join dispatch carries
-    its path so join.py evaluates the right barrier; the TOP fanout (length 1) fires
-    a path-less join — byte-identical to the legacy behavior."""
+    When the enclosing fork is NESTED (path length > 1) the join dispatch carries
+    its path so join.py evaluates the right barrier; the TOP fork (length 1) fires
+    a path-less join — byte-identical to the legacy behavior.
+
+    A sequence is only leg-terminal when it IS a fork leg. A top-level `sequence`
+    group is not: finishing its last child means the GROUP is done, and the run
+    continues at the group's next sibling. Firing a join there would wait on a
+    barrier for a fork that does not exist."""
     cur["state"] = "done"             # last sub-state → leg terminal
     lib.dump_yaml(ctx.cursor_sf, cur)
+    # The enclosing sequence (a fork LEG, or a top-level GROUP — both are
+    # publishing units) has just finished: publish ITS one check-run, coloured by
+    # the fold of its steps. This is the only place a sub-pipeline leg's colour
+    # is emitted; the steps themselves only record node_outcome.
+    if ctx.tree_path is not None and ctx.proto is not None:
+        lib.publish_check_run(ctx.dir_, ctx.pid, ctx.instance, ctx.proto,
+                              _paths.parent_path(ctx.tree_path), ctx.sha)
     update_status_comment(ctx.sf, ctx.inf, ctx.branch, ctx.pr, ctx.pid, ctx.instance,
                           ctx.proto_path, ctx.dir_, "✅ done — published.",
                           ctx.max_iter, ctx.github_repository)
     lib.cas_push(ctx.dir_, f"{ctx.instance}: branch {ctx.branch} {ctx.substate} done → leg done")
+    # Is the finished scope a GROUP or a fork LEG? Ask what the enclosing scope's
+    # PARENT is, not whether a fork exists anywhere above: a group nested INSIDE
+    # a leg has an enclosing fork, but finishing it still means the GROUP ended,
+    # not the leg. Keying on "no fork anywhere" skipped everything after such a
+    # group and marked the group's cursor as the leg's.
+    _scope = _paths.parent_path(ctx.tree_path) if ctx.tree_path else []
+    _scope_is_group = bool(_scope) and (
+        len(_scope) == 1
+        or _paths.node_kind(ctx.proto, _paths.parent_path(_scope)) != "fork")
+    if ctx.tree_path is not None and ctx.proto is not None and _scope_is_group \
+            and _paths.node_kind(ctx.proto, _scope) == "sequence":
+        # A GROUP finished, not a fork leg: continue at the group's successor.
+        group_path = _paths.parent_path(ctx.tree_path)
+        nxt = _paths.next_sibling(ctx.proto, group_path) if group_path else None
+        if nxt:
+            nxt_path = _paths.parent_path(group_path) + [nxt]
+            lib.dispatch_continue(ctx.pid, ctx.instance, path=".".join(nxt_path))
+        return
     fire_join(ctx.pid, ctx.instance, ctx.branch, _join_path(ctx.proto, ctx.tree_path))
 
 
-def advance_node(ctx, process):
+def advance_node(ctx, process, outcome=(0, "")):
     """Advance a sub-pipeline branch node.  Called when ``ctx.branch`` and
     ``ctx.substate`` are both set.
 
     process=='done':   If next sibling exists → seed/dispatch it (agent), open the
-                       gate (gate kind), or — when the next sibling is a FANOUT —
-                       re-dispatch protocol-continue with client_payload[path]=<fanout
-                       tree path> (so next.py's `continue` enters the nested fanout)
+                       human task (approval/question kind), or — when the next sibling is a FANOUT —
+                       re-dispatch protocol-continue with client_payload[path]=<fork
+                       tree path> (so next.py's `continue` enters the nested fork)
                        WITHOUT seeding a leg file; else → complete_sequence (leg terminal).
     process=='failed': Mark the branch cursor failed so the join barrier can observe
                        the leg's outcome; the caller (main) handles the shared
@@ -161,7 +235,13 @@ def advance_node(ctx, process):
     `ctx.tree_path` (NODE_PATH mode) is the canonical TREE path of the leaf being
     advanced (e.g. ["preflight","deep","triage"]). When set, sibling lookup +
     file naming route through paths.* / lib.state_path so depth-4 works; when None
-    the legacy depth-<=3 branch/phase/substate behavior is byte-identical."""
+    the legacy depth-<=3 branch/phase/substate behavior is byte-identical.
+
+    `outcome` is THIS step's (exit, summary) — recorded before any successor is
+    entered, because a leg-terminal sub-state hands straight to complete_sequence,
+    which FOLDS the leg's steps to colour its check-run. Recording after would
+    publish the leg from a fold that had not yet seen its last step. The default
+    (0, "") is the "nothing objected" caller (an auto-resolved human task)."""
     proto, proto_path, dir_ = ctx.proto, ctx.proto_path, ctx.dir_
     pid, instance, branch = ctx.pid, ctx.instance, ctx.branch
     phase, substate, cursor_sf = ctx.phase, ctx.substate, ctx.cursor_sf
@@ -178,38 +258,39 @@ def advance_node(ctx, process):
     import paths as _paths
     parent = _paths.parent_path(tree_path)
     nxt_sub = _paths.next_sibling(proto, tree_path)
-    # Mark this sub-state's own file done (already set above), then move on.
-    lib.set_check_run(ctx.cr_name, sha, "completed", "success",
-                      f"{substate} complete", "")
+    # Mark this sub-state's own file done (already set above), record ITS exit
+    # status (the unit that encloses it publishes the check-run), then move on.
+    lib.node_outcome(dir_, pid, instance, lib.state_path(proto, tree_path),
+                     outcome[0], outcome[1])
     cur = lib.load_yaml(cursor_sf) if os.path.isfile(cursor_sf) else {}
     if nxt_sub:
         nxt_kind = _paths.node_kind(proto, parent + [nxt_sub])
         nxt_state = None
 
         # --- Next sibling is a FANOUT → enter it via protocol-continue. ---
-        # The leg stays in-flight; we move the cursor onto the fanout id and let
-        # next.py's `continue` (NODE_PATH=<fanout path>) seed the fanout's child
+        # The leg stays in-flight; we move the cursor onto the fork id and let
+        # next.py's `continue` (NODE_PATH=<fork path>) seed the fork's child
         # legs + nested __join.yaml. We deliberately do NOT seed a leg file here.
-        if nxt_kind == "fanout":
+        if nxt_kind == "fork":
             cur["sub_state"] = nxt_sub
             cur["state"] = life_state         # leg stays in flight
             lib.dump_yaml(cursor_sf, cur)
-            fanout_tree_path = parent + [nxt_sub]
-            lib.cas_push(dir_, f"{instance}: {'.'.join(tree_path)} done → fanout {nxt_sub}")
+            fork_tree_path = parent + [nxt_sub]
+            lib.cas_push(dir_, f"{instance}: {'.'.join(tree_path)} done → fork {nxt_sub}")
             gh_api(
                 f"repos/{github_repository}/dispatches",
                 "-f", "event_type=protocol-continue",
                 "-F", f"client_payload[protocol]={pid}",
                 "-F", f"client_payload[instance]={instance}",
-                "-F", f"client_payload[path]={'.'.join(fanout_tree_path)}",
+                "-F", f"client_payload[path]={'.'.join(fork_tree_path)}",
             )
             return
 
         cur["sub_state"] = nxt_sub
         cur["state"] = life_state         # leg stays in flight
         lib.dump_yaml(cursor_sf, cur)
-        if nxt_kind == "gate":
-            # Open the gate; read questions from the source sub-state's persisted
+        if _paths.is_human_task(nxt_kind):
+            # Open the human task; read questions from the source sub-state's persisted
             # evidence.  Use path-aware file resolution (via lib.state_path) so
             # multi-phase protocols produce the correct filename (e.g.
             # review.B.clarify.yaml, not the legacy single-phase B.clarify.yaml).
@@ -228,35 +309,42 @@ def advance_node(ctx, process):
                     if isinstance(raw, list):
                         questions, questions_known = raw, True
             if qfrom and questions_known and not questions:
-                # Auto-complete an empty DATA gate ONLY when the source agent deliberately
+                # Auto-complete an empty `question` node ONLY when the source agent deliberately
                 # surfaced an EXPLICIT empty `questions` list — advance past it as if
-                # resolved (→ gate.next, or leg-terminal → join). A missing / null / garbled
-                # `questions` is an agent malfunction, not a decision to skip a HUMAN gate, so
-                # fall through to open_gate (fail-closed: hold for a human) instead of silently
-                # advancing. (The cursor sub_state was already set to the gate above.)
-                gate_path = parent + [nxt_sub]
+                # resolved (→ the node's next, or leg-terminal → join). A missing / null / garbled
+                # `questions` is an agent malfunction, not a decision to skip a HUMAN task, so
+                # fall through to open_human_task (fail-closed: hold for a human) instead of silently
+                # advancing. (The cursor sub_state was already set to the human task above.)
+                human_task_path = parent + [nxt_sub]
                 gsf = lib.state_file(dir_, pid, instance,
-                                     path=lib.state_path(proto, gate_path))
+                                     path=lib.state_path(proto, human_task_path))
                 lib.dump_yaml(gsf, {"protocol": pid, "instance": instance,
                                     "state": "done", "head_sha": sha,
-                                    "gates": {"state": "auto-resolved", "history": []}})
+                                    "human_task": {"state": "auto-resolved", "history": []}})
                 advance_node(dataclasses.replace(
-                    ctx, substate=nxt_sub, tree_path=gate_path,
-                    cr_name=pid + "/" + "/".join(gate_path[1:])), "done")
+                    ctx, substate=nxt_sub, tree_path=human_task_path), "done")
                 return
-            gate_channel = (_paths.node_at_path(proto, parent + [nxt_sub]) or {}).get("channel", "comment")
-            lib.open_gate(dir_, pid, instance, proto_path, nxt_sub, sha, pr,
+            human_task_channel = (_paths.node_at_path(proto, parent + [nxt_sub]) or {}).get("channel", "comment")
+            lib.open_human_task(dir_, pid, instance, proto_path, nxt_sub, sha, pr,
                           questions=questions,
                           path=lib.state_path(proto, parent + [nxt_sub]),
-                          channel=gate_channel)
-            lib.cas_push(dir_, f"{instance}: branch {branch} {substate} done → gate {nxt_sub} open")
+                          tree_path=parent + [nxt_sub],
+                          channel=human_task_channel)
+            lib.cas_push(dir_, f"{instance}: branch {branch} {substate} done → human task {nxt_sub} open")
             return
-        # Otherwise: an agent sub-state. Advance the cursor (done above) and
+        # Otherwise: any node entered via a path-continue — an agent sub-state
+        # today, and equally a `code`/`choice`/`sequence` node. This arm is
+        # deliberately kind-AGNOSTIC: it moves the cursor and hands off to
+        # next.py's `continue`, whose dispatcher owns the per-kind behavior (and
+        # fails loud on a kind it does not implement). So a new kind needs no arm
+        # here — only in next.py.
+        #
+        # Advance the cursor (done above) and
         # dispatch a path-continue; the continue's enter_node SEEDS the sub-state
         # file. We deliberately do NOT pre-seed it here — pre-seeding makes the
         # follow-on continue's cas_push an empty commit (identical content), which
         # aborts an agent→agent sub-pipeline transition. Mirrors do_answer's
-        # gate→next-substate handling in next.py (which also leaves seeding to the
+        # human-task→next-substate handling in next.py (which also leaves seeding to the
         # continue). The cursor sub_state change (above) is what this cas_push
         # commits.
         lib.cas_push(dir_, f"{instance}: branch {branch} {substate} done → {nxt_sub}")
@@ -273,217 +361,13 @@ def advance_node(ctx, process):
         complete_sequence(ctx, cur)
 
 
-def run_publish_hook(proto_path, proto, branch, agent_state, evid, instance, pid,
-                     tree_path=None):
-    """Resolve and run the protocol's publish-state executable.
-    Returns {conclusion, summary} dict; on any resolution/exec failure,
-    returns a neutral conclusion so the transition still completes.
-
-    When tree_path is not None (NODE_PATH mode), resolve the action path-aware:
-    use node_at_path to get the leg's node dict directly (which carries .publish),
-    regardless of which fanout the leg belongs to. This fixes the first-fanout-only
-    resolution bug where the old branch-scan always broke on the first fanout found.
-    It also makes a `publish:` key on a root-child SINGLE-agent node fire (the
-    legacy single-agent branch below resolves via `.next` → the terminal sentinel
-    `done`, not a state, so a root-child publish would otherwise never run)."""
-
-    if tree_path is not None:
-        # Path-aware resolution: look up the exact leg node and read its .publish.
-        node = _paths.node_at_path(proto, tree_path) or {}
-        action = node.get("publish") or None
-        exec_override = ""
-    elif branch:
-        # fan-out branch: get .publish from the branch entry
-        action = None
-        for state in proto.get("states", []):
-            if state.get("kind") == "fanout":
-                for b in state.get("branches", []):
-                    if b["id"] == branch:
-                        action = b.get("publish") or None
-                        break
-                break
-        exec_override = ""
-    else:
-        # single-agent: publish hook is on the state after agent_state (.next)
-        pubstate_id = None
-        for state in proto.get("states", []):
-            if state.get("id") == agent_state:
-                pubstate_id = state.get("next") or None
-                break
-        action = None
-        exec_override = ""
-        if pubstate_id:
-            for state in proto.get("states", []):
-                if state.get("id") == pubstate_id:
-                    action = state.get("action") or None
-                    exec_override = state.get("exec") or ""
-                    break
-
-    pdir = os.path.dirname(os.path.abspath(proto_path))
-
-    if not action and not exec_override:
-        return {"conclusion": "neutral", "summary": "no publish action defined"}
-
-    res = lib.resolve_executable(f"{pdir}/publish", action or "", pdir, exec_override)
-    kind, path = res.split("\t", 1)
-
-    if kind == "ERR":
-        sys.stderr.write(f"[advance] publish hook unresolved: {path}\n")
-        return {"conclusion": "neutral", "summary": "publish hook unresolved"}
-
-    if not os.access(path, os.X_OK):
-        sys.stderr.write(f"[advance] publish hook not executable: {path}\n")
-        return {"conclusion": "neutral", "summary": "publish hook not executable"}
-
-    # The hook is trusted (zone 4) and inherits the full parent env
-    # (ENGINE_LOCAL, PUBLISH_TOKEN, GITHUB_REPOSITORY, PR).
-    result = subprocess.run(
-        [path, evid, instance],
-        text=True, capture_output=False,
-        stdout=subprocess.PIPE, stderr=None
-    )
-    if result.returncode != 0:
-        sys.stderr.write("[advance] publish hook exited nonzero\n")
-        return {"conclusion": "neutral", "summary": "publish hook failed"}
-
-    out = result.stdout.strip()
-    try:
-        parsed = json.loads(out)
-        if isinstance(parsed, dict) and "conclusion" in parsed and "summary" in parsed:
-            return parsed
-    except (json.JSONDecodeError, ValueError):
-        pass
-
-    return {"conclusion": "neutral", "summary": "publish hook returned no verdict"}
-
-
-_TOKEN_PATTERNS = [
-    # GitHub token families: prefix + token body chars.
-    re.compile(r"gh[posu]_[A-Za-z0-9_]+"),
-    re.compile(r"github_pat_[A-Za-z0-9_]+"),
-    # OpenAI / Anthropic API keys — structural, so protection does NOT depend on
-    # the secret being present in THIS job's environment (per the trust-zone
-    # table LLM creds live in the agent job, not advance/checks).
-    re.compile(r"sk-(?:proj-|ant-)?[A-Za-z0-9_-]{16,}"),
-    # x-access-token:<secret>@ inside clone/remote URLs.
-    re.compile(r"x-access-token:[^@\s/]+@"),
-]
-_SECRET_ENV_VARS = (
-    "PUBLISH_TOKEN", "GH_TOKEN", "GITHUB_TOKEN", "POC_DISPATCH_TOKEN",
-    "ANTHROPIC_AUTH_TOKEN", "OPENAI_API_KEY",
-)
-
-
-def _redact(text):
-    """Redact secrets from text before it reaches a PUBLIC check-run/comment or
-    the job log. Generic (no protocol coupling): redacts the values of known
-    secret env vars, GitHub token patterns, and the x-access-token:<secret>@
-    form in remote URLs. Replaces each with ***."""
-    if not text:
-        return text
-    out = text
-    # 1) Concrete secret values from the environment (longest first so a token
-    #    that is a substring of another does not leave a tail behind).
-    values = sorted(
-        (v for name in _SECRET_ENV_VARS for v in (os.environ.get(name, ""),) if v),
-        key=len, reverse=True,
-    )
-    for v in values:
-        out = out.replace(v, "***")
-    # 2) Structural patterns (tokens that were not in our env, e.g. from stderr).
-    for pat in _TOKEN_PATTERNS:
-        if pat.pattern.startswith("x-access-token"):
-            out = pat.sub("x-access-token:***@", out)
-        else:
-            out = pat.sub("***", out)
-    return out
-
-
-def run_conclude_hook(proto_path, proto, state_id, evid, instance, blocking,
-                      dir_=None, tree_path=None):
-    """Resolve+run the optional `conclude` hook for an agent state. Returns
-    {conclusion,summary,blocked} or None if the state declares none. Trusted
-    (zone 4). Receives BLOCKING via env and, for states with declared inputs,
-    CONCLUDE_INPUTS_DIR with those inputs materialized as <as>.json."""
-    # Path-aware resolution (mirrors run_publish_hook): in NODE_PATH mode look up
-    # the exact leg node via node_at_path. state_by_id is top-level-only, so a NESTED
-    # sub-pipeline state (per-issue triage/fix) would otherwise resolve to None and
-    # its conclude would silently never fire. node_at_path([root-child]) returns the
-    # identical top-level node, so the existing depth-1 caller is unchanged.
-    state = _paths.node_at_path(proto, tree_path) if tree_path is not None else None
-    if state is None:
-        state = lib.state_by_id(proto, state_id)
-    action = (state or {}).get("conclude") or None
-    if not action:
-        return None
-    pdir = os.path.dirname(os.path.abspath(proto_path))
-    res = lib.resolve_executable(f"{pdir}/publish", action, pdir, "")
-    kind, path = res.split("\t", 1)
-    if kind == "ERR" or not os.access(path, os.X_OK):
-        sys.stderr.write(f"[advance] conclude hook unresolved/not-exec: {path}\n")
-        return {"conclusion": "neutral", "summary": "conclude hook unresolved", "blocked": False}
-    env = dict(os.environ)
-    env["BLOCKING"] = "1" if blocking else "0"
-    # Generic capability (not protocol-specific): expose the state checkout so a
-    # conclude hook can read any node's persisted evidence directly — e.g. read a
-    # deeply-nested leg's gather evidence whose path the input-resolver cannot
-    # reach from a sibling root child. "" when there is no checkout (degraded).
-    env["CONCLUDE_STATE_DIR"] = dir_ or ""
-    workdir = None
-    # In NODE_PATH mode read the declared inputs off the resolved node — state_inputs
-    # is top-level-only and would miss a nested sub-state's inputs (e.g. fix's triage).
-    declared = (list(state.get("inputs") or []) if tree_path is not None
-                else lib.state_inputs(proto, state_id))
-    if dir_ is not None and declared:
-        fo = lib._fanout_state(proto)
-        phase = fo["id"] if (fo and lib.is_multiphase(proto)) else None
-        consuming_branch = tree_path[-2] if tree_path and len(tree_path) >= 2 else None
-        resolved = lib.resolve_inputs(
-            proto,
-            dir_,
-            lib.protocol_id(proto_path),
-            instance,
-            consuming_branch=consuming_branch,
-            consuming_phase=phase,
-            inputs=declared,
-            consuming_path=tree_path,
-        )
-        workdir = tempfile.mkdtemp(prefix="conclude-inputs-")
-        lib.materialize_inputs(resolved, workdir)
-        env["CONCLUDE_INPUTS_DIR"] = os.path.join(workdir, "inputs")
-    try:
-        result = subprocess.run([path, evid, instance], text=True,
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                env=env)
-        parsed = None
-        try:
-            parsed = json.loads((result.stdout or "").strip())
-        except (json.JSONDecodeError, ValueError):
-            parsed = None
-        # SUCCESS: a well-formed verdict is returned verbatim (preserves the
-        # {"blocked": true} gate semantics used by preflight-gate / on_blocked=halt).
-        if result.returncode == 0 and isinstance(parsed, dict) and "blocked" in parsed:
-            return parsed
-        # FAILURE: a crashed hook (non-zero exit) OR malformed stdout must be
-        # SURFACED, not swallowed. Conclusion is "failure" — a red check-run that
-        # does NOT halt a normal pipeline (halt requires blocked=true, which we
-        # never set here; that is a separate gate concern). Scrub secrets from
-        # both the public summary and the job log.
-        hook_name = os.path.basename(path)
-        detail = _redact(result.stderr or "") or _redact(result.stdout or "")
-        tail = detail[-300:] if detail else "(no output)"
-        summary = (f"conclude hook `{hook_name}` failed "
-                   f"(exit {result.returncode}): {tail}")
-        sys.stderr.write(
-            f"[advance] conclude hook {hook_name} failed (exit "
-            f"{result.returncode}); scrubbed stderr:\n{_redact(result.stderr or '')}\n"
-        )
-        return {"conclusion": "failure", "summary": summary, "blocked": False}
-    finally:
-        # Materialized inputs are only needed for the hook subprocess above; remove the
-        # temp dir so repeated conclude calls (triage/fix/mrp) don't leak it per run.
-        if workdir:
-            shutil.rmtree(workdir, ignore_errors=True)
+# Redaction now lives in lib.py: 4.0.0 routes every check-run through
+# lib.publish_check_run, whose summary text is a hook's own stdout, so BOTH hook
+# kinds reach a public surface and must be scrubbed by the same function. The
+# aliases keep advance.py's internal callers (and its tests) working unchanged.
+_TOKEN_PATTERNS = lib._TOKEN_PATTERNS
+_SECRET_ENV_VARS = lib._SECRET_ENV_VARS
+_redact = lib._redact
 
 
 def render_status_body(sf, headline, pid, instance, max_iter, github_repository):
@@ -517,8 +401,7 @@ def update_status_comment(sf, inf, branch, pr, pid, instance, proto_path, dir_,
     `branch`/`headline` (the renderer derives the headline from state) and key on
     `inf`. Single-phase fan-out keeps the per-fan-out comment; single-agent keeps
     its per-state-file comment. Both single-phase paths stay byte-identical."""
-    with open(proto_path) as fh:
-        proto = json.load(fh)
+    proto = lib.load_protocol(proto_path)
     if lib.is_multiphase(proto):
         if not os.path.isfile(inf):
             return
@@ -529,7 +412,7 @@ def update_status_comment(sf, inf, branch, pr, pid, instance, proto_path, dir_,
         # fan-out branch: shared comment keyed in _instance.yaml
         if not os.path.isfile(inf):
             return
-        body = lib.render_fanout_status_body(dir_, pid, instance, proto_path)
+        body = lib.render_fork_status_body(dir_, pid, instance, proto_path)
         lib.upsert_status_comment(inf, pr, body)
     else:
         body = render_status_body(sf, headline, pid, instance, max_iter, github_repository)
@@ -563,8 +446,7 @@ def main():
     github_repository = os.environ.get("GITHUB_REPOSITORY", "")
 
     # Load protocol
-    with open(proto_path) as f:
-        proto = json.load(f)
+    proto = lib.load_protocol(proto_path)
 
     pid = lib.protocol_id(proto_path)
 
@@ -589,7 +471,7 @@ def main():
     agent_state = _unit["agent_state"]
     max_iter = _unit["max_iterations"]
     life_state = _unit["life_state"]
-    # Surface branch/substate so the `if branch and substate:` sub-pipeline gates
+    # Surface branch/substate so the `if branch and substate:` sub-pipeline arm is selected
     # in main() fire; these are the leg's immediate parent + own ids (advance_node
     # uses tree_path for real navigation).
     branch = tree_path[-2] if len(tree_path) >= 2 else ""
@@ -597,7 +479,6 @@ def main():
     phase = ""
     file_path = lib.state_path(proto, tree_path)
     sf = lib.state_file(dir_, pid, instance, path=file_path)
-    cr_name = pid + "/" + "/".join(tree_path[1:])
 
     # Checkout state
     lib.state_checkout(dir_)
@@ -610,7 +491,7 @@ def main():
             "instance": instance,
             "state": life_state,
             "iteration": 1,
-            "gates": {},
+            "human_task": {},
             "history": [],
         }
         lib.dump_yaml(sf, seed)
@@ -625,10 +506,20 @@ def main():
         verdicts = json.load(f)
 
     results = verdicts.get("results", [])
+    # "Were checks declared for this node at all?" is distinct from "did they
+    # produce results" -- a node with no checks[] legitimately has none of
+    # either, and must not be treated as a checks-job failure (lib.decide).
+    # Default True when the key is absent (e.g. the synthetic fallback verdict
+    # agentic-engine.yml writes when the checks job itself dies) so that path's
+    # existing failed/iterate behavior is unchanged.
+    checks_declared = verdicts.get("checks_declared", True)
     # DECIDE: the process axis (iterate/done/failed) is a pure fold over the
     # verdicts + their on_fail severities. `blocking` (a block-severity fail)
-    # has no consumer in M1 — the M2 phase-gate will read it.
-    process, blocking = lib.decide(results, iterations_remaining=(iter_ < max_iter))
+    # is consumed below via lib.block_exit, folded with each arm's own
+    # `conclude` hook result into the node's exit code.
+    process, blocking = lib.decide(
+        results, iterations_remaining=(iter_ < max_iter), checks_declared=checks_declared,
+    )
 
     # Feedback fed back to the agent: only iterate-severity failures, since the
     # agent cannot fix advisory/block facts by re-running. Defaulting on_fail to
@@ -637,7 +528,7 @@ def main():
     fb_parts = [r.get("feedback", "") for r in results
                 if not r.get("pass", False) and r.get("on_fail", "iterate") == "iterate"]
     fb = "; ".join(p for p in fb_parts if p)
-    if not fb and len(results) == 0:
+    if not fb and len(results) == 0 and checks_declared:
         fb = "no check verdicts produced (checks job failure?)"
 
     # Checks map: {check: "pass"/"fail"}
@@ -665,7 +556,7 @@ def main():
     # object. cursor_sf varies by call site (set per-arm below before advance_node).
     ctx = LegCtx(dir_=dir_, pid=pid, instance=instance, branch=branch, phase=phase,
                  substate=substate, sf=sf, cursor_sf="", inf=inf, pr=pr,
-                 proto_path=proto_path, cr_name=cr_name, max_iter=max_iter,
+                 proto_path=proto_path, max_iter=max_iter,
                  github_repository=github_repository, sha=sha, life_state=life_state,
                  tree_path=tree_path, file_path=file_path, proto=proto)
 
@@ -680,28 +571,38 @@ def main():
         # Best-effort: a missing/empty evid file is silently skipped.
         persist_output(ctx, evid)
 
-        # --- FLAT nested-fanout child leg (NODE_PATH, parent is a FANOUT). ---
-        # Its parent is a fanout, NOT a sub-pipeline sequence, so there is no
+        # --- FLAT nested-fork child leg (NODE_PATH, parent is a FANOUT). ---
+        # Its parent is a fork, NOT a sub-pipeline sequence, so there is no
         # leg-cursor to advance: the leg is its OWN terminal (tracked by the
-        # fanout's per-leg files + __join.yaml). Mark this leg's own sf done and
-        # fire the enclosing fanout's path-keyed join — DO NOT write a cursor
-        # file at the parent (that would prematurely mark the whole fanout done).
-        if _paths.is_fanout(proto, _paths.parent_path(tree_path)):
-            # Run the publish hook if this leg declares one. Use path-aware
-            # resolution (tree_path) so legs in the SECOND (or any later) fanout
-            # resolve correctly. Legs without a "publish" key are unchanged
-            # (conclusion "success", empty summary — no-op, no hook invocation).
-            leg_node = _paths.node_at_path(proto, tree_path) or {}
-            if leg_node.get("publish"):
-                hook = run_publish_hook(proto_path, proto, branch, agent_state,
-                                        evid, instance, pid, tree_path=tree_path)
-                concl = hook.get("conclusion", "neutral")
-                csum = hook.get("summary", "")
-            else:
-                concl = "success"
-                csum = ""
-            lib.set_check_run(cr_name, sha, "completed", concl,
-                              f"{substate} complete", csum)
+        # fork's per-leg files + __join.yaml). Mark this leg's own sf done and
+        # fire the enclosing fork's path-keyed join — DO NOT write a cursor
+        # file at the parent (that would prematurely mark the whole fork done).
+        if _paths.is_fork(proto, _paths.parent_path(tree_path)):
+            # THE HOLE THIS CLOSES: a FLAT fork leg never ran its `conclude`, so
+            # the six `on_fail: "block"` declarations in recover-mental-model{,
+            # -interactive} (legion / codeset / ubiquitous-language) could not
+            # reach a check-run at all. Run it here exactly as the root-child and
+            # sub-pipeline arms do, and fold it with the ENGINE's `blocking`.
+            #
+            # COLOUR IS NOT FLOW: a nonzero exit paints this leg RED and the run
+            # still fires the join and continues. Only a node declaring
+            # `on_blocked: "halt"` stops — which is what lets code-review's five
+            # `review` legs go red on findings and still reach the `per-issue`
+            # phase that fixes them.
+            #
+            # (Presently unreachable by a DISPATCHED code leaf, and equally by
+            # an agent one: `lib.normalize_protocol` wraps every fork branch —
+            # `agent` and `code` alike — into a one-child `sequence` at load,
+            # so the parent of any dispatched LEAF is that `sequence`, never
+            # the `fork` itself; a flat fork child is fixture/test-only. Guard
+            # kept defensively — `_conclude_unless_dispatched` costs nothing
+            # extra here and this arm should not silently rot if that
+            # normalization invariant ever changes.)
+            _cc = _conclude_unless_dispatched(proto_path, proto, evid, instance, dir_, tree_path)
+            _exit, _sum = lib.block_exit(blocking, _cc)
+            lib.node_outcome(dir_, pid, instance, lib.state_path(proto, tree_path),
+                             _exit, _sum)
+            lib.publish_check_run(dir_, pid, instance, proto, list(tree_path), sha)
             update_status_comment(sf, inf, branch, pr, pid, instance, proto_path, dir_,
                                   "✅ done — published.", max_iter, github_repository)
             lib.cas_push(dir_, f"{instance}: {'.'.join(tree_path)} done → leg done")
@@ -715,79 +616,107 @@ def main():
             # depth-1 phases, so without this a nested conclude (conclude-triage /
             # conclude-fix — the per-leg commit/push/close) would NEVER fire. Run it
             # BEFORE advancing, mirroring the root-child block. Nested legs are not
-            # gates (no on_blocked), so there is no halt arm — a failed conclude
-            # still advances, but must surface as a RED leg check-run, not a green
-            # one (advance_node stamps a hardcoded success below, so re-stamp after).
-            _leg_node = _paths.node_at_path(proto, tree_path) or {}
-            _cc = None
-            if _leg_node.get("conclude"):
-                _cc = run_conclude_hook(
-                    proto_path, proto, agent_state, evid, instance, blocking,
-                    dir_=dir_, tree_path=tree_path)
+            # human tasks (no on_blocked), so there is no halt arm — a failed conclude
+            # still advances, but must surface as a RED step, which colours the
+            # enclosing leg's check-run when complete_sequence folds it.
+            # DELIBERATE (not an oversight): this stays true for a HOOK_FAILED_EXIT
+            # conclude too, same as any other nonzero exit here. Adding a halt at
+            # this position would need a branch-scoped `halted`/override story that
+            # does not exist yet (unlike the root-child arm, which already has one)
+            # — that is a structural addition, not this task's ABI-only scope,
+            # and code-review's per-issue legs rely on "red still advances the leg
+            # cursor, the join arbitrates" exactly as they do for an ordinary
+            # objection: a leg that goes red must still reach the phase that
+            # inspects/fixes it, never dangle joinless.
+            #
+            # A DISPATCHED code node's LAST sub-pipeline/fork-leg step (e.g.
+            # this plan's `sec` leg) reaches this arm too — a genuinely NEW
+            # path Task 4 opened (inline `code` never reached advance.py at
+            # all). `conclude` is forbidden on it (Task 1), so skip it
+            # explicitly rather than trust the empty-`conclude` no-op.
+            _cc = _conclude_unless_dispatched(proto_path, proto, evid, instance, dir_, tree_path)
+            _exit, _sum = lib.block_exit(blocking, _cc)
             ctx.cursor_sf = lib.state_file(
                 dir_, pid, instance,
                 path=lib.state_path(proto, _paths.parent_path(tree_path)))
-            advance_node(ctx, process="done")
-            if _cc is not None:
-                _c = "failure" if _cc.get("conclusion") == "failure" else "success"
-                lib.set_check_run(cr_name, sha, "completed", _c,
-                                  f"{substate} complete", _cc.get("summary", ""))
+            # The step's outcome rides INTO advance_node so it is recorded before
+            # a leg-terminal sub-state hands to complete_sequence, which folds the
+            # leg's steps to colour the leg's one check-run.
+            advance_node(ctx, process="done", outcome=(_exit, _sum))
             return
 
-        # --- Depth-1 AGENT phase (root child) clear tail. ---
+        # --- Depth-1 AGENT-LANE phase (root child) clear tail. ---
         # When the node is a root-level agent phase (e.g. code-review's
-        # `preflight`), advance the root cursor via path-continue.
-        if (_paths.is_root_child(proto, tree_path)
-                and _paths.node_kind(proto, tree_path) == "agent"):
+        # `preflight`) OR a root-level DISPATCHED `code` phase (e.g. this
+        # plan's `gather`) — see `_is_agent_lane_root_phase` for why both
+        # belong here — advance the root cursor via path-continue.
+        if _is_agent_lane_root_phase(proto, tree_path):
             _this_state = lib.state_by_id(proto, agent_state)
-            _conclude = run_conclude_hook(
-                proto_path, proto, agent_state, evid, instance, blocking,
-                dir_=dir_, tree_path=tree_path)
-            hook = run_publish_hook(proto_path, proto, branch, agent_state, evid, instance, pid,
-                                    tree_path=tree_path)
-            if _conclude is not None:
-                concl = _conclude.get("conclusion", "neutral")
-                csum = _conclude.get("summary", "")
-            else:
-                concl = hook.get("conclusion", "neutral")
-                csum = hook.get("summary", "")
+            # `conclude` is forbidden on a dispatched `code` node (Task 1);
+            # skip the hook explicitly rather than trust the empty-key no-op.
+            _cc = _conclude_unless_dispatched(proto_path, proto, evid, instance, dir_, tree_path)
+            _exit, _sum = lib.block_exit(blocking, _cc)
+            # THIS STEP's exit status. The conclude hook + `blocking` are the
+            # ONLY signal (5.0.0): `publish` is retired, so a node with neither
+            # a `conclude` nor a blocking check has no verdict source and stays
+            # clear. `_exit` itself is untouched — it alone decides HALT.
+            _node_exit = _exit
+            csum = _sum
             _phase_id = tree_path[-1]
-            if (_conclude is not None and _conclude.get("blocked")
-                    and (_this_state or {}).get("on_blocked") == "halt"):
-                # GATE BLOCKED → terminate the pipeline before the next phase.
+            # A nonzero exit is the OBJECTION -- from a failed block-severity
+            # check, the conclude hook, or both (lib.block_exit folds them to
+            # the worst). An ordinary objection halts the pipeline only when
+            # the node itself declares on_blocked:"halt" -- but HOOK_FAILED_EXIT
+            # is not an ordinary objection: it means the hook produced NO
+            # verdict at all (unresolved/not-exec/timed out), so there is
+            # nothing for on_blocked to opt into. Mirrors next.py's
+            # `res.get("hook_failed")` unconditional-halt clause for `code`
+            # hooks: the absence of a verdict is never read as consent to
+            # advance, whether or not the node declared on_blocked.
+            if _exit == lib.HOOK_FAILED_EXIT or (
+                    _exit and (_this_state or {}).get("on_blocked") == "halt"):
+                # BLOCKED → terminate the pipeline before the next phase.
                 state_data = lib.load_yaml(sf)
                 state_data["state"] = "failed"
                 lib.dump_yaml(sf, state_data)
-                lib.set_check_run(pid, sha, "completed", "failure", "Gate blocked",
-                                  csum or "A required gate did not pass; pipeline halted.")
-                lib.set_check_run(cr_name, sha, "completed", "failure", "Gate blocked", csum)
+                # Record the objecting step, then publish the unit that contains
+                # it. A root-child phase is a STEP of the root sequence, so the
+                # unit IS the root — the aggregate gating check-run, which is
+                # exactly what must go red when the pipeline halts.
+                lib.node_outcome(dir_, pid, instance, lib.state_path(proto, tree_path),
+                                 _node_exit,
+                                 csum or "A required check did not pass; pipeline halted.")
+                lib.publish_check_run(dir_, pid, instance, proto,
+                                      list(_paths.completing_scope(proto, tree_path)[1]), sha)
                 inst_data = lib.load_yaml(inf) if os.path.isfile(inf) else {}
-                inst_data["halted"] = {"phase": _phase_id, "reason": "blocked", "sha": sha}
+                # Full path, not just the leaf id — `/override` resolves the
+                # successor from this marker and a bare id cannot address a node
+                # inside a group. See next.py's matching writers.
+                inst_data["halted"] = {"phase": _phase_id, "path": ".".join(tree_path),
+                                       "reason": "blocked", "sha": sha}
                 lib.dump_yaml(inf, inst_data)
                 update_status_comment(
                     sf, inf, branch, pr, pid, instance, proto_path, dir_,
                     "⛔ blocked", max_iter, github_repository
                 )
-                notice = (f"⛔ **{_phase_id}** gate blocked: "
-                          f"{csum or 'a required gate did not pass'}. "
+                notice = (f"⛔ **{_phase_id}** blocked: "
+                          f"{csum or 'a required check did not pass'}. "
                           f"A write-access user can comment `/override <reason>` "
-                          f"to proceed past this gate.")
+                          f"to proceed past it.")
                 lib.post_pr_comment(pr, notice)
                 lib.ensure_phase_label(dir_, pid, instance, proto, pr, "blocked")
                 lib.cas_push(dir_, f"{instance}: phase {_phase_id} blocked → pipeline halted")
             else:
-                # GATE CLEAR → advance root cursor via path-continue.
+                # CLEAR → advance root cursor via path-continue.
                 # `concl` is never "blocked" here: a blocked conclude goes to
-                # the halt arm above; this arm only runs on a clear gate.
+                # the halt arm above; this arm only runs on a clear verdict.
                 nxt = _paths.next_sibling(proto, tree_path)
-                # A crashed/failed conclude hook (concl == "failure", from
-                # run_conclude_hook's failure branch) still ADVANCES — halt
-                # requires blocked=true, which it never sets — but must be
-                # surfaced as a RED check-run, not a misleading green "success".
-                # Normal conclusions (neutral/success) keep the "success" badge.
-                _clear_concl = "failure" if concl == "failure" else "success"
-                lib.set_check_run(cr_name, sha, "completed", _clear_concl,
-                                  "Gate complete", csum)
+                # A crashed/failed conclude hook still ADVANCES — halt requires
+                # on_blocked:"halt", which it never sets — but must be surfaced
+                # as a RED step, which reddens the unit containing it when that
+                # unit publishes. COLOUR IS NOT FLOW.
+                lib.node_outcome(dir_, pid, instance, lib.state_path(proto, tree_path),
+                                 _node_exit, csum)
                 inst = lib.load_yaml(inf) if os.path.isfile(inf) else {}
                 if nxt:
                     inst["phase"] = nxt
@@ -800,9 +729,10 @@ def main():
                     lib.cas_push(dir_, f"{instance}: phase {_phase_id} clear → advancing to {nxt}")
                     lib.dispatch_continue(pid, instance, path=nxt)
                 else:
-                    # No further sibling → pipeline complete (or, if the final
-                    # phase's conclude crashed, surfaced red via _clear_concl).
-                    lib.set_check_run(pid, sha, "completed", _clear_concl, "Complete", csum)
+                    # No further sibling → the ROOT sequence finished: publish the
+                    # aggregate, coloured by the fold of every step under it (so a
+                    # final phase whose conclude crashed still lands red).
+                    lib.publish_check_run(dir_, pid, instance, proto, [], sha)
                     update_status_comment(
                         sf, inf, branch, pr, pid, instance, proto_path, dir_,
                         "✅ complete", max_iter, github_repository
@@ -811,16 +741,18 @@ def main():
                     lib.cas_push(dir_, f"{instance}: phase {_phase_id} clear → done (no further phase)")
             return
 
-        # Remaining done case: a fan-out leg whose parent is the TOP fanout (the
-        # flat_fanout_child block above handles nested fanouts; root-child agents,
-        # sub-pipeline legs, and nested-fanout children all returned earlier). Run
-        # publish for side-effects, mark the leg done, and fire the (path-less) top
-        # join. Root-level agent phases advance via the NODE_PATH root-child block
-        # above (path-continue).
-        hook = run_publish_hook(proto_path, proto, branch, agent_state, evid, instance, pid)
-        concl = hook.get("conclusion", "neutral")
-        csum = hook.get("summary", "")
-        lib.set_check_run(cr_name, sha, "completed", concl, "Review complete", csum)
+        # Remaining done case: a ROOT-LEVEL leaf whose kind is not `agent` (e.g. a
+        # top-level `code` node like recover-mental-model's `combine`) — not a fork
+        # leg (flat_fork_child above handles those), not a sub-pipeline leg (those
+        # need a nonempty branch), not a root-child AGENT phase (handled above).
+        # `branch` is always "" here (tree_path has length 1), so the retired
+        # publish-hook resolution never matched a fork's branch id at this
+        # position — it was a permanent no-op (always "neutral"). Nothing fed
+        # this arm a verdict; record a clear outcome.
+        lib.node_outcome(dir_, pid, instance, lib.state_path(proto, tree_path),
+                         0, "")
+        lib.publish_check_run(dir_, pid, instance, proto,
+                              list(_paths.completing_scope(proto, tree_path)[1]), sha)
         update_status_comment(
             sf, inf, branch, pr, pid, instance, proto_path, dir_,
             "✅ done — published.",
@@ -835,11 +767,11 @@ def main():
         state_data["iteration"] = next_iter
         lib.dump_yaml(sf, state_data)
 
-        lib.set_check_run(
-            cr_name, sha, "in_progress", "",
-            "Review in progress",
-            f"Iteration {iter_} failed checks; retrying as iteration {next_iter}/{max_iter}."
-        )
+        # The unit containing this step is still RUNNING: re-publish it
+        # `in_progress` (no conclusion, no fold — its steps are not all in yet).
+        lib.publish_check_run(dir_, pid, instance, proto,
+                              list(_paths.completing_scope(proto, tree_path)[1]),
+                              sha, status="in_progress")
         update_status_comment(
             sf, inf, branch, pr, pid, instance, proto_path, dir_,
             f"⏳ iteration {iter_} failed checks — retrying as iteration {next_iter}/{max_iter}…",
@@ -866,37 +798,42 @@ def main():
         state_data["state"] = "failed"
         lib.dump_yaml(sf, state_data)
 
-        # A FLAT nested-fanout child leg (parent is a FANOUT) is its OWN terminal:
+        # A FLAT nested-fork child leg (parent is a FANOUT) is its OWN terminal:
         # sf is already marked failed above; there is no leg-cursor to advance, so
-        # we must NOT write the parent fanout file. Only a sub-pipeline SEQUENCE
+        # we must NOT write the parent fork file. Only a sub-pipeline SEQUENCE
         # leg has a cursor (advance_node marks the branch file failed).
-        flat_fanout_child = _paths.is_fanout(proto, _paths.parent_path(tree_path))
-        if branch and substate and not flat_fanout_child:
+        flat_fork_child = _paths.is_fork(proto, _paths.parent_path(tree_path))
+        if branch and substate and not flat_fork_child:
             ctx.cursor_sf = lib.state_file(
                 dir_, pid, instance,
                 path=lib.state_path(proto, _paths.parent_path(tree_path)))
             advance_node(ctx, process="failed")
 
-        # A root-level agent phase that exhausts its iterations is a terminal phase
-        # failure (label it). A fan-out leg reaching here is NOT a phase terminal —
-        # join.py (fan-out) owns that.
-        if (_paths.is_root_child(proto, tree_path)
-                and _paths.node_kind(proto, tree_path) == "agent"):
+        # A root-level agent-lane phase (agent OR dispatched code — see
+        # _is_agent_lane_root_phase) that exhausts its iterations is a
+        # terminal phase failure (label it). Before this widening, a
+        # root-level dispatched `code` phase that exhausted its retries
+        # would exhaust silently: no `failed` phase label, same defect class
+        # as the clear-tail guard above. A fan-out leg reaching here is NOT a
+        # phase terminal — join.py (fan-out) owns that.
+        if _is_agent_lane_root_phase(proto, tree_path):
             lib.ensure_phase_label(dir_, pid, instance, proto, pr, "failed")
 
-        lib.set_check_run(
-            cr_name, sha, "completed", "failure",
-            "Review failed",
-            f"Could not produce a valid review after {max_iter} iterations."
-        )
+        # The step objected by exhausting its budget; publish the unit that
+        # contains it (for a fork leg, the leg itself; for a root-child phase,
+        # the root aggregate).
+        lib.node_outcome(dir_, pid, instance, lib.state_path(proto, tree_path),
+                         1, f"exhausted {max_iter} iterations")
+        lib.publish_check_run(dir_, pid, instance, proto,
+                              list(_paths.completing_scope(proto, tree_path)[1]), sha)
         update_status_comment(
             sf, inf, branch, pr, pid, instance, proto_path, dir_,
             f"❌ **failed** after {max_iter} iterations.",
             max_iter, github_repository
         )
         lib.cas_push(dir_, f"{instance}: iterations exhausted → failed")
-        # A NESTED failed leg fires its enclosing fanout's path-keyed join; the TOP
-        # fanout (or legacy depth-<=3) fires a path-less join (byte-identical).
+        # A NESTED failed leg fires its enclosing fork's path-keyed join; the TOP
+        # fork (or legacy depth-<=3) fires a path-less join (byte-identical).
         fire_join(pid, instance, branch, _join_path(proto, tree_path))
 
 

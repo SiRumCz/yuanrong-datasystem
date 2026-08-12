@@ -1,0 +1,49 @@
+# `cedar-hook-record` — the ledger step of `cedar-on-hook-test`.
+#
+# A dispatched `code` node (engine 7.0.0), NOT a gh-aw agent: no .md source, no
+# .lock.yml, no LLM. It reduces the `guard` fork and publishes one ledger of both
+# legs' guard events, which is the durable record the protocol exists to produce.
+# It is dispatched rather than inline because `lib.run_code_hook` reduces an
+# inline hook's return to {conclusion, summary} — too narrow for a ledger.
+name: Cedar Hook Record
+run-name: "Cedar Hook Record · cid:[${{ fromJSON(github.event.inputs.protocol_context || '{}').cid }}]"
+on:
+  workflow_dispatch:
+    inputs:
+      protocol_context:
+        description: "Engine dispatch context: {cid, pr, ref, sha, inputs, iteration}."
+        type: string
+        required: false
+        default: ""
+
+# The trust boundary for a dispatched step is THIS block. It only reads the
+# legs' evidence the engine already materialized; it writes nothing.
+permissions:
+  contents: read
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Assemble the ledger
+        env:
+          # Engine-supplied context reaches the shell via env, never
+          # interpolated into a run: body — the repo's standing rule.
+          CTX: ${{ github.event.inputs.protocol_context }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/agent
+          printf '%s' "${CTX:-{\}}" > /tmp/agent/ctx.json
+          jq -n --slurpfile ctx /tmp/agent/ctx.json -f .github/agent-factory/protocols/cedar-on-hook-test/scripts/ledger.jq > /tmp/evidence.json
+          echo "--- ledger:"; jq '{legs: [.legs[] | {leg, enforced, decisions, incidents: (.incidents|length)}]}' /tmp/evidence.json
+
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: evidence
+          path: /tmp/evidence.json

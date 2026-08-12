@@ -28,14 +28,27 @@ function parseUid(uid) {
 }
 
 /**
- * decide(policiesText, entitiesJson, request) -> 'Allow' | 'Deny'
+ * decideDetailed(policies, entitiesJson, request) -> { decision, determining }
  *
- * @param {string} policiesText  Cedar policy set text (Cedar language)
+ * Same single authorize call as decide(), but also surfaces Cedar's own
+ * `diagnostics.reason` — the ids of the policies that DETERMINED the answer.
+ *
+ * Policy-id caveat (verified against cedar-wasm 4.11.2): when `policies` is a
+ * single concatenated STRING, cedar assigns synthetic ids (`policy0`, `policy1`,
+ * …) and the `@id("…")` annotation is NOT used. Pass an object map
+ * `{ "<id>": "<policy text>" }` to get meaningful ids back — the map key becomes
+ * the policy id (and overrides any `@id` annotation without conflict).
+ *
+ * @param {string|Object<string,string>} policies  policy text, or { id: text } map
  * @param {Array|string} entitiesJson  Entities array or JSON string
  * @param {{ principal: string|object, action: string|object, resource: string|object, context: object }} request
- * @returns {'Allow'|'Deny'}
+ * Cedar SKIPS a policy whose condition errors (wrong context type, missing
+ * attribute) and answers from the rest. That is reported, not thrown: a caller
+ * that must not silently lose a forbid inspects `errors` itself.
+ *
+ * @returns {{ decision: 'Allow'|'Deny', determining: string[], errors: string[] }}
  */
-function decide(policiesText, entitiesJson, request) {
+function decideDetailed(policies, entitiesJson, request) {
   const entities = typeof entitiesJson === 'string' ? JSON.parse(entitiesJson) : entitiesJson
 
   const call = {
@@ -43,7 +56,7 @@ function decide(policiesText, entitiesJson, request) {
     action: parseUid(request.action),
     resource: parseUid(request.resource),
     context: request.context || {},
-    policies: { staticPolicies: policiesText },
+    policies: { staticPolicies: policies },
     entities,
   }
 
@@ -52,8 +65,25 @@ function decide(policiesText, entitiesJson, request) {
     const msgs = (answer.errors || []).map(e => e.message || String(e)).join('; ')
     throw new Error('Cedar authorization error: ' + msgs)
   }
+  const diag = answer.response.diagnostics || {}
   // answer.response.decision is 'allow' | 'deny'
-  return answer.response.decision === 'allow' ? 'Allow' : 'Deny'
+  return {
+    decision: answer.response.decision === 'allow' ? 'Allow' : 'Deny',
+    determining: (diag.reason || []).slice(),
+    errors: (diag.errors || []).map(e => e.message || (e.error && e.error.message) || String(e)),
+  }
 }
 
-module.exports = { decide }
+/**
+ * decide(policiesText, entitiesJson, request) -> 'Allow' | 'Deny'
+ *
+ * @param {string|Object<string,string>} policiesText  Cedar policy set text (Cedar language)
+ * @param {Array|string} entitiesJson  Entities array or JSON string
+ * @param {{ principal: string|object, action: string|object, resource: string|object, context: object }} request
+ * @returns {'Allow'|'Deny'}
+ */
+function decide(policiesText, entitiesJson, request) {
+  return decideDetailed(policiesText, entitiesJson, request).decision
+}
+
+module.exports = { decide, decideDetailed }

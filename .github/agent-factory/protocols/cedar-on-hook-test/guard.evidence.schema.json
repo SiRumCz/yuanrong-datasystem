@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["step", "live_guard"],
+  "properties": {
+    "step": { "type": "string" },
+    "live_guard": {
+      "type": "object",
+      "required": ["liveness", "decisions", "incidents"],
+      "properties": {
+        "liveness": {
+          "type": "object",
+          "properties": {
+            "engines": {
+              "type": "object",
+              "additionalProperties": { "type": "integer" }
+            },
+            "counts": {
+              "type": "object",
+              "additionalProperties": { "type": "integer" }
+            }
+          }
+        },
+        "decisions": { "type": "array", "items": { "type": "object" } },
+        "incidents": { "type": "array", "items": { "type": "object" } }
+      }
+    },
+    "examined": { "type": "array", "items": { "type": "string" } },
+    "note": { "type": "string" }
+  }
+}

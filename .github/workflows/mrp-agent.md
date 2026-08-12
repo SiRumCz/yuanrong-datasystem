@@ -111,7 +111,7 @@ post-steps:
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
 timeout-minutes: 10
-source: golivax/agentic-protocol-poc/.github/workflows/mrp-agent.md@30e1636e52e0444bc37750f234359eaffa786dad
+source: golivax/agentic-protocol-poc/.github/workflows/mrp-agent.md@ebc3725789c0c0678b640b2b9dc1f6a0145700d8
 ---
 
 # MRP Assembler — synthesize, do not re-review
@@ -135,7 +135,7 @@ Read `/tmp/gh-aw/task-context.json` (use `cat`):
   you take NO action on it. MAY be absent.
 - `.inputs.overview` — the guided walkthrough + risk: `summary`, `cohorts[]` (each with
   `cohort`, `layers[]`, `bcFindings[].severityClass`), `risk_band`. MAY be absent.
-- `.inputs.honesty` — the per-issue honesty-gate rollup: `{ conclusion, summary, blocked,
+- `.inputs.honesty` — the per-issue honesty-verdict rollup: `{ conclusion, summary, blocked,
   rollup }`. `conclusion` is `"success"`|`"failure"`; `blocked` is `true` iff any per-issue
   fix was found NOT honest; `rollup` is `{ total, dishonest[], per_issue[] }` where
   `total` is the number of per-issue fix legs verified, `dishonest[]` lists the issue keys

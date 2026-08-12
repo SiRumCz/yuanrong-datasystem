@@ -222,7 +222,7 @@ post-steps:
       path: /tmp/gh-aw/certificate.json
       if-no-files-found: warn
 timeout-minutes: 10
-source: golivax/agentic-protocol-poc/.github/workflows/honesty-fixverify-agent.md@30e1636e52e0444bc37750f234359eaffa786dad
+source: golivax/agentic-protocol-poc/.github/workflows/honesty-fixverify-agent.md@ebc3725789c0c0678b640b2b9dc1f6a0145700d8
 ---
 
 # Honesty Fix-Verify — semi-formal certificate that the fix actually resolves the finding

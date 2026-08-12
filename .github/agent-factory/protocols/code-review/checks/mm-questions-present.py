@@ -3,11 +3,17 @@
 
 `questions` must be a well-formed list, and it MUST be non-empty when the agent
 claims a mental-model change (`mm_changed: true`) — that single question is what
-makes the human decide on the opened [mm] PR before mrp. Without this, an agent
-that opens an MM PR but emits `questions: []` (or null/missing) would pass the
-generic evidence-present check, and the engine's empty-data-gate auto-skip would
-silently bypass the mandatory human decision. When `mm_changed` is false, an
-empty list is correct (the gate then auto-completes straight to mrp).
+the human answers to decide on the opened [mm] PR before mrp. When `mm_changed`
+is false, an empty list is correct.
+
+NOTE ON SCOPE. This check no longer decides the ROUTE. The protocol's `mm-route`
+choice routes on `$.mm_changed` itself, so an agent that opens an MM PR and emits
+`questions: []` can no longer skip the gate — it is held regardless, and the
+bypass this check was originally written to prevent is now structurally
+unreachable rather than merely guarded. What remains load-bearing is the
+FORM: a gate held with no well-formed question would open asking nothing, which
+a human cannot answer. So this check keeps the gate answerable; `mm-route` keeps
+it mandatory.
 
 ABI: mm-questions-present.py <evidence.json> <diff.txt> <changed-files.txt>
 Prints one {"check","pass","feedback"} to stdout and always exits 0.

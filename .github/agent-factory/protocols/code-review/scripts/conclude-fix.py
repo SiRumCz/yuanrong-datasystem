@@ -1,0 +1,441 @@
+#!/usr/bin/env python3
+"""Conclude hook for fix: completeness against the real triage input, then apply,
+commit and close.
+
+It stays a `conclude` hook because it genuinely EVALUATES one thing: whether the
+remediation actually LANDED. A fix that was applied but whose push did not land
+must red this step, and that judgment needs the evidence.
+
+ABI (4.0.0): conclude-fix.py <evidence.json> <instance-key>, with the declared
+`triage` input at $CONCLUDE_INPUTS_DIR/triage.json. The EXIT CODE is the contract
+— nonzero when a fix was committed but the push failed. Whether objecting also
+STOPS the run is the node's own `on_blocked` (this node declares none, so the leg
+goes red and still flows to `honesty`). Stdout is the check-run summary text.
+"""
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import _apply_fixes  # noqa: E402
+
+CODE_FIXABLE = {"correctness", "security", "performance", "maintainability"}
+
+
+def _load_json(path):
+    try:
+        with open(path) as fh:
+            data = json.load(fh)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+# Overrides CONCLUDE_INPUTS_DIR when set. Module-level because _issue_targets ->
+# _triage_clusters -> _triage_input runs deep inside _apply_commit_close, which
+# tests drive directly with a one-arg call; threading a parameter through would
+# change that signature.
+INPUTS_DIR = ""
+
+
+def _triage_input():
+    d = INPUTS_DIR or os.environ.get("CONCLUDE_INPUTS_DIR", "")
+    if not d:
+        return {}
+    return _load_json(os.path.join(d, "triage.json"))
+
+
+def _cluster_dims(cluster):
+    dims = cluster.get("dimension") or cluster.get("dimensions") or []
+    return {d for d in dims if isinstance(d, str)}
+
+
+def _code_fixable_clusters(triage):
+    out = []
+    for cluster in triage.get("clusters") or []:
+        if not isinstance(cluster, dict):
+            continue
+        cid = cluster.get("cluster_id")
+        if not cid:
+            continue
+        dims = _cluster_dims(cluster)
+        if dims.intersection(CODE_FIXABLE):
+            out.append(cluster)
+    return out
+
+
+def _classify(evidence, triage):
+    fixes = evidence.get("fixes") if isinstance(evidence.get("fixes"), list) else []
+    skipped = evidence.get("skipped") if isinstance(evidence.get("skipped"), list) else []
+    triage_ids = {
+        c.get("cluster_id")
+        for c in (triage.get("clusters") or [])
+        if isinstance(c, dict) and c.get("cluster_id")
+    }
+    fixable_ids = [c.get("cluster_id") for c in _code_fixable_clusters(triage)]
+    fixed_ids = [f.get("cluster_id") for f in fixes if isinstance(f, dict) and f.get("cluster_id")]
+    skipped_ids = [
+        s.get("cluster_id") for s in skipped if isinstance(s, dict) and s.get("cluster_id")
+    ]
+    fixed_set = set(fixed_ids)
+    skipped_set = set(skipped_ids)
+    return {
+        "mode": evidence.get("mode") or "edit",
+        "applied": [cid for cid in fixable_ids if cid in fixed_set],
+        "skipped": [cid for cid in fixable_ids if cid in skipped_set],
+        "dropped": [
+            cid for cid in fixable_ids if cid not in fixed_set and cid not in skipped_set
+        ],
+        "unknown": {
+            "fixes": sorted(cid for cid in fixed_set if cid not in triage_ids),
+            "skipped": sorted(cid for cid in skipped_set if cid not in triage_ids),
+        },
+    }
+
+
+def _fix_review_body(evidence):
+    """Diff-shape fixes carry no single path/line anchor (unlike the old
+    suggested_patch mode), so there is no per-line 'suggestion' block to post --
+    just a summary of which clusters carry a diff to be applied below."""
+    ids = [
+        f.get("cluster_id")
+        for f in evidence.get("fixes") or []
+        if isinstance(f, dict) and f.get("cluster_id")
+    ]
+    if not ids:
+        return "Fix phase: no fix diffs received."
+    return f"Fix phase: {len(ids)} cluster diff(s) received ({', '.join(ids)})."
+
+
+def _write_fix(report):
+    out = os.environ.get("FIX_OUT", "/tmp/gh-aw/fix.json")
+    try:
+        os.makedirs(os.path.dirname(out), exist_ok=True)
+        with open(out, "w") as fh:
+            json.dump(report, fh)
+    except OSError:
+        pass
+
+
+def _post_review(payload):
+    out = os.environ.get("FIX_REVIEW_OUT")
+    if os.environ.get("ENGINE_LOCAL", "0") == "1":
+        if out:
+            with open(out, "w") as fh:
+                json.dump(payload, fh)
+        else:
+            sys.stderr.write(json.dumps(payload, indent=2) + "\n")
+        return
+    repo = os.environ.get("GITHUB_REPOSITORY", "")
+    pr = os.environ.get("PR", "")
+    if not repo or not pr:
+        return
+    env = dict(os.environ)
+    if os.environ.get("PUBLISH_TOKEN"):
+        env["GH_TOKEN"] = os.environ["PUBLISH_TOKEN"]
+    subprocess.run(
+        ["gh", "api", f"repos/{repo}/pulls/{pr}/reviews", "--method", "POST", "--input", "-"],
+        input=json.dumps(payload),
+        text=True,
+        capture_output=True,
+        env=env,
+    )
+
+
+def _triage_clusters():
+    return _triage_input().get("clusters") or []
+
+
+def _issue_targets(applied_cluster_ids):
+    """Map applied cluster_ids -> issue close-targets {label,title} via triage members."""
+    targets = []
+    seen = set()
+    for cluster in _triage_clusters():
+        if not isinstance(cluster, dict) or cluster.get("cluster_id") not in applied_cluster_ids:
+            continue
+        for m in cluster.get("member_findings") or []:
+            if not isinstance(m, dict):
+                continue
+            dim, title = m.get("dimension"), m.get("title")
+            if not dim or not title:
+                continue
+            key = (f"review:{dim}", title)
+            if key not in seen:
+                seen.add(key)
+                targets.append({"label": key[0], "title": title})
+    return targets
+
+
+def _git(args, cwd, token=None):
+    env = dict(os.environ)
+    if token:
+        env["GIT_TERMINAL_PROMPT"] = "0"
+    return subprocess.run(["git", *args], cwd=cwd, env=env,
+                          text=True, capture_output=True)
+
+
+def _scrub(s, token):
+    """Redact the token from captured output + truncate. The diag is pushed to
+    agentic-state (git) — it must NEVER contain the token."""
+    s = (s or "").strip()
+    if token:
+        s = s.replace(token, "<TOK>")
+    return s[:400]
+
+
+def _write_diag(diag, token):
+    """Write a token-scrubbed diag into CONCLUDE_STATE_DIR so the engine's cas_push
+    carries it to agentic-state (git-readable). No-op if the state dir is absent."""
+    d = os.environ.get("CONCLUDE_STATE_DIR", "")
+    if not d or not os.path.isdir(d):
+        return
+    try:
+        with open(os.path.join(d, "_fix_diag.json"), "w") as fh:
+            json.dump(diag, fh, indent=2)
+    except OSError:
+        pass
+
+
+def _apply_commit_close(evidence):
+    """Apply fixes to the PR head, push a commit, close resolved issues.
+    Returns a report dict. ENGINE_LOCAL short-circuits to APPLY_WORKDIR/APPLY_OUT.
+
+    The non-local apply body (head resolution, clone, apply_all, commit/push,
+    diag build) runs entirely inside try/except so an uncaught exception can no
+    longer crash the hook invisibly; a `finally` block GUARANTEES exactly one
+    _write_diag + _post_apply_comment before every non-local return (including
+    the "no fixes" branch, which was previously silent). The ENGINE_LOCAL path
+    makes NO network/gh/git-remote calls and posts NO comments."""
+    fixes = evidence.get("fixes") if isinstance(evidence.get("fixes"), list) else []
+    report = {"applied": 0, "skipped": [], "pushed": False, "close": []}
+    local = os.environ.get("ENGINE_LOCAL", "0") == "1"
+    repo = os.environ.get("GITHUB_REPOSITORY", "")
+    pr = os.environ.get("PR", "")
+    token = os.environ.get("GH_TOKEN") or os.environ.get("PUBLISH_TOKEN")
+    diag = {"local": local, "n_fixes": len(fixes),
+            "env": {"repo": repo, "pr": pr, "has_token": bool(token)}}
+    workdir = None
+    try:
+        if not fixes:
+            diag["stop"] = "no fixes"
+            return report
+
+        if local:
+            workdir = os.environ.get("APPLY_WORKDIR")
+            results = _apply_fixes.apply_all(workdir, fixes) if workdir else []
+        else:
+            if not repo or not pr or not token:
+                diag["stop"] = "env missing"
+                report["diag"] = f"env missing: repo={bool(repo)} pr={bool(pr)} token={bool(token)}"
+                return report
+            head = _pr_head_ref(repo, pr, token)
+            diag["head"] = head
+            if not head:
+                diag["stop"] = "no head (gh pr view failed)"
+                report["diag"] = "pr_head_ref empty (gh pr view --json headRefName failed)"
+                return report
+            workdir = tempfile.mkdtemp(prefix="fix-apply-")
+            url = f"https://x-access-token:{token}@github.com/{repo}.git"
+            cl = _git(["clone", "--depth", "1", "--branch", head, url, workdir],
+                      None, token=token)
+            diag["clone_rc"] = cl.returncode
+            diag["clone_err"] = _scrub(cl.stderr or cl.stdout, token)
+            if cl.returncode != 0:
+                diag["stop"] = "clone failed"
+                report["diag"] = "clone failed (branch=%s): %s" % (head, diag["clone_err"])
+                return report
+            results = _apply_fixes.apply_all(workdir, fixes)
+
+        diag["apply"] = [{"status": r.get("status"), "detail": _scrub(r.get("detail"), token)} for r in results]
+        applied = [r for r in results if r["status"] == "applied"]
+        report["applied"] = len(applied)
+        report["skipped"] = [
+            {"cluster_id": r.get("cluster_id"), "reason": r.get("detail")}
+            for r in results if r["status"] != "applied"
+        ]
+        report["close"] = _issue_targets({r["cluster_id"] for r in applied})
+        diag["applied_n"] = len(applied)
+
+        if applied and not local:
+            paths = sorted({p for r in applied for p in r.get("paths") or []})
+            push = _commit_push(workdir, head, pr, paths, token)
+            report["pushed"] = push["ok"]
+            diag["push_ok"] = push["ok"]
+            diag["push_detail"] = _scrub(push.get("detail"), token)
+            if not push["ok"]:
+                # Scrub before it reaches report — report["push_error"] is
+                # rendered into a PUBLIC PR comment + check-run summary, and git
+                # echoes the tokened clone URL (x-access-token:<PAT>@) on push
+                # failure. (diag["push_detail"] above is already scrubbed.)
+                report["push_error"] = _scrub(push["detail"], token)
+            if push["ok"]:
+                _close_issues(repo, report["close"], token)
+        return report
+    except Exception as e:
+        # Scrub: report["error"] reaches the PUBLIC PR comment + check-run.
+        report["error"] = _scrub(str(e), token)
+        diag["exception"] = _scrub(str(e), token)
+        return report
+    finally:
+        if workdir and not local:
+            shutil.rmtree(workdir, ignore_errors=True)
+        # ALWAYS surface the outcome exactly once. The local path stays offline:
+        # no diag push, no PR comment, no remote calls.
+        if not local:
+            _write_diag(diag, token)
+            _post_apply_comment(repo, pr, token, report)
+        _write_apply(report)
+
+
+def _pr_head_ref(repo, pr, token):
+    env = dict(os.environ); env["GH_TOKEN"] = token
+    r = subprocess.run(["gh", "pr", "view", pr, "--repo", repo, "--json", "headRefName",
+                        "--jq", ".headRefName"], text=True, capture_output=True, env=env)
+    return r.stdout.strip() if r.returncode == 0 else ""
+
+
+def _commit_push(workdir, head, pr, paths, token, attempts=5):
+    """Commit the given paths and push to the PR head branch. Returns
+    {"ok": bool, "detail": str} — detail carries the git error on failure.
+
+    DELIBERATE, MINIMAL DIVERGENCE FROM THE SiRumCz PORT (per-issue/parallel arch):
+    conclude-fix now runs once PER per-issue leg, and those legs run as SEPARATE
+    dispatched jobs CONCURRENTLY. Every leg clones the same PR head at the same
+    base SHA and pushes to the same ref, so a plain `git push` lets leg 1 win
+    while legs 2..N are non-fast-forward → REJECTED. With no retry those fixes
+    were silently lost and their issues left open, defeating per-issue auto-fix.
+    We therefore mirror the engine's proven lib.cas_push fetch→rebase→retry:
+    on a rejected push, fetch the advanced remote head, rebase our fix commit
+    onto it, and retry (bounded). Different issues' fixes almost always touch
+    different files so the rebase applies cleanly; a GENUINE conflict (two legs
+    editing the same lines) aborts the rebase and surfaces the existing loud
+    push_error — we NEVER force-push and NEVER silently drop a fix."""
+    import time
+    paths = sorted(set(paths))
+    if not paths:
+        return {"ok": False, "detail": "no paths to commit"}
+    _git(["config", "user.name", "agentic-fix-bot"], workdir)
+    _git(["config", "user.email", "agentic-fix-bot@users.noreply.github.com"], workdir)
+    _git(["add", "--", *paths], workdir)
+    msg = f"fix: apply AI review remediations (PR #{pr})"
+    c = _git(["commit", "-m", msg], workdir)
+    if c.returncode != 0:
+        return {"ok": False, "detail": f"commit failed: {(c.stderr or c.stdout).strip()[:300]}"}
+    # Explicit refspec so the push targets the PR head branch unambiguously.
+    # Push first (the common no-race case wins on attempt 1 with no extra fetch);
+    # only re-sync on a rejection, exactly like lib.cas_push.
+    last = ""
+    for i in range(attempts):
+        p = _git(["push", "origin", f"HEAD:refs/heads/{head}"], workdir, token=token)
+        if p.returncode == 0:
+            return {"ok": True, "detail": ""}
+        last = (p.stderr or p.stdout).strip()
+        if i + 1 >= attempts:
+            break
+        # Non-fast-forward: a concurrent leg advanced the head. Fetch it and rebase
+        # our single fix commit on top, then retry.
+        f = _git(["fetch", "origin", head], workdir, token=token)
+        if f.returncode != 0:
+            return {"ok": False, "detail": f"push failed: {last[:300]}"}
+        rb = _git(["rebase", "FETCH_HEAD"], workdir)
+        if rb.returncode != 0:
+            # Genuine conflict (two legs touched the same lines): abort and surface
+            # the loud push_error — never force-push, never drop the fix.
+            _git(["rebase", "--abort"], workdir)
+            return {"ok": False,
+                    "detail": f"push failed (rebase conflict on {head}): {last[:300]}"}
+        time.sleep(0.1 * (i + 1))
+    return {"ok": False, "detail": f"push failed after {attempts} attempts: {last[:300]}"}
+
+
+def _post_apply_comment(repo, pr, token, report):
+    """Surface the fix-apply outcome on the PR so failures are visible (never silent)."""
+    if not repo or not pr:
+        return
+    lines = [f"AI fix phase: applied={report.get('applied', 0)}, pushed={report.get('pushed', False)}."]
+    if report.get("diag"):
+        lines.append(f"Diag: {report['diag']}")
+    if report.get("push_error"):
+        lines.append(f"Push error: {report['push_error']}")
+    if report.get("error"):
+        lines.append(f"Error: {report['error']}")
+    skipped = report.get("skipped") or []
+    if skipped:
+        lines.append("Skipped fixes:")
+        for s in skipped[:10]:
+            lines.append(f"- {s.get('cluster_id')}: {s.get('reason')}")
+    body = "\n".join(lines)
+    env = dict(os.environ)
+    if token:
+        env["GH_TOKEN"] = token
+    subprocess.run(["gh", "api", f"repos/{repo}/issues/{pr}/comments", "-f", f"body={body}"],
+                   text=True, capture_output=True, env=env)
+
+
+def _close_issues(repo, targets, token):
+    env = dict(os.environ); env["GH_TOKEN"] = token
+    for t in targets:
+        label = t["label"]
+        target_title = t["title"]
+        # Reconstruct the full issue title as publish-review opens it:
+        # "[ai-review][<dim>] <finding-title>"
+        dim = label.split(":", 1)[1] if ":" in label else label
+        expected_title = f"[ai-review][{dim}] {target_title}"
+        listing = subprocess.run(
+            ["gh", "issue", "list", "--repo", repo, "--label", label,
+             "--state", "open", "--json", "number,title"],
+            text=True, capture_output=True, env=env)
+        try:
+            items = json.loads(listing.stdout or "[]")
+        except ValueError:
+            items = []
+        for it in items:
+            if (it.get("title") or "").strip() == expected_title.strip():
+                subprocess.run(["gh", "issue", "close", str(it["number"]), "--repo", repo,
+                                "--comment", "Resolved by the AI fix phase (committed to the PR)."],
+                               text=True, capture_output=True, env=env)
+
+
+def _write_apply(report):
+    out = os.environ.get("APPLY_OUT")
+    if not out:
+        return
+    try:
+        with open(out, "w") as fh:
+            json.dump(report, fh)
+    except OSError:
+        pass
+
+
+def main():
+    evidence = _load_json(sys.argv[1] if len(sys.argv) > 1 else "")
+    triage = _triage_input()
+    report = _classify(evidence, triage)
+    _write_fix(report)
+    payload = {
+        "event": "COMMENT",
+        "body": _fix_review_body(evidence),
+        "comments": [],
+        "commit_id": os.environ.get("HEAD_SHA") or os.environ.get("PR_HEAD_SHA", ""),
+    }
+    _post_review(payload)
+    apply_report = _apply_commit_close(evidence)
+    sys.stderr.write("[conclude-fix] APPLY_REPORT " + json.dumps(apply_report) + "\n")
+    # A fix that was applied but whose push did NOT land must red this step.
+    # push_error is set only when a fix was committed but the push failed; a clean
+    # push, a no-op (nothing to fix), or a local dry-run exits 0.
+    push_failed = bool(apply_report.get("push_error"))
+    print(f"Fix diffs: clusters_fixed={len(report['applied'])}, "
+          f"skipped={len(report['skipped'])}, dropped={len(report['dropped'])}, "
+          f"unknown={len(report['unknown']['fixes']) + len(report['unknown']['skipped'])}."
+          f" files_patched={apply_report['applied']}, pushed={apply_report['pushed']}"
+          f"{('; push_error=' + apply_report['push_error']) if apply_report.get('push_error') else ''}"
+          f"{('; error=' + apply_report['error']) if apply_report.get('error') else ''}.")
+    sys.exit(1 if push_failed else 0)
+
+
+if __name__ == "__main__":
+    main()

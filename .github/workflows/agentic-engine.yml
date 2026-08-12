@@ -39,6 +39,10 @@ jobs:
       github.event_name == 'pull_request' ||
       github.event_name == 'issue_comment'
     runs-on: ubuntu-latest
+    # Belt-and-braces bound: engine hooks/checks have their own
+    # subprocess timeout (lib.hook_timeout_seconds), but a job-level
+    # cap stops anything else from riding to GitHub's 6h ceiling.
+    timeout-minutes: 30
     permissions:
       contents: read
       issues: write
@@ -116,7 +120,7 @@ jobs:
             pull_request)
               PR="${{ github.event.pull_request.number }}"
               INSTANCE="pr-$PR"
-              CMD=$(python3 .github/agent-factory/engine/lib.py match-trigger "$PROTO" pull_request "$PR_EVENT_ACTION" "") ;;
+              CMD=$(python3 .github/agent-factory/engine/driver.py derive-command "$PROTO" pull_request "$PR_EVENT_ACTION" "") ;;
             issue_comment)
               N="${{ github.event.issue.number }}"
               IS_PR="${{ github.event.issue.pull_request != null }}"
@@ -129,7 +133,7 @@ jobs:
                 PR="$N"; INSTANCE="issue-$N"
                 CHECKOUT_REF="${{ github.event.repository.default_branch }}"
               fi
-              CMD=$(python3 .github/agent-factory/engine/lib.py match-trigger "$PROTO" issue_comment "" "$COMMENT_BODY" "$IS_PR")
+              CMD=$(python3 .github/agent-factory/engine/driver.py derive-command "$PROTO" issue_comment "" "$COMMENT_BODY" "$IS_PR")
               if [ "$CMD" = "override" ]; then
                 # Authorize from TRUSTED fields only (login from the event, repo
                 # permission from the API) — never from the comment body. The body
@@ -148,25 +152,25 @@ jobs:
                   CMD=""   # not authorized → the engine no-ops (plan/dispatch skip on empty command)
                 fi
               fi
-              if [ "$CMD" = "resolve-gate" ]; then
+              if [ "$CMD" = "resolve-human-task" ]; then
                 # Decision derived from the matched prefix (mutually exclusive; no
                 # prefix is a prefix of another). Identity from TRUSTED event fields.
                 case "$COMMENT_BODY" in
-                  /approve*)         GATE_DECISION=approve;         PREFIX=/approve ;;
-                  /request-changes*) GATE_DECISION=request-changes; PREFIX=/request-changes ;;
-                  /reject*)          GATE_DECISION=reject;          PREFIX=/reject ;;
-                  *)                 GATE_DECISION="";              PREFIX="" ;;
+                  /approve*)         HUMAN_TASK_DECISION=approve;         PREFIX=/approve ;;
+                  /request-changes*) HUMAN_TASK_DECISION=request-changes; PREFIX=/request-changes ;;
+                  /reject*)          HUMAN_TASK_DECISION=reject;          PREFIX=/reject ;;
+                  *)                 HUMAN_TASK_DECISION="";              PREFIX="" ;;
                 esac
                 PERM=$(gh api "repos/${{ github.repository }}/collaborators/$COMMENTER_LOGIN/permission" \
                   --jq '.permission' 2>/dev/null || echo none)
                 if [ "$PERM" = "write" ] || [ "$PERM" = "admin" ]; then
                   REASON="${COMMENT_BODY#$PREFIX}"   # strip the matched prefix
                   REASON="${REASON# }"               # strip one leading space
-                  echo "gate_decision=$GATE_DECISION" >> "$GITHUB_OUTPUT"
-                  echo "gate_actor=$COMMENTER_LOGIN" >> "$GITHUB_OUTPUT"
-                  echo "gate_pr_author=${{ github.event.issue.user.login }}" >> "$GITHUB_OUTPUT"
+                  echo "human_task_decision=$HUMAN_TASK_DECISION" >> "$GITHUB_OUTPUT"
+                  echo "human_task_actor=$COMMENTER_LOGIN" >> "$GITHUB_OUTPUT"
+                  echo "human_task_pr_author=${{ github.event.issue.user.login }}" >> "$GITHUB_OUTPUT"
                   DELIM="gate_$(openssl rand -hex 16)"
-                  { echo "gate_reason<<$DELIM"; printf '%s\n' "$REASON"; echo "$DELIM"; } >> "$GITHUB_OUTPUT"
+                  { echo "human_task_reason<<$DELIM"; printf '%s\n' "$REASON"; echo "$DELIM"; } >> "$GITHUB_OUTPUT"
                 else
                   gh api "repos/${{ github.repository }}/issues/$PR/comments" \
                     -f "body=@$COMMENTER_LOGIN resolving this gate requires write access to this repository." >/dev/null 2>&1 || true
@@ -175,7 +179,7 @@ jobs:
               fi
               if [ "$CMD" = "answer" ]; then
                 # /answer drives the pipeline forward (gate → next sub-state), so
-                # require write access (same posture as resolve-gate). Body is
+                # require write access (same posture as resolve-human-task). Body is
                 # untrusted and passed to next.py via env, never interpolated.
                 PERM=$(gh api "repos/${{ github.repository }}/collaborators/$COMMENTER_LOGIN/permission" \
                   --jq '.permission' 2>/dev/null || echo none)
@@ -271,16 +275,19 @@ jobs:
           NODE_PATH: ${{ steps.ctx.outputs.node_path }}
           OVERRIDE_ACTOR: ${{ steps.ctx.outputs.override_actor }}
           OVERRIDE_REASON: ${{ steps.ctx.outputs.override_reason }}
-          GATE_DECISION: ${{ steps.ctx.outputs.gate_decision }}
-          GATE_ACTOR: ${{ steps.ctx.outputs.gate_actor }}
-          GATE_REASON: ${{ steps.ctx.outputs.gate_reason }}
-          GATE_PR_AUTHOR: ${{ steps.ctx.outputs.gate_pr_author }}
+          HUMAN_TASK_DECISION: ${{ steps.ctx.outputs.human_task_decision }}
+          HUMAN_TASK_ACTOR: ${{ steps.ctx.outputs.human_task_actor }}
+          HUMAN_TASK_REASON: ${{ steps.ctx.outputs.human_task_reason }}
+          HUMAN_TASK_PR_AUTHOR: ${{ steps.ctx.outputs.human_task_pr_author }}
           ANSWER_BODY: ${{ steps.ctx.outputs.answer_body }}
           ANSWER_ACTOR: ${{ steps.ctx.outputs.answer_actor }}
         run: |
-          # next.py reads NODE_PATH from env (the dot-joined tree path of the leg
-          # being continued). Empty NODE_PATH → a fresh start (start/reset command).
-          .github/agent-factory/engine/next.py /tmp/state "${{ steps.ctx.outputs.instance }}" \
+          # driver.py is the one call path to the engine CLIs, shared with the
+          # local conductor (see engine/driver.py). It passes NODE_PATH through
+          # to next.py from this step's env — the dot-joined tree path of the leg
+          # being continued. Empty NODE_PATH → a fresh start (start/reset command).
+          python3 .github/agent-factory/engine/driver.py plan \
+            /tmp/state "${{ steps.ctx.outputs.instance }}" \
             "$PROTO" "${{ steps.ctx.outputs.command }}" "$HEAD_SHA" > /tmp/action.json
           cat /tmp/action.json
           ACTION=$(jq -r .action /tmp/action.json)
@@ -288,13 +295,17 @@ jobs:
           echo "iteration=$(jq -r .iteration /tmp/action.json)" >> "$GITHUB_OUTPUT"
           { echo "feedback<<GH_EOF"; jq -r .feedback /tmp/action.json; echo "GH_EOF"; } >> "$GITHUB_OUTPUT"
           # Legs (matrix axis — NODE_PATH coordinate, replaces legacy branch/substate):
-          #   run-fanout  → legs[] from action (each carries {path, workflow})
-          #   run-agent   → one-element [{path, workflow}] from the action
+          #   run-fork  → legs[] from action (each carries {path, workflow, lane})
+          #   run-agent   → one-element [{path, workflow, lane}] from the action
           #   halt/other  → []  (downstream jobs skip)
-          if [ "$ACTION" = "run-fanout" ]; then
-            LEGS=$(jq -c '.legs' /tmp/action.json)
+          # `lane` ("agent" | "code", Task 6) is EMITTED by next.py, not re-derived
+          # here — the planner already loaded the protocol and knows the kind;
+          # defaulting a missing lane to "agent" keeps pre-7.0.0 action JSON (no
+          # `lane` key) dispatching exactly as it always has.
+          if [ "$ACTION" = "run-fork" ]; then
+            LEGS=$(jq -c '[.legs[] | . + {lane: (.lane // "agent")}]' /tmp/action.json)
           elif [ "$ACTION" = "run-agent" ]; then
-            LEGS=$(jq -c '[{path: .path, workflow: .workflow}]' /tmp/action.json)
+            LEGS=$(jq -c '[{path: .path, workflow: .workflow, lane: (.lane // "agent")}]' /tmp/action.json)
           else
             LEGS='[]'
           fi
@@ -349,7 +360,7 @@ jobs:
         # ensure-status-comment is a no-op for a single-agent protocol.
         # Skipped for ref-targeted runs (no PR): status lives in the visibility API.
         if: >
-          (steps.plan.outputs.action == 'run-fanout' || steps.plan.outputs.action == 'run-agent')
+          (steps.plan.outputs.action == 'run-fork' || steps.plan.outputs.action == 'run-agent')
           && steps.ctx.outputs.pr != ''
         env:
           STATE_REMOTE: https://x-access-token:${{ secrets.POC_DISPATCH_TOKEN }}@github.com/${{ github.repository }}.git
@@ -367,6 +378,10 @@ jobs:
     needs: plan
     if: ${{ needs.plan.outputs.legs != '[]' && needs.plan.outputs.legs != '' }}
     runs-on: ubuntu-latest
+    # Belt-and-braces bound: engine hooks/checks have their own
+    # subprocess timeout (lib.hook_timeout_seconds), but a job-level
+    # cap stops anything else from riding to GitHub's 6h ceiling.
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
@@ -384,6 +399,7 @@ jobs:
           PROTO: ${{ inputs.protocol }}
           NODE_PATH: ${{ matrix.leg.path }}
           LEG_WORKFLOW: ${{ matrix.leg.workflow }}
+          LEG_LANE: ${{ matrix.leg.lane }}
           INPUTS_JSON: ${{ needs.plan.outputs.inputs_json }}
           LEG_INPUTS: ${{ toJSON(matrix.leg.inputs) }}
           CHECKOUT_REF: ${{ needs.plan.outputs.checkout_ref }}
@@ -394,7 +410,7 @@ jobs:
           LEGTOK=$(printf '%s' "$NODE_PATH" | tr '.' '-')
           [ -n "$LEGTOK" ] || LEGTOK="agent"
           CID="${{ github.run_id }}-${{ github.run_attempt }}-${LEGTOK}"
-          # Prefer this leg's per-leg runtime item (dynamic fanout); fall back to the
+          # Prefer this leg's per-leg runtime item (dynamic fork); fall back to the
           # shared declared-inputs blob (static). LEG_INPUTS is 'null' when absent.
           if [ -n "$LEG_INPUTS" ] && [ "$LEG_INPUTS" != "null" ]; then
             INPUTS="$LEG_INPUTS"
@@ -406,19 +422,40 @@ jobs:
           # START requested); fall back to the resolved SHA for ref-target CONTINUE
           # hops, where the dispatch carries no ref (the SHA is pinned in state).
           REF="${CHECKOUT_REF:-$SHA}"
-          CTX=$(jq -nc \
-            --arg pr "$PR" --arg iteration "$ITERATION" --arg feedback "$FEEDBACK" \
-            --argjson sabotage "$SABOTAGE" --arg cid "$CID" \
-            --argjson inputs "$INPUTS" --arg ref "$REF" --arg sha "$SHA" \
-            '{pr: $pr, iteration: $iteration, feedback: $feedback, sabotage: $sabotage, cid: $cid, inputs: $inputs, ref: $ref, sha: $sha}')
           # Workflow comes from the matrix leg (next.py emits it in legs[]); read
           # via env var (never interpolated) to keep the security invariant.
           NAME="$LEG_WORKFLOW"
           [ -n "$NAME" ] || { echo "no agent workflow in matrix leg for NODE_PATH='$NODE_PATH'" >&2; exit 1; }
-          WF="$NAME.lock.yml"
           mkdir -p /tmp/meta
           T0=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          gh workflow run "$WF" --repo "$REPO" -f aw_context="$CTX"
+          # Two lanes (Task 6), sharing everything from here down (the cid poll
+          # loop, match_run_by_cid, `gh run watch`, the runmeta artifact) — that
+          # sharing is the entire point of routing dispatched code through the
+          # agent lane. `LEG_LANE` is emitted by next.py, never re-derived here.
+          #
+          #   agent: <name>.lock.yml, gh-aw's compiler-generated `aw_context` input
+          #          (8 fields — pr/iteration/feedback/sabotage/cid/inputs/ref/sha).
+          #   code:  <name>.yml, a hand-written `protocol_context` input (6 fields
+          #          — cid/pr/ref/sha/inputs/iteration). `feedback`/`sabotage` are
+          #          DROPPED: a re-dispatched script cannot consume feedback (bare
+          #          retry, no feedback loop), and sabotage is LLM test scaffolding,
+          #          meaningless for a deterministic step.
+          if [ "$LEG_LANE" = "code" ]; then
+            WF="$NAME.yml"
+            PCTX=$(jq -nc \
+              --arg cid "$CID" --arg pr "$PR" --arg ref "$REF" --arg sha "$SHA" \
+              --argjson inputs "$INPUTS" --arg iteration "$ITERATION" \
+              '{cid: $cid, pr: $pr, ref: $ref, sha: $sha, inputs: $inputs, iteration: $iteration}')
+            gh workflow run "$WF" --repo "$REPO" -f protocol_context="$PCTX"
+          else
+            WF="$NAME.lock.yml"
+            CTX=$(jq -nc \
+              --arg pr "$PR" --arg iteration "$ITERATION" --arg feedback "$FEEDBACK" \
+              --argjson sabotage "$SABOTAGE" --arg cid "$CID" \
+              --argjson inputs "$INPUTS" --arg ref "$REF" --arg sha "$SHA" \
+              '{pr: $pr, iteration: $iteration, feedback: $feedback, sabotage: $sabotage, cid: $cid, inputs: $inputs, ref: $ref, sha: $sha}')
+            gh workflow run "$WF" --repo "$REPO" -f aw_context="$CTX"
+          fi
           RID=""
           for i in $(seq 1 24); do
             sleep 5
@@ -445,6 +482,10 @@ jobs:
     needs: [plan, dispatch]
     if: always() && needs.plan.outputs.legs != '[]' && needs.plan.outputs.legs != '' && needs.dispatch.result != 'skipped'
     runs-on: ubuntu-latest
+    # Belt-and-braces bound: engine hooks/checks have their own
+    # subprocess timeout (lib.hook_timeout_seconds), but a job-level
+    # cap stops anything else from riding to GitHub's 6h ceiling.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -476,28 +517,6 @@ jobs:
             gh run download "${{ steps.meta.outputs.rid }}" \
               --repo "${{ github.repository }}" -n evidence -D /tmp/agent || echo "no evidence artifact"
           fi
-      - name: Download and normalize agent trajectory
-        env:
-          RID: ${{ steps.meta.outputs.rid }}
-          SOURCE_RUNTIME: codex   # the agent locks in this pipeline are codex; Claude nodes set this per-leg later
-        run: |
-          set -uo pipefail
-          mkdir -p /tmp/agentdl
-          if [ -n "${RID:-}" ] && gh run download "$RID" \
-               --repo "${{ github.repository }}" -n agent -D /tmp/agentdl; then
-            STDIO=$(find /tmp/agentdl -name agent-stdio.log 2>/dev/null | head -1)
-            if python3 .github/agent-factory/engine/actions.py "${STDIO:-/dev/null}" "$SOURCE_RUNTIME" \
-                 > /tmp/trajectory.json 2>/tmp/actions.err; then
-              :
-            else
-              echo "::warning::trajectory normalize failed for run ${RID:-<none>}"
-              cat /tmp/actions.err || true
-              echo '{"error":"trajectory-unavailable"}' > /tmp/trajectory.json
-            fi
-          else
-            echo '{"error":"trajectory-unavailable"}' > /tmp/trajectory.json
-          fi
-          echo "TRAJECTORY_PATH=/tmp/trajectory.json" >> "$GITHUB_ENV"
       - name: Fetch independent ground truth
         env:
           PR: ${{ needs.plan.outputs.pr }}
@@ -547,8 +566,24 @@ jobs:
           PR_BODY="$(gh pr view "${{ needs.plan.outputs.pr }}" --repo "${{ github.repository }}" --json body --jq '.body' 2>/dev/null || true)"
           PR_TITLE="$(gh pr view "${{ needs.plan.outputs.pr }}" --repo "${{ github.repository }}" --json title --jq '.title' 2>/dev/null || true)"
           export PR_BODY PR_TITLE
-          VERDICTS=$(.github/agent-factory/engine/run-checks.py \
+          VERDICTS=$(python3 .github/agent-factory/engine/driver.py run-checks \
             "$PROTO" "$NODE" "$EV" /tmp/diff.txt /tmp/files.txt)
+          # A failed dispatch (agent OR dispatched code) gets a synthetic
+          # failure verdict prepended, mirroring the checks-job-absent
+          # precedent below (see the join/advance step further down). This
+          # is FAILURE-ONLY: `pass` means a check settled a claim against
+          # ground truth, and nothing did here — a job's exit status is the
+          # process axis, not a claim. There is no `pass: true` counterpart.
+          # Severity is "iterate" (not "block") so a transient failure
+          # (npm/pip install, a flaky `gh api` call) consumes a retry;
+          # `max_iterations: 1` is how an author expresses "do not retry".
+          # $OK comes from env (steps.meta.outputs.ok), never interpolated
+          # into this run: block.
+          if [ "$OK" = "false" ]; then
+            VERDICTS=$(jq \
+              '.results = [{"check":"dispatched-run","pass":false,"on_fail":"iterate","feedback":"dispatched run failed"}] + .results' \
+              <<<"$VERDICTS")
+          fi
           jq . <<<"$VERDICTS"
           mkdir -p /tmp/verdicts
           printf '%s' "$VERDICTS" > /tmp/verdicts/verdicts.json
@@ -563,6 +598,10 @@ jobs:
     needs: [plan, dispatch, checks]
     if: always() && needs.plan.outputs.legs != '[]' && needs.plan.outputs.legs != '' && needs.dispatch.result != 'skipped' && (needs.checks.result == 'success' || needs.checks.result == 'failure')
     runs-on: ubuntu-latest
+    # Belt-and-braces bound: engine hooks/checks have their own
+    # subprocess timeout (lib.hook_timeout_seconds), but a job-level
+    # cap stops anything else from riding to GitHub's 6h ceiling.
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -625,5 +664,6 @@ jobs:
           fi
           printf '%s' "$VERDICTS" > /tmp/verdicts.json
           jq . /tmp/verdicts.json
-          .github/agent-factory/engine/advance.py /tmp/state "${{ needs.plan.outputs.instance }}" \
+          python3 .github/agent-factory/engine/driver.py advance \
+            /tmp/state "${{ needs.plan.outputs.instance }}" \
             "$PROTO" /tmp/verdicts.json /tmp/agent/evidence.json

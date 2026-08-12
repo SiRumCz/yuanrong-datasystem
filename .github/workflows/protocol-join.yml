@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 # Serialize all join evaluations for one (instance, path) pair so nested joins at different
-# fanout paths don't serialize against each other or the top join.
+# fork paths don't serialize against each other or the top join.
 concurrency:
   group: join-${{ github.event.client_payload.instance }}-${{ github.event.client_payload.path }}
   cancel-in-progress: false
@@ -73,4 +73,4 @@ jobs:
           INSTANCE: ${{ github.event.client_payload.instance }}
         run: |
           PROTO=".github/agent-factory/protocols/$DISPATCH_PROTOCOL/protocol.json"
-          .github/agent-factory/engine/join.py /tmp/state "$INSTANCE" "$PROTO"
+          python3 .github/agent-factory/engine/driver.py join /tmp/state "$INSTANCE" "$PROTO"

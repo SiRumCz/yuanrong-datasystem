@@ -49,16 +49,9 @@ class AgentProvider:
 class ProgrammableProvider(AgentProvider):
     """Evidence supplied directly by a scenario. `by_path` maps a node path to
     either one evidence dict (same every iteration) or a list of per-iteration
-    dicts (1-based). Unlisted paths get {} (empty evidence).
-
-    `trajectory_by_path` optionally maps a node path to that node's trajectory
-    (a list of normalized action records) — the offline analogue of the
-    `agent-stdio.log` trajectory a live run captures. A path with no entry
-    yields None (trajectory unavailable), which `claims-attested` treats as
-    unverified rather than as an empty-but-present trajectory."""
-    def __init__(self, by_path, trajectory_by_path=None):
+    dicts (1-based). Unlisted paths get {} (empty evidence)."""
+    def __init__(self, by_path):
         self.by_path = by_path
-        self.trajectory_by_path = trajectory_by_path or {}
 
     def provide(self, node_path, iteration):
         spec = self.by_path.get(node_path)
@@ -67,10 +60,6 @@ class ProgrammableProvider(AgentProvider):
         if isinstance(spec, list):
             return spec[min(iteration - 1, len(spec) - 1)]
         return spec
-
-    def trajectory(self, node_path):
-        """Records for this node, or None if the scenario declared none."""
-        return self.trajectory_by_path.get(node_path)
 
 
 class RecordingProvider(AgentProvider):
@@ -132,22 +121,10 @@ def _run_leg(proto, instance, provider, env, workdir, path, iteration, counter, 
     ev = os.path.join(workdir, f"ev-{counter}.json")
     with open(ev, "w") as fh:
         json.dump(evidence, fh)
-    # Optional per-node trajectory (the offline analogue of the live
-    # agent-stdio.log a claims-attested check attests claims against).
-    # Providers without a `trajectory` method (RecordingProvider,
-    # RecordedProvider, …) are unaffected — this stays inert unless the
-    # provider actually declares one for this path.
-    leg_env = env
-    traj = getattr(provider, "trajectory", lambda _p: None)(path)
-    if traj is not None:
-        traj_file = os.path.join(workdir, f"traj-{counter}.json")
-        with open(traj_file, "w") as fh:
-            json.dump(traj, fh)
-        leg_env = {**env, "TRAJECTORY_PATH": traj_file}
     verdicts = driver.run_checks(proto, path or "root", ev,
                                  os.path.join(workdir, "diff.txt"),
                                  os.path.join(workdir, "files.txt"),
-                                 node_path=path, env=leg_env)
+                                 node_path=path, env=env)
     if trace is not None:
         trace.append({"path": path, "iteration": iteration, "verdicts": verdicts,
                       "kind": "leg"})
@@ -159,39 +136,39 @@ def _run_leg(proto, instance, provider, env, workdir, path, iteration, counter, 
     return parse_dispatches(stderr)
 
 
-def _resolve_open_gate(protocol_path, proto_dict, instance, gate_path,
-                       gate_resolver, answer_resolver, env, workdir, counter):
-    """Route an open gate at `gate_path` (a full dotted node path) to the answer
-    flow (a data/question gate, `questions_from` set) or the approval flow
-    (resolve_gate, unchanged); return the parsed follow-on dispatches."""
-    gate_node = paths.node_at_path(proto_dict, gate_path.split(".")) or {}
+def _resolve_open_human_task(protocol_path, proto_dict, instance, human_task_path,
+                       human_task_resolver, answer_resolver, env, workdir, counter):
+    """Route an open human task at `human_task_path` (a full dotted node path) to the answer
+    flow (a `question` node, `questions_from` set) or the approval flow
+    (resolve_human_task, unchanged); return the parsed follow-on dispatches."""
+    human_task_node = paths.node_at_path(proto_dict, human_task_path.split(".")) or {}
     counter[0] += 1
-    with _scratch(workdir, f"gate-{counter[0]}") as gate:
-        if gate_node.get("questions_from"):
-            # A data/question gate: next.py's `answer` command is path-aware on
-            # its own (do_answer's _find_open_gate recursively scans the live
+    with _scratch(workdir, f"human-task-{counter[0]}") as human_task_dir:
+        if human_task_node.get("questions_from"):
+            # A `question` node: next.py's `answer` command is path-aware on
+            # its own (do_answer's _find_open_human_task recursively scans the live
             # cursors) — no NODE_PATH needed, root or nested alike.
-            stderr = driver.answer_gate(
-                gate, instance, protocol_path,
-                answer_resolver.answers(gate_path), env=env)
+            stderr = driver.answer_human_task(
+                human_task_dir, instance, protocol_path,
+                answer_resolver.answers(human_task_path), env=env)
         else:
-            # An approval gate: next.py's resolve-gate is ROOT-cursor-only today,
-            # so this arm only resolves a top-level approval gate.
-            stderr = driver.resolve_gate(
-                gate, instance, protocol_path,
-                gate_resolver.resolve(gate_path), env=env)
+            # An `approval` node: next.py's resolve-human-task is ROOT-cursor-only today,
+            # so this arm only resolves a top-level approval node.
+            stderr = driver.resolve_human_task(
+                human_task_dir, instance, protocol_path,
+                human_task_resolver.resolve(human_task_path), env=env)
     return parse_dispatches(stderr)
 
 
-def _detect_silently_opened_gate(proto_dict, workdir, env, pid, instance, leg_path, tag):
-    """A sub-pipeline leg step whose next sibling is a gate is opened DIRECTLY by
-    advance.py's nested-branch arm (lib.open_gate, no dispatch event — there is
+def _detect_silently_opened_human_task(proto_dict, workdir, env, pid, instance, leg_path, tag):
+    """A sub-pipeline leg step whose next sibling is a human task is opened DIRECTLY by
+    advance.py's nested-branch arm (lib.open_human_task, no dispatch event — there is
     nothing further to auto-drive until a human/answer resolves it). The
     conductor's dispatch-router loop has nothing to route on in that case, so
     detect the side effect by reading state instead: if leg_path's parent-
-    sequence cursor now points its sub_state at a gate whose gates.state is
-    'open', return that gate's full dotted node path; else None. (Only a
-    depth>=2 sub-pipeline leg can have a directly-opened gate this way — a
+    sequence cursor now points its sub_state at a human task whose human_task.state is
+    'open', return that human task's full dotted node path; else None. (Only a
+    depth>=2 sub-pipeline leg can have a directly-opened human task this way — a
     root-level agent phase always dispatches a path-continue event.)"""
     segs = leg_path.split(".") if leg_path else []
     if len(segs) < 2:
@@ -208,16 +185,16 @@ def _detect_silently_opened_gate(proto_dict, workdir, env, pid, instance, leg_pa
         sub = cur.get("sub_state", "")
         if not sub:
             return None
-        gate_path = parent + [sub]
-        if paths.node_kind(proto_dict, gate_path) != "gate":
+        human_task_path = parent + [sub]
+        if not paths.is_human_task(paths.node_kind(proto_dict, human_task_path)):
             return None
-        gf = lib.state_file(d, pid, instance, path=lib.state_path(proto_dict, gate_path))
+        gf = lib.state_file(d, pid, instance, path=lib.state_path(proto_dict, human_task_path))
         if not os.path.isfile(gf):
             return None
         with open(gf) as fh:
             gdata = yaml.safe_load(fh) or {}
-        if gdata.get("gates", {}).get("state") == "open":
-            return ".".join(gate_path)
+        if gdata.get("human_task", {}).get("state") == "open":
+            return ".".join(human_task_path)
         return None
 
 
@@ -226,7 +203,7 @@ def _plan_capturing(state_dir, instance, protocol_path, command, head_sha, node_
 
     driver.plan returns only the parsed stdout action. But a MERGE node planned
     with `continue` fires its follow-on dispatch (a NESTED merge → protocol-join
-    for the enclosing fanout; a TOP merge with `.next` → protocol-continue) via
+    for the enclosing fork; a TOP merge with `.next` → protocol-continue) via
     _gh_dispatch, which under ENGINE_LOCAL goes to STDERR — exactly like advance.py
     and join.py. The conductor already routes advance/join stderr; this captures
     the same stream for a plan step so a merge reached by `continue` doesn't stall
@@ -246,7 +223,7 @@ def _plan_capturing(state_dir, instance, protocol_path, command, head_sha, node_
 
 
 def run(protocol_path, instance, provider, env, head_sha="sha",
-        command="start", pid=None, workdir=None, max_steps=200, gate_resolver=None,
+        command="start", pid=None, workdir=None, max_steps=200, human_task_resolver=None,
         diff="", changed_files=None, answer_resolver=None, return_trace=False,
         record_dir=None):
     """Walk a protocol to terminal in mock mode; return the final _instance.yaml dict.
@@ -269,16 +246,15 @@ def run(protocol_path, instance, provider, env, head_sha="sha",
     provider — SmokeProvider records real-agent evidence; a mock provider pins
     a regression fixture.
     """
-    with open(protocol_path) as fh:
-        proto_dict = json.load(fh)
+    proto_dict = lib.load_protocol(protocol_path)
     if pid is None:
         pid = proto_dict["name"]
     if workdir is None:
         raise ValueError("workdir is required (a scratch dir for checkouts/evidence)")
     if record_dir is not None:
         provider = RecordingProvider(provider, os.path.join(record_dir, pid, instance))
-    if gate_resolver is None:
-        gate_resolver = ApproveGateResolver()
+    if human_task_resolver is None:
+        human_task_resolver = ApproveHumanTaskResolver()
     if answer_resolver is None:
         answer_resolver = ProgrammableAnswerResolver({})
     with open(os.path.join(workdir, "diff.txt"), "w") as fh:
@@ -305,20 +281,34 @@ def run(protocol_path, instance, provider, env, head_sha="sha",
                 action, plan_dispatches = _plan_capturing(
                     pd, instance, protocol_path, cmd, head_sha, path, env)
             a = action.get("action")
+            # Dispatches the PLAN step itself emitted, which `legs` does NOT
+            # cover. A CODE-FIRST fork leg is partitioned out of `legs[]` at fork
+            # entry and dispatched by `lib.dispatch_continue` instead (C1 / Task
+            # 8), which under ENGINE_LOCAL lands on this step's stderr. The
+            # run-fork arm used to consume `legs` and drop the rest, so such a
+            # leg's hook never ran and its barrier never fired — the repo's own
+            # offline authoring surface could not walk a shape the engine
+            # supports. Deduped against `legs` by node path, so an entry
+            # appearing in both is never run twice.
+            extra = []
+            if a == "run-fork":
+                leg_paths = {l.get("path", "") for l in action.get("legs", [])}
+                extra = [d for d in plan_dispatches
+                         if d["fields"].get("path", "") not in leg_paths]
             if a == "run-agent":
                 legs = [{"path": action.get("path", ""), "workflow": action.get("workflow")}]
-            elif a == "run-fanout":
+            elif a == "run-fork":
                 legs = action.get("legs", [])
-            elif a == "noop" and action.get("reason", "").startswith("gate-open:"):
-                # gate_path is the full node path the conductor planned with (a
-                # root-level gate's reason carries just its id, which IS the
-                # whole path at depth 1; a nested gate's reason carries the full
-                # dotted NODE_PATH — see next.py's gate-open emit sites).
-                gate_path = action["reason"].split(":", 1)[1]
+            elif a == "noop" and action.get("reason", "").startswith("human-task-open:"):
+                # human_task_path is the full node path the conductor planned with (a
+                # root-level human task's reason carries just its id, which IS the
+                # whole path at depth 1; a nested human task's reason carries the full
+                # dotted NODE_PATH — see next.py's human-task-open emit sites).
+                human_task_path = action["reason"].split(":", 1)[1]
                 queue += [(d["event_type"], d["fields"].get("path", ""))
-                          for d in _resolve_open_gate(
-                              protocol_path, proto_dict, instance, gate_path,
-                              gate_resolver, answer_resolver, env, workdir, counter)]
+                          for d in _resolve_open_human_task(
+                              protocol_path, proto_dict, instance, human_task_path,
+                              human_task_resolver, answer_resolver, env, workdir, counter)]
                 continue
             else:
                 # terminal/halt/no-op for the leg itself — but a MERGE node
@@ -335,19 +325,20 @@ def run(protocol_path, instance, provider, env, head_sha="sha",
                 dispatches = _run_leg(protocol_path, instance, provider, env, workdir,
                                       lp, iters[lp], counter[0], trace=trace)
                 if not dispatches:
-                    # A sub-pipeline leg step that lands directly on a gate is
+                    # A sub-pipeline leg step that lands directly on a human task is
                     # opened in-place by advance.py with no dispatch event — see
-                    # _detect_silently_opened_gate. Resolve it here so the walk
+                    # _detect_silently_opened_human_task. Resolve it here so the walk
                     # keeps going instead of silently stalling.
                     counter[0] += 1
-                    gp = _detect_silently_opened_gate(
+                    gp = _detect_silently_opened_human_task(
                         proto_dict, workdir, env, pid, instance, lp, counter[0])
                     if gp:
-                        dispatches = _resolve_open_gate(
+                        dispatches = _resolve_open_human_task(
                             protocol_path, proto_dict, instance, gp,
-                            gate_resolver, answer_resolver, env, workdir, counter)
+                            human_task_resolver, answer_resolver, env, workdir, counter)
                 queue += [(d["event_type"], d["fields"].get("path", ""))
                           for d in dispatches]
+            queue += [(d["event_type"], d["fields"].get("path", "")) for d in extra]
         elif kind == "protocol-continue":
             (path,) = rest
             queue.append(("plan", "continue", path))
@@ -365,52 +356,52 @@ def run(protocol_path, instance, provider, env, head_sha="sha",
     return inst
 
 
-class GateResolver:
-    """Supplies a human gate's decision in mock mode, as resolve-gate env."""
-    def resolve(self, gate_path):
+class HumanTaskResolver:
+    """Supplies a human task's decision in mock mode, as resolve-human-task env."""
+    def resolve(self, human_task_path):
         raise NotImplementedError
 
 
-def _gate_env(decision):
-    return {"GATE_DECISION": decision, "GATE_ACTOR": "reviewer",
-            "GATE_REASON": "", "GATE_PR_AUTHOR": "author"}
+def _human_task_env(decision):
+    return {"HUMAN_TASK_DECISION": decision, "HUMAN_TASK_ACTOR": "reviewer",
+            "HUMAN_TASK_REASON": "", "HUMAN_TASK_PR_AUTHOR": "author"}
 
 
-class ApproveGateResolver(GateResolver):
-    """Approves every gate (default). Actor != author so approve_excludes_author passes."""
-    def resolve(self, gate_path):
-        env = _gate_env("approve")
-        env["GATE_REASON"] = "lgtm"
+class ApproveHumanTaskResolver(HumanTaskResolver):
+    """Approves every human task (default). Actor != author so approve_excludes_author passes."""
+    def resolve(self, human_task_path):
+        env = _human_task_env("approve")
+        env["HUMAN_TASK_REASON"] = "lgtm"
         return env
 
 
-class ProgrammableGateResolver(GateResolver):
-    """Per-gate decisions. by_path maps gate_path -> 'approve'|'reject'|'request-changes'."""
+class ProgrammableHumanTaskResolver(HumanTaskResolver):
+    """Per-human-task decisions. by_path maps human_task_path -> 'approve'|'reject'|'request-changes'."""
     def __init__(self, by_path, default="approve"):
         self.by_path = by_path
         self.default = default
 
-    def resolve(self, gate_path):
-        return _gate_env(self.by_path.get(gate_path, self.default))
+    def resolve(self, human_task_path):
+        return _human_task_env(self.by_path.get(human_task_path, self.default))
 
 
 class AnswerResolver:
-    """Supplies a question/data gate's answer-comment body in mock mode, as an
-    ANSWER_BODY string for driver.answer_gate."""
-    def answers(self, gate_path):
+    """Supplies a `question` node's answer-comment body in mock mode, as an
+    ANSWER_BODY string for driver.answer_human_task."""
+    def answers(self, human_task_path):
         raise NotImplementedError
 
 
 class ProgrammableAnswerResolver(AnswerResolver):
-    """Per-gate answers. `by_gate` maps a gate path -> either a dict
+    """Per-human-task answers. `by_human_task` maps a human task path -> either a dict
     {question_id: value} (formatted here into `/answer <id>: <value>` lines) or
     a raw ANSWER_BODY string (passed through verbatim). A path with no entry
-    answers nothing (an empty body — the gate stays open/partial)."""
-    def __init__(self, by_gate):
-        self.by_gate = by_gate or {}
+    answers nothing (an empty body — the human task stays open/partial)."""
+    def __init__(self, by_human_task):
+        self.by_human_task = by_human_task or {}
 
-    def answers(self, gate_path):
-        spec = self.by_gate.get(gate_path, {})
+    def answers(self, human_task_path):
+        spec = self.by_human_task.get(human_task_path, {})
         if isinstance(spec, str):
             return spec
         return "\n".join(f"/answer {qid}: {val}" for qid, val in spec.items())
@@ -540,8 +531,7 @@ class SmokeProvider(AgentProvider):
     def __init__(self, protocol_path, repo_root=".", workflows_dir=None,
                  diff="", changed_files=None, docker_bin="docker",
                  cred_env=("OPENAI_API_KEY", "CODEX_API_KEY"), runner=None):
-        with open(protocol_path) as fh:
-            self.proto = json.load(fh)
+        self.proto = lib.load_protocol(protocol_path)
         self.repo_root = os.path.abspath(repo_root)
         self.workflows_dir = os.path.abspath(
             workflows_dir or os.path.join(self.repo_root, ".github", "workflows"))
@@ -553,6 +543,14 @@ class SmokeProvider(AgentProvider):
 
     def _workflow_for(self, node_path):
         node = paths.node_at_path(self.proto, node_path.split(".")) if node_path else None
+        if node and lib.is_dispatched_code(node):
+            # A dispatched `code` node has no LLM to pin and no `.lock.yml`/
+            # `.md` pair to read pins/prompt from — its own workflow IS the
+            # work, dispatched and exit-status-verdicted, not smoke-driven.
+            raise driver.DriverError(
+                f"smoke: node '{node_path or 'root'}' is a dispatched code node "
+                f"(workflow '{node.get('workflow')}') — no LLM to pin, no lock/.md "
+                "to read; smoke mode only drives agent nodes")
         wf = (node or {}).get("workflow")
         if not wf:
             raise driver.DriverError(
