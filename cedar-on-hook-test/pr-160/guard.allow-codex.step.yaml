@@ -1,17 +1,7 @@
 protocol: cedar-on-hook-test
 instance: pr-160
-state: failed
+state: guard
 iteration: 1
 human_task: {}
 head_sha: aeae908d9dc468fe15521768e18828b3e593e0de
-history:
-- iteration: 1
-  agent_run_id: '31616992099'
-  checks:
-    dispatched-run: fail
-    live-guard-enforced: fail
-  feedback: 'dispatched run failed; unenforced: no liveness record -- the hook was
-    never installed, so this run proves nothing about the guard'
-outcome:
-  exit: 1
-  summary: exhausted 1 iterations
+history: []

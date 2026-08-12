@@ -1,15 +1,7 @@
 protocol: cedar-on-hook-test
 instance: pr-160
-state: done
+state: guard
 iteration: 1
 human_task: {}
 head_sha: aeae908d9dc468fe15521768e18828b3e593e0de
-history:
-- iteration: 1
-  agent_run_id: '31616993121'
-  checks:
-    live-guard-enforced: fail
-  feedback: ''
-outcome:
-  exit: 1
-  summary: a required check did not pass
+history: []
