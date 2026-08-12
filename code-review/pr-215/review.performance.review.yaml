@@ -1,7 +1,25 @@
 protocol: code-review
 instance: pr-215
 state: review
-iteration: 1
+iteration: 2
 human_task: {}
 head_sha: 54fcf0e987fd851dee9c2e7a49c2c2cdc13db205
-history: []
+history:
+- iteration: 1
+  agent_run_id: '31640589316'
+  checks:
+    dispatched-run: fail
+    evidence-present: fail
+    review-schema-valid: fail
+    review-findings-anchored: fail
+    plan-ast-guardians: pass
+    plan-cert-verify: pass
+    live-guard-clean: fail
+  feedback: 'dispatched run failed; evidence shape: missing required key `dimension`;
+    missing required key `verdict`; missing required key `findings`; key `dimension`
+    is empty; key `verdict` is empty; review schema invalid: `dimension` None not
+    in [''correctness'', ''maintainability'', ''performance'', ''security'', ''test''];
+    `dimension` None does not match branch ''performance''; `verdict` None not in
+    [''APPROVE'', ''COMMENT'', ''REQUEST_CHANGES'']; `findings` must be an array;
+    unanchored findings: `findings` missing or not an array; unenforced: no liveness
+    record -- the hook was never installed, so this run proves nothing about the guard'
