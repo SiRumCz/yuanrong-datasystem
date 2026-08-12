@@ -1,7 +1,19 @@
 protocol: code-review
 instance: pr-215
 state: adherence-fanout
-iteration: 1
+iteration: 2
 human_task: {}
 head_sha: 54fcf0e987fd851dee9c2e7a49c2c2cdc13db205
-history: []
+history:
+- iteration: 1
+  agent_run_id: '31637868085'
+  checks:
+    dispatched-run: fail
+    evidence-present: fail
+    spec-solves-issue-coverage: fail
+    plan-ast-guardians: pass
+    plan-cert-verify: pass
+    plan-ast-cedar: pass
+  feedback: 'dispatched run failed; evidence shape: missing required key `verdict`;
+    missing required key `examined`; no linked issue but verdict is not n/a with empty
+    matrix'
