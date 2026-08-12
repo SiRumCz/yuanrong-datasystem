@@ -3,21 +3,9 @@ name: "Review Agent: security (protocol state: review.security)"
 run-name: "Review Agent · cid:[${{ fromJSON(github.event.inputs.aw_context || '{}').cid }}]"
 on:
   workflow_dispatch:
-imports:
-  # The codex live-guard apparatus: installs the pinned CLI, writes the wrapper
-  # that registers the PreToolUse hook, and folds the guard's records into
-  # evidence. Shared because every line of it was learned from a live failure.
-  - shared/live-guard-codex.md
 engine:
   id: codex
-  # gh-aw's default 0.135.0 dispatches NO hooks, silently. Declaring `command`
-  # also makes gh-aw skip its own install step, so the import installs the CLI.
-  version: "0.147.0"
   model: gpt-5.5
-  command: /tmp/gh-aw/cedar-live-guard/codex-with-guard
-  # On a fresh runner every hook is untrusted and skipped without warning.
-  # No model_provider override: gh-aw supplies the awf firewall proxy.
-  args: ["--dangerously-bypass-hook-trust"]
   # Codex (OpenAI) routed through the private OpenAI-compatible gateway below
   # (Tailscale Funnel, reachable from GitHub runners). gh-aw injects OPENAI_API_KEY
   # (repo secret). The agent needs no GitHub network access — PR data is prefetched
@@ -94,6 +82,8 @@ post-steps:
       SEC=.github/agent-factory/protocols/code-review/scripts/security
       python3.11 "$SEC/verify-plan-ast.py" /tmp/gh-aw/evidence.json "$SEC/policy/guardians/default.policy.yaml" || true
       python3.11 "$SEC/verify-plan-cert.py" /tmp/gh-aw/evidence.json || true
+      ( cd "$SEC" && npm install --no-audit --no-fund --silent ) || true
+      python3.11 "$SEC/verify-plan-cedar.py" /tmp/gh-aw/evidence.json "$SEC/policy/cedar/default" || true
   - name: Upload evidence artifact
     if: always()
     uses: actions/upload-artifact@v4
@@ -102,6 +92,7 @@ post-steps:
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
 timeout-minutes: 10
+source: golivax/agentic-protocol-poc/.github/workflows/review-security-agent.md@ebc3725789c0c0678b640b2b9dc1f6a0145700d8
 ---
 
 # Review Agent — one dimension of the code-quality review
