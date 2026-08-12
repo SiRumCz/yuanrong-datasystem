@@ -1,13 +1,7 @@
 protocol: cedar-on-hook-test
 instance: pr-160
-state: done
+state: record
 iteration: 1
 human_task: {}
-history:
-- iteration: 1
-  agent_run_id: '31629257603'
-  checks: {}
-  feedback: ''
-outcome:
-  exit: 0
-  summary: ''
+head_sha: aeae908d9dc468fe15521768e18828b3e593e0de
+history: []
