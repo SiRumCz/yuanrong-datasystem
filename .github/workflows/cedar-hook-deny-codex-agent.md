@@ -56,6 +56,12 @@ pre-agent-steps:
       fi
       ( cd "$SEC" && npm install --no-audit --no-fund --silent )
       mkdir -p /tmp/cedar-live-guard
+      # See the allow-codex agent: `engine.command` suppresses gh-aw's own
+      # "Install Codex CLI" step and renders `engine.version` inert metadata, so
+      # the pinned CLI must be installed here or `exec` finds nothing (exit 127).
+      npm install --ignore-scripts -g @openai/codex@0.147.0
+      CODEX_BIN="$(command -v codex)"
+      [ -x "$CODEX_BIN" ] || { echo "::error::codex not installed" >&2; exit 1; }
       cat > /tmp/cedar-live-guard/codex-with-guard <<WRAPPER
       #!/usr/bin/env bash
       set -euo pipefail
@@ -71,7 +77,7 @@ pre-agent-steps:
       command = "$GITHUB_WORKSPACE/$SEC/live-guard/hook.py"
       timeout = 60
       TOML
-      exec codex "\$@"
+      exec "$CODEX_BIN" "\$@"
       WRAPPER
       chmod +x /tmp/cedar-live-guard/codex-with-guard
       test -x /tmp/cedar-live-guard/codex-with-guard
@@ -91,7 +97,6 @@ post-steps:
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
 timeout-minutes: 10
-source: golivax/agentic-protocol-poc/.github/workflows/cedar-hook-deny-codex-agent.md@ebc3725789c0c0678b640b2b9dc1f6a0145700d8
 ---
 
 # Cedar Hook Deny Codex Agent

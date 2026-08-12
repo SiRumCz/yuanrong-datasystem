@@ -62,10 +62,22 @@ pre-agent-steps:
       fi
       ( cd "$SEC" && npm install --no-audit --no-fund --silent )
       mkdir -p /tmp/cedar-live-guard
+      # Install the CLI OURSELVES. Declaring `engine.command` makes gh-aw skip
+      # its own "Install Codex CLI" step — it assumes we supply the executable —
+      # which ALSO makes `engine.version` inert (it survives only as
+      # GH_AW_INFO_VERSION metadata that nothing consumes). Live proof: every
+      # attempt died with `exec: codex: not found`, exitCode=127, because codex
+      # was never on the machine. The version pinned here is the load-bearing
+      # one: gh-aw's default 0.135.0 dispatches no hooks at all.
+      npm install --ignore-scripts -g @openai/codex@0.147.0
+      CODEX_BIN="$(command -v codex)"
+      [ -x "$CODEX_BIN" ] || { echo "::error::codex not installed" >&2; exit 1; }
       # The wrapper `engine.command` points at. It appends the hooks block to
       # whatever config.toml gh-aw has by then produced (append, never rewrite:
       # gh-aw's MCP + shell-policy config must survive), then execs the real
-      # codex. Registration therefore happens strictly after gh-aw is done.
+      # codex by ABSOLUTE path — `exec codex` resolves nothing in the container
+      # the harness spawns it from. Registration therefore happens strictly
+      # after gh-aw has finished writing config.toml.
       cat > /tmp/cedar-live-guard/codex-with-guard <<WRAPPER
       #!/usr/bin/env bash
       set -euo pipefail
@@ -81,7 +93,7 @@ pre-agent-steps:
       command = "$GITHUB_WORKSPACE/$SEC/live-guard/hook.py"
       timeout = 60
       TOML
-      exec codex "\$@"
+      exec "$CODEX_BIN" "\$@"
       WRAPPER
       chmod +x /tmp/cedar-live-guard/codex-with-guard
       test -x /tmp/cedar-live-guard/codex-with-guard
@@ -99,7 +111,6 @@ post-steps:
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
 timeout-minutes: 10
-source: golivax/agentic-protocol-poc/.github/workflows/cedar-hook-allow-codex-agent.md@ebc3725789c0c0678b640b2b9dc1f6a0145700d8
 ---
 
 # Cedar Hook Allow Codex Agent
