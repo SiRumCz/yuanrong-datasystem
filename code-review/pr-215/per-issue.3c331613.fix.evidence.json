@@ -1,0 +1,332 @@
+{
+  "fixes": [],
+  "skipped": [],
+  "mode": "edit",
+  "pinned_issue": 237,
+  "agent_security": {
+    "plan_kts": "val planTools = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\nval taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\nval prDiff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\nval repoReadme = readRepoFile(\".repo_context/README.md\")\nval repoIndexNav = readRepoFile(\".repo_context/index.md\")\nval repoMaintenance = readRepoFile(\".repo_context/maintenance.md\")\nval generatedRepoIndex = readRepoFile(\".repo_context/generated/repo_index.md\")\nval engineeringPrinciples = readRepoFile(\".repo_context/modules/overview/engineering-principles.md\")\nval selfVerification = readRepoFile(\".repo_context/playbooks/upkeep/ai-self-verification.md\")\nval prMeta = readRepoFile(\"/tmp/gh-aw/agent/pr.json\")\nval selection = compute(taskContext, prDiff, repoReadme, repoIndexNav, repoMaintenance, generatedRepoIndex, engineeringPrinciples, selfVerification, prMeta)\nval status = runCommand(listOf(\"git\", \"status\", \"--short\"))\nval evidence = compute(selection, status, planTools)\nwriteFile(\"/tmp/gh-aw/evidence.json\", evidence)\npublish(\"safeoutputs.noop\", \"Evidence written with no code fixes: triage contained only test-scope clusters, which this edit leg must exclude.\")",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "plan_tools"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "pr_diff"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/README.md"
+          },
+          "result": "repo_readme"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/index.md"
+          },
+          "result": "repo_index_nav"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/maintenance.md"
+          },
+          "result": "repo_maintenance"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/generated/repo_index.md"
+          },
+          "result": "generated_repo_index"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/overview/engineering-principles.md"
+          },
+          "result": "engineering_principles"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/playbooks/upkeep/ai-self-verification.md"
+          },
+          "result": "self_verification"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.json"
+          },
+          "result": "pr_meta"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "pr_diff": {
+              "$ref": "pr_diff"
+            },
+            "repo_readme": {
+              "$ref": "repo_readme"
+            },
+            "repo_index_nav": {
+              "$ref": "repo_index_nav"
+            },
+            "repo_maintenance": {
+              "$ref": "repo_maintenance"
+            },
+            "generated_repo_index": {
+              "$ref": "generated_repo_index"
+            },
+            "engineering_principles": {
+              "$ref": "engineering_principles"
+            },
+            "self_verification": {
+              "$ref": "self_verification"
+            },
+            "pr_meta": {
+              "$ref": "pr_meta"
+            }
+          },
+          "result": "selection"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "git",
+              "status",
+              "--short"
+            ]
+          },
+          "result": "git_status"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "selection": {
+              "$ref": "selection"
+            },
+            "git_status": {
+              "$ref": "git_status"
+            },
+            "plan_tools": {
+              "$ref": "plan_tools"
+            }
+          },
+          "result": "evidence"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence"
+            }
+          },
+          "result": "evidence_written"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": "Evidence written with no code fixes: triage contained only test-scope clusters, which this edit leg must exclude."
+          },
+          "result": "noop_published"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "plan_tools",
+          "plan_tools"
+        ],
+        [
+          "plan_tools",
+          "evidence"
+        ],
+        [
+          "plan_tools",
+          "evidence_written"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "selection"
+        ],
+        [
+          "task_context",
+          "evidence"
+        ],
+        [
+          "task_context",
+          "evidence_written"
+        ],
+        [
+          "pr_diff",
+          "pr_diff"
+        ],
+        [
+          "pr_diff",
+          "selection"
+        ],
+        [
+          "pr_diff",
+          "evidence"
+        ],
+        [
+          "pr_diff",
+          "evidence_written"
+        ],
+        [
+          "repo_readme",
+          "repo_readme"
+        ],
+        [
+          "repo_readme",
+          "selection"
+        ],
+        [
+          "repo_readme",
+          "evidence"
+        ],
+        [
+          "repo_readme",
+          "evidence_written"
+        ],
+        [
+          "repo_index_nav",
+          "repo_index_nav"
+        ],
+        [
+          "repo_index_nav",
+          "selection"
+        ],
+        [
+          "repo_index_nav",
+          "evidence"
+        ],
+        [
+          "repo_index_nav",
+          "evidence_written"
+        ],
+        [
+          "repo_maintenance",
+          "repo_maintenance"
+        ],
+        [
+          "repo_maintenance",
+          "selection"
+        ],
+        [
+          "repo_maintenance",
+          "evidence"
+        ],
+        [
+          "repo_maintenance",
+          "evidence_written"
+        ],
+        [
+          "generated_repo_index",
+          "generated_repo_index"
+        ],
+        [
+          "generated_repo_index",
+          "selection"
+        ],
+        [
+          "generated_repo_index",
+          "evidence"
+        ],
+        [
+          "generated_repo_index",
+          "evidence_written"
+        ],
+        [
+          "engineering_principles",
+          "engineering_principles"
+        ],
+        [
+          "engineering_principles",
+          "selection"
+        ],
+        [
+          "engineering_principles",
+          "evidence"
+        ],
+        [
+          "engineering_principles",
+          "evidence_written"
+        ],
+        [
+          "self_verification",
+          "self_verification"
+        ],
+        [
+          "self_verification",
+          "selection"
+        ],
+        [
+          "self_verification",
+          "evidence"
+        ],
+        [
+          "self_verification",
+          "evidence_written"
+        ],
+        [
+          "pr_meta",
+          "pr_meta"
+        ],
+        [
+          "pr_meta",
+          "selection"
+        ],
+        [
+          "pr_meta",
+          "evidence"
+        ],
+        [
+          "pr_meta",
+          "evidence_written"
+        ],
+        [
+          "git_status",
+          "git_status"
+        ],
+        [
+          "git_status",
+          "evidence"
+        ],
+        [
+          "git_status",
+          "evidence_written"
+        ]
+      ]
+    }
+  }
+}
