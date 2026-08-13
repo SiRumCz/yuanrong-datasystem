@@ -844,8 +844,8 @@
                   "on_fail": "advisory"
                 },
                 {
-                  "run": "plan-ast-cedar",
-                  "on_fail": "advisory"
+                  "run": "live-guard-clean",
+                  "on_fail": "iterate"
                 }
               ],
               "next": "publish"
@@ -1147,7 +1147,7 @@
     {
       "id": "per-issue",
       "kind": "fork",
-      "label": "per-issue triage \u2192 fix (one leg per open [ai-review] issue)",
+      "label": "per-issue triage → fix (one leg per open [ai-review] issue)",
       "expand": {
         "hook": "expand-issues",
         "as": "issue",
@@ -1375,7 +1375,7 @@
     {
       "id": "post-fix",
       "kind": "fork",
-      "label": "context capture \u2225 mental-model update",
+      "label": "context capture ∥ mental-model update",
       "branches": [
         {
           "id": "context",
