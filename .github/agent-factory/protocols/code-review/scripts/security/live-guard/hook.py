@@ -58,6 +58,7 @@ Environment:
 """
 from __future__ import annotations
 
+import fcntl
 import json
 import os
 import shutil
@@ -161,30 +162,48 @@ def touch_liveness(session_id: str, outcome: str, engine: str, event: dict) -> N
         safe = "".join(c if (c.isalnum() or c in "-_") else "_" for c in (session_id or "unknown"))
         path = d / f"{safe}.json"
         now = time.time()
-        try:
-            rec = json.loads(path.read_text(encoding="utf-8"))
-            if not isinstance(rec, dict):
-                raise ValueError
-        except Exception:
-            rec = {
-                "schema": "cedar-live-guard/liveness/1",
-                "session_id": session_id,
-                "hook": HOOK_VERSION,
-                "hook_path": str(Path(__file__).resolve()),
-                "policy_dir": str(policy_dir()),
-                "failure_mode": "closed" if fail_closed() else "open",
-                "first_seen": now,
-                "counts": {},
-                "engines": {},
-            }
-        rec["last_seen"] = now
-        rec["cwd"] = event.get("cwd")
-        rec["permission_mode"] = event.get("permission_mode")
-        rec["counts"][outcome] = int(rec.get("counts", {}).get(outcome, 0)) + 1
-        rec["engines"][engine] = int(rec.get("engines", {}).get(engine, 0)) + 1
-        tmp = path.with_suffix(".json.tmp")
-        tmp.write_text(json.dumps(rec, ensure_ascii=False, default=str), encoding="utf-8")
-        os.replace(tmp, path)          # atomic: a reader never sees a half file
+        # The counters are a read-modify-write, and a host may dispatch hooks for
+        # overlapping tool calls: two processes that read the same value both
+        # write value+1 and one increment is lost. `os.replace` makes each write
+        # atomic but cannot make the SEQUENCE atomic. Observed live on PR 215
+        # (run 31750438861): decisions.jsonl held 16 entries -- it is append-only,
+        # so it loses nothing -- while counts read 4.
+        #
+        # A lock file beside the record serializes the whole sequence. It is a
+        # separate file so the record itself is still replaced atomically rather
+        # than written in place; holding the lock on the record would mean
+        # writing through the fd and a reader could see a half file.
+        lock_path = d / f"{safe}.lock"
+        with lock_path.open("a+", encoding="utf-8") as lock_fh:
+            fcntl.flock(lock_fh.fileno(), fcntl.LOCK_EX)
+            try:
+                try:
+                    rec = json.loads(path.read_text(encoding="utf-8"))
+                    if not isinstance(rec, dict):
+                        raise ValueError
+                except Exception:
+                    rec = {
+                        "schema": "cedar-live-guard/liveness/1",
+                        "session_id": session_id,
+                        "hook": HOOK_VERSION,
+                        "hook_path": str(Path(__file__).resolve()),
+                        "policy_dir": str(policy_dir()),
+                        "failure_mode": "closed" if fail_closed() else "open",
+                        "first_seen": now,
+                        "counts": {},
+                        "engines": {},
+                    }
+                rec["last_seen"] = now
+                rec["cwd"] = event.get("cwd")
+                rec["permission_mode"] = event.get("permission_mode")
+                rec["counts"][outcome] = int(rec.get("counts", {}).get(outcome, 0)) + 1
+                rec["engines"][engine] = int(rec.get("engines", {}).get(engine, 0)) + 1
+                tmp = path.with_suffix(".json.tmp")
+                tmp.write_text(json.dumps(rec, ensure_ascii=False, default=str),
+                               encoding="utf-8")
+                os.replace(tmp, path)  # atomic: a reader never sees a half file
+            finally:
+                fcntl.flock(lock_fh.fileno(), fcntl.LOCK_UN)
     except Exception:
         pass
 
