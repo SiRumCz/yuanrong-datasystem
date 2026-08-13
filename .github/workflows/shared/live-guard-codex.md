@@ -107,6 +107,23 @@ post-steps:
     run: |
       bash .github/agent-factory/protocols/code-review/scripts/security/live-guard/assemble-evidence.sh \
         /tmp/gh-aw/cedar-live-guard /tmp/gh-aw/evidence.json "${GH_AW_LIVE_GUARD_STEP:-review}"
+  # Re-upload, because gh-aw emits its own `Upload evidence artifact` step
+  # BEFORE post-steps: the fold above mutates a file that has already been
+  # uploaded, so without this the engine downloads PRE-fold evidence and
+  # `live-guard-clean` reports `unenforced` on every run, however well the
+  # guard worked. `overwrite: true` replaces the earlier artifact of the same
+  # name, which is what the engine's `gh run download -n evidence` resolves.
+  #
+  # Post-steps land after that upload by construction, so folding earlier is
+  # not an option from an import; re-uploading is the seam available to us.
+  - name: Re-upload evidence with the guard's records folded in
+    if: always()
+    uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+    with:
+      name: evidence
+      path: /tmp/gh-aw/evidence.json
+      if-no-files-found: warn
+      overwrite: true
 ---
 
 # Shared: codex live-guard
