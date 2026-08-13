@@ -1568,6 +1568,19 @@ def upsert_status_comment(sf, pr, body):
     upsert_status_comment <state_file> <pr> <body>
     Single engine-owned PR comment, edited in place; id persisted in state.
     Mutates the state file but does NOT push.
+
+    Best-effort: failure never breaks a transition — same contract, and for the
+    same reason, as set_check_run. Every caller renders the comment immediately
+    BEFORE its cas_push, so raising here would trade the durable state write for
+    a cosmetic redraw. Dropping the redraw is safe: the body is re-rendered from
+    the whole state tree on each call, so the next writer shows the complete
+    current picture. A dropped PATCH self-heals; a dropped cas_push does not.
+
+    Observed live: seven concurrent code-review preflight legs each PATCHed the
+    same comment id within 23s and hit a GitHub *secondary* rate limit (core
+    quota was 4986/5000). Secondary limits are per-user, so the token pool
+    cannot rotate around one — every leg raised, and seven completed sets of
+    check verdicts were discarded.
     """
     if os.environ.get("ENGINE_LOCAL", "0") == "1":
         sys.stderr.write(f"[ENGINE_LOCAL] status comment pr#{pr}: {body}\n")
@@ -1584,17 +1597,25 @@ def upsert_status_comment(sf, pr, body):
     cid = state.get("status_comment_id", "") or ""
     repo = os.environ.get("GITHUB_REPOSITORY", "")
 
-    if not cid:
-        result = run_gh_rotating(
-            [f"repos/{repo}/issues/{pr}/comments", "-f", f"body={body}", "--jq", ".id"],
-            check=True)
-        new_cid = result.stdout.strip()
-        state["status_comment_id"] = int(new_cid) if new_cid.isdigit() else new_cid
-        dump_yaml(sf, state)
-    else:
-        run_gh_rotating(
-            ["-X", "PATCH", f"repos/{repo}/issues/comments/{cid}", "-f", f"body={body}"],
-            check=True)
+    try:
+        if not cid:
+            result = run_gh_rotating(
+                [f"repos/{repo}/issues/{pr}/comments", "-f", f"body={body}", "--jq", ".id"],
+                check=True)
+            new_cid = result.stdout.strip()
+            state["status_comment_id"] = int(new_cid) if new_cid.isdigit() else new_cid
+            dump_yaml(sf, state)
+        else:
+            run_gh_rotating(
+                ["-X", "PATCH", f"repos/{repo}/issues/comments/{cid}", "-f", f"body={body}"],
+                check=True)
+    except subprocess.CalledProcessError as exc:
+        # A create that failed leaves status_comment_id unset, so the next
+        # transition creates the comment instead of orphaning this one.
+        sys.stderr.write(
+            f"[engine] status comment {'update' if cid else 'create'} failed "
+            f"(pr#{pr}); state advance continues: "
+            f"{(exc.stderr or '').strip()[:200]}\n")
 
 
 def post_pr_comment(pr, body):
