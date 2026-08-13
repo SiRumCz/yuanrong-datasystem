@@ -67,6 +67,16 @@ pre-agent-steps:
       cat > /tmp/gh-aw/cedar-live-guard/codex-with-guard <<WRAPPER
       #!/usr/bin/env bash
       set -euo pipefail
+      # Point the hook at the dir post-steps actually reads. hook.py otherwise
+      # defaults to \$TMPDIR/cedar-live-guard (= /tmp/cedar-live-guard), which is
+      # NOT /tmp/gh-aw/cedar-live-guard — the guard then writes its records
+      # somewhere the collector never looks, and a run where the hook fired on
+      # every call reports \`enforced: {}\`, i.e. indistinguishable from a guard
+      # that never installed. That is exactly how this presented live (PR 215).
+      # It must be exported HERE: this wrapper is the only part of the import
+      # that runs in the hook's own process tree, and \`engine.env\` — where
+      # cedar-on-hook-test happens to pin it — is not importable.
+      export CEDAR_LIVE_GUARD_LOG_DIR=/tmp/gh-aw/cedar-live-guard
       CFG="\${CODEX_HOME:?CODEX_HOME unset}/config.toml"
       mkdir -p "\$(dirname "\$CFG")"
       # APPEND only, and register nothing but the hook. These agents run WITH the
