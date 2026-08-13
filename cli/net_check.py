@@ -29,6 +29,7 @@ def ping_worker(host: str, count: int = 3) -> bool:
 
     completed = subprocess.run(
         ["ping", "-c", str(count), host],
-        capture_output=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
     return completed.returncode == 0
