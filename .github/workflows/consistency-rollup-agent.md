@@ -3,9 +3,19 @@ name: "Consistency Rollup (protocol state: preflight.consistency.__rollup)"
 run-name: "Consistency Rollup · cid:[${{ fromJSON(github.event.inputs.aw_context || '{}').cid }}]"
 on:
   workflow_dispatch:
+imports:
+  # The codex live-guard apparatus: replaces the provisioning engine.command
+  # removes (node / codex CLI / AWF), writes the wrapper that registers the
+  # PreToolUse hook, and folds the guard's records into evidence.
+  - shared/live-guard-codex.md
 engine:
   id: codex
+  # gh-aw's default 0.135.0 dispatches NO hooks, silently.
+  version: "0.147.0"
   model: gpt-5.5
+  command: /tmp/gh-aw/cedar-live-guard/codex-with-guard
+  # On a fresh runner every hook is untrusted and skipped without warning.
+  args: ["--dangerously-bypass-hook-trust"]
   env:
     OPENAI_BASE_URL: https://arcyleung-ubuntu.tailb940e6.ts.net/v1/
 network:
@@ -48,8 +58,6 @@ post-steps:
       SEC=.github/agent-factory/protocols/code-review/scripts/security
       python3.11 "$SEC/verify-plan-ast.py" /tmp/gh-aw/evidence.json "$SEC/policy/guardians/default.policy.yaml" || true
       python3.11 "$SEC/verify-plan-cert.py" /tmp/gh-aw/evidence.json || true
-      ( cd "$SEC" && npm install --no-audit --no-fund --silent ) || true
-      python3.11 "$SEC/verify-plan-cedar.py" /tmp/gh-aw/evidence.json "$SEC/policy/cedar/default" || true
   - name: Upload evidence artifact
     if: always()
     uses: actions/upload-artifact@v4
@@ -58,7 +66,6 @@ post-steps:
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
 timeout-minutes: 10
-source: golivax/agentic-protocol-poc/.github/workflows/consistency-rollup-agent.md@ebc3725789c0c0678b640b2b9dc1f6a0145700d8
 ---
 
 # Consistency Rollup — consolidate the two consistency judges into one cluster evidence
