@@ -1,0 +1,261 @@
+{
+  "fixes": [],
+  "skipped": [],
+  "mode": "edit",
+  "pinned_issue": 218,
+  "agent_security": {
+    "plan_kts": "fun main() {\n  val toolRegistry = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val repoContextReadme = readRepoFile(\".repo_context/README.md\")\n  val repoContextIndex = readRepoFile(\".repo_context/index.md\")\n  val repoContextMaintenance = readRepoFile(\".repo_context/maintenance.md\")\n  val generatedRepoIndex = readRepoFile(\".repo_context/generated/repo_index.md\")\n  val engineeringPrinciples = readRepoFile(\".repo_context/modules/overview/engineering-principles.md\")\n  val taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\n  val prDiff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\n  val prJson = readRepoFile(\"/tmp/gh-aw/agent/pr.json\")\n  val selfVerification = readRepoFile(\".repo_context/playbooks/upkeep/ai-self-verification.md\")\n  val evidenceContent = computeEvidence(\n    toolRegistry,\n    repoContextReadme,\n    repoContextIndex,\n    repoContextMaintenance,\n    generatedRepoIndex,\n    engineeringPrinciples,\n    taskContext,\n    prDiff,\n    prJson,\n    selfVerification\n  )\n  writeFile(\"/tmp/gh-aw/evidence.json\", evidenceContent)\n  publish(\"safeoutputs/noop\", \"No action needed: triage contains only a test-dimension cluster, which is outside edit-agent scope.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "tool_registry"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/README.md"
+          },
+          "result": "repo_context_readme"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/index.md"
+          },
+          "result": "repo_context_index"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/maintenance.md"
+          },
+          "result": "repo_context_maintenance"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/generated/repo_index.md"
+          },
+          "result": "generated_repo_index"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/overview/engineering-principles.md"
+          },
+          "result": "engineering_principles"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "pr_diff"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.json"
+          },
+          "result": "pr_json"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/playbooks/upkeep/ai-self-verification.md"
+          },
+          "result": "self_verification"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "tool_registry": {
+              "$ref": "tool_registry"
+            },
+            "repo_context_readme": {
+              "$ref": "repo_context_readme"
+            },
+            "repo_context_index": {
+              "$ref": "repo_context_index"
+            },
+            "repo_context_maintenance": {
+              "$ref": "repo_context_maintenance"
+            },
+            "generated_repo_index": {
+              "$ref": "generated_repo_index"
+            },
+            "engineering_principles": {
+              "$ref": "engineering_principles"
+            },
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "pr_diff": {
+              "$ref": "pr_diff"
+            },
+            "pr_json": {
+              "$ref": "pr_json"
+            },
+            "self_verification": {
+              "$ref": "self_verification"
+            }
+          },
+          "result": "evidence_content"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence_content"
+            }
+          },
+          "result": "evidence_file"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs/noop",
+            "body": "No action needed: triage contains only a test-dimension cluster, which is outside edit-agent scope."
+          },
+          "result": "noop_receipt"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "tool_registry",
+          "tool_registry"
+        ],
+        [
+          "tool_registry",
+          "evidence_content"
+        ],
+        [
+          "tool_registry",
+          "evidence_file"
+        ],
+        [
+          "repo_context_readme",
+          "repo_context_readme"
+        ],
+        [
+          "repo_context_readme",
+          "evidence_content"
+        ],
+        [
+          "repo_context_readme",
+          "evidence_file"
+        ],
+        [
+          "repo_context_index",
+          "repo_context_index"
+        ],
+        [
+          "repo_context_index",
+          "evidence_content"
+        ],
+        [
+          "repo_context_index",
+          "evidence_file"
+        ],
+        [
+          "repo_context_maintenance",
+          "repo_context_maintenance"
+        ],
+        [
+          "repo_context_maintenance",
+          "evidence_content"
+        ],
+        [
+          "repo_context_maintenance",
+          "evidence_file"
+        ],
+        [
+          "generated_repo_index",
+          "generated_repo_index"
+        ],
+        [
+          "generated_repo_index",
+          "evidence_content"
+        ],
+        [
+          "generated_repo_index",
+          "evidence_file"
+        ],
+        [
+          "engineering_principles",
+          "engineering_principles"
+        ],
+        [
+          "engineering_principles",
+          "evidence_content"
+        ],
+        [
+          "engineering_principles",
+          "evidence_file"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "evidence_content"
+        ],
+        [
+          "task_context",
+          "evidence_file"
+        ],
+        [
+          "pr_diff",
+          "pr_diff"
+        ],
+        [
+          "pr_diff",
+          "evidence_content"
+        ],
+        [
+          "pr_diff",
+          "evidence_file"
+        ],
+        [
+          "pr_json",
+          "pr_json"
+        ],
+        [
+          "pr_json",
+          "evidence_content"
+        ],
+        [
+          "pr_json",
+          "evidence_file"
+        ],
+        [
+          "self_verification",
+          "self_verification"
+        ],
+        [
+          "self_verification",
+          "evidence_content"
+        ],
+        [
+          "self_verification",
+          "evidence_file"
+        ]
+      ]
+    }
+  }
+}
