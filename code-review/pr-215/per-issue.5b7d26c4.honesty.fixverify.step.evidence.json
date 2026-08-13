@@ -1,1 +1,0 @@
-{"check": "fixverify", "pass": true, "reason": "fix verified: When ping_worker runs for the finding's condition, subprocess.run executes ping with stdout and stderr redirected to subprocess.DEVNULL, so unused ping output is discarded instead of captured in memory, and the helper still returns True exactly when completed.returncode is 0. (issue #238)"}
