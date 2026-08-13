@@ -1,0 +1,3 @@
+outcome:
+  exit: 1
+  summary: '3/3 issue(s) dishonest: 238, 237, 218'

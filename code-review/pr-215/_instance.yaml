@@ -3,7 +3,7 @@ instance: pr-215
 head_sha: 54fcf0e987fd851dee9c2e7a49c2c2cdc13db205
 phase: honesty-verdict
 joined: true
-phase_label: honesty verdict (halts if any fix is dishonest)
+phase_label: "\u26D4 blocked"
 status_comment_id: 5285588789
 overrides:
 - phase: preflight-verdict
@@ -11,3 +11,8 @@ overrides:
   reason: 'live-guard pilot: PR 215 is the throwaway test vehicle and has no spec/plan
     by construction, so preflight blocks by design. Advancing to the review fan-out
     to verify the guarded correctness leg.'
+halted:
+  phase: honesty-verdict
+  path: honesty-verdict
+  reason: blocked
+  sha: e58242c37dd40d053e20ab4f143aacbe09382e2b
