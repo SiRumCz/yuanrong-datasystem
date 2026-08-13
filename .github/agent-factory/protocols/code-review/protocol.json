@@ -911,8 +911,8 @@
                   "on_fail": "advisory"
                 },
                 {
-                  "run": "plan-ast-cedar",
-                  "on_fail": "advisory"
+                  "run": "live-guard-clean",
+                  "on_fail": "iterate"
                 }
               ],
               "next": "publish"
@@ -978,8 +978,8 @@
                   "on_fail": "advisory"
                 },
                 {
-                  "run": "plan-ast-cedar",
-                  "on_fail": "advisory"
+                  "run": "live-guard-clean",
+                  "on_fail": "iterate"
                 }
               ],
               "next": "publish"
@@ -1045,8 +1045,8 @@
                   "on_fail": "advisory"
                 },
                 {
-                  "run": "plan-ast-cedar",
-                  "on_fail": "advisory"
+                  "run": "live-guard-clean",
+                  "on_fail": "iterate"
                 }
               ],
               "next": "publish"
@@ -1112,8 +1112,8 @@
                   "on_fail": "advisory"
                 },
                 {
-                  "run": "plan-ast-cedar",
-                  "on_fail": "advisory"
+                  "run": "live-guard-clean",
+                  "on_fail": "iterate"
                 }
               ],
               "next": "publish"
