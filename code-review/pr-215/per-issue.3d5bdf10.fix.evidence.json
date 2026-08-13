@@ -1,0 +1,373 @@
+{
+  "fixes": [],
+  "skipped": [],
+  "mode": "edit",
+  "pinned_issue": 218,
+  "agent_security": {
+    "plan_kts": "fun fixAgent() {\n  val toolRegistry = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val committedPlan = compute(toolRegistry)\n  val taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\n  val diffContext = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\n  val repoReadme = readRepoFile(\".repo_context/README.md\")\n  val repoIndexNav = readRepoFile(\".repo_context/index.md\")\n  val repoMaintenance = readRepoFile(\".repo_context/maintenance.md\")\n  val generatedRepoIndex = readRepoFile(\".repo_context/generated/repo_index.md\")\n  val engineeringPrinciples = readRepoFile(\".repo_context/modules/overview/engineering-principles.md\")\n  val selfVerification = readRepoFile(\".repo_context/playbooks/upkeep/ai-self-verification.md\")\n  val testsReproduction = readRepoFile(\".repo_context/modules/quality/tests-and-reproduction.md\")\n  val contextValidation = compute(repoReadme, repoIndexNav, repoMaintenance, generatedRepoIndex, engineeringPrinciples, selfVerification, testsReproduction)\n  val clusterSelection = compute(taskContext, diffContext, contextValidation)\n  val gitStatus = runCommand(listOf(\"git\", \"status\", \"--short\"))\n  val evidenceContent = compute(committedPlan, clusterSelection, gitStatus, contextValidation)\n  writeFile(\"/tmp/gh-aw/evidence.json\", evidenceContent)\n  publish(\"safeoutputs:noop\", \"No action needed: triage cluster c1 is test-only and excluded from fix-agent code edits; evidence records no code-fixable clusters.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "tool_registry"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "registry": {
+              "$ref": "tool_registry"
+            }
+          },
+          "result": "committed_plan"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "diff_context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/README.md"
+          },
+          "result": "repo_readme"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/index.md"
+          },
+          "result": "repo_index_nav"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/maintenance.md"
+          },
+          "result": "repo_maintenance"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/generated/repo_index.md"
+          },
+          "result": "generated_repo_index"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/overview/engineering-principles.md"
+          },
+          "result": "engineering_principles"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/playbooks/upkeep/ai-self-verification.md"
+          },
+          "result": "self_verification"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/quality/tests-and-reproduction.md"
+          },
+          "result": "tests_reproduction"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "repo_readme": {
+              "$ref": "repo_readme"
+            },
+            "repo_index_nav": {
+              "$ref": "repo_index_nav"
+            },
+            "repo_maintenance": {
+              "$ref": "repo_maintenance"
+            },
+            "generated_repo_index": {
+              "$ref": "generated_repo_index"
+            },
+            "engineering_principles": {
+              "$ref": "engineering_principles"
+            },
+            "self_verification": {
+              "$ref": "self_verification"
+            },
+            "tests_reproduction": {
+              "$ref": "tests_reproduction"
+            }
+          },
+          "result": "context_validation"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "diff_context": {
+              "$ref": "diff_context"
+            },
+            "context_validation": {
+              "$ref": "context_validation"
+            }
+          },
+          "result": "cluster_selection"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "git",
+              "status",
+              "--short"
+            ]
+          },
+          "result": "git_status"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "plan": {
+              "$ref": "committed_plan"
+            },
+            "cluster_selection": {
+              "$ref": "cluster_selection"
+            },
+            "git_status": {
+              "$ref": "git_status"
+            },
+            "context_validation": {
+              "$ref": "context_validation"
+            }
+          },
+          "result": "evidence_content"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence_content"
+            }
+          },
+          "result": "evidence_file"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs:noop",
+            "body": "No action needed: triage cluster c1 is test-only and excluded from fix-agent code edits; evidence records no code-fixable clusters."
+          },
+          "result": "noop_receipt"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "tool_registry",
+          "tool_registry"
+        ],
+        [
+          "tool_registry",
+          "committed_plan"
+        ],
+        [
+          "tool_registry",
+          "evidence_content"
+        ],
+        [
+          "tool_registry",
+          "evidence_file"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "cluster_selection"
+        ],
+        [
+          "task_context",
+          "evidence_content"
+        ],
+        [
+          "task_context",
+          "evidence_file"
+        ],
+        [
+          "diff_context",
+          "diff_context"
+        ],
+        [
+          "diff_context",
+          "cluster_selection"
+        ],
+        [
+          "diff_context",
+          "evidence_content"
+        ],
+        [
+          "diff_context",
+          "evidence_file"
+        ],
+        [
+          "repo_readme",
+          "repo_readme"
+        ],
+        [
+          "repo_readme",
+          "context_validation"
+        ],
+        [
+          "repo_readme",
+          "cluster_selection"
+        ],
+        [
+          "repo_readme",
+          "evidence_content"
+        ],
+        [
+          "repo_readme",
+          "evidence_file"
+        ],
+        [
+          "repo_index_nav",
+          "repo_index_nav"
+        ],
+        [
+          "repo_index_nav",
+          "context_validation"
+        ],
+        [
+          "repo_index_nav",
+          "cluster_selection"
+        ],
+        [
+          "repo_index_nav",
+          "evidence_content"
+        ],
+        [
+          "repo_index_nav",
+          "evidence_file"
+        ],
+        [
+          "repo_maintenance",
+          "repo_maintenance"
+        ],
+        [
+          "repo_maintenance",
+          "context_validation"
+        ],
+        [
+          "repo_maintenance",
+          "cluster_selection"
+        ],
+        [
+          "repo_maintenance",
+          "evidence_content"
+        ],
+        [
+          "repo_maintenance",
+          "evidence_file"
+        ],
+        [
+          "generated_repo_index",
+          "generated_repo_index"
+        ],
+        [
+          "generated_repo_index",
+          "context_validation"
+        ],
+        [
+          "generated_repo_index",
+          "cluster_selection"
+        ],
+        [
+          "generated_repo_index",
+          "evidence_content"
+        ],
+        [
+          "generated_repo_index",
+          "evidence_file"
+        ],
+        [
+          "engineering_principles",
+          "engineering_principles"
+        ],
+        [
+          "engineering_principles",
+          "context_validation"
+        ],
+        [
+          "engineering_principles",
+          "cluster_selection"
+        ],
+        [
+          "engineering_principles",
+          "evidence_content"
+        ],
+        [
+          "engineering_principles",
+          "evidence_file"
+        ],
+        [
+          "self_verification",
+          "self_verification"
+        ],
+        [
+          "self_verification",
+          "context_validation"
+        ],
+        [
+          "self_verification",
+          "cluster_selection"
+        ],
+        [
+          "self_verification",
+          "evidence_content"
+        ],
+        [
+          "self_verification",
+          "evidence_file"
+        ],
+        [
+          "tests_reproduction",
+          "tests_reproduction"
+        ],
+        [
+          "tests_reproduction",
+          "context_validation"
+        ],
+        [
+          "tests_reproduction",
+          "cluster_selection"
+        ],
+        [
+          "tests_reproduction",
+          "evidence_content"
+        ],
+        [
+          "tests_reproduction",
+          "evidence_file"
+        ]
+      ]
+    }
+  }
+}
