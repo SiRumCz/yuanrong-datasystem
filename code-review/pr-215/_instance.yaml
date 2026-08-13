@@ -3,5 +3,10 @@ instance: pr-215
 head_sha: 54fcf0e987fd851dee9c2e7a49c2c2cdc13db205
 phase: preflight-verdict
 joined: true
-phase_label: pre-flight verdict (halts on an unmet floor)
+phase_label: "\u26D4 blocked"
 status_comment_id: 5283873727
+halted:
+  phase: preflight-verdict
+  path: preflight-verdict
+  reason: blocked
+  sha: 54fcf0e987fd851dee9c2e7a49c2c2cdc13db205
