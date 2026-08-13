@@ -1,12 +1,13 @@
 protocol: code-review
 instance: pr-215
 head_sha: 54fcf0e987fd851dee9c2e7a49c2c2cdc13db205
-phase: preflight-verdict
+phase: overview
 joined: true
-phase_label: "\u26D4 blocked"
+phase_label: guided overview + risk
 status_comment_id: 5285588789
-halted:
-  phase: preflight-verdict
-  path: preflight-verdict
-  reason: blocked
-  sha: 54fcf0e987fd851dee9c2e7a49c2c2cdc13db205
+overrides:
+- phase: preflight-verdict
+  actor: SiRumCz
+  reason: 'live-guard pilot: PR 215 is the throwaway test vehicle and has no spec/plan
+    by construction, so preflight blocks by design. Advancing to the review fan-out
+    to verify the guarded correctness leg.'
