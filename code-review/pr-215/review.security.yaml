@@ -1,7 +1,7 @@
 protocol: code-review
 instance: pr-215
 state: review
-sub_state: review
+sub_state: publish
 iteration: 1
 human_task: {}
 history: []
