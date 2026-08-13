@@ -1,0 +1,451 @@
+{
+  "fixes": [
+    {
+      "cluster_id": "c1",
+      "diff": "diff --git a/cli/net_check.py b/cli/net_check.py\nindex ac3434c..b975e7c 100644\n--- a/cli/net_check.py\n+++ b/cli/net_check.py\n@@ -29,6 +29,7 @@ def ping_worker(host: str, count: int = 3) -> bool:\n \n     completed = subprocess.run(\n         [\"ping\", \"-c\", str(count), host],\n-        capture_output=True,\n+        stdout=subprocess.DEVNULL,\n+        stderr=subprocess.DEVNULL,\n     )\n     return completed.returncode == 0\n"
+    }
+  ],
+  "skipped": [],
+  "mode": "edit",
+  "pinned_issue": 238,
+  "agent_security": {
+    "plan_kts": "fun fixTriageCluster() {\n  val registry = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val repoReadme = readRepoFile(\".repo_context/README.md\")\n  val repoIndex = readRepoFile(\".repo_context/index.md\")\n  val repoMaintenance = readRepoFile(\".repo_context/maintenance.md\")\n  val generatedIndex = readRepoFile(\".repo_context/generated/repo_index.md\")\n  val engineeringPrinciples = readRepoFile(\".repo_context/modules/overview/engineering-principles.md\")\n  val taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\n  val prDiff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\n  val prJson = readRepoFile(\"/tmp/gh-aw/agent/pr.json\")\n  val sourceBefore = readRepoFile(\"cli/net_check.py\")\n  val searchResults = runCommand(listOf(\"rg\", \"-n\", \"ping_worker|net_check|subprocess.run\", \".\"))\n  val testContext = readRepoFile(\".repo_context/modules/quality/tests-and-reproduction.md\")\n  val selfVerification = readRepoFile(\".repo_context/playbooks/upkeep/ai-self-verification.md\")\n  val selectedCluster = compute(taskContext, prDiff, prJson, sourceBefore, searchResults, testContext, selfVerification)\n  val patchedSource = compute(selectedCluster, sourceBefore)\n  writeFile(\"cli/net_check.py\", patchedSource)\n  val failedImportValidation = runCommand(listOf(\"python3\", \"-\", \"# import cli.net_check validation\"))\n  val directFileValidation = runCommand(listOf(\"python3\", \"-\", \"# direct file validation\"))\n  val status = runCommand(listOf(\"git\", \"status\", \"--short\"))\n  val clusterDiff = runCommand(listOf(\"git\", \"diff\", \"--\", \"cli/net_check.py\"))\n  val evidence = compute(taskContext, clusterDiff, status, directFileValidation, registry)\n  writeFile(\"/tmp/gh-aw/evidence.json\", evidence)\n  publish(\"safeoutputs:noop\", \"No GitHub issue or comment action needed: fix evidence was written locally for pinned ai-review issue 238.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "registry"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/README.md"
+          },
+          "result": "repo_readme"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/index.md"
+          },
+          "result": "repo_index"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/maintenance.md"
+          },
+          "result": "repo_maintenance"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/generated/repo_index.md"
+          },
+          "result": "generated_index"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/overview/engineering-principles.md"
+          },
+          "result": "engineering_principles"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "pr_diff"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.json"
+          },
+          "result": "pr_json"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "cli/net_check.py"
+          },
+          "result": "source_before"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rg",
+              "-n",
+              "ping_worker|net_check|subprocess.run",
+              "."
+            ]
+          },
+          "result": "search_results"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/quality/tests-and-reproduction.md"
+          },
+          "result": "test_context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/playbooks/upkeep/ai-self-verification.md"
+          },
+          "result": "self_verification"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "pr_diff": {
+              "$ref": "pr_diff"
+            },
+            "pr_json": {
+              "$ref": "pr_json"
+            },
+            "source_before": {
+              "$ref": "source_before"
+            },
+            "search_results": {
+              "$ref": "search_results"
+            },
+            "test_context": {
+              "$ref": "test_context"
+            },
+            "self_verification": {
+              "$ref": "self_verification"
+            }
+          },
+          "result": "selected_cluster"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "selected_cluster": {
+              "$ref": "selected_cluster"
+            },
+            "source_before": {
+              "$ref": "source_before"
+            }
+          },
+          "result": "patched_source"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "cli/net_check.py",
+            "content": {
+              "$ref": "patched_source"
+            }
+          },
+          "result": "source_write"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "python3",
+              "-",
+              "# import cli.net_check validation"
+            ]
+          },
+          "result": "failed_import_validation"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "python3",
+              "-",
+              "# direct file validation"
+            ]
+          },
+          "result": "direct_file_validation"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "git",
+              "status",
+              "--short"
+            ]
+          },
+          "result": "status"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "git",
+              "diff",
+              "--",
+              "cli/net_check.py"
+            ]
+          },
+          "result": "cluster_diff"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "cluster_diff": {
+              "$ref": "cluster_diff"
+            },
+            "status": {
+              "$ref": "status"
+            },
+            "direct_file_validation": {
+              "$ref": "direct_file_validation"
+            },
+            "registry": {
+              "$ref": "registry"
+            }
+          },
+          "result": "evidence"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence"
+            }
+          },
+          "result": "evidence_file"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs:noop",
+            "body": "No GitHub issue or comment action needed: fix evidence was written locally for pinned ai-review issue 238."
+          },
+          "result": "noop_result"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "registry",
+          "registry"
+        ],
+        [
+          "repo_readme",
+          "repo_readme"
+        ],
+        [
+          "repo_index",
+          "repo_index"
+        ],
+        [
+          "repo_maintenance",
+          "repo_maintenance"
+        ],
+        [
+          "generated_index",
+          "generated_index"
+        ],
+        [
+          "engineering_principles",
+          "engineering_principles"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "pr_diff",
+          "pr_diff"
+        ],
+        [
+          "pr_json",
+          "pr_json"
+        ],
+        [
+          "source_before",
+          "source_before"
+        ],
+        [
+          "search_results",
+          "search_results"
+        ],
+        [
+          "test_context",
+          "test_context"
+        ],
+        [
+          "self_verification",
+          "self_verification"
+        ],
+        [
+          "cluster_diff",
+          "cluster_diff"
+        ],
+        [
+          "status",
+          "status"
+        ],
+        [
+          "direct_file_validation",
+          "direct_file_validation"
+        ],
+        [
+          "task_context",
+          "selected_cluster"
+        ],
+        [
+          "pr_diff",
+          "selected_cluster"
+        ],
+        [
+          "pr_json",
+          "selected_cluster"
+        ],
+        [
+          "source_before",
+          "selected_cluster"
+        ],
+        [
+          "search_results",
+          "selected_cluster"
+        ],
+        [
+          "test_context",
+          "selected_cluster"
+        ],
+        [
+          "self_verification",
+          "selected_cluster"
+        ],
+        [
+          "task_context",
+          "patched_source"
+        ],
+        [
+          "task_context",
+          "source_write"
+        ],
+        [
+          "pr_diff",
+          "patched_source"
+        ],
+        [
+          "pr_diff",
+          "source_write"
+        ],
+        [
+          "pr_json",
+          "patched_source"
+        ],
+        [
+          "pr_json",
+          "source_write"
+        ],
+        [
+          "source_before",
+          "patched_source"
+        ],
+        [
+          "source_before",
+          "source_write"
+        ],
+        [
+          "search_results",
+          "patched_source"
+        ],
+        [
+          "search_results",
+          "source_write"
+        ],
+        [
+          "test_context",
+          "patched_source"
+        ],
+        [
+          "test_context",
+          "source_write"
+        ],
+        [
+          "self_verification",
+          "patched_source"
+        ],
+        [
+          "self_verification",
+          "source_write"
+        ],
+        [
+          "task_context",
+          "evidence"
+        ],
+        [
+          "task_context",
+          "evidence_file"
+        ],
+        [
+          "cluster_diff",
+          "evidence"
+        ],
+        [
+          "cluster_diff",
+          "evidence_file"
+        ],
+        [
+          "status",
+          "evidence"
+        ],
+        [
+          "status",
+          "evidence_file"
+        ],
+        [
+          "direct_file_validation",
+          "evidence"
+        ],
+        [
+          "direct_file_validation",
+          "evidence_file"
+        ],
+        [
+          "registry",
+          "evidence"
+        ],
+        [
+          "registry",
+          "evidence_file"
+        ],
+        [
+          "source_before",
+          "cluster_diff"
+        ],
+        [
+          "source_before",
+          "evidence"
+        ],
+        [
+          "source_before",
+          "evidence_file"
+        ]
+      ]
+    }
+  }
+}
