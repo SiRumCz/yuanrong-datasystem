@@ -1,0 +1,172 @@
+{
+  "fixes": [],
+  "skipped": [],
+  "mode": "edit",
+  "pinned_issue": 237,
+  "agent_security": {
+    "plan_kts": "fun plan() {\n  val registry = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val context = readRepoFile(\"/tmp/gh-aw/task-context.json\")\n  val prDiff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\n  val selectedClusters = compute(\"Filter triage clusters to code-fixable dimensions only; exclude test-only clusters\", context, prDiff)\n  val evidence = compute(\"Build edit-mode evidence with empty fixes/skipped and pinned issue because no code-fixable clusters were selected\", registry, context, prDiff, selectedClusters)\n  val writerScript = compute(\"Serialize evidence JSON with json.dumps and write it to the required evidence path\", evidence)\n  runCommand(listOf(\"python3\", \"-c\", writerScript))\n  writeFile(\"/tmp/gh-aw/evidence.json\", evidence)\n  publish(\"safeoutputs.noop\", \"No action needed: triage contained only a test-dimension cluster, which is out of scope for the edit fix leg; evidence written with no fixes.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "registry"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "pr_diff"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "context": {
+              "$ref": "context"
+            },
+            "pr_diff": {
+              "$ref": "pr_diff"
+            }
+          },
+          "result": "selected_clusters"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "registry": {
+              "$ref": "registry"
+            },
+            "context": {
+              "$ref": "context"
+            },
+            "pr_diff": {
+              "$ref": "pr_diff"
+            },
+            "selected_clusters": {
+              "$ref": "selected_clusters"
+            }
+          },
+          "result": "evidence"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "evidence": {
+              "$ref": "evidence"
+            }
+          },
+          "result": "writer_script"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": {
+              "$ref": "writer_script"
+            }
+          },
+          "result": "command_result"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence"
+            }
+          },
+          "result": "written_evidence"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": "No action needed: triage contained only a test-dimension cluster, which is out of scope for the edit fix leg; evidence written with no fixes."
+          },
+          "result": "noop"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "registry",
+          "registry"
+        ],
+        [
+          "registry",
+          "evidence"
+        ],
+        [
+          "registry",
+          "writer_script"
+        ],
+        [
+          "registry",
+          "command_result"
+        ],
+        [
+          "registry",
+          "written_evidence"
+        ],
+        [
+          "context",
+          "context"
+        ],
+        [
+          "context",
+          "selected_clusters"
+        ],
+        [
+          "context",
+          "evidence"
+        ],
+        [
+          "context",
+          "writer_script"
+        ],
+        [
+          "context",
+          "command_result"
+        ],
+        [
+          "context",
+          "written_evidence"
+        ],
+        [
+          "pr_diff",
+          "pr_diff"
+        ],
+        [
+          "pr_diff",
+          "selected_clusters"
+        ],
+        [
+          "pr_diff",
+          "evidence"
+        ],
+        [
+          "pr_diff",
+          "writer_script"
+        ],
+        [
+          "pr_diff",
+          "command_result"
+        ],
+        [
+          "pr_diff",
+          "written_evidence"
+        ]
+      ]
+    }
+  }
+}
