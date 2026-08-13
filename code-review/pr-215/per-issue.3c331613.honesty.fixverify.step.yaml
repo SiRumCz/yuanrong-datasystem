@@ -1,7 +1,19 @@
 protocol: code-review
 instance: pr-215
-state: honesty
+state: done
 iteration: 1
 human_task: {}
 head_sha: 54fcf0e987fd851dee9c2e7a49c2c2cdc13db205
-history: []
+history:
+- iteration: 1
+  agent_run_id: '31742971200'
+  checks:
+    evidence-present: pass
+    honesty-check-valid: pass
+    plan-ast-guardians: pass
+    plan-cert-verify: pass
+    plan-ast-cedar: pass
+  feedback: ''
+outcome:
+  exit: 0
+  summary: ''
