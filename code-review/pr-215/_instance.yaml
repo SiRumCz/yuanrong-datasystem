@@ -3,7 +3,7 @@ instance: pr-215
 head_sha: e58242c37dd40d053e20ab4f143aacbe09382e2b
 phase: honesty-verdict
 joined: true
-phase_label: honesty verdict (halts if any fix is dishonest)
+phase_label: "\u26D4 blocked"
 status_comment_id: 5286891432
 overrides:
 - phase: preflight-verdict
@@ -11,3 +11,8 @@ overrides:
   reason: 'wave-1 live verification: PR 215 is the throwaway test vehicle and has
     no spec/plan by design; the preflight block is legitimate and expected. Overriding
     to reach the review fork, where all 5 legs now run the live Cedar guard.'
+halted:
+  phase: honesty-verdict
+  path: honesty-verdict
+  reason: blocked
+  sha: e58242c37dd40d053e20ab4f143aacbe09382e2b
