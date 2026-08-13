@@ -25,6 +25,7 @@
 #include "datasystem/c_api/util.h"
 #include "datasystem/c_api/utilC.h"
 #include "datasystem/common/log/log.h"
+#include "datasystem/common/log/trace.h"
 #include "datasystem/common/util/memory.h"
 #include "datasystem/common/util/thread_pool.h"
 #include "datasystem/context/context.h"
@@ -317,6 +318,20 @@ void *CreateObjectClient(const char *cWorkerHost, const int workerPort, const in
     auto clientUniquePtr =
         std::make_unique<std::shared_ptr<datasystem::object_cache::ObjectClientImpl>>(std::move(clientSharedPtr));
     return reinterpret_cast<void *>(clientUniquePtr.release());
+}
+
+void *CreateObjectClientWithTrace(const char *cWorkerHost, const int workerPort, const int timeOut, const char *token,
+                                  size_t tokenLen, const char *clientPublicKey, size_t cClientPublicKeyLen,
+                                  const char *clientPrivateKey, size_t clientPrivateKeyLen, const char *serverPublicKey,
+                                  size_t cServerPublicKeyLen, const char *accessKey, size_t cAccessKeyLen,
+                                  const char *secretKey, size_t secretKeyLen, const char *tenantId, size_t cTenantIdLen,
+                                  const char *enableCrossNodeConnection)
+{
+    datasystem::TraceGuard traceGuard = datasystem::Trace::Instance().SetRequestTraceUUID();
+    return CreateObjectClient(cWorkerHost, workerPort, timeOut, token, tokenLen, clientPublicKey, cClientPublicKeyLen,
+                              clientPrivateKey, clientPrivateKeyLen, serverPublicKey, cServerPublicKeyLen, accessKey,
+                              cAccessKeyLen, secretKey, secretKeyLen, tenantId, cTenantIdLen,
+                              enableCrossNodeConnection);
 }
 
 struct StatusC ConnectWorker(void *clientPtr)
