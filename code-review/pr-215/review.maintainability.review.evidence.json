@@ -1,0 +1,399 @@
+{
+  "dimension": "maintainability",
+  "verdict": "APPROVE",
+  "findings": [],
+  "agent_security": {
+    "plan_kts": "fun reviewMaintainability() {\n  val attemptedPrefixedRegistryRead = runCommand(listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/plan-tools.md\"))\n  val planTools = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val dimension = readRepoFile(\"/tmp/gh-aw/agent/dimension.txt\")\n  val rubric = readRepoFile(\"/tmp/gh-aw/agent/rubric.md\")\n  val pr = readRepoFile(\"/tmp/gh-aw/agent/pr.json\")\n  val diff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\n  val taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\n  val repoReadme = readRepoFile(\".repo_context/README.md\")\n  val repoIndex = readRepoFile(\".repo_context/index.md\")\n  val maintenance = readRepoFile(\".repo_context/maintenance.md\")\n  val engineeringPrinciples = readRepoFile(\".repo_context/modules/overview/engineering-principles.md\")\n  val generatedIndex = readRepoFile(\".repo_context/generated/repo_index.md\")\n  val reviewChecklist = readRepoFile(\".repo_context/playbooks/reviews/pr-review-checklist.md\")\n  val selfVerification = readRepoFile(\".repo_context/playbooks/upkeep/ai-self-verification.md\")\n  val review = computeMaintainabilityFindings(dimension, rubric, pr, diff, taskContext, repoReadme, repoIndex, maintenance, engineeringPrinciples, generatedIndex, reviewChecklist, selfVerification)\n  writeFile(\"/tmp/gh-aw/evidence.json\", review)\n  publish(\"safeoutputs/noop\", \"No GitHub action needed: maintainability review evidence was written locally for PR 215 with no actionable findings.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/plan-tools.md"
+            ]
+          },
+          "result": "attempted_prefixed_registry_read"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "plan_tools"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/dimension.txt"
+          },
+          "result": "dimension"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/rubric.md"
+          },
+          "result": "rubric"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.json"
+          },
+          "result": "pr"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "diff"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/README.md"
+          },
+          "result": "repo_readme"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/index.md"
+          },
+          "result": "repo_context_index"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/maintenance.md"
+          },
+          "result": "maintenance"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/overview/engineering-principles.md"
+          },
+          "result": "engineering_principles"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/generated/repo_index.md"
+          },
+          "result": "generated_repo_index"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/playbooks/reviews/pr-review-checklist.md"
+          },
+          "result": "review_checklist"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/playbooks/upkeep/ai-self-verification.md"
+          },
+          "result": "self_verification"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "dimension": {
+              "$ref": "dimension"
+            },
+            "rubric": {
+              "$ref": "rubric"
+            },
+            "pr": {
+              "$ref": "pr"
+            },
+            "diff": {
+              "$ref": "diff"
+            },
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "repo_readme": {
+              "$ref": "repo_readme"
+            },
+            "repo_context_index": {
+              "$ref": "repo_context_index"
+            },
+            "maintenance": {
+              "$ref": "maintenance"
+            },
+            "engineering_principles": {
+              "$ref": "engineering_principles"
+            },
+            "generated_repo_index": {
+              "$ref": "generated_repo_index"
+            },
+            "review_checklist": {
+              "$ref": "review_checklist"
+            },
+            "self_verification": {
+              "$ref": "self_verification"
+            }
+          },
+          "result": "review"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "review"
+            }
+          },
+          "result": "evidence_file"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs/noop",
+            "body": "No GitHub action needed: maintainability review evidence was written locally for PR 215 with no actionable findings."
+          },
+          "result": "safeoutput_noop"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "plan_tools",
+          "plan_tools"
+        ],
+        [
+          "plan_tools",
+          "review"
+        ],
+        [
+          "plan_tools",
+          "evidence_file"
+        ],
+        [
+          "dimension",
+          "dimension"
+        ],
+        [
+          "dimension",
+          "review"
+        ],
+        [
+          "dimension",
+          "evidence_file"
+        ],
+        [
+          "rubric",
+          "rubric"
+        ],
+        [
+          "rubric",
+          "review"
+        ],
+        [
+          "rubric",
+          "evidence_file"
+        ],
+        [
+          "pr",
+          "pr"
+        ],
+        [
+          "pr",
+          "review"
+        ],
+        [
+          "pr",
+          "evidence_file"
+        ],
+        [
+          "diff",
+          "diff"
+        ],
+        [
+          "diff",
+          "review"
+        ],
+        [
+          "diff",
+          "evidence_file"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "review"
+        ],
+        [
+          "task_context",
+          "evidence_file"
+        ],
+        [
+          "repo_readme",
+          "repo_readme"
+        ],
+        [
+          "repo_readme",
+          "review"
+        ],
+        [
+          "repo_readme",
+          "evidence_file"
+        ],
+        [
+          "repo_context_index",
+          "repo_context_index"
+        ],
+        [
+          "repo_context_index",
+          "review"
+        ],
+        [
+          "repo_context_index",
+          "evidence_file"
+        ],
+        [
+          "maintenance",
+          "maintenance"
+        ],
+        [
+          "maintenance",
+          "review"
+        ],
+        [
+          "maintenance",
+          "evidence_file"
+        ],
+        [
+          "engineering_principles",
+          "engineering_principles"
+        ],
+        [
+          "engineering_principles",
+          "review"
+        ],
+        [
+          "engineering_principles",
+          "evidence_file"
+        ],
+        [
+          "generated_repo_index",
+          "generated_repo_index"
+        ],
+        [
+          "generated_repo_index",
+          "review"
+        ],
+        [
+          "generated_repo_index",
+          "evidence_file"
+        ],
+        [
+          "review_checklist",
+          "review_checklist"
+        ],
+        [
+          "review_checklist",
+          "review"
+        ],
+        [
+          "review_checklist",
+          "evidence_file"
+        ],
+        [
+          "self_verification",
+          "self_verification"
+        ],
+        [
+          "self_verification",
+          "review"
+        ],
+        [
+          "self_verification",
+          "evidence_file"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 39,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "diff",
+        "dimension",
+        "engineering_principles",
+        "generated_repo_index",
+        "maintenance",
+        "plan_tools",
+        "pr",
+        "repo_context_index",
+        "repo_readme",
+        "review_checklist",
+        "rubric",
+        "self_verification",
+        "task_context"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a001f7-48a7-7040-b61e-1331ac014d62",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1786739389.827419,
+      "counts": {
+        "allow": 16
+      },
+      "engines": {
+        "cedar": 16
+      },
+      "last_seen": 1786739500.040409,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 16,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
