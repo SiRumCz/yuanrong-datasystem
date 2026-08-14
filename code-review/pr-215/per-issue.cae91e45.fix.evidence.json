@@ -1,0 +1,435 @@
+{
+  "fixes": [],
+  "skipped": [],
+  "mode": "edit",
+  "pinned_issue": 240,
+  "agent_security": {
+    "plan_kts": "fun fixTriage() {\n  val rtkRegistryAttempt = runCommand(listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/plan-tools.md\"))\n  val fallbackDecision = compute(rtkRegistryAttempt)\n  val toolRegistry = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\n  val prDiff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\n  val prMetadata = readRepoFile(\"/tmp/gh-aw/agent/pr.json\")\n  val repoReadme = readRepoFile(\".repo_context/README.md\")\n  val repoIndex = readRepoFile(\".repo_context/index.md\")\n  val repoMaintenance = readRepoFile(\".repo_context/maintenance.md\")\n  val generatedIndex = readRepoFile(\".repo_context/generated/repo_index.md\")\n  val engineeringPrinciples = readRepoFile(\".repo_context/modules/overview/engineering-principles.md\")\n  val testsReproduction = readRepoFile(\".repo_context/modules/quality/tests-and-reproduction.md\")\n  val selfVerification = readRepoFile(\".repo_context/playbooks/upkeep/ai-self-verification.md\")\n  val gitStatus = runCommand(listOf(\"git\", \"status\", \"--short\"))\n  val selectedClusters = compute(taskContext, prDiff, prMetadata, repoReadme, repoIndex, repoMaintenance, generatedIndex, engineeringPrinciples, testsReproduction, selfVerification, fallbackDecision, gitStatus)\n  val evidence = compute(selectedClusters, taskContext, toolRegistry)\n  writeFile(\"/tmp/gh-aw/evidence.json\", evidence)\n  publish(\"safeoutputs.noop\", \"No action needed: triage contained only test-dimension findings, which are out of scope for the fix leg; evidence was written with no fixes.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/plan-tools.md"
+            ]
+          },
+          "result": "rtk_registry_attempt"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "input": {
+              "$ref": "rtk_registry_attempt"
+            }
+          },
+          "result": "fallback_decision"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "tool_registry"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "pr_diff"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.json"
+          },
+          "result": "pr_metadata"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/README.md"
+          },
+          "result": "repo_readme"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/index.md"
+          },
+          "result": "repo_index"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/maintenance.md"
+          },
+          "result": "repo_maintenance"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/generated/repo_index.md"
+          },
+          "result": "generated_index"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/overview/engineering-principles.md"
+          },
+          "result": "engineering_principles"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/quality/tests-and-reproduction.md"
+          },
+          "result": "tests_reproduction"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/playbooks/upkeep/ai-self-verification.md"
+          },
+          "result": "self_verification"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "git",
+              "status",
+              "--short"
+            ]
+          },
+          "result": "git_status"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "task": {
+              "$ref": "task_context"
+            },
+            "diff": {
+              "$ref": "pr_diff"
+            },
+            "metadata": {
+              "$ref": "pr_metadata"
+            },
+            "readme": {
+              "$ref": "repo_readme"
+            },
+            "index": {
+              "$ref": "repo_index"
+            },
+            "maintenance": {
+              "$ref": "repo_maintenance"
+            },
+            "generated": {
+              "$ref": "generated_index"
+            },
+            "principles": {
+              "$ref": "engineering_principles"
+            },
+            "tests": {
+              "$ref": "tests_reproduction"
+            },
+            "verify": {
+              "$ref": "self_verification"
+            },
+            "fallback": {
+              "$ref": "fallback_decision"
+            },
+            "status": {
+              "$ref": "git_status"
+            }
+          },
+          "result": "selected_clusters"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "selection": {
+              "$ref": "selected_clusters"
+            },
+            "task": {
+              "$ref": "task_context"
+            },
+            "registry": {
+              "$ref": "tool_registry"
+            }
+          },
+          "result": "evidence_content"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence_content"
+            }
+          },
+          "result": "evidence_file"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": "No action needed: triage contained only test-dimension findings, which are out of scope for the fix leg; evidence was written with no fixes."
+          },
+          "result": "noop_result"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "tool_registry",
+          "tool_registry"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "pr_diff",
+          "pr_diff"
+        ],
+        [
+          "pr_metadata",
+          "pr_metadata"
+        ],
+        [
+          "repo_readme",
+          "repo_readme"
+        ],
+        [
+          "repo_index",
+          "repo_index"
+        ],
+        [
+          "repo_maintenance",
+          "repo_maintenance"
+        ],
+        [
+          "generated_index",
+          "generated_index"
+        ],
+        [
+          "engineering_principles",
+          "engineering_principles"
+        ],
+        [
+          "tests_reproduction",
+          "tests_reproduction"
+        ],
+        [
+          "self_verification",
+          "self_verification"
+        ],
+        [
+          "task_context",
+          "selected_clusters"
+        ],
+        [
+          "task_context",
+          "evidence_content"
+        ],
+        [
+          "task_context",
+          "evidence_file"
+        ],
+        [
+          "pr_diff",
+          "selected_clusters"
+        ],
+        [
+          "pr_diff",
+          "evidence_content"
+        ],
+        [
+          "pr_diff",
+          "evidence_file"
+        ],
+        [
+          "pr_metadata",
+          "selected_clusters"
+        ],
+        [
+          "pr_metadata",
+          "evidence_content"
+        ],
+        [
+          "pr_metadata",
+          "evidence_file"
+        ],
+        [
+          "repo_readme",
+          "selected_clusters"
+        ],
+        [
+          "repo_readme",
+          "evidence_content"
+        ],
+        [
+          "repo_readme",
+          "evidence_file"
+        ],
+        [
+          "repo_index",
+          "selected_clusters"
+        ],
+        [
+          "repo_index",
+          "evidence_content"
+        ],
+        [
+          "repo_index",
+          "evidence_file"
+        ],
+        [
+          "repo_maintenance",
+          "selected_clusters"
+        ],
+        [
+          "repo_maintenance",
+          "evidence_content"
+        ],
+        [
+          "repo_maintenance",
+          "evidence_file"
+        ],
+        [
+          "generated_index",
+          "selected_clusters"
+        ],
+        [
+          "generated_index",
+          "evidence_content"
+        ],
+        [
+          "generated_index",
+          "evidence_file"
+        ],
+        [
+          "engineering_principles",
+          "selected_clusters"
+        ],
+        [
+          "engineering_principles",
+          "evidence_content"
+        ],
+        [
+          "engineering_principles",
+          "evidence_file"
+        ],
+        [
+          "tests_reproduction",
+          "selected_clusters"
+        ],
+        [
+          "tests_reproduction",
+          "evidence_content"
+        ],
+        [
+          "tests_reproduction",
+          "evidence_file"
+        ],
+        [
+          "self_verification",
+          "selected_clusters"
+        ],
+        [
+          "self_verification",
+          "evidence_content"
+        ],
+        [
+          "self_verification",
+          "evidence_file"
+        ],
+        [
+          "tool_registry",
+          "evidence_content"
+        ],
+        [
+          "tool_registry",
+          "evidence_file"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 43,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "engineering_principles",
+        "generated_index",
+        "pr_diff",
+        "pr_metadata",
+        "repo_index",
+        "repo_maintenance",
+        "repo_readme",
+        "self_verification",
+        "task_context",
+        "tests_reproduction",
+        "tool_registry"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a00206-4d2b-76f2-ad39-0797f9a4486d",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1786740372.7080872,
+      "counts": {
+        "allow": 15
+      },
+      "engines": {
+        "cedar": 15
+      },
+      "last_seen": 1786740465.7582848,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 15,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
