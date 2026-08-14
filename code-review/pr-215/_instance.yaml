@@ -1,7 +1,7 @@
 protocol: code-review
 instance: pr-215
 head_sha: e58242c37dd40d053e20ab4f143aacbe09382e2b
-phase: preflight
-joined: false
-phase_label: pre-flight adherence chain
+phase: preflight-verdict
+joined: true
+phase_label: pre-flight verdict (halts on an unmet floor)
 status_comment_id: 5287937327
