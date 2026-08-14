@@ -2,7 +2,7 @@ protocol: code-review
 instance: pr-215
 head_sha: c6ff46438613ba1fb759f61aa63d9ff439cb548b
 phase: review
-joined: true
+joined: false
 phase_label: multi-dimension review
 status_comment_id: 5297542749
 overrides:
