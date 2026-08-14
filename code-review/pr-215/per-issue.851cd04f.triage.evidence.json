@@ -1,0 +1,240 @@
+{
+  "agent_security": {
+    "plan_kts": "fun main() {\n  val registry = read_repo_file(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val plan = compute(registry)\n  val taskContext = read_repo_file(\"/tmp/gh-aw/task-context.json\")\n  val issues = read_repo_file(\"/tmp/gh-aw/agent/issues.json\")\n  val prDiff = read_repo_file(\"/tmp/gh-aw/agent/pr.diff\")\n  val evidence = compute(taskContext, issues, prDiff, plan)\n  write_file(\"/tmp/gh-aw/evidence.json\", evidence)\n  publish(\"safeoutputs.noop\", \"No action needed: triage evidence written to /tmp/gh-aw/evidence.json as requested; no GitHub issue/comment was needed.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "registry"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "input": {
+              "$ref": "registry"
+            }
+          },
+          "result": "plan"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/issues.json"
+          },
+          "result": "issues"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "pr_diff"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "issues": {
+              "$ref": "issues"
+            },
+            "pr_diff": {
+              "$ref": "pr_diff"
+            },
+            "plan": {
+              "$ref": "plan"
+            }
+          },
+          "result": "evidence_content"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence_content"
+            }
+          },
+          "result": "evidence_file"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": "No action needed: triage evidence written to /tmp/gh-aw/evidence.json as requested; no GitHub issue/comment was needed."
+          },
+          "result": "noop_result"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "registry",
+          "registry"
+        ],
+        [
+          "registry",
+          "plan"
+        ],
+        [
+          "registry",
+          "evidence_content"
+        ],
+        [
+          "registry",
+          "evidence_file"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "evidence_content"
+        ],
+        [
+          "task_context",
+          "evidence_file"
+        ],
+        [
+          "issues",
+          "issues"
+        ],
+        [
+          "issues",
+          "evidence_content"
+        ],
+        [
+          "issues",
+          "evidence_file"
+        ],
+        [
+          "pr_diff",
+          "pr_diff"
+        ],
+        [
+          "pr_diff",
+          "evidence_content"
+        ],
+        [
+          "pr_diff",
+          "evidence_file"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 13,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "issues",
+        "pr_diff",
+        "registry",
+        "task_context"
+      ],
+      "sinks": []
+    }
+  },
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "Bound the ping subprocess runtime",
+      "dimension": [
+        "performance"
+      ],
+      "severity": "low",
+      "paths": [
+        "cli/net_check.py"
+      ],
+      "member_findings": [
+        {
+          "dimension": "performance",
+          "path": "cli/net_check.py",
+          "line": 28,
+          "severity": "low",
+          "category": "performance",
+          "title": "Bound the ping subprocess runtime",
+          "impact": "ping_worker accepts any positive count and then runs ping synchronously. A caller that passes a very large count can keep the dscli helper occupied for minutes or hours and leave a long-running child process, which is avoidable operator-side resource consumption even though this is not a cache request path.",
+          "fix": "Cap count to a small operational maximum and/or pass an explicit subprocess timeout derived from count so the helper has a predictable upper runtime."
+        }
+      ],
+      "rank": 1
+    }
+  ],
+  "summary": {
+    "present": [
+      "performance"
+    ],
+    "missing": [
+      "correctness",
+      "test",
+      "security",
+      "maintainability"
+    ],
+    "clusters": 1,
+    "total_findings": 1,
+    "by_severity": {
+      "low": 1
+    },
+    "by_dimension": {
+      "performance": 1
+    }
+  },
+  "pinned_issue": 242,
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a001ff-0c69-79d1-8247-d587447c5507",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1786739898.9017441,
+      "counts": {
+        "allow": 7
+      },
+      "engines": {
+        "cedar": 7
+      },
+      "last_seen": 1786739972.048091,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 7,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
