@@ -1,7 +1,17 @@
 protocol: code-review
 instance: pr-215
 state: preflight
-iteration: 1
+iteration: 2
 human_task: {}
 head_sha: c6ff46438613ba1fb759f61aa63d9ff439cb548b
-history: []
+history:
+- iteration: 1
+  agent_run_id: '31811241289'
+  checks:
+    dispatched-run: fail
+    judge-coverage: pass
+    plan-ast-guardians: pass
+    plan-cert-verify: pass
+    live-guard-clean: fail
+  feedback: 'dispatched run failed; unenforced: no liveness record -- the hook was
+    never installed, so this run proves nothing about the guard'
