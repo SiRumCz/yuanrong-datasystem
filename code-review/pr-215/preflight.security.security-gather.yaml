@@ -1,16 +1,7 @@
 protocol: code-review
 instance: pr-215
-state: done
+state: preflight
 iteration: 1
 human_task: {}
 head_sha: e58242c37dd40d053e20ab4f143aacbe09382e2b
-history:
-- iteration: 1
-  agent_run_id: '31754456338'
-  checks:
-    evidence-present: pass
-    security-gather-coverage: pass
-  feedback: ''
-outcome:
-  exit: 0
-  summary: ''
+history: []
