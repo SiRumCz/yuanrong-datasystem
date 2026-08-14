@@ -1,0 +1,143 @@
+{
+  "agent_security": {
+    "plan_kts": "fun plan() {\n  val taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\n  val evidence = compute(taskContext)\n  writeFile(\"/tmp/gh-aw/evidence.json\", evidence)\n  publish(\"safeoutputs.noop\", \"No action needed: consistency cluster evidence written to /tmp/gh-aw/evidence.json; no GitHub issue/comment requested.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "input": {
+              "$ref": "task_context"
+            }
+          },
+          "result": "evidence"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence"
+            }
+          },
+          "result": "evidence_written"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": "No action needed: consistency cluster evidence written to /tmp/gh-aw/evidence.json; no GitHub issue/comment requested."
+          },
+          "result": "noop_published"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "evidence"
+        ],
+        [
+          "task_context",
+          "evidence_written"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 3,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "task_context"
+      ],
+      "sinks": []
+    }
+  },
+  "cluster": "consistency",
+  "legs": [
+    {
+      "leg": "docs-updated-appropriately",
+      "scope": {
+        "code_changed": true
+      },
+      "gather_verdict": "inadequate",
+      "graded_findings": [
+        {
+          "ref": ".repo_context/generated/repo_index.md",
+          "severity": "blocking",
+          "rationale": "The finding identifies a source-backed context maintenance gap: PR 215 adds cli/net_check.py, but the generated repository index was not regenerated to include it. Because the repository instructions require updating relevant .repo_context files when module structure changes, this is a real merge-blocking adherence issue."
+        }
+      ]
+    },
+    {
+      "leg": "tests-updated-appropriately",
+      "scope": {
+        "code_changed": true
+      },
+      "gather_verdict": "inadequate",
+      "graded_findings": [
+        {
+          "ref": "tests/python/test_ds_client.py",
+          "severity": "blocking",
+          "rationale": "The gather identifies newly added CLI network-check validation and subprocess behavior with no corresponding tests for success, failure, or invalid input branches. That is a real tests-updated gap for user-visible control flow and should stop merge until covered."
+        }
+      ]
+    }
+  ],
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a001e6-40eb-7892-87e5-53a055e6b58f",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1786738281.1195645,
+      "counts": {
+        "allow": 5
+      },
+      "engines": {
+        "cedar": 5
+      },
+      "last_seen": 1786738338.8052628,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 5,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
