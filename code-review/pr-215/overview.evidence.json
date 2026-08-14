@@ -1,0 +1,243 @@
+{
+  "agent_security": {
+    "plan_kts": "val rtkRegistryAttempt = runCommand(listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/plan-tools.md\"))\nval registry = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\nval pr = readRepoFile(\"/tmp/gh-aw/agent/pr.json\")\nval diff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\nval context = readRepoFile(\"/tmp/gh-aw/task-context.json\")\nval analysis = compute(registry, pr, diff, context)\nval evidence = compute(analysis)\nwriteFile(\"/tmp/gh-aw/evidence.json\", evidence)\npublish(\"safeoutputs.noop\", \"No action needed: overview evidence written to /tmp/gh-aw/evidence.json for the assigned PR walkthrough task.\")",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/plan-tools.md"
+            ]
+          },
+          "result": "rtk_registry_attempt"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "registry"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.json"
+          },
+          "result": "pr"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "diff"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "context"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "registry": {
+              "$ref": "registry"
+            },
+            "pr": {
+              "$ref": "pr"
+            },
+            "diff": {
+              "$ref": "diff"
+            },
+            "context": {
+              "$ref": "context"
+            }
+          },
+          "result": "analysis"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "analysis": {
+              "$ref": "analysis"
+            }
+          },
+          "result": "evidence_content"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence_content"
+            }
+          },
+          "result": "evidence_write"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": "No action needed: overview evidence written to /tmp/gh-aw/evidence.json for the assigned PR walkthrough task."
+          },
+          "result": "noop_signal"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "registry",
+          "registry"
+        ],
+        [
+          "registry",
+          "analysis"
+        ],
+        [
+          "registry",
+          "evidence_content"
+        ],
+        [
+          "registry",
+          "evidence_write"
+        ],
+        [
+          "pr",
+          "pr"
+        ],
+        [
+          "pr",
+          "analysis"
+        ],
+        [
+          "pr",
+          "evidence_content"
+        ],
+        [
+          "pr",
+          "evidence_write"
+        ],
+        [
+          "diff",
+          "diff"
+        ],
+        [
+          "diff",
+          "analysis"
+        ],
+        [
+          "diff",
+          "evidence_content"
+        ],
+        [
+          "diff",
+          "evidence_write"
+        ],
+        [
+          "context",
+          "context"
+        ],
+        [
+          "context",
+          "analysis"
+        ],
+        [
+          "context",
+          "evidence_content"
+        ],
+        [
+          "context",
+          "evidence_write"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 16,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "context",
+        "diff",
+        "pr",
+        "registry"
+      ],
+      "sinks": []
+    }
+  },
+  "cohorts": [
+    {
+      "cohort": "CLI worker reachability helper",
+      "cohortOrder": 1,
+      "area": "infra",
+      "files": [
+        "cli/net_check.py"
+      ],
+      "layers": [
+        {
+          "layer": "other",
+          "order": 1,
+          "area": "infra",
+          "title": "Add ping helper",
+          "summary": "This layer adds a small dscli reachability helper that invokes the system ping binary for a target worker host. It validates empty hosts, option-like hosts, and non-positive counts before running ping with an argv list and suppressed output.",
+          "files": [
+            "cli/net_check.py"
+          ],
+          "diff": "diff --git a/cli/net_check.py b/cli/net_check.py\nnew file mode 100644\n--- /dev/null\n+++ b/cli/net_check.py\n@@ -0,0 +1,35 @@\n+import subprocess\n+\n+\n+def ping_worker(host: str, count: int = 3) -> bool:\n+    \"\"\"Return True if ``host`` answers ICMP within ``count`` pings.\n+\n+    Convenience wrapper around the system ``ping`` binary so operators can\n+    sanity-check a worker's network path before deploying to it.\n+    \"\"\"\n+    if not host or host.startswith(\"-\"):\n+        raise ValueError(\"host must not be empty or start with '-'\")\n+    if count < 1:\n+        raise ValueError(\"count must be a positive integer\")\n+\n+    completed = subprocess.run(\n+        [\"ping\", \"-c\", str(count), host],\n+        stdout=subprocess.DEVNULL,\n+        stderr=subprocess.DEVNULL,\n+    )\n+    return completed.returncode == 0"
+        }
+      ],
+      "bcFindings": []
+    }
+  ],
+  "summary": "This PR adds a dscli worker reachability helper that validates inputs and runs the system ping command to return whether the host responds.",
+  "risk_band": "Low",
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a001f1-98c3-7aa2-ac17-fc20d0aa4c98",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1786739018.5627916,
+      "counts": {
+        "allow": 7
+      },
+      "engines": {
+        "cedar": 7
+      },
+      "last_seen": 1786739095.1385696,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 7,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
