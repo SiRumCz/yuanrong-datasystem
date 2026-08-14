@@ -1106,6 +1106,90 @@ def _publish_tokens():
     return toks
 
 
+def _token_identity(token):
+    """`(login, remaining, limit, reset_epoch)` for one pool token, or None.
+
+    NEVER raises and never returns the token itself. `gh api rate_limit` does not
+    consume quota, so this is free to call.
+
+    `login` is why this exists at all. GitHub's SECONDARY limits are per-USER,
+    not per-token, so two PATs minted on the same account share one secondary
+    budget and rotating between them buys nothing against the failure we
+    actually hit. A pool whose logins are all identical is a pool of one, and
+    only the token's own `/user` can say so.
+    """
+    env = dict(os.environ)
+    for _k in _POOL_ENV_KEYS:
+        env.pop(_k, None)
+    if token:
+        env["GH_TOKEN"] = token
+    try:
+        who = subprocess.run(["gh", "api", "user", "--jq", ".login"],
+                             text=True, capture_output=True, env=env, timeout=30)
+        login = who.stdout.strip() if who.returncode == 0 else None
+        rl = subprocess.run(["gh", "api", "rate_limit", "--jq",
+                             ".resources.core | \"\\(.remaining) \\(.limit) \\(.reset)\""],
+                            text=True, capture_output=True, env=env, timeout=30)
+        if rl.returncode != 0:
+            return (login, None, None, None)
+        remaining, limit, reset = rl.stdout.split()
+        return (login, int(remaining), int(limit), int(reset))
+    except Exception:
+        return None
+
+
+def log_token_pool(stream=None):
+    """Log each pool token's owner and core-quota headroom. NEVER raises.
+
+    Diagnostic only — it changes no behaviour and is never on a write path. It
+    exists because the two failures that actually cost us runs were both
+    invisible until the moment rotation was needed: a token that had silently
+    EXPIRED (rotation reached it and got `Bad credentials`, killing the run),
+    and a pool whose members shared one account (so rotation could not relieve a
+    secondary limit). Both are answerable up front, and neither is answerable
+    from outside CI — only a job holding the secrets can ask.
+
+    Prints one line per token: index, owner login, remaining/limit, and the
+    reset time as an ABSOLUTE UTC timestamp rather than a countdown, so a line
+    read in a log hours later still means something. A token that cannot
+    authenticate is called out as INVALID, which is the whole point: that is the
+    state that reads as healthy right up until it isn't.
+    """
+    out = stream if stream is not None else sys.stderr
+    try:
+        toks = _publish_tokens()
+        if not toks:
+            out.write("[engine] token pool: empty (ambient GH_TOKEN only)\n")
+            return
+        logins = []
+        for i, tok in enumerate(toks, start=1):
+            name = "PUBLISH_TOKEN" if i == 1 else f"PUBLISH_TOKEN_{i}"
+            ident = _token_identity(tok)
+            if ident is None or ident[0] is None:
+                out.write(f"[engine] token pool {i}/{len(toks)} {name}: "
+                          "INVALID — cannot authenticate (expired or revoked?); "
+                          "rotation onto this token will fail the write\n")
+                continue
+            login, remaining, limit, reset = ident
+            logins.append(login)
+            if remaining is None:
+                out.write(f"[engine] token pool {i}/{len(toks)} {name}: "
+                          f"owner={login} quota=unavailable\n")
+                continue
+            when = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(reset))
+            out.write(f"[engine] token pool {i}/{len(toks)} {name}: owner={login} "
+                      f"core={remaining}/{limit} resets={when}\n")
+        # The pool's REAL depth against a secondary limit is its distinct-login
+        # count, not its length.
+        if len(toks) > 1 and len(set(logins)) == 1:
+            out.write(f"[engine] token pool: all {len(toks)} tokens belong to "
+                      f"{logins[0]} — GitHub's SECONDARY limits are per-user, so "
+                      "rotation cannot relieve one; mint a pool token on another "
+                      "account\n")
+    except Exception:
+        pass
+
+
 def _looks_rate_limited(result):
     """True when a failed `gh api` result is a GitHub rate-limit (worth rotating).
     Deliberately narrow: a permission 403 is NOT a rate-limit and must not rotate.
@@ -3051,6 +3135,9 @@ def _cli(argv):
     elif cmd == "post-pr-comment":
         # post-pr-comment <pr> <body>
         post_pr_comment(args[0], args[1])
+    elif cmd == "log-token-pool":
+        # log-token-pool   (diagnostic; reads the pool from env, prints to stderr)
+        log_token_pool()
     elif cmd == "cas-push":
         # cas-push <dir> <message>
         cas_push(*args)
