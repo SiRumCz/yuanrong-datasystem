@@ -1,0 +1,185 @@
+{
+  "leg": "plan-implements-spec",
+  "scope": {
+    "code_changed": true,
+    "spec_present": false,
+    "plan_present": false,
+    "spec_path": null,
+    "plan_path": null
+  },
+  "gather_verdict": "underspec",
+  "graded_findings": [],
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ],
+  "agent_security": {
+    "plan_kts": "fun plan() {\n  val planRegistry = read_repo_file(path = \"/tmp/gh-aw/agent/plan-tools.md\")\n  val agentSecurityPlan = compute(planRegistry)\n  val taskContext = read_repo_file(path = \"/tmp/gh-aw/task-context.json\")\n  val evidenceJson = compute(taskContext, agentSecurityPlan)\n  write_file(path = \"/tmp/gh-aw/evidence.json\", content = evidenceJson)\n  val noopBody = compute(evidenceJson)\n  publish(channel = \"safeoutputs.noop\", body = noopBody)\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "plan_registry"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "input": {
+              "$ref": "plan_registry"
+            }
+          },
+          "result": "agent_security_plan"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "agent_security_plan": {
+              "$ref": "agent_security_plan"
+            }
+          },
+          "result": "evidence_json"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence_json"
+            }
+          },
+          "result": "evidence_written"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "evidence_json": {
+              "$ref": "evidence_json"
+            }
+          },
+          "result": "noop_body"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": {
+              "$ref": "noop_body"
+            }
+          },
+          "result": "noop_result"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "plan_registry",
+          "plan_registry"
+        ],
+        [
+          "plan_registry",
+          "agent_security_plan"
+        ],
+        [
+          "plan_registry",
+          "evidence_json"
+        ],
+        [
+          "plan_registry",
+          "evidence_written"
+        ],
+        [
+          "plan_registry",
+          "noop_body"
+        ],
+        [
+          "plan_registry",
+          "noop_result"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "evidence_json"
+        ],
+        [
+          "task_context",
+          "evidence_written"
+        ],
+        [
+          "task_context",
+          "noop_body"
+        ],
+        [
+          "task_context",
+          "noop_result"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 11,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "plan_registry",
+        "task_context"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a001de-4d81-7462-9c9f-225f36018a38",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1786737779.0420823,
+      "counts": {
+        "allow": 4
+      },
+      "engines": {
+        "cedar": 4
+      },
+      "last_seen": 1786737843.0677552,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 4,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  }
+}
