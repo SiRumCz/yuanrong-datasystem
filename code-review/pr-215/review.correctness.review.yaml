@@ -1,7 +1,20 @@
 protocol: code-review
 instance: pr-215
-state: review
+state: done
 iteration: 1
 human_task: {}
 head_sha: c6ff46438613ba1fb759f61aa63d9ff439cb548b
-history: []
+history:
+- iteration: 1
+  agent_run_id: '31838054724'
+  checks:
+    evidence-present: pass
+    review-schema-valid: pass
+    review-findings-anchored: pass
+    plan-ast-guardians: pass
+    plan-cert-verify: pass
+    live-guard-clean: pass
+  feedback: ''
+outcome:
+  exit: 0
+  summary: ''
