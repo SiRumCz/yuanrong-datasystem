@@ -42,8 +42,7 @@ def main():
     # Resolve protocol dir: equivalent to $(cd "$(dirname "$PROTO")" && pwd)
     pdir = os.path.realpath(os.path.dirname(os.path.abspath(proto)))
 
-    with open(proto) as f:
-        protocol = json.load(f)
+    protocol = lib.load_protocol(proto)
 
     node_path_env = os.environ.get("NODE_PATH", "")
 
@@ -97,6 +96,13 @@ def main():
     params = (node or {}).get("params", {})
     params_json = json.dumps(params, separators=(",", ":"))
     checks_list = (node or {}).get("checks", [])
+    # Declared vs. produced are different questions: a node with an empty/absent
+    # `checks[]` legitimately produces zero verdicts (nothing to fold, decide()
+    # returns "done"); a node whose declared checks all errored also produces
+    # zero verdicts, but that IS a checks-job failure (decide() iterates/fails).
+    # This flag is how the caller (advance.py -> lib.decide) tells them apart —
+    # it must never be inferred from len(results).
+    checks_declared = bool(checks_list)
 
     results = []
 
@@ -123,9 +129,20 @@ def main():
             ))
             continue
 
-        # child_env inherits the full job environment, so PR_BODY / PR_TITLE
-        # (exported by the checks job for checks that parse the PR description/
-        # title) reach every check alongside CHECK_PARAMS. Keep this passthrough.
+        # This is the engine's ONE unfenced subprocess env — code hooks and
+        # expanders build theirs from lib.HOOK_ENV_ALLOWLIST. The asymmetry is
+        # deliberate, not an oversight:
+        #
+        # Checks run in ZONE 3, which by design holds nothing worth fencing —
+        # the read-only default GITHUB_TOKEN and no publish/state credential
+        # (see the trust-zone table in CLAUDE.md). Hooks run in ZONE 4 beside
+        # the state PAT and PUBLISH_TOKEN, which is why THEY need an allowlist.
+        # Passing the full env here costs no privilege and lets a check read the
+        # job's PR_BODY / PR_TITLE (exported for checks that parse the PR
+        # description or title) alongside CHECK_PARAMS.
+        #
+        # If zone 3 ever gains a credential, this line becomes the leak — fence
+        # it then, and the trust-zone table is what says so.
         child_env = dict(os.environ)
         child_env["CHECK_PARAMS"] = params_json
 
@@ -134,8 +151,15 @@ def main():
                 [path, ev, diff, files],
                 capture_output=True,
                 text=True,
-                env=child_env
+                env=child_env,
+                timeout=lib.hook_timeout_seconds(),
             )
+        except subprocess.TimeoutExpired:
+            # A hung check must FAIL, not stall the checks job: no verdict was
+            # produced, so the node has not demonstrated anything.
+            results.append(fail_verdict(
+                name, f"check timed out after {lib.hook_timeout_seconds()}s", on_fail))
+            continue
         except OSError as exc:
             results.append(fail_verdict(name, f"check runner error: {exc}", on_fail))
             continue
@@ -176,7 +200,10 @@ def main():
         verdict["on_fail"] = on_fail
         results.append(verdict)
 
-    print(json.dumps({"results": results}, separators=(",", ":")))
+    print(json.dumps(
+        {"results": results, "checks_declared": checks_declared},
+        separators=(",", ":"),
+    ))
 
 
 if __name__ == "__main__":

@@ -51,6 +51,18 @@ steps:
       if [ -z "$CTX" ]; then CTX='{}'; fi
       printf '%s' "$CTX" > /tmp/gh-aw/task-context.json
 post-steps:
+  - name: Set up Python 3.11 for Guardians
+    uses: actions/setup-python@v5
+    with: { python-version: '3.11' }
+  - name: Guardians verify plan_ast (advisory, fail-open)
+    if: always()
+    run: |
+      python3.11 -m pip install --quiet "git+https://github.com/metareflection/guardians@main" z3-solver pydantic pyyaml || true
+      SEC=.github/agent-factory/protocols/code-review/scripts/security
+      python3.11 "$SEC/verify-plan-ast.py" /tmp/gh-aw/evidence.json "$SEC/policy/guardians/default.policy.yaml" || true
+      python3.11 "$SEC/verify-plan-cert.py" /tmp/gh-aw/evidence.json || true
+      ( cd "$SEC" && npm install --no-audit --no-fund --silent ) || true
+      python3.11 "$SEC/verify-plan-cedar.py" /tmp/gh-aw/evidence.json "$SEC/policy/cedar/default" || true
   - name: Upload evidence artifact
     if: always()
     uses: actions/upload-artifact@v4
@@ -58,7 +70,7 @@ post-steps:
       name: evidence
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
-source: golivax/agentic-protocol-poc/.github/workflows/mm-compliance-gate.md@c6ecf5dad176860d8088573b8be7f5e65e21e3dc
+source: golivax/agentic-protocol-poc/.github/workflows/mm-compliance-gate.md@30e1636e52e0444bc37750f234359eaffa786dad
 ---
 
 # Mental-Model Compliance Gate
@@ -123,3 +135,33 @@ not independent constraints.
 - ALWAYS write `/tmp/gh-aw/evidence.json` (even when compliant — `divergences: []`).
 - Base every verdict on real evidence from `pr.diff`. Cite file paths. Never invent MM content not in `_mm/`.
 - This is a preflight fanout LEG: write evidence and then call `noop`. Do NOT post a comment — the preflight gate renders the mental-model verdict in the consolidated preflight comment.
+
+## Emit your security bundle (`agent_security`)
+
+Wrap all plan-safety artifacts in ONE `agent_security` object in the JSON you write to
+`/tmp/gh-aw/evidence.json` (additive — keep every other evidence field you already emit):
+
+```json
+{
+  "agent_security": {
+    "plan_kts": "fun plan(...) { ... }",
+    "plan_ast": { "steps": [ { "tool": "readDiff", "args": { "pr": {"$ref":"pr"} }, "result": "diff" } ] },
+    "cert":     { "paths": [ ["diff","diff"], ["diff","findings"], ["diff","verdict"] ] }
+  }
+}
+```
+
+- **`plan_kts`** — your plan as a single Kotlin `.kts`: each capability a named function
+  call (`readIssue`/`readDiff`/`readFile`/`analyze`/`writeFile`/`curlPost`…), data through
+  named `val` bindings, and any sink destination (`url=`/`path=`) a string literal.
+- **`plan_ast`** — the SAME plan as a restricted workflow AST: one step per tool call;
+  `args` maps each param to a literal or `{"$ref":"<prior-result>"}`; `result` names the output.
+- **`cert`** — your safety certificate: the reachability set over `plan_ast`. For every
+  SOURCE step (a read of external/sensitive data), list every variable its data reaches by
+  following the `$ref → result` flows, including the source reaching itself. Each entry is
+  `[source-variable, reached-variable]`.
+
+A deterministic checker re-derives the facts from `plan_ast` and verifies `cert` (it
+rejects fabricated or omitted paths, so you cannot hide a leak). The engine records the
+results back under `agent_security` as `guardians`, `cert_verify`, and `cedar`. Purely additive;
+nothing gates on it.

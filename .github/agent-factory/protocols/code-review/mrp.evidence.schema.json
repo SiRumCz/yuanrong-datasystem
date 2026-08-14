@@ -12,14 +12,15 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["point", "source"],
+            "required": ["point", "snippet", "source"],
             "properties": {
               "point": { "type": "string" },
-              "source": { "type": "string" }
+              "snippet": { "type": "string" },
+              "source": { "type": "string", "enum": ["conversation", "walkthrough"] }
             }
           }
         },
-        "intentMatch": { "type": "string" }
+        "intentMatch": { "type": "string", "enum": ["aligned", "partial", "unclear"] }
       }
     },
     "critique_ledger": {
@@ -41,6 +42,18 @@
     "routed_questions": {
       "type": "object",
       "additionalProperties": { "type": "string" }
+    },
+    "routed_spots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "spot_id": { "type": "string" },
+          "cohort": { "type": "string" },
+          "diff_hunk_pointer": { "type": "string" },
+          "risk_source": { "type": "string" }
+        }
+      }
     },
     "acceptance": {
       "type": "object",
@@ -73,6 +86,25 @@
       }
     },
     "riskBand": { "type": ["string", "null"] },
+    "smm_compliance": {
+      "type": ["object", "null"],
+      "properties": {
+        "verdict": { "type": "string" },
+        "divergences": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "mm_doc": { "type": "string" },
+              "decision": { "type": "string" },
+              "contradiction": { "type": "string" },
+              "evidence_path": { "type": "string" },
+              "fix": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
     "meta": {
       "type": "object",
       "properties": {

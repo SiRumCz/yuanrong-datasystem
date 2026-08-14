@@ -1,0 +1,162 @@
+# `security-gather` — the `code-review` protocol's deterministic security step.
+#
+# This is NOT a gh-aw agent: no .md source, no .lock.yml, no LLM. It was one
+# until engine 7.0.0, and only because a `code` node had no way to get a
+# provisioned runner: the real work — Cedar over the captured agent transcript,
+# Guardians over the plan and the transcript, fused into one report — is 40
+# lines of shell needing npm, pip, Node and Python 3.11. The agent that wrapped
+# it did nothing but `cat` four JSON files, copy them into evidence.json, and
+# compute `verdict` by a rule its own prompt spelled out mechanically. The
+# engine's `security-gather-coverage` check RE-DERIVES that verdict from
+# `engine_report.violations` anyway and rejects a mismatch, so the model's
+# answer was never trusted — it was a costume over deterministic work.
+#
+# The ABI this file satisfies (docs/AUTHORING.md):
+#   * on: workflow_dispatch with a `protocol_context` input — the engine passes
+#     {cid, pr, ref, sha, inputs, iteration} as one JSON string;
+#   * `cid:[…]` inside run-name, LOAD-BEARING: lib.match_run_by_cid finds the
+#     run the engine launched by that literal, and dispatch hard-fails after 24
+#     polls without it;
+#   * an artifact named `evidence` holding evidence.json, matching
+#     security-gather.evidence.schema.json.
+#
+# FAIL-OPEN is deliberate and unchanged from the agent version: every engine
+# line ends in `|| true` or a fallback stub, because a missing transcript, an
+# absent plan, or a flaky dependency install must never fail the PR. When the
+# engines genuinely could not run the verdict is `n/a` — never a silent PASS.
+name: Security Gather
+run-name: "Security Gather · cid:[${{ fromJSON(github.event.inputs.protocol_context || '{}').cid }}]"
+on:
+  workflow_dispatch:
+    inputs:
+      protocol_context:
+        description: "Engine dispatch context: {cid, pr, ref, sha, inputs, iteration}."
+        type: string
+        required: false
+        default: ""
+
+# The trust boundary for a dispatched step is THIS block. The engine never
+# hands it the state PAT; read-only is all the engines need (they fetch the PR,
+# the plan at head, and any declarative custom policy, and write nothing).
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  gather:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Prefetch PR metadata
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Engine-supplied context reaches the shell via env, never
+          # interpolated into a run: body — the repo's standing rule.
+          PR: ${{ fromJSON(github.event.inputs.protocol_context || '{}').pr }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/agent
+          gh pr view "$PR" --repo "$REPO" \
+            --json number,title,author,body,files,baseRefName,headRefName,headRefOid \
+            > /tmp/agent/pr.json
+          gh pr diff "$PR" --repo "$REPO" > /tmp/agent/pr.diff || true
+
+      - name: Set up Python 3.11 for Guardians
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run Cedar + Guardians security engines (deterministic, fail-open)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Two off-the-shelf engines audit the change for security data-flow risks. Every line is
+          # fail-open (|| true / fallback JSON): a missing transcript/plan/dep never fails the run.
+          SEC=.github/agent-factory/protocols/code-review/scripts/security
+          CTX=.github/agent-factory/protocols/code-review/scripts/context
+          A=/tmp/agent
+          HEAD_SHA=$(jq -r '.headRefOid // ""' "$A/pr.json" 2>/dev/null || echo "")
+          # Captured agent transcript(s) via the protocol's own locator → Cedar input. Read from the
+          # dedicated `conversations` branch at <owner>/<repo>/pr-<N>/*.jsonl (not the PR's own tree).
+          PRNUM=$(jq -r '.number // empty' "$A/pr.json" 2>/dev/null || echo "")
+          CONVERSATIONS_REF=conversations CONVERSATIONS_DIR="$REPO/pr-$PRNUM" \
+            node "$CTX/locate.js" "$A/pr.json" "$A/transcripts" || true
+          # Plan text: derive the plan path from changed files, fetch at head → Guardians input.
+          PLAN_PATH=$(jq -r '[.files[].path] | map(select(test("(?i)(docs/.*plans?/|^plans?/|PLAN\\.md$)"))) | .[0] // ""' "$A/pr.json" 2>/dev/null || echo "")
+          if [ -n "$PLAN_PATH" ]; then gh api "repos/$REPO/contents/$PLAN_PATH?ref=$HEAD_SHA" --jq '.content' 2>/dev/null | base64 -d > "$A/plan.txt" || true; fi
+          [ -s "$A/plan.txt" ] || : > "$A/plan.txt"
+          # Optional per-repo DECLARATIVE custom policy (data only — never executed). LOCKED rules win.
+          CCDIR="$A/custom-cedar"; mkdir -p "$CCDIR"
+          for fn in $(gh api "repos/$REPO/contents/.custody/policy/cedar?ref=$HEAD_SHA" --jq '.[].name' 2>/dev/null || true); do
+            case "$fn" in *.cedar) gh api "repos/$REPO/contents/.custody/policy/cedar/$fn?ref=$HEAD_SHA" --jq '.content' 2>/dev/null | base64 -d > "$CCDIR/$fn" || true ;; esac
+          done
+          CUSTOM_CEDAR=""; [ -n "$(ls -A "$CCDIR" 2>/dev/null)" ] && CUSTOM_CEDAR="$CCDIR"
+          CUSTOM_GUARD=""
+          if gh api "repos/$REPO/contents/.custody/policy/guardians.policy.yaml?ref=$HEAD_SHA" --jq '.content' 2>/dev/null | base64 -d > "$A/custom-guardians.yaml" 2>/dev/null; then CUSTOM_GUARD="$A/custom-guardians.yaml"; fi
+          # Install the engines (fail-open).
+          ( cd "$SEC" && npm install --no-audit --no-fund --silent ) || true
+          python3.11 -m pip install --quiet "git+https://github.com/metareflection/guardians@main" z3-solver pydantic pyyaml || true
+          # Run: Cedar over the transcript; plan → AST → Guardians; transcript → AST → Guardians; fuse.
+          CHANGED=$(jq -c '[.files[].path] // []' "$A/pr.json" 2>/dev/null || echo '[]')
+          node "$SEC/run-cedar.js" "$SEC/policy/cedar/default" "$CUSTOM_CEDAR" "$A/transcripts" "$CHANGED" > "$A/cedar.json" 2>/dev/null || echo '{"status":"n/a","flags":[]}' > "$A/cedar.json"
+          # Guardians over the PLAN (declared intent).
+          node "$SEC/plan-extract.js" "$A/plan.txt" > "$A/gx-workflow.json" 2>/dev/null || echo '{"steps":[]}' > "$A/gx-workflow.json"
+          python3.11 "$SEC/verify_driver.py" "$A/gx-workflow.json" "$SEC/policy/guardians/default.policy.yaml" ${CUSTOM_GUARD:+"$CUSTOM_GUARD"} > "$A/guardians.json" 2>/dev/null || echo '{"ok":true,"violations":[],"warnings":[]}' > "$A/guardians.json"
+          # Guardians over the TRANSCRIPT (what the agent actually did — real tool calls → same taint AST).
+          node "$SEC/transcript-extract.js" "$A/transcripts" > "$A/gx-transcript.json" 2>/dev/null || echo '{"steps":[]}' > "$A/gx-transcript.json"
+          python3.11 "$SEC/verify_driver.py" "$A/gx-transcript.json" "$SEC/policy/guardians/default.policy.yaml" ${CUSTOM_GUARD:+"$CUSTOM_GUARD"} > "$A/guardians-transcript.json" 2>/dev/null || echo '{"ok":true,"violations":[],"warnings":[]}' > "$A/guardians-transcript.json"
+          node "$SEC/emit-engine-report.js" "$A/cedar.json" "$A/guardians.json" "$A/guardians-transcript.json" > "$A/engine-report.json" 2>/dev/null || echo '{"violations":[],"summary":{}}' > "$A/engine-report.json"
+          echo "engine-report:"; cat "$A/engine-report.json" 2>/dev/null || true
+
+      - name: Assemble evidence
+        run: |
+          set -euo pipefail
+          A=/tmp/agent
+          # THE VERDICT RULE, verbatim from the agent prompt it replaces — it was
+          # always mechanical, which is the whole reason this step needed no model:
+          #   LOCKED_VIOLATION  iff any engine_report.violations[] has locked:true
+          #   n/a               if the report has no `violations` array at all
+          #                     (both engines produced only fallback stubs) —
+          #                     fail-OPEN, never a silent PASS
+          #   PASS              otherwise
+          # `security-gather-coverage` re-derives this independently and rejects a
+          # mismatch, so a bug here is caught by the engine rather than trusted.
+          #
+          # `examined` is the negative-attestation trace: the policy ids the
+          # engines actually consulted, so a check can settle the claim that they
+          # ran at all rather than taking "no findings" on faith.
+          for f in cedar guardians engine-report; do
+            [ -s "$A/$f.json" ] || echo '{}' > "$A/$f.json"
+            jq -e . "$A/$f.json" >/dev/null 2>&1 || echo '{}' > "$A/$f.json"
+          done
+          jq -n \
+            --slurpfile cedar "$A/cedar.json" \
+            --slurpfile guardians "$A/guardians.json" \
+            --slurpfile report "$A/engine-report.json" \
+            '($report[0] // {}) as $r
+             | (if ($r.violations | type) != "array" then "n/a"
+                elif ([$r.violations[] | select(.locked == true)] | length) > 0 then "LOCKED_VIOLATION"
+                else "PASS" end) as $verdict
+             | {scope: {},
+                cedar: ($cedar[0] // {}),
+                guardians: ($guardians[0] // {}),
+                engine_report: $r,
+                verdict: $verdict,
+                examined: (if ($r.violations | type) == "array"
+                           then ["policy/cedar/default", "policy/guardians/default.policy.yaml"]
+                           else [] end)}' \
+            > /tmp/evidence.json
+          echo "--- evidence:"; jq '{verdict, examined, violations: (.engine_report.violations | length? // null)}' /tmp/evidence.json
+
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: evidence
+          path: /tmp/evidence.json
+          if-no-files-found: error

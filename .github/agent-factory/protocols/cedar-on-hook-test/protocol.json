@@ -1,0 +1,67 @@
+{
+  "$schema": "../../engine/protocol.schema.json",
+  "name": "cedar-on-hook-test",
+  "version": "0.1.0",
+  "min_engine_version": "7.0.0",
+  "_note": "Isolated live proof of the live-guard Cedar PreToolUse hook, run on BOTH engines. Four agent legs share one check, as two matched lanes: `allow`/`deny` on claude-sonnet-4-6 and `allow-codex`/`deny-codex` on codex gpt-5.5. An allow leg makes only permitted calls and is expected GREEN; a deny leg is instructed to attempt a forbidden call, the hook refuses it, and the leg is expected RED via on_fail:block (a denied call is not a form defect to retry, so it never iterates; no leg declares on_blocked so the run keeps flowing). One green + one red PER LANE IS the pass condition -- two greens in a lane means the guard never fired there, two reds means it over-blocks. The lanes differ in three engine-specific ways, all forced by measurement (docs/STATUS.md, 'live-guard on codex'): codex pins version 0.147.0 because gh-aw's default 0.135.0 dispatches no hooks at all; it registers the hook via `-c` on the command line because gh-aw truncates $CODEX_HOME/config.toml after pre-agent-steps; and it must NOT set CEDAR_LIVE_GUARD_ON_DENY=stop, which fails OPEN on codex. `record` is a DISPATCHED code node because an inline hook's return is reduced to {conclusion,summary} and could not carry a ledger; it reduces the fork with from_fork and publishes all legs' guard events as evidence. Trigger /cedar-hook on a PR comment.",
+  "triggers": [
+    { "on": "issue_comment", "comment_prefix": "/cedar-hook", "command": "start" }
+  ],
+  "states": [
+    {
+      "id": "guard",
+      "kind": "fork",
+      "label": "cedar guard: allow ∥ deny",
+      "next": "join-guard",
+      "branches": [
+        {
+          "id": "allow",
+          "kind": "agent",
+          "workflow": "cedar-hook-allow-agent",
+          "evidence": "guard.evidence.schema.json",
+          "max_iterations": 1,
+          "params": { "expect": "allow" },
+          "checks": [ { "run": "live-guard-enforced", "on_fail": "iterate" } ]
+        },
+        {
+          "id": "deny",
+          "kind": "agent",
+          "workflow": "cedar-hook-deny-agent",
+          "evidence": "guard.evidence.schema.json",
+          "max_iterations": 1,
+          "params": { "expect": "deny" },
+          "checks": [ { "run": "live-guard-enforced", "on_fail": "block" } ]
+        },
+        {
+          "id": "allow-codex",
+          "kind": "agent",
+          "workflow": "cedar-hook-allow-codex-agent",
+          "evidence": "guard.evidence.schema.json",
+          "max_iterations": 1,
+          "params": { "expect": "allow" },
+          "checks": [ { "run": "live-guard-enforced", "on_fail": "iterate" } ]
+        },
+        {
+          "id": "deny-codex",
+          "kind": "agent",
+          "workflow": "cedar-hook-deny-codex-agent",
+          "evidence": "guard.evidence.schema.json",
+          "max_iterations": 1,
+          "params": { "expect": "deny" },
+          "checks": [ { "run": "live-guard-enforced", "on_fail": "block" } ]
+        }
+      ]
+    },
+    { "id": "join-guard", "kind": "join", "of": "guard", "next": "record" },
+    {
+      "id": "record",
+      "kind": "code",
+      "label": "record (ledger of both legs' guard events)",
+      "workflow": "cedar-hook-record",
+      "evidence": "ledger.evidence.schema.json",
+      "max_iterations": 1,
+      "inputs": [ { "from_fork": "guard", "as": "legs" } ],
+      "next": "done"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["step", "legs", "examined"],
+  "properties": {
+    "step": { "type": "string" },
+    "legs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["leg", "enforced", "decisions", "incidents"],
+        "properties": {
+          "leg": { "type": "string" },
+          "enforced": { "type": "boolean" },
+          "decisions": { "type": "integer" },
+          "incidents": { "type": "array", "items": { "type": "object" } }
+        }
+      }
+    },
+    "examined": { "type": "array", "items": { "type": "string" } }
+  }
+}

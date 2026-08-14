@@ -3,11 +3,31 @@
   "title": "honesty subworkflow check evidence",
   "type": "object",
   "additionalProperties": false,
-  "required": ["check", "pass", "reason"],
+  "required": [
+    "check",
+    "pass",
+    "reason"
+  ],
   "properties": {
-    "check": { "type": "string", "enum": ["testhash", "fixverify"] },
-    "pass": { "type": "boolean" },
-    "reason": { "type": "string" },
-    "test_output_hash": { "type": "string" }
+    "check": {
+      "type": "string",
+      "enum": [
+        "testhash",
+        "fixverify"
+      ]
+    },
+    "pass": {
+      "type": "boolean"
+    },
+    "reason": {
+      "type": "string"
+    },
+    "test_output_hash": {
+      "type": "string"
+    },
+    "agent_security": {
+      "type": "object",
+      "description": "Security bundle: plan_kts/plan_ast/plan_cert (agent-emitted) + plan_ast_guardians/plan_cert_verify (recorded verdicts). Additive; not gated."
+    }
   }
 }

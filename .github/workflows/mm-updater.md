@@ -3,9 +3,19 @@ name: "MM Updater (protocol leg: mm-updater)"
 run-name: "MM Updater · cid:[${{ fromJSON(github.event.inputs.aw_context || '{}').cid }}]"
 'on':
   workflow_dispatch:
+imports:
+  # The codex live-guard apparatus: replaces the provisioning engine.command
+  # removes (node / codex CLI / AWF), writes the wrapper that registers the
+  # PreToolUse hook, and folds the guard's records into evidence.
+  - shared/live-guard-codex.md
 engine:
   id: codex
+  # gh-aw's default 0.135.0 dispatches NO hooks, silently.
+  version: "0.147.0"
   model: gpt-5.5
+  command: /tmp/gh-aw/cedar-live-guard/codex-with-guard
+  # On a fresh runner every hook is untrusted and skipped without warning.
+  args: ["--dangerously-bypass-hook-trust"]
   # Codex (OpenAI) via the private OpenAI-compatible gateway (matches preflight +
   # the other custody agents). gh-aw injects OPENAI_API_KEY (repo secret).
   env:
@@ -56,6 +66,16 @@ steps:
       if [ -z "$CTX" ]; then CTX='{}'; fi
       printf '%s' "$CTX" > /tmp/gh-aw/task-context.json
 post-steps:
+  - name: Set up Python 3.11 for Guardians
+    uses: actions/setup-python@v5
+    with: { python-version: '3.11' }
+  - name: Guardians verify plan_ast (advisory, fail-open)
+    if: always()
+    run: |
+      python3.11 -m pip install --quiet "git+https://github.com/metareflection/guardians@main" z3-solver pydantic pyyaml || true
+      SEC=.github/agent-factory/protocols/code-review/scripts/security
+      python3.11 "$SEC/verify-plan-ast.py" /tmp/gh-aw/evidence.json "$SEC/policy/guardians/default.policy.yaml" || true
+      python3.11 "$SEC/verify-plan-cert.py" /tmp/gh-aw/evidence.json || true
   - name: Upload evidence artifact
     if: always()
     uses: actions/upload-artifact@v4
@@ -63,7 +83,6 @@ post-steps:
       name: evidence
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
-source: golivax/agentic-protocol-poc/.github/workflows/mm-updater.md@c6ecf5dad176860d8088573b8be7f5e65e21e3dc
 ---
 
 # Mental-Model Updater
@@ -131,3 +150,33 @@ change is warranted the pipeline proceeds straight to it.
 - The proposed PR must contain ONLY mental-model edits (you are on the `_mental_model` branch).
 - Ground every proposed change in real evidence from `pr.diff`. Do not invent unrelated content.
 - When unsure whether a change rises to an MM update, prefer `mm_changed:false` to avoid noise.
+
+## Emit your security bundle (`agent_security`)
+
+Wrap all plan-safety artifacts in ONE `agent_security` object in the JSON you write to
+`/tmp/gh-aw/evidence.json` (additive — keep every other evidence field you already emit):
+
+```json
+{
+  "agent_security": {
+    "plan_kts": "fun plan(...) { ... }",
+    "plan_ast": { "steps": [ { "tool": "readDiff", "args": { "pr": {"$ref":"pr"} }, "result": "diff" } ] },
+    "cert":     { "paths": [ ["diff","diff"], ["diff","findings"], ["diff","verdict"] ] }
+  }
+}
+```
+
+- **`plan_kts`** — your plan as a single Kotlin `.kts`: each capability a named function
+  call (`readIssue`/`readDiff`/`readFile`/`analyze`/`writeFile`/`curlPost`…), data through
+  named `val` bindings, and any sink destination (`url=`/`path=`) a string literal.
+- **`plan_ast`** — the SAME plan as a restricted workflow AST: one step per tool call;
+  `args` maps each param to a literal or `{"$ref":"<prior-result>"}`; `result` names the output.
+- **`cert`** — your safety certificate: the reachability set over `plan_ast`. For every
+  SOURCE step (a read of external/sensitive data), list every variable its data reaches by
+  following the `$ref → result` flows, including the source reaching itself. Each entry is
+  `[source-variable, reached-variable]`.
+
+A deterministic checker re-derives the facts from `plan_ast` and verifies `cert` (it
+rejects fabricated or omitted paths, so you cannot hide a leak). The engine records the
+results back under `agent_security` as `guardians`, `cert_verify`, and `cedar`. Purely additive;
+nothing gates on it.

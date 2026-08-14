@@ -67,9 +67,11 @@ def _error_evidence(path):
         "rationale": None,
         "critique_ledger": [],
         "routed_questions": {},
+        "routed_spots": [],
         "acceptance_plan": {"per_cohort": [], "staged_rungs": STAGED_RUNGS},
         "acceptance": {"recommendation": "hold", "reasons": ["mrp pack missing or unreadable"]},
         "riskBand": None,
+        "smm_compliance": None,
         "meta": {},
         "pack": {"path": path, "error": True},
     }
@@ -83,9 +85,11 @@ def evidence_from_pack(path):
         "rationale": pack.get("rationale"),
         "critique_ledger": pack.get("critique_ledger") or [],
         "routed_questions": _routed_questions(pack),
+        "routed_spots": pack.get("routed_spots") or [],
         "acceptance_plan": pack.get("acceptance_plan") or {"per_cohort": [], "staged_rungs": STAGED_RUNGS},
         "acceptance": _derive_acceptance(pack),
         "riskBand": pack.get("riskBand"),
+        "smm_compliance": pack.get("smm_compliance"),
         "meta": pack.get("meta") or {},
         "pack": {"path": path, "error": False},
     }
