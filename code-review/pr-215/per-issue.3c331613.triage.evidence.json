@@ -1,0 +1,238 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "New ping_worker behavior has no regression coverage",
+      "dimension": [
+        "test"
+      ],
+      "severity": "medium",
+      "paths": [
+        "cli/net_check.py"
+      ],
+      "member_findings": [
+        {
+          "dimension": "test",
+          "path": "cli/net_check.py",
+          "line": 18,
+          "severity": "medium",
+          "category": "test",
+          "title": "New ping_worker behavior has no regression coverage",
+          "impact": "The new helper adds input validation for host/count and maps the system ping return code to a boolean, but the PR adds no unit test that would fail if validation is removed, invalid arguments are accepted, or ping failures are reported as success.",
+          "fix": "Add a focused test for ping_worker that mocks subprocess.run and covers a successful ping, a non-zero return code, empty or dash-prefixed host rejection, and non-positive count rejection."
+        }
+      ],
+      "rank": 1
+    }
+  ],
+  "summary": {
+    "present": [
+      "test"
+    ],
+    "missing": [
+      "correctness",
+      "performance",
+      "security",
+      "maintainability"
+    ],
+    "clusters": 1,
+    "total_findings": 1,
+    "by_severity": {
+      "medium": 1
+    },
+    "by_dimension": {
+      "test": 1
+    }
+  },
+  "pinned_issue": 237,
+  "agent_security": {
+    "plan_kts": "fun main() {\n  val rtkRegistryAttempt = runCommand(listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/plan-tools.md\"))\n  val toolRegistry = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\n  val issues = readRepoFile(\"/tmp/gh-aw/agent/issues.json\")\n  val prDiff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\n  val evidence = computeEvidence(toolRegistry, taskContext, issues, prDiff)\n  writeFile(\"/tmp/gh-aw/evidence.json\", evidence)\n  publish(\"safeoutputs.noop\", \"No action needed: wrote the required single-cluster triage evidence for pinned ai-review issue 237; no GitHub issue/comment/PR update was requested.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/plan-tools.md"
+            ]
+          },
+          "result": "rtk_registry_attempt"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "tool_registry"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/issues.json"
+          },
+          "result": "issues"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "pr_diff"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "tool_registry": {
+              "$ref": "tool_registry"
+            },
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "issues": {
+              "$ref": "issues"
+            },
+            "pr_diff": {
+              "$ref": "pr_diff"
+            }
+          },
+          "result": "evidence_content"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence_content"
+            }
+          },
+          "result": "evidence_file"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": "No action needed: wrote the required single-cluster triage evidence for pinned ai-review issue 237; no GitHub issue/comment/PR update was requested."
+          },
+          "result": "noop_result"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "tool_registry",
+          "tool_registry"
+        ],
+        [
+          "tool_registry",
+          "evidence_content"
+        ],
+        [
+          "tool_registry",
+          "evidence_file"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "evidence_content"
+        ],
+        [
+          "task_context",
+          "evidence_file"
+        ],
+        [
+          "issues",
+          "issues"
+        ],
+        [
+          "issues",
+          "evidence_content"
+        ],
+        [
+          "issues",
+          "evidence_file"
+        ],
+        [
+          "pr_diff",
+          "pr_diff"
+        ],
+        [
+          "pr_diff",
+          "evidence_content"
+        ],
+        [
+          "pr_diff",
+          "evidence_file"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 12,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "issues",
+        "pr_diff",
+        "task_context",
+        "tool_registry"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "019ffddc-2756-7620-a77d-75cf16eda872",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1786670513.287471,
+      "counts": {
+        "allow": 7
+      },
+      "engines": {
+        "cedar": 7
+      },
+      "last_seen": 1786670594.7267423,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 7,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
