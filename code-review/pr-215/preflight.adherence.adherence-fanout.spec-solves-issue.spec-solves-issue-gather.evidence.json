@@ -1,0 +1,146 @@
+{
+  "matrix": [],
+  "verdict": "n/a",
+  "scope": {
+    "issue_linked": false,
+    "spec_present": false
+  },
+  "examined": [
+    "scope.json"
+  ],
+  "agent_security": {
+    "plan_kts": "fun plan() {\n  val scope = readRepoFile(\"/tmp/gh-aw/agent/scope.json\")\n  val naDecision = compute(\"issue_linked is false, so emit N/A evidence with an empty matrix\", scope)\n  val evidenceContent = compute(\"build evidence JSON including agent_security\", naDecision)\n  writeFile(\"/tmp/gh-aw/evidence.json\", evidenceContent)\n  val noopBody = compute(\"No action needed because scope marks this leg out of scope\", scope)\n  publish(\"safeoutputs.noop\", noopBody)\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/scope.json"
+          },
+          "result": "scope"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "scope": {
+              "$ref": "scope"
+            }
+          },
+          "result": "na_decision"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "decision": {
+              "$ref": "na_decision"
+            }
+          },
+          "result": "evidence_content"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence_content"
+            }
+          },
+          "result": "evidence_write"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "scope": {
+              "$ref": "scope"
+            }
+          },
+          "result": "noop_body"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": {
+              "$ref": "noop_body"
+            }
+          },
+          "result": "noop_publish"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "scope",
+          "scope"
+        ],
+        [
+          "scope",
+          "na_decision"
+        ],
+        [
+          "scope",
+          "evidence_content"
+        ],
+        [
+          "scope",
+          "noop_body"
+        ],
+        [
+          "scope",
+          "noop_publish"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "fail",
+      "status": "ok",
+      "certificate_valid": false,
+      "paths_verified": 5,
+      "rejected_reasons": [
+        "closure gap: (scope->evidence_content) + flow(evidence_content->evidence_write) but (scope->evidence_write) omitted"
+      ],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "scope"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a000b0-2952-7d23-8c33-6b405511a247",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1786717957.0698895,
+      "counts": {
+        "allow": 5
+      },
+      "engines": {
+        "cedar": 5
+      },
+      "last_seen": 1786718012.9707355,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 5,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  }
+}
