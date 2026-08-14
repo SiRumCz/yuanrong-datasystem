@@ -1,0 +1,188 @@
+{
+  "matrix": [],
+  "verdict": "n/a",
+  "scope": {
+    "issue_linked": false,
+    "spec_present": false
+  },
+  "examined": [
+    "scope.json",
+    "issue.txt",
+    "spec.txt",
+    "task-context.json"
+  ],
+  "agent_security": {
+    "plan_kts": "fun plan() {\n  val scope = readRepoFile(\"/tmp/gh-aw/agent/scope.json\")\n  val issue = readRepoFile(\"/tmp/gh-aw/agent/issue.txt\")\n  val spec = readRepoFile(\"/tmp/gh-aw/agent/spec.txt\")\n  val taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\n  val evidence = compute(scope, issue, spec, taskContext)\n  writeFile(\"/tmp/gh-aw/evidence.json\", evidence)\n  publish(\"safeoutputs noop\", \"No action needed: spec-solves-issue leg is out of scope because scope.json has issue_linked=false.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/scope.json"
+          },
+          "result": "scope"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/issue.txt"
+          },
+          "result": "issue"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/spec.txt"
+          },
+          "result": "spec"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "taskContext"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "scope": {
+              "$ref": "scope"
+            },
+            "issue": {
+              "$ref": "issue"
+            },
+            "spec": {
+              "$ref": "spec"
+            },
+            "taskContext": {
+              "$ref": "taskContext"
+            }
+          },
+          "result": "evidence"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence"
+            }
+          },
+          "result": "evidenceFile"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs noop",
+            "body": "No action needed: spec-solves-issue leg is out of scope because scope.json has issue_linked=false."
+          },
+          "result": "noopResult"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "scope",
+          "scope"
+        ],
+        [
+          "scope",
+          "evidence"
+        ],
+        [
+          "scope",
+          "evidenceFile"
+        ],
+        [
+          "issue",
+          "issue"
+        ],
+        [
+          "issue",
+          "evidence"
+        ],
+        [
+          "issue",
+          "evidenceFile"
+        ],
+        [
+          "spec",
+          "spec"
+        ],
+        [
+          "spec",
+          "evidence"
+        ],
+        [
+          "spec",
+          "evidenceFile"
+        ],
+        [
+          "taskContext",
+          "taskContext"
+        ],
+        [
+          "taskContext",
+          "evidence"
+        ],
+        [
+          "taskContext",
+          "evidenceFile"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 12,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "issue",
+        "scope",
+        "spec",
+        "taskContext"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "019ffdab-81e8-7533-a115-25a61cfeafb3",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1786667316.4090092,
+      "counts": {
+        "allow": 8
+      },
+      "engines": {
+        "cedar": 8
+      },
+      "last_seen": 1786667376.9727,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 8,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  }
+}
