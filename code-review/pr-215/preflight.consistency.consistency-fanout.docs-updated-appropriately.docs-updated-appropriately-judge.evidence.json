@@ -1,0 +1,171 @@
+{
+  "leg": "docs-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": ".repo_context/generated/repo_index.md",
+      "severity": "blocking",
+      "rationale": "The finding identifies a source-backed context maintenance gap: PR 215 adds cli/net_check.py, but the generated repository index was not regenerated to include it. Because the repository instructions require updating relevant .repo_context files when module structure changes, this is a real merge-blocking adherence issue."
+    }
+  ],
+  "examined": [
+    ".repo_context/generated/repo_index.md"
+  ],
+  "agent_security": {
+    "plan_kts": "fun plan() {\n  val registry = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\n  val grading = compute(taskContext)\n  val securityPlan = compute(registry)\n  val evidence = compute(grading, securityPlan)\n  writeFile(\"/tmp/gh-aw/evidence.json\", evidence)\n  publish(\"safeoutputs:noop\", \"No GitHub issue created: docs-updated-appropriately judge wrote evidence.json only, as instructed.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "registry"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "input": {
+              "$ref": "task_context"
+            }
+          },
+          "result": "grading"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "input": {
+              "$ref": "registry"
+            }
+          },
+          "result": "security_plan"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "grading": {
+              "$ref": "grading"
+            },
+            "agent_security": {
+              "$ref": "security_plan"
+            }
+          },
+          "result": "evidence"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence"
+            }
+          },
+          "result": "evidence_written"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs:noop",
+            "body": "No GitHub issue created: docs-updated-appropriately judge wrote evidence.json only, as instructed."
+          },
+          "result": "noop_published"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "registry",
+          "registry"
+        ],
+        [
+          "registry",
+          "security_plan"
+        ],
+        [
+          "registry",
+          "evidence"
+        ],
+        [
+          "registry",
+          "evidence_written"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "grading"
+        ],
+        [
+          "task_context",
+          "evidence"
+        ],
+        [
+          "task_context",
+          "evidence_written"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 8,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "registry",
+        "task_context"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a001e0-73b9-7360-9891-66d0933f6c84",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1786737913.0668542,
+      "counts": {
+        "allow": 4
+      },
+      "engines": {
+        "cedar": 4
+      },
+      "last_seen": 1786737971.7862673,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 4,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  }
+}
