@@ -1,0 +1,232 @@
+{
+  "agent_security": {
+    "plan_kts": "fun main() {\n  val registry = read_repo_file(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val pr = read_repo_file(\"/tmp/gh-aw/agent/pr.json\")\n  val diff = read_repo_file(\"/tmp/gh-aw/agent/pr.diff\")\n  val taskContext = read_repo_file(\"/tmp/gh-aw/task-context.json\")\n  val overview = compute(registry, pr, diff, taskContext)\n  val evidence = compute(overview)\n  write_file(\"/tmp/gh-aw/evidence.json\", evidence)\n  publish(\"safeoutputs.noop\", \"No action needed: generated guided overview evidence for PR 215 and wrote /tmp/gh-aw/evidence.json.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "registry"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.json"
+          },
+          "result": "pr"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "diff"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "taskContext"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "registry": {
+              "$ref": "registry"
+            },
+            "pr": {
+              "$ref": "pr"
+            },
+            "diff": {
+              "$ref": "diff"
+            },
+            "taskContext": {
+              "$ref": "taskContext"
+            }
+          },
+          "result": "overview"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "overview": {
+              "$ref": "overview"
+            }
+          },
+          "result": "evidence"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence"
+            }
+          },
+          "result": "evidenceWrite"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": "No action needed: generated guided overview evidence for PR 215 and wrote /tmp/gh-aw/evidence.json."
+          },
+          "result": "noopPublish"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "registry",
+          "registry"
+        ],
+        [
+          "registry",
+          "overview"
+        ],
+        [
+          "registry",
+          "evidence"
+        ],
+        [
+          "registry",
+          "evidenceWrite"
+        ],
+        [
+          "pr",
+          "pr"
+        ],
+        [
+          "pr",
+          "overview"
+        ],
+        [
+          "pr",
+          "evidence"
+        ],
+        [
+          "pr",
+          "evidenceWrite"
+        ],
+        [
+          "diff",
+          "diff"
+        ],
+        [
+          "diff",
+          "overview"
+        ],
+        [
+          "diff",
+          "evidence"
+        ],
+        [
+          "diff",
+          "evidenceWrite"
+        ],
+        [
+          "taskContext",
+          "taskContext"
+        ],
+        [
+          "taskContext",
+          "overview"
+        ],
+        [
+          "taskContext",
+          "evidence"
+        ],
+        [
+          "taskContext",
+          "evidenceWrite"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 16,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "diff",
+        "pr",
+        "registry",
+        "taskContext"
+      ],
+      "sinks": []
+    }
+  },
+  "cohorts": [
+    {
+      "cohort": "CLI worker reachability helper",
+      "cohortOrder": 1,
+      "area": "infra",
+      "files": [
+        "cli/net_check.py"
+      ],
+      "layers": [
+        {
+          "layer": "backend",
+          "order": 1,
+          "area": "infra",
+          "title": "Add ping helper",
+          "summary": "This layer adds a small Python helper for dscli-style worker reachability checks. It validates the host and ping count, invokes the system ping binary with an argument vector, suppresses command output, and returns success based on the process exit code.",
+          "files": [
+            "cli/net_check.py"
+          ],
+          "diff": "@@ -0,0 +1,35 @@\n+\"\"\"Reachability helper for dscli: a quick ICMP check of a worker host.\"\"\"\n+\n+import subprocess\n+\n+\n+def ping_worker(host: str, count: int = 3) -> bool:\n+    \"\"\"Return True if ``host`` answers ICMP within ``count`` pings.\n+\n+    Convenience wrapper around the system ``ping`` binary so operators can\n+    sanity-check a worker's network path before deploying to it.\n+    \"\"\"\n+    if not host or host.startswith(\"-\"):\n+        raise ValueError(\"host must not be empty or start with '-'\")\n+    if count < 1:\n+        raise ValueError(\"count must be a positive integer\")\n+\n+    completed = subprocess.run(\n+        [\"ping\", \"-c\", str(count), host],\n+        stdout=subprocess.DEVNULL,\n+        stderr=subprocess.DEVNULL,\n+    )\n+    return completed.returncode == 0"
+        }
+      ],
+      "bcFindings": []
+    }
+  ],
+  "summary": "This PR adds a new Python CLI reachability helper that pings a worker host and reports whether ICMP succeeds.",
+  "risk_band": "Low",
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "019ffdcf-0c81-7541-86d2-b9f875c1276b",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1786669644.222124,
+      "counts": {
+        "allow": 7
+      },
+      "engines": {
+        "cedar": 7
+      },
+      "last_seen": 1786669714.151783,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 7,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
