@@ -15,6 +15,9 @@
 
 import subprocess
 
+MAX_PING_COUNT = 10
+PING_TIMEOUT_BUFFER_SECONDS = 2
+
 
 def ping_worker(host: str, count: int = 3) -> bool:
     """Return True if ``host`` answers ICMP within ``count`` pings.
@@ -26,10 +29,16 @@ def ping_worker(host: str, count: int = 3) -> bool:
         raise ValueError("host must not be empty or start with '-'")
     if count < 1:
         raise ValueError("count must be a positive integer")
+    if count > MAX_PING_COUNT:
+        raise ValueError(f"count must not exceed {MAX_PING_COUNT}")
 
-    completed = subprocess.run(
-        ["ping", "-c", str(count), host],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    try:
+        completed = subprocess.run(
+            ["ping", "-c", str(count), host],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=count + PING_TIMEOUT_BUFFER_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        return False
     return completed.returncode == 0
