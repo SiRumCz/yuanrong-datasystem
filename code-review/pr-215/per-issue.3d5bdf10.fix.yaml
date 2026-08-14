@@ -1,7 +1,20 @@
 protocol: code-review
 instance: pr-215
-state: per-issue
+state: done
 iteration: 1
 human_task: {}
 head_sha: c6ff46438613ba1fb759f61aa63d9ff439cb548b
-history: []
+history:
+- iteration: 1
+  agent_run_id: '31839309349'
+  checks:
+    evidence-present: pass
+    fix-schema-valid: pass
+    plan-ast-guardians: pass
+    plan-cert-verify: fail
+    live-guard-clean: pass
+  feedback: ''
+outcome:
+  exit: 0
+  summary: 'Fix diffs: clusters_fixed=0, skipped=0, dropped=0, unknown=0. files_patched=0,
+    pushed=False.'

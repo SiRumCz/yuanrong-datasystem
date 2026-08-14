@@ -1,0 +1,323 @@
+{
+  "fixes": [],
+  "skipped": [],
+  "mode": "edit",
+  "pinned_issue": 218,
+  "agent_security": {
+    "plan_kts": "fun main() {\n  val rtkRegistryAttempt = runCommand(listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/plan-tools.md\"))\n  val toolRegistry = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\n  val prDiff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\n  val fixSelection = computeFixableClusters(rtkRegistryAttempt, toolRegistry, taskContext, prDiff)\n  writeFile(\"/tmp/gh-aw/evidence.json\", fixSelection)\n  publish(\"safeoutputs:noop\", \"No action needed: triage only contained a test-only cluster, which is out of scope for the edit-and-test fix phase.\")\n  val selfVerificationPlaybook = readRepoFile(\".repo_context/playbooks/upkeep/ai-self-verification.md\")\n  val gitStatus = runCommand(listOf(\"git\", \"status\", \"--short\"))\n  val gitDiffStat = runCommand(listOf(\"git\", \"diff\", \"--stat\"))\n  val finalEvidence = computeFinalEvidence(fixSelection, selfVerificationPlaybook, gitStatus, gitDiffStat)\n  writeFile(\"/tmp/gh-aw/evidence.json\", finalEvidence)\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/plan-tools.md"
+            ]
+          },
+          "result": "rtk_registry_attempt"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "tool_registry"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "pr_diff"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "rtk_registry_attempt": {
+              "$ref": "rtk_registry_attempt"
+            },
+            "tool_registry": {
+              "$ref": "tool_registry"
+            },
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "pr_diff": {
+              "$ref": "pr_diff"
+            }
+          },
+          "result": "fix_selection"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "fix_selection"
+            }
+          },
+          "result": "evidence_file_initial"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs:noop",
+            "body": "No action needed: triage only contained a test-only cluster, which is out of scope for the edit-and-test fix phase."
+          },
+          "result": "noop_result"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/playbooks/upkeep/ai-self-verification.md"
+          },
+          "result": "self_verification_playbook"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "git",
+              "status",
+              "--short"
+            ]
+          },
+          "result": "git_status"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "git",
+              "diff",
+              "--stat"
+            ]
+          },
+          "result": "git_diff_stat"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "fix_selection": {
+              "$ref": "fix_selection"
+            },
+            "self_verification_playbook": {
+              "$ref": "self_verification_playbook"
+            },
+            "git_status": {
+              "$ref": "git_status"
+            },
+            "git_diff_stat": {
+              "$ref": "git_diff_stat"
+            }
+          },
+          "result": "final_evidence"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "final_evidence"
+            }
+          },
+          "result": "evidence_file_final"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "rtk_registry_attempt",
+          "rtk_registry_attempt"
+        ],
+        [
+          "rtk_registry_attempt",
+          "fix_selection"
+        ],
+        [
+          "rtk_registry_attempt",
+          "evidence_file_initial"
+        ],
+        [
+          "rtk_registry_attempt",
+          "final_evidence"
+        ],
+        [
+          "rtk_registry_attempt",
+          "evidence_file_final"
+        ],
+        [
+          "tool_registry",
+          "tool_registry"
+        ],
+        [
+          "tool_registry",
+          "fix_selection"
+        ],
+        [
+          "tool_registry",
+          "evidence_file_initial"
+        ],
+        [
+          "tool_registry",
+          "final_evidence"
+        ],
+        [
+          "tool_registry",
+          "evidence_file_final"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "fix_selection"
+        ],
+        [
+          "task_context",
+          "evidence_file_initial"
+        ],
+        [
+          "task_context",
+          "final_evidence"
+        ],
+        [
+          "task_context",
+          "evidence_file_final"
+        ],
+        [
+          "pr_diff",
+          "pr_diff"
+        ],
+        [
+          "pr_diff",
+          "fix_selection"
+        ],
+        [
+          "pr_diff",
+          "evidence_file_initial"
+        ],
+        [
+          "pr_diff",
+          "final_evidence"
+        ],
+        [
+          "pr_diff",
+          "evidence_file_final"
+        ],
+        [
+          "self_verification_playbook",
+          "self_verification_playbook"
+        ],
+        [
+          "self_verification_playbook",
+          "final_evidence"
+        ],
+        [
+          "self_verification_playbook",
+          "evidence_file_final"
+        ],
+        [
+          "git_status",
+          "git_status"
+        ],
+        [
+          "git_status",
+          "final_evidence"
+        ],
+        [
+          "git_status",
+          "evidence_file_final"
+        ],
+        [
+          "git_diff_stat",
+          "git_diff_stat"
+        ],
+        [
+          "git_diff_stat",
+          "final_evidence"
+        ],
+        [
+          "git_diff_stat",
+          "evidence_file_final"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "fail",
+      "status": "ok",
+      "certificate_valid": false,
+      "paths_verified": 29,
+      "rejected_reasons": [
+        "ungrounded (git_status->git_status): 'git_status' is not a source",
+        "ungrounded (git_status->final_evidence): 'git_status' is not a source",
+        "ungrounded (rtk_registry_attempt->evidence_file_initial): 'rtk_registry_attempt' is not a source",
+        "ungrounded (git_diff_stat->git_diff_stat): 'git_diff_stat' is not a source",
+        "ungrounded (rtk_registry_attempt->fix_selection): 'rtk_registry_attempt' is not a source",
+        "ungrounded (rtk_registry_attempt->evidence_file_final): 'rtk_registry_attempt' is not a source",
+        "ungrounded (git_diff_stat->evidence_file_final): 'git_diff_stat' is not a source",
+        "ungrounded (rtk_registry_attempt->rtk_registry_attempt): 'rtk_registry_attempt' is not a source"
+      ],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "pr_diff",
+        "self_verification_playbook",
+        "task_context",
+        "tool_registry"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a00206-7ccb-74e2-b9b5-99088a1dde4d",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1786740384.4297867,
+      "counts": {
+        "allow": 10
+      },
+      "engines": {
+        "cedar": 10
+      },
+      "last_seen": 1786740502.6011136,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 10,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
