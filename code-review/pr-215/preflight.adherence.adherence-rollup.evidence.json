@@ -1,0 +1,186 @@
+{
+  "cluster": "adherence",
+  "legs": [
+    {
+      "leg": "spec-solves-issue",
+      "scope": {
+        "issue_linked": false,
+        "spec_present": false
+      },
+      "gather_verdict": "n/a",
+      "graded_findings": []
+    },
+    {
+      "leg": "plan-implements-spec",
+      "scope": {
+        "code_changed": true,
+        "spec_present": false,
+        "plan_present": false,
+        "spec_path": null,
+        "plan_path": null
+      },
+      "gather_verdict": "underspec",
+      "graded_findings": []
+    },
+    {
+      "leg": "code-implements-plan",
+      "scope": {
+        "code_changed": true,
+        "plan_present": false,
+        "plan_path": null,
+        "code_files": [
+          "cli/net_check.py"
+        ]
+      },
+      "gather_verdict": "underplan",
+      "graded_findings": []
+    }
+  ],
+  "agent_security": {
+    "plan_kts": "fun plan() {\n  val registryAttempt = runCommand(listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/plan-tools.md\"))\n  val planTools = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\n  val evidence = compute(registryAttempt, planTools, taskContext)\n  writeFile(\"/tmp/gh-aw/evidence.json\", evidence)\n  publish(\"safeoutputs noop\", \"No action needed: adherence rollup evidence was written locally; no GitHub issue/comment was required.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/plan-tools.md"
+            ]
+          },
+          "result": "registry_attempt"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "plan_tools"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "registry_attempt": {
+              "$ref": "registry_attempt"
+            },
+            "plan_tools": {
+              "$ref": "plan_tools"
+            },
+            "task_context": {
+              "$ref": "task_context"
+            }
+          },
+          "result": "evidence"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence"
+            }
+          },
+          "result": "evidence_file"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs noop",
+            "body": "No action needed: adherence rollup evidence was written locally; no GitHub issue/comment was required."
+          },
+          "result": "noop_result"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "plan_tools",
+          "plan_tools"
+        ],
+        [
+          "plan_tools",
+          "evidence"
+        ],
+        [
+          "plan_tools",
+          "evidence_file"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "evidence"
+        ],
+        [
+          "task_context",
+          "evidence_file"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 6,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "plan_tools",
+        "task_context"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "019ffdbc-99cd-7f31-8a11-2b023c3b8cc5",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1786668436.7606926,
+      "counts": {
+        "allow": 5
+      },
+      "engines": {
+        "cedar": 5
+      },
+      "last_seen": 1786668488.4620316,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 5,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
