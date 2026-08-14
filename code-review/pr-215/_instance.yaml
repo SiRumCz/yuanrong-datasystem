@@ -1,12 +1,11 @@
 protocol: code-review
 instance: pr-215
 head_sha: e58242c37dd40d053e20ab4f143aacbe09382e2b
-phase: preflight-verdict
+phase: overview
 joined: true
-phase_label: "\u26D4 blocked"
+phase_label: guided overview + risk
 status_comment_id: 5287937327
-halted:
-  phase: preflight-verdict
-  path: preflight-verdict
-  reason: blocked
-  sha: e58242c37dd40d053e20ab4f143aacbe09382e2b
+overrides:
+- phase: preflight-verdict
+  actor: SiRumCz
+  reason: ''
