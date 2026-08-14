@@ -1,6 +1,6 @@
 protocol: code-review
 instance: pr-215
-state: per-issue
+state: failed
 sub_state: fix
 iteration: 1
 human_task: {}
