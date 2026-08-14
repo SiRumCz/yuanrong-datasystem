@@ -61,8 +61,35 @@ steps:
       # The engine dispatches agents ref-lessly, so the checkout above is the default
       # branch — check out the PR head here so the agent edits and tests the real PR code.
       if [ -n "${SHA:-}" ]; then
+        BASE="$(git rev-parse HEAD)"
         git fetch --depth=1 "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "$SHA"
         git checkout -q "$SHA"
+        # Relocating the workspace takes the protocol tree with it. The live guard
+        # provisions from the workspace in `pre-agent-steps`, which run strictly AFTER
+        # this step, so a PR branch cut before the engine was installed leaves the guard
+        # with nothing to install and the whole leg dies. This is the ONLY guarded agent
+        # that moves the tree, which is why waves 1-3 never saw it. Live proof: all four
+        # `fix` legs failed both iterations at
+        # `::error::live-guard not found at .../scripts/security` (PR 215) — with
+        # `live-guard-clean` at `on_fail: "iterate"` that burns the iteration budget on a
+        # provisioning fault, not on anything the agent did.
+        #
+        # Restore ONLY the guard's own directory, and ONLY when the head lacks it. Both
+        # halves are load-bearing: files the head does not track cannot appear in the
+        # `git diff` the agent captures as its fix evidence, and a PR that genuinely
+        # edits the engine keeps its own version rather than being silently overwritten
+        # by the default branch's.
+        SEC=.github/agent-factory/protocols/code-review/scripts/security
+        if [ ! -x "$SEC/live-guard/hook.py" ] || [ ! -d "$SEC/policy/cedar/live" ]; then
+          if git rev-parse -q --verify "$BASE:$SEC" >/dev/null; then
+            git checkout -q "$BASE" -- "$SEC"
+            # Unstage: `git checkout <sha> -- <path>` also writes the index, and a staged
+            # path is a tracked path. Leaving it untracked is what keeps it out of the diff.
+            git reset -q -- "$SEC"
+          else
+            echo "::warning::no $SEC on the default branch either; the live guard will fail closed"
+          fi
+        fi
       else
         echo "::warning::no PR head sha in aw_context; editing/testing against the default branch"
       fi
