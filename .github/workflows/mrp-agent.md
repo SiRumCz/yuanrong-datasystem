@@ -3,9 +3,19 @@ name: "MRP Assembler (protocol state: mrp)"
 run-name: "MRP Assembler · cid:[${{ fromJSON(github.event.inputs.aw_context || '{}').cid }}]"
 on:
   workflow_dispatch:
+imports:
+  # The codex live-guard apparatus: replaces the provisioning engine.command
+  # removes (node / codex CLI / AWF), writes the wrapper that registers the
+  # PreToolUse hook, and folds the guard's records into evidence.
+  - shared/live-guard-codex.md
 engine:
   id: codex
+  # gh-aw's default 0.135.0 dispatches NO hooks, silently.
+  version: "0.147.0"
   model: gpt-5.5
+  command: /tmp/gh-aw/cedar-live-guard/codex-with-guard
+  # On a fresh runner every hook is untrusted and skipped without warning.
+  args: ["--dangerously-bypass-hook-trust"]
   # Codex (OpenAI) routed through the private OpenAI-compatible gateway below
   # (Tailscale Funnel, reachable from GitHub runners). gh-aw injects OPENAI_API_KEY
   # (repo secret). The agent needs no GitHub network access — upstream phase
@@ -75,8 +85,6 @@ post-steps:
       SEC=.github/agent-factory/protocols/code-review/scripts/security
       python3.11 "$SEC/verify-plan-ast.py" /tmp/gh-aw/evidence.json "$SEC/policy/guardians/default.policy.yaml" || true
       python3.11 "$SEC/verify-plan-cert.py" /tmp/gh-aw/evidence.json || true
-      ( cd "$SEC" && npm install --no-audit --no-fund --silent ) || true
-      python3.11 "$SEC/verify-plan-cedar.py" /tmp/gh-aw/evidence.json "$SEC/policy/cedar/default" || true
   # Deterministic split: the agent only judged (agent-out.json); these steps compute
   # the pack. assemble-mrp.py re-derives per-cohort risk bands with the engine's own
   # scorer, then builds the custody-shaped mrp.json; to-evidence.py derives the engine
@@ -111,7 +119,6 @@ post-steps:
       path: /tmp/gh-aw/evidence.json
       if-no-files-found: warn
 timeout-minutes: 10
-source: golivax/agentic-protocol-poc/.github/workflows/mrp-agent.md@ebc3725789c0c0678b640b2b9dc1f6a0145700d8
 ---
 
 # MRP Assembler — synthesize, do not re-review

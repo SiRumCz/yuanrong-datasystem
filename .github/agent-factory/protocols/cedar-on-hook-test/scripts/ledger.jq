@@ -18,6 +18,10 @@
             | {leg: $leg.leg_id,
                enforced: (($engines | keys | any(startswith("cedar")))
                           and (($engines | keys | any(startswith("error:"))) | not)),
-               decisions: ((($leg.evidence.live_guard.decisions) // []) | length),
+               # The fold records a COUNT, not the per-call bodies (they blew
+               # GitHub's 65535-byte dispatch-input cap live — see
+               # assemble-evidence.sh). The ledger only ever took `| length` of
+               # them, so nothing is lost here.
+               decisions: (($leg.evidence.live_guard.decisions_count) // 0),
                incidents: (($leg.evidence.live_guard.incidents) // [])})),
    examined: ($legs | map(.leg_id))}

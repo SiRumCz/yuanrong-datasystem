@@ -1190,8 +1190,8 @@
                 "on_fail": "advisory"
               },
               {
-                "run": "plan-ast-cedar",
-                "on_fail": "advisory"
+                "run": "live-guard-clean",
+                "on_fail": "iterate"
               }
             ],
             "conclude": "conclude-triage",
@@ -1276,8 +1276,8 @@
                     "on_fail": "advisory"
                   },
                   {
-                    "run": "plan-ast-cedar",
-                    "on_fail": "advisory"
+                    "run": "live-guard-clean",
+                    "on_fail": "iterate"
                   }
                 ]
               },
@@ -1312,8 +1312,8 @@
                     "on_fail": "advisory"
                   },
                   {
-                    "run": "plan-ast-cedar",
-                    "on_fail": "advisory"
+                    "run": "live-guard-clean",
+                    "on_fail": "iterate"
                   }
                 ]
               }
@@ -1407,8 +1407,8 @@
               "on_fail": "advisory"
             },
             {
-              "run": "plan-ast-cedar",
-              "on_fail": "advisory"
+              "run": "live-guard-clean",
+              "on_fail": "iterate"
             }
           ]
         },
@@ -1447,8 +1447,8 @@
                   "on_fail": "advisory"
                 },
                 {
-                  "run": "plan-ast-cedar",
-                  "on_fail": "advisory"
+                  "run": "live-guard-clean",
+                  "on_fail": "iterate"
                 }
               ],
               "next": "mm-route"
@@ -1552,8 +1552,8 @@
           "on_fail": "advisory"
         },
         {
-          "run": "plan-ast-cedar",
-          "on_fail": "advisory"
+          "run": "live-guard-clean",
+          "on_fail": "iterate"
         }
       ],
       "next": "emit-mrp"
