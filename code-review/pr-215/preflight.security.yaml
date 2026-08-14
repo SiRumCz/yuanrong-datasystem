@@ -1,7 +1,7 @@
 protocol: code-review
 instance: pr-215
-state: done
-sub_state: security-gather
+state: preflight
+sub_state: security-judge
 iteration: 1
 human_task: {}
 history: []
