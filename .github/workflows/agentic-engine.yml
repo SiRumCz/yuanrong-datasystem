@@ -239,6 +239,22 @@ jobs:
                    --jq '.content' | base64 -d | sed -n 's/^head_sha:[[:space:]]*//p' | head -1)
           fi
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+      # Diagnostic only, and deliberately BEFORE the first engine write: the two
+      # token-pool failures that have actually cost runs were both invisible
+      # until rotation reached them mid-flight — an expired PAT (`Bad
+      # credentials`, fatal on the dispatch that fires the next phase) and a pool
+      # whose members shared one account (GitHub's secondary limits are
+      # per-USER, so rotation could not relieve one). Both are answerable up
+      # front, and only a job holding the secrets can ask. Never fails the run:
+      # `log_token_pool` swallows everything and `continue-on-error` covers the
+      # rest.
+      - name: Log write-token pool (owner + quota + reset)
+        if: steps.ctx.outputs.command != ''
+        continue-on-error: true
+        env:
+          PUBLISH_TOKEN: ${{ secrets.POC_DISPATCH_TOKEN }}
+          PUBLISH_TOKEN_2: ${{ secrets.POC_DISPATCH_TOKEN_2 }}
+        run: python3 .github/agent-factory/engine/lib.py log-token-pool
       - id: plan
         if: steps.ctx.outputs.command != ''
         env:
@@ -634,6 +650,16 @@ jobs:
             gh run download "$RID" --repo "${{ github.repository }}" -n evidence -D /tmp/agent || true
           fi
           [ -f /tmp/agent/evidence.json ] || echo '{"files":[]}' > /tmp/agent/evidence.json
+      # See the plan job's copy. Logged here too because `advance` is where the
+      # pool is under the most pressure — it is the last job of every iteration
+      # and the one whose `dispatches` call fires the next phase, so a token that
+      # dies here parks the run.
+      - name: Log write-token pool (owner + quota + reset)
+        continue-on-error: true
+        env:
+          PUBLISH_TOKEN: ${{ secrets.POC_DISPATCH_TOKEN }}
+          PUBLISH_TOKEN_2: ${{ secrets.POC_DISPATCH_TOKEN_2 }}
+        run: python3 .github/agent-factory/engine/lib.py log-token-pool
       - name: Advance
         env:
           STATE_REMOTE: https://x-access-token:${{ secrets.POC_DISPATCH_TOKEN }}@github.com/${{ github.repository }}.git
