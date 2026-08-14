@@ -1,7 +1,7 @@
 protocol: code-review
 instance: pr-215
 state: preflight
-sub_state: adherence-rollup
+sub_state: adherence-fanout
 iteration: 1
 human_task: {}
 history: []
