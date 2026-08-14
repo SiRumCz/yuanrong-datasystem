@@ -1,7 +1,20 @@
 protocol: code-review
 instance: pr-215
 state: per-issue
-iteration: 1
+iteration: 2
 human_task: {}
 head_sha: e58242c37dd40d053e20ab4f143aacbe09382e2b
-history: []
+history:
+- iteration: 1
+  agent_run_id: '31760721102'
+  checks:
+    dispatched-run: fail
+    evidence-present: fail
+    fix-schema-valid: fail
+    plan-ast-guardians: pass
+    plan-cert-verify: pass
+    live-guard-clean: fail
+  feedback: 'dispatched run failed; evidence shape: missing required key `fixes`;
+    missing required key `mode`; fix schema invalid: mode must be ''edit''; `fixes`
+    must be an array; unenforced: no liveness record -- the hook was never installed,
+    so this run proves nothing about the guard'
