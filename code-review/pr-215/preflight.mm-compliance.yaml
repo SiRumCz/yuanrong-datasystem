@@ -1,7 +1,7 @@
 protocol: code-review
 instance: pr-215
-state: done
-sub_state: mm-compliance-gather
+state: preflight
+sub_state: mm-compliance-judge
 iteration: 1
 human_task: {}
 history: []
