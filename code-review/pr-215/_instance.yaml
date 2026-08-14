@@ -1,12 +1,13 @@
 protocol: code-review
 instance: pr-215
 head_sha: c6ff46438613ba1fb759f61aa63d9ff439cb548b
-phase: preflight-verdict
+phase: overview
 joined: true
-phase_label: "\u26D4 blocked"
+phase_label: guided overview + risk
 status_comment_id: 5297542749
-halted:
-  phase: preflight-verdict
-  path: preflight-verdict
-  reason: blocked
-  sha: c6ff46438613ba1fb759f61aa63d9ff439cb548b
+overrides:
+- phase: preflight-verdict
+  actor: SiRumCz
+  reason: 'fix-agent verification: PR 215 is the throwaway test vehicle and carries
+    no spec/plan by design, so the preflight block is legitimate and expected. Proceeding
+    to reach the per-issue fix legs, which is what this run exists to verify.'
