@@ -1,0 +1,248 @@
+{
+  "agent_security": {
+    "plan_kts": "val rtkPlanToolsError = runCommand(listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/plan-tools.md\"))\nval planTools = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\nval taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\nval issues = readRepoFile(\"/tmp/gh-aw/agent/issues.json\")\nval prDiff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\nval cluster = computeTriage(taskContext, issues, prDiff)\nval evidenceJson = computeEvidence(cluster, planTools)\nwriteFile(\"/tmp/gh-aw/evidence.json\", evidenceJson)\npublish(\"safeoutputs.noop\", \"No action needed: triage evidence was written locally; no GitHub issue/comment/PR update was required.\")",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/plan-tools.md"
+            ]
+          },
+          "result": "rtk_plan_tools_error"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "plan_tools"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/issues.json"
+          },
+          "result": "issues"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "pr_diff"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "issues": {
+              "$ref": "issues"
+            },
+            "pr_diff": {
+              "$ref": "pr_diff"
+            }
+          },
+          "result": "cluster"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "cluster": {
+              "$ref": "cluster"
+            },
+            "plan_tools": {
+              "$ref": "plan_tools"
+            }
+          },
+          "result": "evidence_json"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence_json"
+            }
+          },
+          "result": "written_evidence"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": "No action needed: triage evidence was written locally; no GitHub issue/comment/PR update was required."
+          },
+          "result": "noop_result"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "plan_tools",
+          "plan_tools"
+        ],
+        [
+          "plan_tools",
+          "evidence_json"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "cluster"
+        ],
+        [
+          "task_context",
+          "evidence_json"
+        ],
+        [
+          "issues",
+          "issues"
+        ],
+        [
+          "issues",
+          "cluster"
+        ],
+        [
+          "issues",
+          "evidence_json"
+        ],
+        [
+          "pr_diff",
+          "pr_diff"
+        ],
+        [
+          "pr_diff",
+          "cluster"
+        ],
+        [
+          "pr_diff",
+          "evidence_json"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "fail",
+      "status": "ok",
+      "certificate_valid": false,
+      "paths_verified": 11,
+      "rejected_reasons": [
+        "closure gap: (pr_diff->evidence_json) + flow(evidence_json->written_evidence) but (pr_diff->written_evidence) omitted",
+        "closure gap: (issues->evidence_json) + flow(evidence_json->written_evidence) but (issues->written_evidence) omitted",
+        "closure gap: (plan_tools->evidence_json) + flow(evidence_json->written_evidence) but (plan_tools->written_evidence) omitted",
+        "closure gap: (task_context->evidence_json) + flow(evidence_json->written_evidence) but (task_context->written_evidence) omitted"
+      ],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "issues",
+        "plan_tools",
+        "pr_diff",
+        "task_context"
+      ],
+      "sinks": []
+    }
+  },
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "New ping_worker behavior has no regression tests",
+      "dimension": [
+        "test"
+      ],
+      "severity": "medium",
+      "paths": [
+        "cli/net_check.py"
+      ],
+      "member_findings": [
+        {
+          "dimension": "test",
+          "path": "cli/net_check.py",
+          "line": 18,
+          "severity": "medium",
+          "category": "test",
+          "title": "New ping_worker behavior has no regression tests",
+          "impact": "The newly added helper has several observable behaviors: rejecting empty or option-like hosts, rejecting non-positive counts, passing the requested count to ping, and returning True or False from the subprocess return code. With no tests in this PR, future changes could silently break validation or invert reachability results.",
+          "fix": "Add focused unit tests for ping_worker that mock subprocess.run and cover a successful ping, a failed ping, invalid host values, and invalid count values."
+        }
+      ],
+      "rank": 1
+    }
+  ],
+  "summary": {
+    "present": [
+      "test"
+    ],
+    "missing": [
+      "correctness",
+      "performance",
+      "security",
+      "maintainability"
+    ],
+    "clusters": 1,
+    "total_findings": 1,
+    "by_severity": {
+      "medium": 1
+    },
+    "by_dimension": {
+      "test": 1
+    }
+  },
+  "pinned_issue": 240,
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "019ffddc-0fdc-7a11-9b05-33ad56545827",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1786670505.3570848,
+      "counts": {
+        "allow": 7
+      },
+      "engines": {
+        "cedar": 7
+      },
+      "last_seen": 1786670695.6635876,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 7,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
