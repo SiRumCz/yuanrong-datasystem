@@ -1,7 +1,17 @@
 protocol: code-review
 instance: pr-215
 state: consistency-fanout
-iteration: 1
+iteration: 2
 human_task: {}
 head_sha: c6ff46438613ba1fb759f61aa63d9ff439cb548b
-history: []
+history:
+- iteration: 1
+  agent_run_id: '31810693703'
+  checks:
+    dispatched-run: fail
+    evidence-present: pass
+    tests-coverage: pass
+    plan-ast-guardians: pass
+    plan-cert-verify: fail
+    live-guard-clean: pass
+  feedback: dispatched run failed
