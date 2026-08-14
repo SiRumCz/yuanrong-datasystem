@@ -1,0 +1,325 @@
+{
+  "scope": {
+    "code_changed": true,
+    "plan_present": false,
+    "plan_path": null,
+    "code_files": [
+      "cli/net_check.py"
+    ]
+  },
+  "plan_to_code": [],
+  "files": [
+    {
+      "path": "cli/net_check.py",
+      "verdicts": [
+        {
+          "category": "code-implements-plan",
+          "examined": [
+            "ping_worker",
+            "subprocess.run"
+          ],
+          "findings": [
+            {
+              "plan_item": null,
+              "status": "extra",
+              "side": "RIGHT",
+              "start_line": 1,
+              "line": 35,
+              "existing_code": "# Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.\n#\n# Licensed under the Apache License, Version 2.0 (the \"License\");\n# you may not use this file except in compliance with the License.\n# You may obtain a copy of the License at\n#\n# http://www.apache.org/licenses/LICENSE-2.0\n#\n# Unless required by applicable law or agreed to in writing, software\n# distributed under the License is distributed on an \"AS IS\" BASIS,\n# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n# See the License for the specific language governing permissions and\n# limitations under the License.\n\"\"\"Reachability helper for dscli: a quick ICMP check of a worker host.\"\"\"\n\nimport subprocess\n\n\ndef ping_worker(host: str, count: int = 3) -> bool:\n    \"\"\"Return True if ``host`` answers ICMP within ``count`` pings.\n\n    Convenience wrapper around the system ``ping`` binary so operators can\n    sanity-check a worker's network path before deploying to it.\n    \"\"\"\n    if not host or host.startswith(\"-\"):\n        raise ValueError(\"host must not be empty or start with '-'\")\n    if count < 1:\n        raise ValueError(\"count must be a positive integer\")\n\n    completed = subprocess.run(\n        [\"ping\", \"-c\", str(count), host],\n        stdout=subprocess.DEVNULL,\n        stderr=subprocess.DEVNULL,\n    )\n    return completed.returncode == 0"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "verdict": "underplan",
+  "examined": [
+    "plan-tools.md",
+    "scope.json",
+    "plan.txt",
+    "task-context.json",
+    "ai-self-verification.md",
+    "pr.diff"
+  ],
+  "agent_security": {
+    "plan_kts": "fun main() {\n  val toolRegistry = read_repo_file(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val plannedReads = compute(toolRegistry)\n  val failedRtkReads = run_command(listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/scope.json\", \"/tmp/gh-aw/agent/plan.txt\", \"/tmp/gh-aw/task-context.json\", \".repo_context/playbooks/upkeep/ai-self-verification.md\"))\n  val scope = read_repo_file(\"/tmp/gh-aw/agent/scope.json\")\n  val committedPlan = read_repo_file(\"/tmp/gh-aw/agent/plan.txt\")\n  val taskContext = read_repo_file(\"/tmp/gh-aw/task-context.json\")\n  val selfVerification = read_repo_file(\".repo_context/playbooks/upkeep/ai-self-verification.md\")\n  val diff = read_repo_file(\"/tmp/gh-aw/agent/pr.diff\")\n  val evidence = compute(scope, committedPlan, taskContext, selfVerification, diff, toolRegistry, failedRtkReads)\n  write_file(\"/tmp/gh-aw/evidence.json\", evidence)\n  publish(\"safeoutputs.noop\", \"No action needed: wrote code-implements-plan evidence for PR 215; verdict underplan because code changed without a committed plan.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "tool_registry"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "input": {
+              "$ref": "tool_registry"
+            }
+          },
+          "result": "planned_reads"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/scope.json",
+              "/tmp/gh-aw/agent/plan.txt",
+              "/tmp/gh-aw/task-context.json",
+              ".repo_context/playbooks/upkeep/ai-self-verification.md"
+            ]
+          },
+          "result": "failed_rtk_reads"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/scope.json"
+          },
+          "result": "scope"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan.txt"
+          },
+          "result": "committed_plan"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/playbooks/upkeep/ai-self-verification.md"
+          },
+          "result": "self_verification"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "diff"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "scope": {
+              "$ref": "scope"
+            },
+            "committed_plan": {
+              "$ref": "committed_plan"
+            },
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "self_verification": {
+              "$ref": "self_verification"
+            },
+            "diff": {
+              "$ref": "diff"
+            },
+            "tool_registry": {
+              "$ref": "tool_registry"
+            },
+            "failed_rtk_reads": {
+              "$ref": "failed_rtk_reads"
+            }
+          },
+          "result": "evidence"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence"
+            }
+          },
+          "result": "written_evidence"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": "No action needed: wrote code-implements-plan evidence for PR 215; verdict underplan because code changed without a committed plan."
+          },
+          "result": "safeoutputs_noop"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "tool_registry",
+          "tool_registry"
+        ],
+        [
+          "tool_registry",
+          "planned_reads"
+        ],
+        [
+          "tool_registry",
+          "evidence"
+        ],
+        [
+          "tool_registry",
+          "written_evidence"
+        ],
+        [
+          "failed_rtk_reads",
+          "failed_rtk_reads"
+        ],
+        [
+          "failed_rtk_reads",
+          "evidence"
+        ],
+        [
+          "failed_rtk_reads",
+          "written_evidence"
+        ],
+        [
+          "scope",
+          "scope"
+        ],
+        [
+          "scope",
+          "evidence"
+        ],
+        [
+          "scope",
+          "written_evidence"
+        ],
+        [
+          "committed_plan",
+          "committed_plan"
+        ],
+        [
+          "committed_plan",
+          "evidence"
+        ],
+        [
+          "committed_plan",
+          "written_evidence"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "evidence"
+        ],
+        [
+          "task_context",
+          "written_evidence"
+        ],
+        [
+          "self_verification",
+          "self_verification"
+        ],
+        [
+          "self_verification",
+          "evidence"
+        ],
+        [
+          "self_verification",
+          "written_evidence"
+        ],
+        [
+          "diff",
+          "diff"
+        ],
+        [
+          "diff",
+          "evidence"
+        ],
+        [
+          "diff",
+          "written_evidence"
+        ],
+        [
+          "evidence",
+          "evidence"
+        ],
+        [
+          "evidence",
+          "written_evidence"
+        ],
+        [
+          "evidence",
+          "safeoutputs_noop"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "fail",
+      "status": "ok",
+      "certificate_valid": false,
+      "paths_verified": 25,
+      "rejected_reasons": [
+        "ungrounded (failed_rtk_reads->evidence): 'failed_rtk_reads' is not a source",
+        "ungrounded (failed_rtk_reads->failed_rtk_reads): 'failed_rtk_reads' is not a source",
+        "ungrounded (failed_rtk_reads->written_evidence): 'failed_rtk_reads' is not a source",
+        "ungrounded (evidence->safeoutputs_noop): 'evidence' is not a source",
+        "ungrounded (evidence->evidence): 'evidence' is not a source",
+        "ungrounded (evidence->written_evidence): 'evidence' is not a source"
+      ],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "committed_plan",
+        "diff",
+        "scope",
+        "self_verification",
+        "task_context",
+        "tool_registry"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a000af-ff05-7081-aa23-9223757f8175",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1786717949.575682,
+      "counts": {
+        "allow": 12
+      },
+      "engines": {
+        "cedar": 12
+      },
+      "last_seen": 1786718051.216091,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 12,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  }
+}
