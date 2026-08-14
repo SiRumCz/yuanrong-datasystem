@@ -1,7 +1,20 @@
 protocol: code-review
 instance: pr-215
 state: overview
-iteration: 1
+iteration: 2
 human_task: {}
 head_sha: e58242c37dd40d053e20ab4f143aacbe09382e2b
-history: []
+history:
+- iteration: 1
+  agent_run_id: '31759155757'
+  checks:
+    evidence-present: fail
+    overview-schema-valid: fail
+    cohort-partition-complete: fail
+    plan-ast-guardians: pass
+    plan-cert-verify: pass
+    live-guard-clean: pass
+  feedback: 'evidence shape: missing required key `cohorts`; missing required key
+    `summary`; key `cohorts` is empty; key `summary` is empty; overview schema invalid:
+    `cohorts` must be a non-empty array; cohort partition incomplete: `cohorts` is
+    missing or not an array'
