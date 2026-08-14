@@ -1,0 +1,172 @@
+{
+  "leg": "plan-implements-spec",
+  "scope": {
+    "code_changed": true,
+    "spec_present": false,
+    "plan_present": false,
+    "spec_path": null,
+    "plan_path": null
+  },
+  "gather_verdict": "underspec",
+  "graded_findings": [],
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ],
+  "agent_security": {
+    "plan_kts": "fun main() {\n  val registry = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\n  val evidence = compute(registry, taskContext)\n  writeFile(\"/tmp/gh-aw/evidence.json\", evidence)\n  val noopBody = compute(evidence)\n  publish(\"safeoutputs/noop\", noopBody)\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "registry"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "registry": {
+              "$ref": "registry"
+            },
+            "task_context": {
+              "$ref": "task_context"
+            }
+          },
+          "result": "evidence"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence"
+            }
+          },
+          "result": "evidence_written"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "evidence": {
+              "$ref": "evidence"
+            }
+          },
+          "result": "noop_body"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs/noop",
+            "body": {
+              "$ref": "noop_body"
+            }
+          },
+          "result": "safeoutput_noop"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "registry",
+          "registry"
+        ],
+        [
+          "registry",
+          "evidence"
+        ],
+        [
+          "registry",
+          "evidence_written"
+        ],
+        [
+          "registry",
+          "noop_body"
+        ],
+        [
+          "registry",
+          "safeoutput_noop"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "evidence"
+        ],
+        [
+          "task_context",
+          "evidence_written"
+        ],
+        [
+          "task_context",
+          "noop_body"
+        ],
+        [
+          "task_context",
+          "safeoutput_noop"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 10,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "registry",
+        "task_context"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a000b6-7d50-7dc1-af67-23ed6cc287fe",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1786718374.8862321,
+      "counts": {
+        "allow": 3
+      },
+      "engines": {
+        "cedar": 3
+      },
+      "last_seen": 1786718415.0670898,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 3,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  }
+}
