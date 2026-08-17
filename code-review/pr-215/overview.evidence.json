@@ -1,0 +1,196 @@
+{
+  "agent_security": {
+    "plan_kts": "val planTools = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\nval pr = readRepoFile(\"/tmp/gh-aw/agent/pr.json\")\nval diff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\nval taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\nval analysis = compute(pr, diff, taskContext)\nwriteFile(\"/tmp/gh-aw/evidence.json\", analysis)\npublish(\"safeoutputs.noop\", \"No GitHub action needed: overview evidence was written to /tmp/gh-aw/evidence.json as requested.\")",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "planTools"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.json"
+          },
+          "result": "pr"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "diff"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "taskContext"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "pr": {
+              "$ref": "pr"
+            },
+            "diff": {
+              "$ref": "diff"
+            },
+            "taskContext": {
+              "$ref": "taskContext"
+            }
+          },
+          "result": "analysis"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "analysis"
+            }
+          },
+          "result": "evidenceFile"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": "No GitHub action needed: overview evidence was written to /tmp/gh-aw/evidence.json as requested."
+          },
+          "result": "noopAck"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "planTools",
+          "planTools"
+        ],
+        [
+          "pr",
+          "pr"
+        ],
+        [
+          "pr",
+          "analysis"
+        ],
+        [
+          "pr",
+          "evidenceFile"
+        ],
+        [
+          "diff",
+          "diff"
+        ],
+        [
+          "diff",
+          "analysis"
+        ],
+        [
+          "diff",
+          "evidenceFile"
+        ],
+        [
+          "taskContext",
+          "taskContext"
+        ],
+        [
+          "taskContext",
+          "analysis"
+        ],
+        [
+          "taskContext",
+          "evidenceFile"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 10,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "diff",
+        "planTools",
+        "pr",
+        "taskContext"
+      ],
+      "sinks": []
+    }
+  },
+  "cohorts": [
+    {
+      "cohort": "CLI network reachability helper",
+      "cohortOrder": 1,
+      "area": "backend",
+      "files": [
+        "cli/net_check.py"
+      ],
+      "layers": [
+        {
+          "layer": "backend",
+          "order": 1,
+          "area": "backend",
+          "title": "Add ping helper",
+          "summary": "This layer introduces a small dscli reachability helper that invokes the system ping binary for a worker host. It validates an empty or option-like host and bounds the ping count before returning a boolean based on the subprocess exit code or timeout.",
+          "files": [
+            "cli/net_check.py"
+          ],
+          "diff": "@@ -0,0 +18,27 @@\n+MAX_PING_COUNT = 10\n+PING_TIMEOUT_BUFFER_SECONDS = 2\n+\n+\n+def ping_worker(host: str, count: int = 3) -> bool:\n+    \"\"\"Return True if ``host`` answers ICMP within ``count`` pings.\n+\n+    Convenience wrapper around the system ``ping`` binary so operators can\n+    sanity-check a worker's network path before deploying to it.\n+    \"\"\"\n+    if not host or host.startswith(\"-\"):\n+        raise ValueError(\"host must not be empty or start with '-'\")\n+    if count < 1:\n+        raise ValueError(\"count must be a positive integer\")\n+    if count > MAX_PING_COUNT:\n+        raise ValueError(f\"count must not exceed {MAX_PING_COUNT}\")\n+\n+    try:\n+        completed = subprocess.run(\n+            [\"ping\", \"-c\", str(count), host],\n+            stdout=subprocess.DEVNULL,\n+            stderr=subprocess.DEVNULL,\n+            timeout=count + PING_TIMEOUT_BUFFER_SECONDS,\n+        )\n+    except subprocess.TimeoutExpired:\n+        return False\n+    return completed.returncode == 0"
+        }
+      ],
+      "bcFindings": []
+    }
+  ],
+  "summary": "This PR adds a new Python dscli network reachability helper that pings a worker host with bounded count and timeout handling.",
+  "risk_band": "Low",
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a01125-4305-7b62-8e02-27e16a417932",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1786994062.5536807,
+      "counts": {
+        "allow": 7
+      },
+      "engines": {
+        "cedar": 7
+      },
+      "last_seen": 1786994126.7373886,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 7,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}

@@ -1,9 +1,9 @@
 protocol: code-review
 instance: pr-215
 head_sha: a0d7b25203381635bdbb6055ae2bc8c4c8a57284
-phase: overview
+phase: review
 joined: true
-phase_label: guided overview + risk
+phase_label: multi-dimension review
 status_comment_id: 5318767089
 overrides:
 - phase: preflight-verdict
