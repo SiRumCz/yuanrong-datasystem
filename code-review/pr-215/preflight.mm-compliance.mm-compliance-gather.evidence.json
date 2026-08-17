@@ -1,0 +1,250 @@
+{
+  "verdict": "compliant",
+  "divergences": [],
+  "examined": [
+    "/tmp/gh-aw/agent/pr.json",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    "_mm/socratic/OPEN_QUESTIONS-yuanrong-datasystem.adoc",
+    "_mm/socratic/QUESTION_TREE-yuanrong-datasystem.adoc",
+    "_mm/socratic/docs/arc42/arc42-yuanrong-datasystem.adoc",
+    "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-001-master-worker-split.adoc",
+    "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-002-pluggable-cluster-metadata.adoc",
+    "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-003-consistent-hash-ring-placement.adoc",
+    "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-004-performance-first-optional-reliability.adoc",
+    "_mm/socratic/docs/specs/prd-yuanrong-datasystem.adoc",
+    "_mm/socratic/docs/specs/use-cases-yuanrong-datasystem.adoc",
+    "_mm/legion-map/CODEBASE.md",
+    "_mm/vibed-codeset/.claude/docs/get_context.py output for cli/net_check.py",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md",
+    "cli/command.py",
+    "cli/start.py",
+    "cli/net_check.py (from PR diff)"
+  ],
+  "agent_security": {
+    "plan_kts": "fun plan() { val pr = readFile(path=\"/tmp/gh-aw/agent/pr.json\"); val diff = readDiff(path=\"/tmp/gh-aw/agent/pr.diff\"); val taskContext = readFile(path=\"/tmp/gh-aw/task-context.json\"); val mmCorpus = readFile(path=\"_mm/socratic/**/*.adoc\"); val codeMap = readFile(path=\"_mm/legion-map/CODEBASE.md\"); val codeset = readFile(path=\"_mm/vibed-codeset context for cli/net_check.py\"); val verdict = analyze(pr=pr, diff=diff, taskContext=taskContext, mmCorpus=mmCorpus, codeMap=codeMap, codeset=codeset); writeFile(path=\"/tmp/gh-aw/evidence.json\", content=verdict) }",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "readFile",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.json"
+          },
+          "result": "pr"
+        },
+        {
+          "tool": "readDiff",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "diff"
+        },
+        {
+          "tool": "readFile",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "taskContext"
+        },
+        {
+          "tool": "readFile",
+          "args": {
+            "path": "_mm/socratic/**/*.adoc"
+          },
+          "result": "mmCorpus"
+        },
+        {
+          "tool": "readFile",
+          "args": {
+            "path": "_mm/legion-map/CODEBASE.md"
+          },
+          "result": "codeMap"
+        },
+        {
+          "tool": "readFile",
+          "args": {
+            "path": "_mm/vibed-codeset context for cli/net_check.py"
+          },
+          "result": "codeset"
+        },
+        {
+          "tool": "analyze",
+          "args": {
+            "pr": {
+              "$ref": "pr"
+            },
+            "diff": {
+              "$ref": "diff"
+            },
+            "taskContext": {
+              "$ref": "taskContext"
+            },
+            "mmCorpus": {
+              "$ref": "mmCorpus"
+            },
+            "codeMap": {
+              "$ref": "codeMap"
+            },
+            "codeset": {
+              "$ref": "codeset"
+            }
+          },
+          "result": "verdict"
+        },
+        {
+          "tool": "writeFile",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "verdict"
+            }
+          },
+          "result": "evidenceFile"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "pr",
+          "pr"
+        ],
+        [
+          "pr",
+          "verdict"
+        ],
+        [
+          "pr",
+          "evidenceFile"
+        ],
+        [
+          "diff",
+          "diff"
+        ],
+        [
+          "diff",
+          "verdict"
+        ],
+        [
+          "diff",
+          "evidenceFile"
+        ],
+        [
+          "taskContext",
+          "taskContext"
+        ],
+        [
+          "taskContext",
+          "verdict"
+        ],
+        [
+          "taskContext",
+          "evidenceFile"
+        ],
+        [
+          "mmCorpus",
+          "mmCorpus"
+        ],
+        [
+          "mmCorpus",
+          "verdict"
+        ],
+        [
+          "mmCorpus",
+          "evidenceFile"
+        ],
+        [
+          "codeMap",
+          "codeMap"
+        ],
+        [
+          "codeMap",
+          "verdict"
+        ],
+        [
+          "codeMap",
+          "evidenceFile"
+        ],
+        [
+          "codeset",
+          "codeset"
+        ],
+        [
+          "codeset",
+          "verdict"
+        ],
+        [
+          "codeset",
+          "evidenceFile"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "fail",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 18,
+      "rejected_reasons": [],
+      "leak": true,
+      "leaks": [
+        "pr -> sink(verdict) @ /tmp/gh-aw/evidence.json",
+        "taskContext -> sink(verdict) @ /tmp/gh-aw/evidence.json",
+        "codeMap -> sink(verdict) @ /tmp/gh-aw/evidence.json",
+        "diff -> sink(verdict) @ /tmp/gh-aw/evidence.json",
+        "codeset -> sink(verdict) @ /tmp/gh-aw/evidence.json",
+        "mmCorpus -> sink(verdict) @ /tmp/gh-aw/evidence.json"
+      ],
+      "sources": [
+        "codeMap",
+        "codeset",
+        "diff",
+        "mmCorpus",
+        "pr",
+        "taskContext"
+      ],
+      "sinks": [
+        "verdict"
+      ]
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a0110b-609f-74d3-af1f-a0ffb4381cd8",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1786992365.191885,
+      "counts": {
+        "allow": 34
+      },
+      "engines": {
+        "cedar": 34
+      },
+      "last_seen": 1786992485.0240698,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 34,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  }
+}
