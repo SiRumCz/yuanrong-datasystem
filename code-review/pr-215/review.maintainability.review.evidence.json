@@ -1,0 +1,324 @@
+{
+  "dimension": "maintainability",
+  "verdict": "APPROVE",
+  "findings": [],
+  "agent_security": {
+    "plan_kts": "fun plan() {\n  val rtkAttempt = runCommand(listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/plan-tools.md\"))\n  val planTools = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val dimension = readRepoFile(\"/tmp/gh-aw/agent/dimension.txt\")\n  val rubric = readRepoFile(\"/tmp/gh-aw/agent/rubric.md\")\n  val pr = readRepoFile(\"/tmp/gh-aw/agent/pr.json\")\n  val diff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\n  val taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\n  val review = compute(dimension, rubric, pr, diff, taskContext)\n  val evidence = compute(planTools, review, rtkAttempt)\n  writeFile(\"/tmp/gh-aw/evidence.json\", evidence)\n  val noopBody = compute(review)\n  publish(\"safeoutputs/noop\", noopBody)\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/plan-tools.md"
+            ]
+          },
+          "result": "rtk_attempt"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "plan_tools"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/dimension.txt"
+          },
+          "result": "dimension"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/rubric.md"
+          },
+          "result": "rubric"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.json"
+          },
+          "result": "pr"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "diff"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "dimension": {
+              "$ref": "dimension"
+            },
+            "rubric": {
+              "$ref": "rubric"
+            },
+            "pr": {
+              "$ref": "pr"
+            },
+            "diff": {
+              "$ref": "diff"
+            },
+            "task_context": {
+              "$ref": "task_context"
+            }
+          },
+          "result": "review"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "plan_tools": {
+              "$ref": "plan_tools"
+            },
+            "review": {
+              "$ref": "review"
+            },
+            "rtk_attempt": {
+              "$ref": "rtk_attempt"
+            }
+          },
+          "result": "evidence_json"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence_json"
+            }
+          },
+          "result": "evidence_written"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "review": {
+              "$ref": "review"
+            }
+          },
+          "result": "noop_body"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs/noop",
+            "body": {
+              "$ref": "noop_body"
+            }
+          },
+          "result": "noop_result"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "plan_tools",
+          "plan_tools"
+        ],
+        [
+          "plan_tools",
+          "evidence_json"
+        ],
+        [
+          "plan_tools",
+          "evidence_written"
+        ],
+        [
+          "dimension",
+          "dimension"
+        ],
+        [
+          "dimension",
+          "review"
+        ],
+        [
+          "dimension",
+          "evidence_json"
+        ],
+        [
+          "dimension",
+          "evidence_written"
+        ],
+        [
+          "dimension",
+          "noop_body"
+        ],
+        [
+          "dimension",
+          "noop_result"
+        ],
+        [
+          "rubric",
+          "rubric"
+        ],
+        [
+          "rubric",
+          "review"
+        ],
+        [
+          "rubric",
+          "evidence_json"
+        ],
+        [
+          "rubric",
+          "evidence_written"
+        ],
+        [
+          "rubric",
+          "noop_body"
+        ],
+        [
+          "rubric",
+          "noop_result"
+        ],
+        [
+          "pr",
+          "pr"
+        ],
+        [
+          "pr",
+          "review"
+        ],
+        [
+          "pr",
+          "evidence_json"
+        ],
+        [
+          "pr",
+          "evidence_written"
+        ],
+        [
+          "pr",
+          "noop_body"
+        ],
+        [
+          "pr",
+          "noop_result"
+        ],
+        [
+          "diff",
+          "diff"
+        ],
+        [
+          "diff",
+          "review"
+        ],
+        [
+          "diff",
+          "evidence_json"
+        ],
+        [
+          "diff",
+          "evidence_written"
+        ],
+        [
+          "diff",
+          "noop_body"
+        ],
+        [
+          "diff",
+          "noop_result"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "review"
+        ],
+        [
+          "task_context",
+          "evidence_json"
+        ],
+        [
+          "task_context",
+          "evidence_written"
+        ],
+        [
+          "task_context",
+          "noop_body"
+        ],
+        [
+          "task_context",
+          "noop_result"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 33,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "diff",
+        "dimension",
+        "plan_tools",
+        "pr",
+        "rubric",
+        "task_context"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a0112b-9e36-7060-af42-d4e2a2ae41a3",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1786994476.7510536,
+      "counts": {
+        "allow": 9
+      },
+      "engines": {
+        "cedar": 9
+      },
+      "last_seen": 1786994549.5760226,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 9,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
