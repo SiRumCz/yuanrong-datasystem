@@ -1,0 +1,246 @@
+{
+  "fixes": [],
+  "skipped": [],
+  "mode": "edit",
+  "pinned_issue": 239,
+  "agent_security": {
+    "plan_kts": "fun main() {\n  val rtkAttempt = runCommand(listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/plan-tools.md\"))\n  val planTools = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\n  val prDiff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\n  val repoContext = readRepoFile(listOf(\n    \".repo_context/README.md\",\n    \".repo_context/index.md\",\n    \".repo_context/maintenance.md\",\n    \".repo_context/generated/repo_index.md\",\n    \".repo_context/modules/overview/engineering-principles.md\",\n    \".repo_context/modules/quality/tests-and-reproduction.md\"\n  ))\n  val selectedClusters = selectCodeFixableClusters(taskContext, prDiff, repoContext)\n  val evidenceContent = buildEvidenceJson(selectedClusters)\n  writeFile(\"/tmp/gh-aw/evidence.json\", evidenceContent)\n  publish(\"safeoutputs/noop\", \"No action needed: triage contained only test-dimension findings, which are out of scope for the fix agent.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/plan-tools.md"
+            ]
+          },
+          "result": "rtk_attempt"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "plan_tools"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "pr_diff"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": [
+              ".repo_context/README.md",
+              ".repo_context/index.md",
+              ".repo_context/maintenance.md",
+              ".repo_context/generated/repo_index.md",
+              ".repo_context/modules/overview/engineering-principles.md",
+              ".repo_context/modules/quality/tests-and-reproduction.md"
+            ]
+          },
+          "result": "repo_context"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "pr_diff": {
+              "$ref": "pr_diff"
+            },
+            "repo_context": {
+              "$ref": "repo_context"
+            }
+          },
+          "result": "selected_clusters"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "selected_clusters": {
+              "$ref": "selected_clusters"
+            },
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "plan_tools": {
+              "$ref": "plan_tools"
+            },
+            "rtk_attempt": {
+              "$ref": "rtk_attempt"
+            }
+          },
+          "result": "evidence_content"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence_content"
+            }
+          },
+          "result": "evidence_file"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs/noop",
+            "body": "No action needed: triage contained only test-dimension findings, which are out of scope for the fix agent."
+          },
+          "result": "noop_declaration"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "rtk_attempt",
+          "rtk_attempt"
+        ],
+        [
+          "plan_tools",
+          "plan_tools"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "pr_diff",
+          "pr_diff"
+        ],
+        [
+          "repo_context",
+          "repo_context"
+        ],
+        [
+          "task_context",
+          "selected_clusters"
+        ],
+        [
+          "task_context",
+          "evidence_content"
+        ],
+        [
+          "task_context",
+          "evidence_file"
+        ],
+        [
+          "pr_diff",
+          "selected_clusters"
+        ],
+        [
+          "pr_diff",
+          "evidence_content"
+        ],
+        [
+          "pr_diff",
+          "evidence_file"
+        ],
+        [
+          "repo_context",
+          "selected_clusters"
+        ],
+        [
+          "repo_context",
+          "evidence_content"
+        ],
+        [
+          "repo_context",
+          "evidence_file"
+        ],
+        [
+          "rtk_attempt",
+          "evidence_content"
+        ],
+        [
+          "rtk_attempt",
+          "evidence_file"
+        ],
+        [
+          "plan_tools",
+          "evidence_content"
+        ],
+        [
+          "plan_tools",
+          "evidence_file"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "fail",
+      "status": "ok",
+      "certificate_valid": false,
+      "paths_verified": 18,
+      "rejected_reasons": [
+        "ungrounded (rtk_attempt->evidence_content): 'rtk_attempt' is not a source",
+        "ungrounded (rtk_attempt->evidence_file): 'rtk_attempt' is not a source",
+        "ungrounded (rtk_attempt->rtk_attempt): 'rtk_attempt' is not a source"
+      ],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "plan_tools",
+        "pr_diff",
+        "repo_context",
+        "task_context"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a0113a-41b6-71a1-a049-3b7d34cb1991",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1786995435.619188,
+      "counts": {
+        "allow": 7
+      },
+      "engines": {
+        "cedar": 7
+      },
+      "last_seen": 1786995501.0654533,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 7,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
