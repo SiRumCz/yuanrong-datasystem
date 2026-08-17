@@ -1,0 +1,227 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "New ping helper has no test coverage",
+      "dimension": [
+        "test"
+      ],
+      "severity": "medium",
+      "paths": [
+        "cli/net_check.py"
+      ],
+      "member_findings": [
+        {
+          "dimension": "test",
+          "path": "cli/net_check.py",
+          "line": 21,
+          "severity": "medium",
+          "category": "test",
+          "title": "New ping helper has no test coverage",
+          "impact": "The new ping_worker helper adds input validation, timeout handling, and return-code mapping, but the PR adds no unit tests for any of those branches. Regressions such as accepting option-like hosts, allowing invalid counts, treating timeouts as success, or misreporting ping failures would not be caught before merge.",
+          "fix": "Add focused tests for ping_worker, mocking subprocess.run: cover a successful returncode 0, a nonzero returncode, TimeoutExpired returning False, empty/option-like hosts raising ValueError, and count values below 1 or above MAX_PING_COUNT raising ValueError."
+        }
+      ],
+      "rank": 1
+    }
+  ],
+  "summary": {
+    "present": [
+      "test"
+    ],
+    "missing": [
+      "correctness",
+      "performance",
+      "security",
+      "maintainability"
+    ],
+    "clusters": 1,
+    "total_findings": 1,
+    "by_severity": {
+      "medium": 1
+    },
+    "by_dimension": {
+      "test": 1
+    }
+  },
+  "pinned_issue": 246,
+  "agent_security": {
+    "plan_kts": "val planTools = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\nval taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\nval issues = readRepoFile(\"/tmp/gh-aw/agent/issues.json\")\nval diff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\nval evidencePayload = computeSingleIssueTriage(planTools, taskContext, issues, diff)\nwriteFile(\"/tmp/gh-aw/evidence.json\", evidencePayload)\npublish(\"safeoutputs.noop\", \"No action needed: triage evidence written for the pinned ai-review issue; no GitHub issue or comment was requested.\")",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "plan_tools"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/issues.json"
+          },
+          "result": "issues"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "diff"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "plan_tools": {
+              "$ref": "plan_tools"
+            },
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "issues": {
+              "$ref": "issues"
+            },
+            "diff": {
+              "$ref": "diff"
+            }
+          },
+          "result": "evidence_payload"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence_payload"
+            }
+          },
+          "result": "evidence_file"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": "No action needed: triage evidence written for the pinned ai-review issue; no GitHub issue or comment was requested."
+          },
+          "result": "noop_result"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "plan_tools",
+          "plan_tools"
+        ],
+        [
+          "plan_tools",
+          "evidence_payload"
+        ],
+        [
+          "plan_tools",
+          "evidence_file"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "evidence_payload"
+        ],
+        [
+          "task_context",
+          "evidence_file"
+        ],
+        [
+          "issues",
+          "issues"
+        ],
+        [
+          "issues",
+          "evidence_payload"
+        ],
+        [
+          "issues",
+          "evidence_file"
+        ],
+        [
+          "diff",
+          "diff"
+        ],
+        [
+          "diff",
+          "evidence_payload"
+        ],
+        [
+          "diff",
+          "evidence_file"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 12,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "diff",
+        "issues",
+        "plan_tools",
+        "task_context"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a01132-ebe6-7193-9f26-18509420bd8c",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1786994963.6302283,
+      "counts": {
+        "allow": 7
+      },
+      "engines": {
+        "cedar": 7
+      },
+      "last_seen": 1786995044.6260684,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 7,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
