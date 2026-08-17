@@ -1,0 +1,216 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "Add regression coverage for ping_worker behavior",
+      "dimension": [
+        "test"
+      ],
+      "severity": "high",
+      "paths": [
+        "cli/net_check.py"
+      ],
+      "member_findings": [
+        {
+          "dimension": "test",
+          "path": "cli/net_check.py",
+          "line": 18,
+          "severity": "high",
+          "category": "test",
+          "title": "Add regression coverage for ping_worker behavior",
+          "impact": "The PR adds a new helper with input-validation branches and subprocess return-code handling, but the diff contains no tests. Regressions in rejecting empty or option-like hosts, rejecting non-positive counts, constructing the ping argv, or mapping success and failure return codes would not be caught.",
+          "fix": "Add focused Python unit tests, for example under tests/python/test_net_check.py, that mock subprocess.run and cover invalid host values, invalid count values, success and failure return codes, and the exact ping argv passed for a valid host/count."
+        }
+      ],
+      "rank": 1
+    }
+  ],
+  "summary": {
+    "present": [
+      "test"
+    ],
+    "missing": [
+      "correctness",
+      "performance",
+      "security",
+      "maintainability"
+    ],
+    "clusters": 1,
+    "total_findings": 1,
+    "by_severity": {
+      "high": 1
+    },
+    "by_dimension": {
+      "test": 1
+    }
+  },
+  "pinned_issue": 243,
+  "agent_security": {
+    "plan_kts": "val registry = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\nval context = readRepoFile(\"/tmp/gh-aw/task-context.json\")\nval issues = readRepoFile(\"/tmp/gh-aw/agent/issues.json\")\nval diff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\nval evidence = compute(context, issues, diff)\nwriteFile(\"/tmp/gh-aw/evidence.json\", evidence)\npublish(\"safeoutputs.noop\", \"No GitHub action needed: wrote single-cluster triage evidence for pinned ai-review issue 243 on PR #215.\")",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "registry"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/issues.json"
+          },
+          "result": "issues"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "diff"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "context": {
+              "$ref": "context"
+            },
+            "issues": {
+              "$ref": "issues"
+            },
+            "diff": {
+              "$ref": "diff"
+            }
+          },
+          "result": "evidence"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence"
+            }
+          },
+          "result": "written_evidence"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": "No GitHub action needed: wrote single-cluster triage evidence for pinned ai-review issue 243 on PR #215."
+          },
+          "result": "noop"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "registry",
+          "registry"
+        ],
+        [
+          "context",
+          "context"
+        ],
+        [
+          "context",
+          "evidence"
+        ],
+        [
+          "context",
+          "written_evidence"
+        ],
+        [
+          "issues",
+          "issues"
+        ],
+        [
+          "issues",
+          "evidence"
+        ],
+        [
+          "issues",
+          "written_evidence"
+        ],
+        [
+          "diff",
+          "diff"
+        ],
+        [
+          "diff",
+          "evidence"
+        ],
+        [
+          "diff",
+          "written_evidence"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 10,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "context",
+        "diff",
+        "issues",
+        "registry"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a01133-77ab-7742-a57b-7470799aa758",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1786994990.8110182,
+      "counts": {
+        "allow": 8
+      },
+      "engines": {
+        "cedar": 8
+      },
+      "last_seen": 1786995049.5430717,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 8,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
