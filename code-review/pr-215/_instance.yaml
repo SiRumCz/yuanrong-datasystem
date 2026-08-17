@@ -1,13 +1,6 @@
 protocol: code-review
 instance: pr-215
-head_sha: c6ff46438613ba1fb759f61aa63d9ff439cb548b
-phase: per-issue
+head_sha: a0d7b25203381635bdbb6055ae2bc8c4c8a57284
+phase: preflight
 joined: false
-phase_label: "per-issue triage \u2192 fix (one leg per open [ai-review] issue)"
-status_comment_id: 5297542749
-overrides:
-- phase: preflight-verdict
-  actor: SiRumCz
-  reason: 'fix-agent verification: PR 215 is the throwaway test vehicle and carries
-    no spec/plan by design, so the preflight block is legitimate and expected. Proceeding
-    to reach the per-issue fix legs, which is what this run exists to verify.'
+phase_label: pre-flight adherence chain
