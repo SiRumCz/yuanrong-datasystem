@@ -1,7 +1,0 @@
-protocol: code-review
-instance: pr-215
-state: consistency-fanout
-iteration: 1
-human_task: {}
-head_sha: a0d7b25203381635bdbb6055ae2bc8c4c8a57284
-history: []
