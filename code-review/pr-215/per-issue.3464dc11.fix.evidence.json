@@ -1,0 +1,526 @@
+{
+  "fixes": [],
+  "skipped": [],
+  "mode": "edit",
+  "pinned_issue": 246,
+  "agent_security": {
+    "plan_kts": "val rtkAttempt = runCommand(listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/plan-tools.md\"))\nval planTools = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\nval taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\nval prDiff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\nval prJson = readRepoFile(\"/tmp/gh-aw/agent/pr.json\")\nval repoReadme = readRepoFile(\".repo_context/README.md\")\nval repoIndex = readRepoFile(\".repo_context/index.md\")\nval maintenance = readRepoFile(\".repo_context/maintenance.md\")\nval generatedIndex = readRepoFile(\".repo_context/generated/repo_index.md\")\nval engineeringPrinciples = readRepoFile(\".repo_context/modules/overview/engineering-principles.md\")\nval testsReproduction = readRepoFile(\".repo_context/modules/quality/tests-and-reproduction.md\")\nval selfVerification = readRepoFile(\".repo_context/playbooks/upkeep/ai-self-verification.md\")\nval selection = computeCodeFixableClusters(taskContext, prDiff, prJson, repoReadme, repoIndex, maintenance, generatedIndex, engineeringPrinciples, testsReproduction)\nval status = runCommand(listOf(\"git\", \"status\", \"--short\"))\nval evidencePayload = computeEvidence(planTools, taskContext, prDiff, prJson, repoReadme, repoIndex, maintenance, generatedIndex, engineeringPrinciples, testsReproduction, selfVerification, selection, status)\nwriteFile(\"/tmp/gh-aw/evidence.json\", evidencePayload)\nval noopBody = computeNoopBody(selection)\npublish(\"safeoutputs.noop\", noopBody)",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/plan-tools.md"
+            ]
+          },
+          "result": "rtk_attempt"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "plan_tools"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "pr_diff"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.json"
+          },
+          "result": "pr_json"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/README.md"
+          },
+          "result": "repo_readme"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/index.md"
+          },
+          "result": "repo_index"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/maintenance.md"
+          },
+          "result": "maintenance"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/generated/repo_index.md"
+          },
+          "result": "generated_index"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/overview/engineering-principles.md"
+          },
+          "result": "engineering_principles"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/quality/tests-and-reproduction.md"
+          },
+          "result": "tests_reproduction"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/playbooks/upkeep/ai-self-verification.md"
+          },
+          "result": "self_verification"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "pr_diff": {
+              "$ref": "pr_diff"
+            },
+            "pr_json": {
+              "$ref": "pr_json"
+            },
+            "repo_readme": {
+              "$ref": "repo_readme"
+            },
+            "repo_index": {
+              "$ref": "repo_index"
+            },
+            "maintenance": {
+              "$ref": "maintenance"
+            },
+            "generated_index": {
+              "$ref": "generated_index"
+            },
+            "engineering_principles": {
+              "$ref": "engineering_principles"
+            },
+            "tests_reproduction": {
+              "$ref": "tests_reproduction"
+            }
+          },
+          "result": "selection"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "git",
+              "status",
+              "--short"
+            ]
+          },
+          "result": "git_status"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "plan_tools": {
+              "$ref": "plan_tools"
+            },
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "pr_diff": {
+              "$ref": "pr_diff"
+            },
+            "pr_json": {
+              "$ref": "pr_json"
+            },
+            "repo_readme": {
+              "$ref": "repo_readme"
+            },
+            "repo_index": {
+              "$ref": "repo_index"
+            },
+            "maintenance": {
+              "$ref": "maintenance"
+            },
+            "generated_index": {
+              "$ref": "generated_index"
+            },
+            "engineering_principles": {
+              "$ref": "engineering_principles"
+            },
+            "tests_reproduction": {
+              "$ref": "tests_reproduction"
+            },
+            "self_verification": {
+              "$ref": "self_verification"
+            },
+            "selection": {
+              "$ref": "selection"
+            },
+            "git_status": {
+              "$ref": "git_status"
+            }
+          },
+          "result": "evidence_payload"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence_payload"
+            }
+          },
+          "result": "evidence_file"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "selection": {
+              "$ref": "selection"
+            }
+          },
+          "result": "noop_body"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": {
+              "$ref": "noop_body"
+            }
+          },
+          "result": "noop_result"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "plan_tools",
+          "plan_tools"
+        ],
+        [
+          "plan_tools",
+          "evidence_payload"
+        ],
+        [
+          "plan_tools",
+          "evidence_file"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "selection"
+        ],
+        [
+          "task_context",
+          "noop_body"
+        ],
+        [
+          "task_context",
+          "noop_result"
+        ],
+        [
+          "task_context",
+          "evidence_payload"
+        ],
+        [
+          "task_context",
+          "evidence_file"
+        ],
+        [
+          "pr_diff",
+          "pr_diff"
+        ],
+        [
+          "pr_diff",
+          "selection"
+        ],
+        [
+          "pr_diff",
+          "noop_body"
+        ],
+        [
+          "pr_diff",
+          "noop_result"
+        ],
+        [
+          "pr_diff",
+          "evidence_payload"
+        ],
+        [
+          "pr_diff",
+          "evidence_file"
+        ],
+        [
+          "pr_json",
+          "pr_json"
+        ],
+        [
+          "pr_json",
+          "selection"
+        ],
+        [
+          "pr_json",
+          "noop_body"
+        ],
+        [
+          "pr_json",
+          "noop_result"
+        ],
+        [
+          "pr_json",
+          "evidence_payload"
+        ],
+        [
+          "pr_json",
+          "evidence_file"
+        ],
+        [
+          "repo_readme",
+          "repo_readme"
+        ],
+        [
+          "repo_readme",
+          "selection"
+        ],
+        [
+          "repo_readme",
+          "noop_body"
+        ],
+        [
+          "repo_readme",
+          "noop_result"
+        ],
+        [
+          "repo_readme",
+          "evidence_payload"
+        ],
+        [
+          "repo_readme",
+          "evidence_file"
+        ],
+        [
+          "repo_index",
+          "repo_index"
+        ],
+        [
+          "repo_index",
+          "selection"
+        ],
+        [
+          "repo_index",
+          "noop_body"
+        ],
+        [
+          "repo_index",
+          "noop_result"
+        ],
+        [
+          "repo_index",
+          "evidence_payload"
+        ],
+        [
+          "repo_index",
+          "evidence_file"
+        ],
+        [
+          "maintenance",
+          "maintenance"
+        ],
+        [
+          "maintenance",
+          "selection"
+        ],
+        [
+          "maintenance",
+          "noop_body"
+        ],
+        [
+          "maintenance",
+          "noop_result"
+        ],
+        [
+          "maintenance",
+          "evidence_payload"
+        ],
+        [
+          "maintenance",
+          "evidence_file"
+        ],
+        [
+          "generated_index",
+          "generated_index"
+        ],
+        [
+          "generated_index",
+          "selection"
+        ],
+        [
+          "generated_index",
+          "noop_body"
+        ],
+        [
+          "generated_index",
+          "noop_result"
+        ],
+        [
+          "generated_index",
+          "evidence_payload"
+        ],
+        [
+          "generated_index",
+          "evidence_file"
+        ],
+        [
+          "engineering_principles",
+          "engineering_principles"
+        ],
+        [
+          "engineering_principles",
+          "selection"
+        ],
+        [
+          "engineering_principles",
+          "noop_body"
+        ],
+        [
+          "engineering_principles",
+          "noop_result"
+        ],
+        [
+          "engineering_principles",
+          "evidence_payload"
+        ],
+        [
+          "engineering_principles",
+          "evidence_file"
+        ],
+        [
+          "tests_reproduction",
+          "tests_reproduction"
+        ],
+        [
+          "tests_reproduction",
+          "selection"
+        ],
+        [
+          "tests_reproduction",
+          "noop_body"
+        ],
+        [
+          "tests_reproduction",
+          "noop_result"
+        ],
+        [
+          "tests_reproduction",
+          "evidence_payload"
+        ],
+        [
+          "tests_reproduction",
+          "evidence_file"
+        ],
+        [
+          "self_verification",
+          "self_verification"
+        ],
+        [
+          "self_verification",
+          "evidence_payload"
+        ],
+        [
+          "self_verification",
+          "evidence_file"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 60,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "engineering_principles",
+        "generated_index",
+        "maintenance",
+        "plan_tools",
+        "pr_diff",
+        "pr_json",
+        "repo_index",
+        "repo_readme",
+        "self_verification",
+        "task_context",
+        "tests_reproduction"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a0113a-b0aa-7191-b843-06edd16dfaaa",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1786995463.6639185,
+      "counts": {
+        "allow": 15
+      },
+      "engines": {
+        "cedar": 15
+      },
+      "last_seen": 1786995561.5512497,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 15,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
