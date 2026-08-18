@@ -155,6 +155,7 @@ def main():
         "generate_cpp_template",
         "generate_docker_entryfile",
         "generate_config",
+        "validate_config",
         "collect_log",
     ]
     for m in modules:
