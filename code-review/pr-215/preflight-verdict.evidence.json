@@ -1,0 +1,199 @@
+{
+  "legs": [
+    {
+      "leg": "spec-solves-issue",
+      "verdict": "n/a",
+      "scope": {
+        "issue_linked": false,
+        "spec_present": false
+      },
+      "summary": "Adherence evidence reported no linked issue and no presented spec, so this leaf is n/a. No graded findings were supplied for this leg."
+    },
+    {
+      "leg": "plan-implements-spec",
+      "verdict": "underspec",
+      "scope": {
+        "code_changed": true,
+        "spec_present": false,
+        "plan_present": false,
+        "spec_path": null,
+        "plan_path": null
+      },
+      "summary": "Adherence evidence reported code changes but no spec or plan paths. The leaf verdict was underspec with no graded findings supplied."
+    },
+    {
+      "leg": "code-implements-plan",
+      "verdict": "underplan",
+      "scope": {
+        "code_changed": true,
+        "plan_present": false,
+        "plan_path": null,
+        "code_files": [
+          "cli/net_check.py"
+        ]
+      },
+      "summary": "Adherence evidence reported cli/net_check.py changed without a presented plan. The leaf verdict was underplan with no graded findings supplied."
+    },
+    {
+      "leg": "mm-compliance",
+      "verdict": "compliant",
+      "scope": {},
+      "summary": "MM compliance evidence reported compliant. Divergence count from graded findings is 0."
+    },
+    {
+      "leg": "docs-updated-appropriately",
+      "verdict": "inadequate",
+      "scope": {
+        "code_changed": true
+      },
+      "summary": "Consistency evidence reported code changed and docs/context upkeep inadequate. The supplied blocking finding says .repo_context/generated/repo_index.md was not regenerated for the added cli/net_check.py."
+    },
+    {
+      "leg": "tests-updated-appropriately",
+      "verdict": "inadequate",
+      "scope": {
+        "code_changed": true
+      },
+      "summary": "Consistency evidence reported code changed and tests inadequate. The supplied blocking finding cites missing coverage for CLI validation, subprocess invocation, return codes, and timeout handling."
+    },
+    {
+      "leg": "security",
+      "verdict": "PASS",
+      "scope": {},
+      "summary": "Security evidence reported PASS. Locked violations count from graded findings is 0."
+    }
+  ],
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ],
+  "agent_security": {
+    "plan_kts": "fun plan() {\n  val planRegistry = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\n  val evidenceContent = compute(planRegistry, taskContext)\n  writeFile(\"/tmp/gh-aw/evidence.json\", evidenceContent)\n  publish(\"safeoutputs.noop\", \"No action needed: consolidated preflight evidence written from supplied inline inputs; no GitHub issue or comment was required.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "plan_registry"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "plan_registry": {
+              "$ref": "plan_registry"
+            },
+            "task_context": {
+              "$ref": "task_context"
+            }
+          },
+          "result": "evidence_content"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence_content"
+            }
+          },
+          "result": "evidence_file"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": "No action needed: consolidated preflight evidence written from supplied inline inputs; no GitHub issue or comment was required."
+          },
+          "result": "noop_result"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "plan_registry",
+          "plan_registry"
+        ],
+        [
+          "plan_registry",
+          "evidence_content"
+        ],
+        [
+          "plan_registry",
+          "evidence_file"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "evidence_content"
+        ],
+        [
+          "task_context",
+          "evidence_file"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 6,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "plan_registry",
+        "task_context"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a012a8-3e7b-7323-a28a-927c3573fb27",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1787019424.9762764,
+      "counts": {
+        "allow": 5
+      },
+      "engines": {
+        "cedar": 5
+      },
+      "last_seen": 1787019486.1446607,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 5,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  }
+}
