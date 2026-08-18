@@ -1,0 +1,279 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "New ping helper has no test coverage",
+      "dimension": [
+        "test"
+      ],
+      "severity": "medium",
+      "paths": [
+        "cli/net_check.py"
+      ],
+      "member_findings": [
+        {
+          "dimension": "test",
+          "path": "cli/net_check.py",
+          "line": 21,
+          "severity": "medium",
+          "category": "test",
+          "title": "New ping helper has no test coverage",
+          "impact": "The new ping_worker helper adds input validation, timeout handling, and return-code mapping, but the PR adds no unit tests for any of those branches. Regressions such as accepting option-like hosts, allowing invalid counts, treating timeouts as success, or misreporting ping failures would not be caught before merge.",
+          "fix": "Add focused tests for ping_worker, mocking subprocess.run: cover a successful returncode 0, a nonzero returncode, TimeoutExpired returning False, empty/option-like hosts raising ValueError, and count values below 1 or above MAX_PING_COUNT raising ValueError."
+        }
+      ],
+      "rank": 1
+    }
+  ],
+  "summary": {
+    "present": [
+      "test"
+    ],
+    "missing": [
+      "correctness",
+      "performance",
+      "security",
+      "maintainability"
+    ],
+    "clusters": 1,
+    "total_findings": 1,
+    "by_severity": {
+      "medium": 1
+    },
+    "by_dimension": {
+      "test": 1
+    }
+  },
+  "pinned_issue": 246,
+  "agent_security": {
+    "plan_kts": "fun plan() {\n  val registry = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\n  val issues = readRepoFile(\"/tmp/gh-aw/agent/issues.json\")\n  val prView = readRepoFile(\"/tmp/gh-aw/agent/pr.json\")\n  val prDiff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\n  val triage = compute(\"Filter issues to exact PR token from taskContext, select taskContext.inputs.issue.number, reconstruct one finding from issue body/title, and use prView/prDiff only to confirm path/line context\")\n  val evidence = compute(\"Build evidence JSON with one cluster, summary counts, pinned issue, and this agent_security bundle\")\n  writeFile(\"/tmp/gh-aw/evidence.json\", evidence)\n  publish(\"safeoutputs.noop\", \"No action needed: triage evidence was written for the pinned ai-review issue; no GitHub issue/comment/PR write was required.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "registry"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/issues.json"
+          },
+          "result": "issues"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.json"
+          },
+          "result": "pr_view"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "pr_diff"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "registry": {
+              "$ref": "registry"
+            },
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "issues": {
+              "$ref": "issues"
+            },
+            "pr_view": {
+              "$ref": "pr_view"
+            },
+            "pr_diff": {
+              "$ref": "pr_diff"
+            }
+          },
+          "result": "triage"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "triage": {
+              "$ref": "triage"
+            }
+          },
+          "result": "evidence_content"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence_content"
+            }
+          },
+          "result": "evidence_write"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": "No action needed: triage evidence was written for the pinned ai-review issue; no GitHub issue/comment/PR write was required."
+          },
+          "result": "noop_publish"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "registry",
+          "registry"
+        ],
+        [
+          "registry",
+          "triage"
+        ],
+        [
+          "registry",
+          "evidence_content"
+        ],
+        [
+          "registry",
+          "evidence_write"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "triage"
+        ],
+        [
+          "task_context",
+          "evidence_content"
+        ],
+        [
+          "task_context",
+          "evidence_write"
+        ],
+        [
+          "issues",
+          "issues"
+        ],
+        [
+          "issues",
+          "triage"
+        ],
+        [
+          "issues",
+          "evidence_content"
+        ],
+        [
+          "issues",
+          "evidence_write"
+        ],
+        [
+          "pr_view",
+          "pr_view"
+        ],
+        [
+          "pr_view",
+          "triage"
+        ],
+        [
+          "pr_view",
+          "evidence_content"
+        ],
+        [
+          "pr_view",
+          "evidence_write"
+        ],
+        [
+          "pr_diff",
+          "pr_diff"
+        ],
+        [
+          "pr_diff",
+          "triage"
+        ],
+        [
+          "pr_diff",
+          "evidence_content"
+        ],
+        [
+          "pr_diff",
+          "evidence_write"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 20,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "issues",
+        "pr_diff",
+        "pr_view",
+        "registry",
+        "task_context"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a0167a-fc38-73a2-a66e-b8a197dc2c99",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1787083575.4596157,
+      "counts": {
+        "allow": 8
+      },
+      "engines": {
+        "cedar": 8
+      },
+      "last_seen": 1787083655.1385808,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 8,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
