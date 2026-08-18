@@ -1,0 +1,497 @@
+{
+  "fixes": [],
+  "skipped": [],
+  "mode": "edit",
+  "pinned_issue": 239,
+  "agent_security": {
+    "plan_kts": "fun main() {\n  val rtkPlanToolsError = runCommand(listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/plan-tools.md\"))\n  val planRegistry = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val planDesign = compute(mapOf(\"registry\" to planRegistry, \"rtk_error\" to rtkPlanToolsError))\n  val taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\n  val prDiff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\n  val repoContextReadme = readRepoFile(\".repo_context/README.md\")\n  val repoContextIndex = readRepoFile(\".repo_context/index.md\")\n  val repoContextMaintenance = readRepoFile(\".repo_context/maintenance.md\")\n  val repoIndex = readRepoFile(\".repo_context/generated/repo_index.md\")\n  val engineeringPrinciples = readRepoFile(\".repo_context/modules/overview/engineering-principles.md\")\n  val testsReproduction = readRepoFile(\".repo_context/modules/quality/tests-and-reproduction.md\")\n  val selfVerification = readRepoFile(\".repo_context/playbooks/upkeep/ai-self-verification.md\")\n  val repoContext = compute(mapOf(\"readme\" to repoContextReadme, \"index\" to repoContextIndex, \"maintenance\" to repoContextMaintenance, \"repo_index\" to repoIndex, \"principles\" to engineeringPrinciples, \"tests\" to testsReproduction, \"self_check\" to selfVerification))\n  val triageSelection = compute(mapOf(\"task_context\" to taskContext, \"pr_diff\" to prDiff, \"repo_context\" to repoContext))\n  val gitStatus = runCommand(listOf(\"git\", \"status\", \"--short\"))\n  val verificationInputs = compute(mapOf(\"git_status\" to gitStatus, \"triage_selection\" to triageSelection, \"self_check\" to selfVerification))\n  val evidence = compute(mapOf(\"plan_design\" to planDesign, \"triage_selection\" to triageSelection, \"verification\" to verificationInputs))\n  writeFile(\"/tmp/gh-aw/evidence.json\", evidence)\n  publish(\"safeoutputs noop\", \"No action needed: triage only contained a test-dimension cluster, which this fix phase must exclude; evidence.json records no code fixes.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/plan-tools.md"
+            ]
+          },
+          "result": "rtk_plan_tools_error"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "plan_registry"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "registry": {
+              "$ref": "plan_registry"
+            },
+            "rtk_error": {
+              "$ref": "rtk_plan_tools_error"
+            }
+          },
+          "result": "plan_design"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "pr_diff"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/README.md"
+          },
+          "result": "repo_context_readme"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/index.md"
+          },
+          "result": "repo_context_index"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/maintenance.md"
+          },
+          "result": "repo_context_maintenance"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/generated/repo_index.md"
+          },
+          "result": "repo_index"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/overview/engineering-principles.md"
+          },
+          "result": "engineering_principles"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/quality/tests-and-reproduction.md"
+          },
+          "result": "tests_reproduction"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/playbooks/upkeep/ai-self-verification.md"
+          },
+          "result": "self_verification"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "readme": {
+              "$ref": "repo_context_readme"
+            },
+            "index": {
+              "$ref": "repo_context_index"
+            },
+            "maintenance": {
+              "$ref": "repo_context_maintenance"
+            },
+            "repo_index": {
+              "$ref": "repo_index"
+            },
+            "principles": {
+              "$ref": "engineering_principles"
+            },
+            "tests": {
+              "$ref": "tests_reproduction"
+            },
+            "self_check": {
+              "$ref": "self_verification"
+            }
+          },
+          "result": "repo_context"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "pr_diff": {
+              "$ref": "pr_diff"
+            },
+            "repo_context": {
+              "$ref": "repo_context"
+            }
+          },
+          "result": "triage_selection"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "git",
+              "status",
+              "--short"
+            ]
+          },
+          "result": "git_status"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "git_status": {
+              "$ref": "git_status"
+            },
+            "triage_selection": {
+              "$ref": "triage_selection"
+            },
+            "self_check": {
+              "$ref": "self_verification"
+            }
+          },
+          "result": "verification_inputs"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "plan_design": {
+              "$ref": "plan_design"
+            },
+            "triage_selection": {
+              "$ref": "triage_selection"
+            },
+            "verification": {
+              "$ref": "verification_inputs"
+            }
+          },
+          "result": "evidence"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence"
+            }
+          },
+          "result": "evidence_file"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs noop",
+            "body": "No action needed: triage only contained a test-dimension cluster, which this fix phase must exclude; evidence.json records no code fixes."
+          },
+          "result": "noop"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "plan_registry",
+          "plan_registry"
+        ],
+        [
+          "plan_registry",
+          "plan_design"
+        ],
+        [
+          "plan_registry",
+          "evidence"
+        ],
+        [
+          "plan_registry",
+          "evidence_file"
+        ],
+        [
+          "repo_context_readme",
+          "repo_context_readme"
+        ],
+        [
+          "repo_context_readme",
+          "repo_context"
+        ],
+        [
+          "repo_context_readme",
+          "triage_selection"
+        ],
+        [
+          "repo_context_readme",
+          "verification_inputs"
+        ],
+        [
+          "repo_context_readme",
+          "evidence"
+        ],
+        [
+          "repo_context_readme",
+          "evidence_file"
+        ],
+        [
+          "repo_context_index",
+          "repo_context_index"
+        ],
+        [
+          "repo_context_index",
+          "repo_context"
+        ],
+        [
+          "repo_context_index",
+          "triage_selection"
+        ],
+        [
+          "repo_context_index",
+          "verification_inputs"
+        ],
+        [
+          "repo_context_index",
+          "evidence"
+        ],
+        [
+          "repo_context_index",
+          "evidence_file"
+        ],
+        [
+          "repo_context_maintenance",
+          "repo_context_maintenance"
+        ],
+        [
+          "repo_context_maintenance",
+          "repo_context"
+        ],
+        [
+          "repo_context_maintenance",
+          "triage_selection"
+        ],
+        [
+          "repo_context_maintenance",
+          "verification_inputs"
+        ],
+        [
+          "repo_context_maintenance",
+          "evidence"
+        ],
+        [
+          "repo_context_maintenance",
+          "evidence_file"
+        ],
+        [
+          "repo_index",
+          "repo_index"
+        ],
+        [
+          "repo_index",
+          "repo_context"
+        ],
+        [
+          "repo_index",
+          "triage_selection"
+        ],
+        [
+          "repo_index",
+          "verification_inputs"
+        ],
+        [
+          "repo_index",
+          "evidence"
+        ],
+        [
+          "repo_index",
+          "evidence_file"
+        ],
+        [
+          "engineering_principles",
+          "engineering_principles"
+        ],
+        [
+          "engineering_principles",
+          "repo_context"
+        ],
+        [
+          "engineering_principles",
+          "triage_selection"
+        ],
+        [
+          "engineering_principles",
+          "verification_inputs"
+        ],
+        [
+          "engineering_principles",
+          "evidence"
+        ],
+        [
+          "engineering_principles",
+          "evidence_file"
+        ],
+        [
+          "tests_reproduction",
+          "tests_reproduction"
+        ],
+        [
+          "tests_reproduction",
+          "repo_context"
+        ],
+        [
+          "tests_reproduction",
+          "triage_selection"
+        ],
+        [
+          "tests_reproduction",
+          "verification_inputs"
+        ],
+        [
+          "tests_reproduction",
+          "evidence"
+        ],
+        [
+          "tests_reproduction",
+          "evidence_file"
+        ],
+        [
+          "self_verification",
+          "self_verification"
+        ],
+        [
+          "self_verification",
+          "repo_context"
+        ],
+        [
+          "self_verification",
+          "triage_selection"
+        ],
+        [
+          "self_verification",
+          "verification_inputs"
+        ],
+        [
+          "self_verification",
+          "evidence"
+        ],
+        [
+          "self_verification",
+          "evidence_file"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "triage_selection"
+        ],
+        [
+          "task_context",
+          "verification_inputs"
+        ],
+        [
+          "task_context",
+          "evidence"
+        ],
+        [
+          "task_context",
+          "evidence_file"
+        ],
+        [
+          "pr_diff",
+          "pr_diff"
+        ],
+        [
+          "pr_diff",
+          "triage_selection"
+        ],
+        [
+          "pr_diff",
+          "verification_inputs"
+        ],
+        [
+          "pr_diff",
+          "evidence"
+        ],
+        [
+          "pr_diff",
+          "evidence_file"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 56,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "engineering_principles",
+        "plan_registry",
+        "pr_diff",
+        "repo_context_index",
+        "repo_context_maintenance",
+        "repo_context_readme",
+        "repo_index",
+        "self_verification",
+        "task_context",
+        "tests_reproduction"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a01683-fe18-7322-bec4-1e068faf6fcb",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1787084161.379315,
+      "counts": {
+        "allow": 14
+      },
+      "engines": {
+        "cedar": 14
+      },
+      "last_seen": 1787084276.6276677,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 14,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
