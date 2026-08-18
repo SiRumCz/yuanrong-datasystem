@@ -1,0 +1,606 @@
+{
+  "scope": {
+    "code_changed": true
+  },
+  "items": [
+    {
+      "path": "tests/python",
+      "status": "missing",
+      "reason": "New cli/net_check.py ping_worker behavior lacks PR test coverage for host/count validation, ping return codes, and subprocess timeout handling."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/modules/quality/tests-and-reproduction.md",
+    ".repo_context/modules/quality/test-suite-design.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md",
+    "cli/net_check.py from PR diff",
+    "tests/python",
+    "tests/kvtest/tests/python",
+    "rg --files tests",
+    "rg -n net_check|ping_worker|subprocess.run|unittest|pytest|cli tests cli -g *.py",
+    "find tests -maxdepth 3 -type d -print",
+    "find cli -maxdepth 2 -type f -print",
+    "git status --short"
+  ],
+  "agent_security": {
+    "plan_kts": "fun plan() { val rtkAttempt = runCommand(listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/plan-tools.md\")); val registry = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\"); val scope = readRepoFile(\"/tmp/gh-aw/agent/scope.json\"); val changed = readRepoFile(\"/tmp/gh-aw/agent/changed-files.txt\"); val diff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\"); val task = readRepoFile(\"/tmp/gh-aw/task-context.json\"); val quality = readRepoFile(\".repo_context/modules/quality/tests-and-reproduction.md\"); val suite = readRepoFile(\".repo_context/modules/quality/test-suite-design.md\"); val principles = readRepoFile(\".repo_context/modules/overview/engineering-principles.md\"); val sourceAttempt = readRepoFile(\"cli/net_check.py\"); val testFiles = runCommand(listOf(\"rg\", \"--files\", \"tests\")); val codeSearch = runCommand(listOf(\"rg\", \"-n\", \"net_check|ping_worker|subprocess.run|unittest|pytest|cli\", \"tests\", \"cli\", \"-g\", \"*.py\")); val testDirs = runCommand(listOf(\"find\", \"tests\", \"-maxdepth\", \"3\", \"-type\", \"d\", \"-print\")); val cliFiles = runCommand(listOf(\"find\", \"cli\", \"-maxdepth\", \"2\", \"-type\", \"f\", \"-print\")); val readme = readRepoFile(\".repo_context/README.md\"); val index = readRepoFile(\".repo_context/index.md\"); val maintenance = readRepoFile(\".repo_context/maintenance.md\"); val repoIndex = readRepoFile(\".repo_context/generated/repo_index.md\"); val selfVerify = readRepoFile(\".repo_context/playbooks/upkeep/ai-self-verification.md\"); val status = runCommand(listOf(\"git\", \"status\", \"--short\")); val analysis = compute(scope, changed, diff, task, quality, suite, principles, sourceAttempt, testFiles, codeSearch, testDirs, cliFiles, readme, index, maintenance, repoIndex, selfVerify, status); val evidence = compute(analysis, registry); writeFile(\"/tmp/gh-aw/evidence.json\", evidence); publish(\"safeoutputs.noop\", \"No action needed: required preflight result was written to local evidence; no GitHub issue/comment was requested by this leg.\") }",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/plan-tools.md"
+            ]
+          },
+          "result": "rtk_attempt"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "registry"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/scope.json"
+          },
+          "result": "scope"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/changed-files.txt"
+          },
+          "result": "changed"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "diff"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/quality/tests-and-reproduction.md"
+          },
+          "result": "quality"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/quality/test-suite-design.md"
+          },
+          "result": "suite"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/overview/engineering-principles.md"
+          },
+          "result": "principles"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "cli/net_check.py"
+          },
+          "result": "source_attempt"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rg",
+              "--files",
+              "tests"
+            ]
+          },
+          "result": "test_files"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rg",
+              "-n",
+              "net_check|ping_worker|subprocess.run|unittest|pytest|cli",
+              "tests",
+              "cli",
+              "-g",
+              "*.py"
+            ]
+          },
+          "result": "code_search"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "find",
+              "tests",
+              "-maxdepth",
+              "3",
+              "-type",
+              "d",
+              "-print"
+            ]
+          },
+          "result": "test_dirs"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "find",
+              "cli",
+              "-maxdepth",
+              "2",
+              "-type",
+              "f",
+              "-print"
+            ]
+          },
+          "result": "cli_files"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/README.md"
+          },
+          "result": "readme"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/index.md"
+          },
+          "result": "index"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/maintenance.md"
+          },
+          "result": "maintenance"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/generated/repo_index.md"
+          },
+          "result": "repo_index"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/playbooks/upkeep/ai-self-verification.md"
+          },
+          "result": "self_verify"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "git",
+              "status",
+              "--short"
+            ]
+          },
+          "result": "git_status"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "input": [
+              {
+                "$ref": "scope"
+              },
+              {
+                "$ref": "changed"
+              },
+              {
+                "$ref": "diff"
+              },
+              {
+                "$ref": "task"
+              },
+              {
+                "$ref": "quality"
+              },
+              {
+                "$ref": "suite"
+              },
+              {
+                "$ref": "principles"
+              },
+              {
+                "$ref": "source_attempt"
+              },
+              {
+                "$ref": "test_files"
+              },
+              {
+                "$ref": "code_search"
+              },
+              {
+                "$ref": "test_dirs"
+              },
+              {
+                "$ref": "cli_files"
+              },
+              {
+                "$ref": "readme"
+              },
+              {
+                "$ref": "index"
+              },
+              {
+                "$ref": "maintenance"
+              },
+              {
+                "$ref": "repo_index"
+              },
+              {
+                "$ref": "self_verify"
+              },
+              {
+                "$ref": "git_status"
+              }
+            ]
+          },
+          "result": "analysis"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "input": [
+              {
+                "$ref": "analysis"
+              },
+              {
+                "$ref": "registry"
+              }
+            ]
+          },
+          "result": "evidence_content"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence_content"
+            }
+          },
+          "result": "evidence_json"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "input": "static noop body"
+          },
+          "result": "noop_body"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": {
+              "$ref": "noop_body"
+            }
+          },
+          "result": "safeoutputs_noop"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "registry",
+          "registry"
+        ],
+        [
+          "registry",
+          "evidence_content"
+        ],
+        [
+          "registry",
+          "evidence_json"
+        ],
+        [
+          "scope",
+          "scope"
+        ],
+        [
+          "scope",
+          "analysis"
+        ],
+        [
+          "scope",
+          "evidence_content"
+        ],
+        [
+          "scope",
+          "evidence_json"
+        ],
+        [
+          "changed",
+          "changed"
+        ],
+        [
+          "changed",
+          "analysis"
+        ],
+        [
+          "changed",
+          "evidence_content"
+        ],
+        [
+          "changed",
+          "evidence_json"
+        ],
+        [
+          "diff",
+          "diff"
+        ],
+        [
+          "diff",
+          "analysis"
+        ],
+        [
+          "diff",
+          "evidence_content"
+        ],
+        [
+          "diff",
+          "evidence_json"
+        ],
+        [
+          "task",
+          "task"
+        ],
+        [
+          "task",
+          "analysis"
+        ],
+        [
+          "task",
+          "evidence_content"
+        ],
+        [
+          "task",
+          "evidence_json"
+        ],
+        [
+          "quality",
+          "quality"
+        ],
+        [
+          "quality",
+          "analysis"
+        ],
+        [
+          "quality",
+          "evidence_content"
+        ],
+        [
+          "quality",
+          "evidence_json"
+        ],
+        [
+          "suite",
+          "suite"
+        ],
+        [
+          "suite",
+          "analysis"
+        ],
+        [
+          "suite",
+          "evidence_content"
+        ],
+        [
+          "suite",
+          "evidence_json"
+        ],
+        [
+          "principles",
+          "principles"
+        ],
+        [
+          "principles",
+          "analysis"
+        ],
+        [
+          "principles",
+          "evidence_content"
+        ],
+        [
+          "principles",
+          "evidence_json"
+        ],
+        [
+          "source_attempt",
+          "source_attempt"
+        ],
+        [
+          "source_attempt",
+          "analysis"
+        ],
+        [
+          "source_attempt",
+          "evidence_content"
+        ],
+        [
+          "source_attempt",
+          "evidence_json"
+        ],
+        [
+          "readme",
+          "readme"
+        ],
+        [
+          "readme",
+          "analysis"
+        ],
+        [
+          "readme",
+          "evidence_content"
+        ],
+        [
+          "readme",
+          "evidence_json"
+        ],
+        [
+          "index",
+          "index"
+        ],
+        [
+          "index",
+          "analysis"
+        ],
+        [
+          "index",
+          "evidence_content"
+        ],
+        [
+          "index",
+          "evidence_json"
+        ],
+        [
+          "maintenance",
+          "maintenance"
+        ],
+        [
+          "maintenance",
+          "analysis"
+        ],
+        [
+          "maintenance",
+          "evidence_content"
+        ],
+        [
+          "maintenance",
+          "evidence_json"
+        ],
+        [
+          "repo_index",
+          "repo_index"
+        ],
+        [
+          "repo_index",
+          "analysis"
+        ],
+        [
+          "repo_index",
+          "evidence_content"
+        ],
+        [
+          "repo_index",
+          "evidence_json"
+        ],
+        [
+          "self_verify",
+          "self_verify"
+        ],
+        [
+          "self_verify",
+          "analysis"
+        ],
+        [
+          "self_verify",
+          "evidence_content"
+        ],
+        [
+          "self_verify",
+          "evidence_json"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 55,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "changed",
+        "diff",
+        "index",
+        "maintenance",
+        "principles",
+        "quality",
+        "readme",
+        "registry",
+        "repo_index",
+        "scope",
+        "self_verify",
+        "source_attempt",
+        "suite",
+        "task"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a01651-2b0f-7d61-b392-b3f219fda56c",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1787080829.052243,
+      "counts": {
+        "allow": 22
+      },
+      "engines": {
+        "cedar": 22
+      },
+      "last_seen": 1787080983.5751007,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 22,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  }
+}
