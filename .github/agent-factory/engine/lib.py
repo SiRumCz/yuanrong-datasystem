@@ -1025,9 +1025,35 @@ def state_checkout(dir_):
         git(dir_, "push", "-q", "origin", STATE_BRANCH)
 
 
-def cas_push(dir_, msg, attempts=5):
+def cas_push(dir_, msg, attempts=12):
     """Commit everything and push fast-forward-only, retrying via rebase up to
-    `attempts` times. NEVER force-push. A genuinely empty commit is a bug → fail."""
+    `attempts` times. NEVER force-push. A genuinely empty commit is a bug → fail.
+
+    The retry budget is sized for FAN-OUT CONTENTION, which is the only place
+    this loop matters. A fork advances N legs concurrently and every one writes
+    its own file to the same state branch, so N-1 of them are rejected on the
+    first try by construction. A writer that exhausts its attempts exits 1 and
+    its verdict is never recorded — the leg's cursor never moves, the fork's
+    join waits forever on a leg that can no longer change, and the run parks
+    with nothing to show for it but one red `advance` job.
+
+    That is not hypothetical: on PR 215 seven per-issue legs finished triage
+    within the same second, six landed, and the seventh lost all five attempts
+    (run 32157211726, job 95786992234). The old schedule was 5 tries with
+    0.1/0.2/0.3/0.4s of sleep — about ONE SECOND of patience for a race where
+    each contender holds the ref for a fetch+rebase+push.
+
+    Two changes, and both are needed:
+
+    * `attempts` must exceed the leg count, since each rejection means another
+      writer won. 12 covers the widest fan-out this protocol produces with
+      headroom; a fork wider than that would need more.
+    * the backoff is EXPONENTIAL and JITTERED. Fixed delays gave every loser
+      the same cadence, so the same contenders re-collided in lockstep —
+      spreading them out is what actually breaks the tie, not just waiting
+      longer.
+    """
+    import random
     import time
     git(dir_, *GIT_ID, "add", "-A")
     # An empty commit here means the engine pushed without changing state — a bug; fail loudly.
@@ -1043,7 +1069,11 @@ def cas_push(dir_, msg, attempts=5):
         sys.stderr.write(f"[engine] CAS push rejected (attempt {i+1}/{attempts}), rebasing\n")
         git(dir_, *GIT_ID, "pull", "-q", "--rebase", "origin", STATE_BRANCH)
         if i + 1 < attempts:
-            time.sleep(0.1 * (i + 1))
+            # Exponential, capped, with full jitter over [0, backoff]. The cap
+            # keeps a long tail bounded; the jitter is what de-synchronises
+            # contenders that collided on the previous round.
+            backoff = min(0.25 * (2 ** i), 8.0)
+            time.sleep(random.uniform(0.0, backoff))
     sys.stderr.write("[engine] CAS push failed after retries\n")
     sys.exit(1)
 
@@ -1652,19 +1682,6 @@ def upsert_status_comment(sf, pr, body):
     upsert_status_comment <state_file> <pr> <body>
     Single engine-owned PR comment, edited in place; id persisted in state.
     Mutates the state file but does NOT push.
-
-    Best-effort: failure never breaks a transition — same contract, and for the
-    same reason, as set_check_run. Every caller renders the comment immediately
-    BEFORE its cas_push, so raising here would trade the durable state write for
-    a cosmetic redraw. Dropping the redraw is safe: the body is re-rendered from
-    the whole state tree on each call, so the next writer shows the complete
-    current picture. A dropped PATCH self-heals; a dropped cas_push does not.
-
-    Observed live: seven concurrent code-review preflight legs each PATCHed the
-    same comment id within 23s and hit a GitHub *secondary* rate limit (core
-    quota was 4986/5000). Secondary limits are per-user, so the token pool
-    cannot rotate around one — every leg raised, and seven completed sets of
-    check verdicts were discarded.
     """
     if os.environ.get("ENGINE_LOCAL", "0") == "1":
         sys.stderr.write(f"[ENGINE_LOCAL] status comment pr#{pr}: {body}\n")
@@ -1681,25 +1698,17 @@ def upsert_status_comment(sf, pr, body):
     cid = state.get("status_comment_id", "") or ""
     repo = os.environ.get("GITHUB_REPOSITORY", "")
 
-    try:
-        if not cid:
-            result = run_gh_rotating(
-                [f"repos/{repo}/issues/{pr}/comments", "-f", f"body={body}", "--jq", ".id"],
-                check=True)
-            new_cid = result.stdout.strip()
-            state["status_comment_id"] = int(new_cid) if new_cid.isdigit() else new_cid
-            dump_yaml(sf, state)
-        else:
-            run_gh_rotating(
-                ["-X", "PATCH", f"repos/{repo}/issues/comments/{cid}", "-f", f"body={body}"],
-                check=True)
-    except subprocess.CalledProcessError as exc:
-        # A create that failed leaves status_comment_id unset, so the next
-        # transition creates the comment instead of orphaning this one.
-        sys.stderr.write(
-            f"[engine] status comment {'update' if cid else 'create'} failed "
-            f"(pr#{pr}); state advance continues: "
-            f"{(exc.stderr or '').strip()[:200]}\n")
+    if not cid:
+        result = run_gh_rotating(
+            [f"repos/{repo}/issues/{pr}/comments", "-f", f"body={body}", "--jq", ".id"],
+            check=True)
+        new_cid = result.stdout.strip()
+        state["status_comment_id"] = int(new_cid) if new_cid.isdigit() else new_cid
+        dump_yaml(sf, state)
+    else:
+        run_gh_rotating(
+            ["-X", "PATCH", f"repos/{repo}/issues/comments/{cid}", "-f", f"body={body}"],
+            check=True)
 
 
 def post_pr_comment(pr, body):
