@@ -1,7 +1,19 @@
 protocol: code-review
 instance: pr-215
-state: adherence-fanout
+state: done
 iteration: 1
 human_task: {}
 head_sha: a0d7b25203381635bdbb6055ae2bc8c4c8a57284
-history: []
+history:
+- iteration: 1
+  agent_run_id: '32089722002'
+  checks:
+    evidence-present: pass
+    plan-spec-coverage: pass
+    plan-ast-guardians: pass
+    plan-cert-verify: pass
+    live-guard-clean: pass
+  feedback: ''
+outcome:
+  exit: 0
+  summary: ''
