@@ -1,0 +1,301 @@
+{
+  "dimension": "correctness",
+  "verdict": "APPROVE",
+  "findings": [],
+  "agent_security": {
+    "plan_kts": "fun plan() {\n  val rtkPlanToolsAttempt = runCommand(listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/plan-tools.md\"))\n  val planTools = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val dimension = readRepoFile(\"/tmp/gh-aw/agent/dimension.txt\")\n  val rubric = readRepoFile(\"/tmp/gh-aw/agent/rubric.md\")\n  val pr = readRepoFile(\"/tmp/gh-aw/agent/pr.json\")\n  val diff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\n  val taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\n  val review = compute(dimension, rubric, pr, diff, taskContext)\n  val evidence = compute(planTools, dimension, rubric, pr, diff, taskContext, review)\n  writeFile(\"/tmp/gh-aw/evidence.json\", evidence)\n  val noopBody = compute(evidence)\n  publish(\"safeoutputs noop\", noopBody)\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/plan-tools.md"
+            ]
+          },
+          "result": "rtk_plan_tools_attempt"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "plan_tools"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/dimension.txt"
+          },
+          "result": "dimension"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/rubric.md"
+          },
+          "result": "rubric"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.json"
+          },
+          "result": "pr"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "diff"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "dimension": {
+              "$ref": "dimension"
+            },
+            "rubric": {
+              "$ref": "rubric"
+            },
+            "pr": {
+              "$ref": "pr"
+            },
+            "diff": {
+              "$ref": "diff"
+            },
+            "task_context": {
+              "$ref": "task_context"
+            }
+          },
+          "result": "review"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "plan_tools": {
+              "$ref": "plan_tools"
+            },
+            "dimension": {
+              "$ref": "dimension"
+            },
+            "rubric": {
+              "$ref": "rubric"
+            },
+            "pr": {
+              "$ref": "pr"
+            },
+            "diff": {
+              "$ref": "diff"
+            },
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "review": {
+              "$ref": "review"
+            }
+          },
+          "result": "evidence"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence"
+            }
+          },
+          "result": "evidence_write"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "evidence": {
+              "$ref": "evidence"
+            }
+          },
+          "result": "noop_body"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs noop",
+            "body": {
+              "$ref": "noop_body"
+            }
+          },
+          "result": "noop_result"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "plan_tools",
+          "plan_tools"
+        ],
+        [
+          "plan_tools",
+          "evidence"
+        ],
+        [
+          "dimension",
+          "dimension"
+        ],
+        [
+          "dimension",
+          "review"
+        ],
+        [
+          "dimension",
+          "evidence"
+        ],
+        [
+          "dimension",
+          "noop_body"
+        ],
+        [
+          "rubric",
+          "rubric"
+        ],
+        [
+          "rubric",
+          "review"
+        ],
+        [
+          "rubric",
+          "evidence"
+        ],
+        [
+          "rubric",
+          "noop_body"
+        ],
+        [
+          "pr",
+          "pr"
+        ],
+        [
+          "pr",
+          "review"
+        ],
+        [
+          "pr",
+          "evidence"
+        ],
+        [
+          "pr",
+          "noop_body"
+        ],
+        [
+          "diff",
+          "diff"
+        ],
+        [
+          "diff",
+          "review"
+        ],
+        [
+          "diff",
+          "evidence"
+        ],
+        [
+          "diff",
+          "noop_body"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "review"
+        ],
+        [
+          "task_context",
+          "evidence"
+        ],
+        [
+          "task_context",
+          "noop_body"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "fail",
+      "status": "ok",
+      "certificate_valid": false,
+      "paths_verified": 22,
+      "rejected_reasons": [
+        "closure gap: (task_context->noop_body) + flow(noop_body->noop_result) but (task_context->noop_result) omitted",
+        "closure gap: (dimension->noop_body) + flow(noop_body->noop_result) but (dimension->noop_result) omitted",
+        "closure gap: (pr->evidence) + flow(evidence->evidence_write) but (pr->evidence_write) omitted",
+        "closure gap: (rubric->evidence) + flow(evidence->evidence_write) but (rubric->evidence_write) omitted",
+        "closure gap: (diff->noop_body) + flow(noop_body->noop_result) but (diff->noop_result) omitted",
+        "closure gap: (task_context->evidence) + flow(evidence->evidence_write) but (task_context->evidence_write) omitted",
+        "closure gap: (dimension->evidence) + flow(evidence->evidence_write) but (dimension->evidence_write) omitted",
+        "closure gap: (pr->noop_body) + flow(noop_body->noop_result) but (pr->noop_result) omitted"
+      ],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "diff",
+        "dimension",
+        "plan_tools",
+        "pr",
+        "rubric",
+        "task_context"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a01672-c34e-7262-9d24-1730753289df",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1787083027.3594677,
+      "counts": {
+        "allow": 9
+      },
+      "engines": {
+        "cedar": 9
+      },
+      "last_seen": 1787083099.3166325,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 9,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
