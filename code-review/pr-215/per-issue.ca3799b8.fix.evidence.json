@@ -1,0 +1,441 @@
+{
+  "fixes": [],
+  "skipped": [],
+  "mode": "edit",
+  "pinned_issue": 248,
+  "agent_security": {
+    "plan_kts": "fun main() {\n  val registry = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val plan = compute(registry)\n  writeFile(\"/tmp/gh-aw/evidence.json\", plan)\n  val task = readRepoFile(\"/tmp/gh-aw/task-context.json\")\n  val prDiff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\n  val prMeta = readRepoFile(\"/tmp/gh-aw/agent/pr.json\")\n  val repoReadme = readRepoFile(\".repo_context/README.md\")\n  val repoIndex = readRepoFile(\".repo_context/index.md\")\n  val repoMaintenance = readRepoFile(\".repo_context/maintenance.md\")\n  val generatedIndex = readRepoFile(\".repo_context/generated/repo_index.md\")\n  val principles = readRepoFile(\".repo_context/modules/overview/engineering-principles.md\")\n  val testsDoc = readRepoFile(\".repo_context/modules/quality/tests-and-reproduction.md\")\n  val queue = compute(task, prDiff, prMeta, repoReadme, repoIndex, repoMaintenance, generatedIndex, principles, testsDoc)\n  val selfVerify = readRepoFile(\".repo_context/playbooks/upkeep/ai-self-verification.md\")\n  val gitStatus = runCommand(\"git status --short\")\n  val evidence = compute(queue, selfVerify, gitStatus)\n  writeFile(\"/tmp/gh-aw/evidence.json\", evidence)\n  publish(\"safeoutputs.noop\", \"No action needed: triage cluster is test-only and excluded from the edit phase.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "registry"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "registry": {
+              "$ref": "registry"
+            }
+          },
+          "result": "plan"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "plan"
+            }
+          },
+          "result": "initial_evidence"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "prDiff"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.json"
+          },
+          "result": "prMeta"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/README.md"
+          },
+          "result": "repoReadme"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/index.md"
+          },
+          "result": "repoIndex"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/maintenance.md"
+          },
+          "result": "repoMaintenance"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/generated/repo_index.md"
+          },
+          "result": "generatedIndex"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/overview/engineering-principles.md"
+          },
+          "result": "principles"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/quality/tests-and-reproduction.md"
+          },
+          "result": "testsDoc"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "task": {
+              "$ref": "task"
+            },
+            "prDiff": {
+              "$ref": "prDiff"
+            },
+            "prMeta": {
+              "$ref": "prMeta"
+            },
+            "repoReadme": {
+              "$ref": "repoReadme"
+            },
+            "repoIndex": {
+              "$ref": "repoIndex"
+            },
+            "repoMaintenance": {
+              "$ref": "repoMaintenance"
+            },
+            "generatedIndex": {
+              "$ref": "generatedIndex"
+            },
+            "principles": {
+              "$ref": "principles"
+            },
+            "testsDoc": {
+              "$ref": "testsDoc"
+            }
+          },
+          "result": "queue"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/playbooks/upkeep/ai-self-verification.md"
+          },
+          "result": "selfVerify"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": "git status --short"
+          },
+          "result": "gitStatus"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "queue": {
+              "$ref": "queue"
+            },
+            "selfVerify": {
+              "$ref": "selfVerify"
+            },
+            "gitStatus": {
+              "$ref": "gitStatus"
+            }
+          },
+          "result": "evidence"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence"
+            }
+          },
+          "result": "final_evidence"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": "No action needed: triage cluster is test-only and excluded from the edit phase."
+          },
+          "result": "noop_published"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "registry",
+          "registry"
+        ],
+        [
+          "task",
+          "task"
+        ],
+        [
+          "prDiff",
+          "prDiff"
+        ],
+        [
+          "prMeta",
+          "prMeta"
+        ],
+        [
+          "repoReadme",
+          "repoReadme"
+        ],
+        [
+          "repoIndex",
+          "repoIndex"
+        ],
+        [
+          "repoMaintenance",
+          "repoMaintenance"
+        ],
+        [
+          "generatedIndex",
+          "generatedIndex"
+        ],
+        [
+          "principles",
+          "principles"
+        ],
+        [
+          "testsDoc",
+          "testsDoc"
+        ],
+        [
+          "selfVerify",
+          "selfVerify"
+        ],
+        [
+          "gitStatus",
+          "gitStatus"
+        ],
+        [
+          "registry",
+          "plan"
+        ],
+        [
+          "registry",
+          "initial_evidence"
+        ],
+        [
+          "registry",
+          "evidence"
+        ],
+        [
+          "registry",
+          "final_evidence"
+        ],
+        [
+          "task",
+          "queue"
+        ],
+        [
+          "task",
+          "evidence"
+        ],
+        [
+          "task",
+          "final_evidence"
+        ],
+        [
+          "prDiff",
+          "queue"
+        ],
+        [
+          "prDiff",
+          "evidence"
+        ],
+        [
+          "prDiff",
+          "final_evidence"
+        ],
+        [
+          "prMeta",
+          "queue"
+        ],
+        [
+          "prMeta",
+          "evidence"
+        ],
+        [
+          "prMeta",
+          "final_evidence"
+        ],
+        [
+          "repoReadme",
+          "queue"
+        ],
+        [
+          "repoReadme",
+          "evidence"
+        ],
+        [
+          "repoReadme",
+          "final_evidence"
+        ],
+        [
+          "repoIndex",
+          "queue"
+        ],
+        [
+          "repoIndex",
+          "evidence"
+        ],
+        [
+          "repoIndex",
+          "final_evidence"
+        ],
+        [
+          "repoMaintenance",
+          "queue"
+        ],
+        [
+          "repoMaintenance",
+          "evidence"
+        ],
+        [
+          "repoMaintenance",
+          "final_evidence"
+        ],
+        [
+          "generatedIndex",
+          "queue"
+        ],
+        [
+          "generatedIndex",
+          "evidence"
+        ],
+        [
+          "generatedIndex",
+          "final_evidence"
+        ],
+        [
+          "principles",
+          "queue"
+        ],
+        [
+          "principles",
+          "evidence"
+        ],
+        [
+          "principles",
+          "final_evidence"
+        ],
+        [
+          "testsDoc",
+          "queue"
+        ],
+        [
+          "testsDoc",
+          "evidence"
+        ],
+        [
+          "testsDoc",
+          "final_evidence"
+        ],
+        [
+          "selfVerify",
+          "evidence"
+        ],
+        [
+          "selfVerify",
+          "final_evidence"
+        ],
+        [
+          "gitStatus",
+          "evidence"
+        ],
+        [
+          "gitStatus",
+          "final_evidence"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "fail",
+      "status": "ok",
+      "certificate_valid": false,
+      "paths_verified": 47,
+      "rejected_reasons": [
+        "ungrounded (gitStatus->gitStatus): 'gitStatus' is not a source",
+        "ungrounded (gitStatus->evidence): 'gitStatus' is not a source",
+        "ungrounded (gitStatus->final_evidence): 'gitStatus' is not a source"
+      ],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "generatedIndex",
+        "prDiff",
+        "prMeta",
+        "principles",
+        "registry",
+        "repoIndex",
+        "repoMaintenance",
+        "repoReadme",
+        "selfVerify",
+        "task",
+        "testsDoc"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a015b2-f0c7-7ce3-95db-1cde7383fcf8",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1787070457.0708704,
+      "counts": {
+        "allow": 17
+      },
+      "engines": {
+        "cedar": 17
+      },
+      "last_seen": 1787070635.7101507,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 17,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
