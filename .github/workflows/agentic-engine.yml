@@ -406,7 +406,20 @@ jobs:
       - uses: actions/checkout@v5
       - id: wait
         env:
-          GH_TOKEN: ${{ secrets.POC_DISPATCH_TOKEN }}
+          # DEDICATED token, not the pool's primary. This job is the engine's
+          # heaviest API consumer by an order of magnitude — `gh run watch`
+          # polls for an agent's entire runtime, measured at ~257 calls per leg
+          # against ~a handful each for plan and advance — and it is the ONE job
+          # the rotation helper cannot cover (`run_gh_rotating` wraps `gh api`;
+          # these are `gh run`/`gh workflow` subcommands).
+          #
+          # So instead of sharing POC_DISPATCH_TOKEN and exhausting it for
+          # everyone, it gets POC_DISPATCH_TOKEN_2 to itself. The two PATs are on
+          # DIFFERENT accounts, so they have independent primary quotas AND
+          # independent secondary limits — the heavy poller can no longer starve
+          # the state writes, and vice versa. Falls back to the primary if the
+          # second token is unset, so a single-token install still works.
+          GH_TOKEN: ${{ secrets.POC_DISPATCH_TOKEN_2 || secrets.POC_DISPATCH_TOKEN }}
           PR: ${{ needs.plan.outputs.pr }}
           ITERATION: ${{ needs.plan.outputs.iteration }}
           FEEDBACK: ${{ needs.plan.outputs.feedback }}
@@ -482,11 +495,37 @@ jobs:
           done
           [ -n "$RID" ] || { echo "no agent run matched cid:[$CID] for $WF" >&2; exit 1; }
           printf '%s' "$RID" > /tmp/meta/run_id
-          if gh run watch "$RID" --repo "$REPO" --exit-status; then
-            printf '%s' "true" > /tmp/meta/agent_ok
-          else
-            printf '%s' "false" > /tmp/meta/agent_ok
-          fi
+          # A 20s poll instead of `gh run watch`. `gh run watch` polls ~1/second
+          # for the agent's ENTIRE runtime, which is where this job's cost comes
+          # from: an agent that runs 4 minutes costs ~240 API calls to WATCH, on
+          # top of the handful spent launching it. Measured at ~257 calls per
+          # leg; across a full code-review pass (~44 legs) that is ~11k calls
+          # against a 5000/hr budget, i.e. a complete pass cannot fit in one
+          # window and every run so far has died mid-flight.
+          #
+          # One `gh run view` every 20s costs ~12 calls for that same 4-minute
+          # agent — a ~20x reduction, which brings a full pass comfortably inside
+          # one budget. The cost is up to 20s of extra latency per leg, paid
+          # once per leg and overlapped across the matrix, against runs that
+          # currently do not finish at all.
+          #
+          # `--exit-status` semantics are preserved by hand: success => ok, any
+          # other conclusion => not ok. A poll that fails (rate limit, transient
+          # 5xx) is retried rather than treated as a verdict, since "we could not
+          # ask" is not the same as "the agent failed" -- the bug that burned an
+          # iteration on 2026-08-12.
+          AGENT_OK="false"
+          for i in $(seq 1 90); do          # 90 * 20s = 30 min ceiling
+            sleep 20
+            ST=$(gh run view "$RID" --repo "$REPO" --json status,conclusion 2>/dev/null) || continue
+            [ -n "$ST" ] || continue
+            case "$(printf '%s' "$ST" | jq -r '.status')" in
+              completed)
+                [ "$(printf '%s' "$ST" | jq -r '.conclusion')" = "success" ] && AGENT_OK="true"
+                break ;;
+            esac
+          done
+          printf '%s' "$AGENT_OK" > /tmp/meta/agent_ok
       - uses: actions/upload-artifact@v6
         if: always()
         with:
