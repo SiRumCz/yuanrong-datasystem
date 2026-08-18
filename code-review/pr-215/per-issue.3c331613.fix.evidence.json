@@ -1,0 +1,560 @@
+{
+  "fixes": [],
+  "skipped": [],
+  "mode": "edit",
+  "pinned_issue": 237,
+  "agent_security": {
+    "plan_kts": "val rtkProbe = run_command(listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/plan-tools.md\"))\nval registry = read_repo_file(\"/tmp/gh-aw/agent/plan-tools.md\")\nval task = read_repo_file(\"/tmp/gh-aw/task-context.json\")\nval pr = read_repo_file(\"/tmp/gh-aw/agent/pr.json\")\nval diff = read_repo_file(\"/tmp/gh-aw/agent/pr.diff\")\nval ctxReadme = read_repo_file(\".repo_context/README.md\")\nval ctxIndex = read_repo_file(\".repo_context/index.md\")\nval ctxMaintenance = read_repo_file(\".repo_context/maintenance.md\")\nval ctxRepoIndex = read_repo_file(\".repo_context/generated/repo_index.md\")\nval ctxEngineering = read_repo_file(\".repo_context/modules/overview/engineering-principles.md\")\nval ctxTests = read_repo_file(\".repo_context/modules/quality/tests-and-reproduction.md\")\nval ctxSelfVerification = read_repo_file(\".repo_context/playbooks/upkeep/ai-self-verification.md\")\nval selectedClusters = compute(task, diff)\nval initialEvidence = compute(registry, task, pr, diff, ctxReadme, ctxIndex, ctxMaintenance, ctxRepoIndex, ctxEngineering, ctxTests, ctxSelfVerification, selectedClusters)\nwrite_file(\"/tmp/gh-aw/evidence.json\", initialEvidence)\nval status = run_command(listOf(\"git\", \"status\", \"--short\"))\nval finalEvidence = compute(registry, task, pr, diff, ctxReadme, ctxIndex, ctxMaintenance, ctxRepoIndex, ctxEngineering, ctxTests, ctxSelfVerification, selectedClusters, status)\nwrite_file(\"/tmp/gh-aw/evidence.json\", finalEvidence)\npublish(\"safeoutputs.noop\", \"No action needed: triage cluster c1 is test-only and outside fix-agent edit scope; wrote empty edit-mode evidence for pinned ai-review issue 237.\")",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/plan-tools.md"
+            ]
+          },
+          "result": "rtk_probe"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "registry"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.json"
+          },
+          "result": "pr"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "diff"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/README.md"
+          },
+          "result": "ctx_readme"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/index.md"
+          },
+          "result": "ctx_index"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/maintenance.md"
+          },
+          "result": "ctx_maintenance"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/generated/repo_index.md"
+          },
+          "result": "ctx_repo_index"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/overview/engineering-principles.md"
+          },
+          "result": "ctx_engineering"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/quality/tests-and-reproduction.md"
+          },
+          "result": "ctx_tests"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/playbooks/upkeep/ai-self-verification.md"
+          },
+          "result": "ctx_self_verification"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "task": {
+              "$ref": "task"
+            },
+            "diff": {
+              "$ref": "diff"
+            }
+          },
+          "result": "selected_clusters"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "registry": {
+              "$ref": "registry"
+            },
+            "task": {
+              "$ref": "task"
+            },
+            "pr": {
+              "$ref": "pr"
+            },
+            "diff": {
+              "$ref": "diff"
+            },
+            "ctx_readme": {
+              "$ref": "ctx_readme"
+            },
+            "ctx_index": {
+              "$ref": "ctx_index"
+            },
+            "ctx_maintenance": {
+              "$ref": "ctx_maintenance"
+            },
+            "ctx_repo_index": {
+              "$ref": "ctx_repo_index"
+            },
+            "ctx_engineering": {
+              "$ref": "ctx_engineering"
+            },
+            "ctx_tests": {
+              "$ref": "ctx_tests"
+            },
+            "ctx_self_verification": {
+              "$ref": "ctx_self_verification"
+            },
+            "selected_clusters": {
+              "$ref": "selected_clusters"
+            }
+          },
+          "result": "initial_evidence"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "initial_evidence"
+            }
+          },
+          "result": "initial_evidence_file"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "git",
+              "status",
+              "--short"
+            ]
+          },
+          "result": "status"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "registry": {
+              "$ref": "registry"
+            },
+            "task": {
+              "$ref": "task"
+            },
+            "pr": {
+              "$ref": "pr"
+            },
+            "diff": {
+              "$ref": "diff"
+            },
+            "ctx_readme": {
+              "$ref": "ctx_readme"
+            },
+            "ctx_index": {
+              "$ref": "ctx_index"
+            },
+            "ctx_maintenance": {
+              "$ref": "ctx_maintenance"
+            },
+            "ctx_repo_index": {
+              "$ref": "ctx_repo_index"
+            },
+            "ctx_engineering": {
+              "$ref": "ctx_engineering"
+            },
+            "ctx_tests": {
+              "$ref": "ctx_tests"
+            },
+            "ctx_self_verification": {
+              "$ref": "ctx_self_verification"
+            },
+            "selected_clusters": {
+              "$ref": "selected_clusters"
+            },
+            "status": {
+              "$ref": "status"
+            }
+          },
+          "result": "final_evidence"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "final_evidence"
+            }
+          },
+          "result": "final_evidence_file"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": "No action needed: triage cluster c1 is test-only and outside fix-agent edit scope; wrote empty edit-mode evidence for pinned ai-review issue 237."
+          },
+          "result": "noop"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "registry",
+          "registry"
+        ],
+        [
+          "registry",
+          "initial_evidence"
+        ],
+        [
+          "registry",
+          "initial_evidence_file"
+        ],
+        [
+          "registry",
+          "final_evidence"
+        ],
+        [
+          "registry",
+          "final_evidence_file"
+        ],
+        [
+          "task",
+          "task"
+        ],
+        [
+          "task",
+          "selected_clusters"
+        ],
+        [
+          "task",
+          "initial_evidence"
+        ],
+        [
+          "task",
+          "initial_evidence_file"
+        ],
+        [
+          "task",
+          "final_evidence"
+        ],
+        [
+          "task",
+          "final_evidence_file"
+        ],
+        [
+          "pr",
+          "pr"
+        ],
+        [
+          "pr",
+          "initial_evidence"
+        ],
+        [
+          "pr",
+          "initial_evidence_file"
+        ],
+        [
+          "pr",
+          "final_evidence"
+        ],
+        [
+          "pr",
+          "final_evidence_file"
+        ],
+        [
+          "diff",
+          "diff"
+        ],
+        [
+          "diff",
+          "selected_clusters"
+        ],
+        [
+          "diff",
+          "initial_evidence"
+        ],
+        [
+          "diff",
+          "initial_evidence_file"
+        ],
+        [
+          "diff",
+          "final_evidence"
+        ],
+        [
+          "diff",
+          "final_evidence_file"
+        ],
+        [
+          "ctx_readme",
+          "ctx_readme"
+        ],
+        [
+          "ctx_readme",
+          "initial_evidence"
+        ],
+        [
+          "ctx_readme",
+          "initial_evidence_file"
+        ],
+        [
+          "ctx_readme",
+          "final_evidence"
+        ],
+        [
+          "ctx_readme",
+          "final_evidence_file"
+        ],
+        [
+          "ctx_index",
+          "ctx_index"
+        ],
+        [
+          "ctx_index",
+          "initial_evidence"
+        ],
+        [
+          "ctx_index",
+          "initial_evidence_file"
+        ],
+        [
+          "ctx_index",
+          "final_evidence"
+        ],
+        [
+          "ctx_index",
+          "final_evidence_file"
+        ],
+        [
+          "ctx_maintenance",
+          "ctx_maintenance"
+        ],
+        [
+          "ctx_maintenance",
+          "initial_evidence"
+        ],
+        [
+          "ctx_maintenance",
+          "initial_evidence_file"
+        ],
+        [
+          "ctx_maintenance",
+          "final_evidence"
+        ],
+        [
+          "ctx_maintenance",
+          "final_evidence_file"
+        ],
+        [
+          "ctx_repo_index",
+          "ctx_repo_index"
+        ],
+        [
+          "ctx_repo_index",
+          "initial_evidence"
+        ],
+        [
+          "ctx_repo_index",
+          "initial_evidence_file"
+        ],
+        [
+          "ctx_repo_index",
+          "final_evidence"
+        ],
+        [
+          "ctx_repo_index",
+          "final_evidence_file"
+        ],
+        [
+          "ctx_engineering",
+          "ctx_engineering"
+        ],
+        [
+          "ctx_engineering",
+          "initial_evidence"
+        ],
+        [
+          "ctx_engineering",
+          "initial_evidence_file"
+        ],
+        [
+          "ctx_engineering",
+          "final_evidence"
+        ],
+        [
+          "ctx_engineering",
+          "final_evidence_file"
+        ],
+        [
+          "ctx_tests",
+          "ctx_tests"
+        ],
+        [
+          "ctx_tests",
+          "initial_evidence"
+        ],
+        [
+          "ctx_tests",
+          "initial_evidence_file"
+        ],
+        [
+          "ctx_tests",
+          "final_evidence"
+        ],
+        [
+          "ctx_tests",
+          "final_evidence_file"
+        ],
+        [
+          "ctx_self_verification",
+          "ctx_self_verification"
+        ],
+        [
+          "ctx_self_verification",
+          "initial_evidence"
+        ],
+        [
+          "ctx_self_verification",
+          "initial_evidence_file"
+        ],
+        [
+          "ctx_self_verification",
+          "final_evidence"
+        ],
+        [
+          "ctx_self_verification",
+          "final_evidence_file"
+        ],
+        [
+          "selected_clusters",
+          "selected_clusters"
+        ],
+        [
+          "selected_clusters",
+          "initial_evidence"
+        ],
+        [
+          "selected_clusters",
+          "initial_evidence_file"
+        ],
+        [
+          "selected_clusters",
+          "final_evidence"
+        ],
+        [
+          "selected_clusters",
+          "final_evidence_file"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "fail",
+      "status": "ok",
+      "certificate_valid": false,
+      "paths_verified": 62,
+      "rejected_reasons": [
+        "ungrounded (selected_clusters->initial_evidence): 'selected_clusters' is not a source",
+        "ungrounded (selected_clusters->final_evidence_file): 'selected_clusters' is not a source",
+        "ungrounded (selected_clusters->final_evidence): 'selected_clusters' is not a source",
+        "ungrounded (selected_clusters->initial_evidence_file): 'selected_clusters' is not a source",
+        "ungrounded (selected_clusters->selected_clusters): 'selected_clusters' is not a source"
+      ],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "ctx_engineering",
+        "ctx_index",
+        "ctx_maintenance",
+        "ctx_readme",
+        "ctx_repo_index",
+        "ctx_self_verification",
+        "ctx_tests",
+        "diff",
+        "pr",
+        "registry",
+        "task"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a01683-ce3b-7da0-a186-231018478987",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1787084145.3490536,
+      "counts": {
+        "allow": 16
+      },
+      "engines": {
+        "cedar": 16
+      },
+      "last_seen": 1787084310.660071,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 16,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
