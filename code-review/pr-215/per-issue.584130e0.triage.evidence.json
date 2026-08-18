@@ -1,0 +1,250 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "Add tests for the new ping helper behavior",
+      "dimension": [
+        "test"
+      ],
+      "severity": "medium",
+      "paths": [
+        "cli/net_check.py"
+      ],
+      "member_findings": [
+        {
+          "dimension": "test",
+          "path": "cli/net_check.py",
+          "line": 18,
+          "severity": "medium",
+          "category": "test",
+          "title": "Add tests for the new ping helper behavior",
+          "impact": "The new ping_worker helper ships with input validation and subprocess return-code behavior, but the PR adds no tests. Regressions in empty-host rejection, dash-prefixed host rejection, invalid count handling, or True/False mapping from ping exit status would not be caught by the repository test suite.",
+          "fix": "Add a focused Python unit test for cli.net_check.ping_worker that mocks subprocess.run and covers successful ping, failed ping, empty host, dash-prefixed host, and count < 1."
+        }
+      ],
+      "rank": 1
+    }
+  ],
+  "summary": {
+    "present": [
+      "test"
+    ],
+    "missing": [
+      "correctness",
+      "performance",
+      "security",
+      "maintainability"
+    ],
+    "clusters": 1,
+    "total_findings": 1,
+    "by_severity": {
+      "medium": 1
+    },
+    "by_dimension": {
+      "test": 1
+    }
+  },
+  "pinned_issue": 239,
+  "agent_security": {
+    "plan_kts": "fun main() {\n  val planRegistry = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val planDesign = compute(mapOf(\"registry\" to planRegistry))\n  val taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\n  val issues = readRepoFile(\"/tmp/gh-aw/agent/issues.json\")\n  val prDiff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\n  val triage = compute(mapOf(\"taskContext\" to taskContext, \"issues\" to issues, \"prDiff\" to prDiff))\n  val evidence = compute(mapOf(\"planDesign\" to planDesign, \"triage\" to triage))\n  writeFile(\"/tmp/gh-aw/evidence.json\", evidence)\n  publish(\"safeoutputs noop\", \"No action needed: wrote single-cluster triage evidence for pinned issue 239; no GitHub issue or comment was required.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "plan_registry"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "registry": {
+              "$ref": "plan_registry"
+            }
+          },
+          "result": "plan_design"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/issues.json"
+          },
+          "result": "issues"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "pr_diff"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "issues": {
+              "$ref": "issues"
+            },
+            "pr_diff": {
+              "$ref": "pr_diff"
+            }
+          },
+          "result": "triage"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "plan_design": {
+              "$ref": "plan_design"
+            },
+            "triage": {
+              "$ref": "triage"
+            }
+          },
+          "result": "evidence"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence"
+            }
+          },
+          "result": "evidence_file"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs noop",
+            "body": "No action needed: wrote single-cluster triage evidence for pinned issue 239; no GitHub issue or comment was required."
+          },
+          "result": "noop"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "plan_registry",
+          "plan_registry"
+        ],
+        [
+          "plan_registry",
+          "plan_design"
+        ],
+        [
+          "plan_registry",
+          "evidence"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "triage"
+        ],
+        [
+          "task_context",
+          "evidence"
+        ],
+        [
+          "issues",
+          "issues"
+        ],
+        [
+          "issues",
+          "triage"
+        ],
+        [
+          "issues",
+          "evidence"
+        ],
+        [
+          "pr_diff",
+          "pr_diff"
+        ],
+        [
+          "pr_diff",
+          "triage"
+        ],
+        [
+          "pr_diff",
+          "evidence"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "fail",
+      "status": "ok",
+      "certificate_valid": false,
+      "paths_verified": 12,
+      "rejected_reasons": [
+        "closure gap: (plan_registry->evidence) + flow(evidence->evidence_file) but (plan_registry->evidence_file) omitted",
+        "closure gap: (task_context->evidence) + flow(evidence->evidence_file) but (task_context->evidence_file) omitted",
+        "closure gap: (pr_diff->evidence) + flow(evidence->evidence_file) but (pr_diff->evidence_file) omitted",
+        "closure gap: (issues->evidence) + flow(evidence->evidence_file) but (issues->evidence_file) omitted"
+      ],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "issues",
+        "plan_registry",
+        "pr_diff",
+        "task_context"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a0167a-fc48-7ba2-9ec2-1a4febb14698",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1787083568.4351513,
+      "counts": {
+        "allow": 7
+      },
+      "engines": {
+        "cedar": 7
+      },
+      "last_seen": 1787083645.6218784,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 7,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
