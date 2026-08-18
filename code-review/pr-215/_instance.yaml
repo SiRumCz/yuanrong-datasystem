@@ -1,12 +1,6 @@
 protocol: code-review
 instance: pr-215
 head_sha: a0d7b25203381635bdbb6055ae2bc8c4c8a57284
-phase: per-issue
+phase: preflight
 joined: false
-phase_label: "per-issue triage \u2192 fix (one leg per open [ai-review] issue)"
-status_comment_id: 5330132564
-overrides:
-- phase: preflight-verdict
-  actor: SiRumCz
-  reason: PR 215 carries no spec/plan by design; the preflight block is expected.
-    Proceeding to honesty, post-fix and mrp.
+phase_label: pre-flight adherence chain
