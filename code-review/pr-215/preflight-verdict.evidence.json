@@ -1,0 +1,194 @@
+{
+  "legs": [
+    {
+      "leg": "spec-solves-issue",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence cluster evidence was not available, so no spec-solves-issue verdict or scope was provided. This cell is the required absent-input placeholder."
+    },
+    {
+      "leg": "plan-implements-spec",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence cluster evidence was not available, so no plan-implements-spec verdict or scope was provided. This cell is the required absent-input placeholder."
+    },
+    {
+      "leg": "code-implements-plan",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence cluster evidence was not available, so no code-implements-plan verdict or scope was provided. This cell is the required absent-input placeholder."
+    },
+    {
+      "leg": "mm-compliance",
+      "verdict": "compliant",
+      "scope": {},
+      "summary": "The mm-compliance judge reported compliant. It provided 0 graded divergences."
+    },
+    {
+      "leg": "docs-updated-appropriately",
+      "verdict": "inadequate",
+      "scope": {
+        "code_changed": true
+      },
+      "summary": "The docs-updated-appropriately leg reported inadequate for a changed code scope. Its graded finding says the new operator-facing dscli reachability helper lacks corresponding command documentation."
+    },
+    {
+      "leg": "tests-updated-appropriately",
+      "verdict": "inadequate",
+      "scope": {
+        "code_changed": true
+      },
+      "summary": "The tests-updated-appropriately leg reported inadequate for a changed code scope. Its graded finding says cli.net_check.ping_worker behavior lacks tests for validation, subprocess return handling, and timeouts."
+    },
+    {
+      "leg": "security",
+      "verdict": "PASS",
+      "scope": {},
+      "summary": "The security judge reported PASS. It provided 0 locked violations."
+    }
+  ],
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ],
+  "agent_security": {
+    "plan_kts": "fun plan() {\n  val rtkRegistryAttempt = run_command(argv=listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/plan-tools.md\"))\n  val registry = read_repo_file(path=\"/tmp/gh-aw/agent/plan-tools.md\")\n  val taskContext = read_repo_file(path=\"/tmp/gh-aw/task-context.json\")\n  val evidenceContent = compute(registry=registry, taskContext=taskContext)\n  write_file(path=\"/tmp/gh-aw/evidence.json\", content=evidenceContent)\n  publish(channel=\"safeoutputs/noop\", body=\"No action needed: consolidated preflight evidence written to /tmp/gh-aw/evidence.json; no GitHub issue/comment was requested by this gate.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/plan-tools.md"
+            ]
+          },
+          "result": "rtkRegistryAttempt"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "registry"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "taskContext"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "registry": {
+              "$ref": "registry"
+            },
+            "taskContext": {
+              "$ref": "taskContext"
+            }
+          },
+          "result": "evidenceContent"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidenceContent"
+            }
+          },
+          "result": "evidenceFile"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs/noop",
+            "body": "No action needed: consolidated preflight evidence written to /tmp/gh-aw/evidence.json; no GitHub issue/comment was requested by this gate."
+          },
+          "result": "safeOutput"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "registry",
+          "registry"
+        ],
+        [
+          "registry",
+          "evidenceContent"
+        ],
+        [
+          "registry",
+          "evidenceFile"
+        ],
+        [
+          "taskContext",
+          "taskContext"
+        ],
+        [
+          "taskContext",
+          "evidenceContent"
+        ],
+        [
+          "taskContext",
+          "evidenceFile"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 6,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "registry",
+        "taskContext"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a01581-4900-72c2-9310-ad5dd3d8d1ca",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1787067204.248512,
+      "counts": {
+        "allow": 5
+      },
+      "engines": {
+        "cedar": 5
+      },
+      "last_seen": 1787067262.9238708,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 5,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  }
+}

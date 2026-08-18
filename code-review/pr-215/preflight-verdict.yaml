@@ -1,7 +1,22 @@
 protocol: code-review
 instance: pr-215
-state: preflight-verdict
+state: failed
 iteration: 1
 human_task: {}
 head_sha: a0d7b25203381635bdbb6055ae2bc8c4c8a57284
-history: []
+history:
+- iteration: 1
+  agent_run_id: '32154983694'
+  checks:
+    preflight-verdict-coverage: pass
+    local-review-evidence: pass
+    plan-ast-guardians: pass
+    plan-cert-verify: pass
+    live-guard-clean: pass
+  feedback: ''
+outcome:
+  exit: 1
+  summary: 'Preflight blocked: code changed but no spec is present; code changed but
+    no plan is present; plan does not implement the spec (underspec); relevant docs
+    are not updated appropriately; relevant tests are not updated appropriately; code-implements-plan:
+    evidence missing or unreadable (fail-safe block)'
