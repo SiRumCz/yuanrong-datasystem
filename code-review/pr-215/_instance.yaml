@@ -3,10 +3,15 @@ instance: pr-215
 head_sha: a0d7b25203381635bdbb6055ae2bc8c4c8a57284
 phase: honesty-verdict
 joined: true
-phase_label: honesty verdict (halts if any fix is dishonest)
+phase_label: "\u26D4 blocked"
 status_comment_id: 5332910861
 overrides:
 - phase: preflight-verdict
   actor: SiRumCz
   reason: PR 215 carries no spec/plan by design; the preflight block is expected.
     Proceeding to post-fix and mrp.
+halted:
+  phase: honesty-verdict
+  path: honesty-verdict
+  reason: blocked
+  sha: a0d7b25203381635bdbb6055ae2bc8c4c8a57284

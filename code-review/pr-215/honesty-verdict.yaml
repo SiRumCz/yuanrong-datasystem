@@ -1,0 +1,3 @@
+outcome:
+  exit: 1
+  summary: '8/8 issue(s) dishonest: 249, 248, 246, 243, 240, 239, 237, 218'
