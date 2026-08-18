@@ -1,0 +1,292 @@
+{
+  "agent_security": {
+    "cert": {
+      "paths": [
+        [
+          "plan_tools",
+          "plan_tools"
+        ],
+        [
+          "plan_tools",
+          "evidence_content"
+        ],
+        [
+          "plan_tools",
+          "evidence_file"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "cluster_selection"
+        ],
+        [
+          "task_context",
+          "evidence_content"
+        ],
+        [
+          "task_context",
+          "evidence_file"
+        ],
+        [
+          "pr_diff",
+          "pr_diff"
+        ],
+        [
+          "pr_diff",
+          "cluster_selection"
+        ],
+        [
+          "pr_diff",
+          "evidence_content"
+        ],
+        [
+          "pr_diff",
+          "evidence_file"
+        ],
+        [
+          "repo_docs",
+          "repo_docs"
+        ],
+        [
+          "repo_docs",
+          "cluster_selection"
+        ],
+        [
+          "repo_docs",
+          "evidence_content"
+        ],
+        [
+          "repo_docs",
+          "evidence_file"
+        ],
+        [
+          "self_verification",
+          "self_verification"
+        ],
+        [
+          "self_verification",
+          "cluster_selection"
+        ],
+        [
+          "self_verification",
+          "evidence_content"
+        ],
+        [
+          "self_verification",
+          "evidence_file"
+        ]
+      ]
+    },
+    "plan_ast": {
+      "steps": [
+        {
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/plan-tools.md"
+            ]
+          },
+          "result": "rtk_plan_tools_error",
+          "tool": "run_command"
+        },
+        {
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "plan_tools",
+          "tool": "read_repo_file"
+        },
+        {
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context",
+          "tool": "read_repo_file"
+        },
+        {
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "pr_diff",
+          "tool": "read_repo_file"
+        },
+        {
+          "args": {
+            "path": [
+              ".repo_context/README.md",
+              ".repo_context/index.md",
+              ".repo_context/maintenance.md",
+              ".repo_context/generated/repo_index.md",
+              ".repo_context/modules/overview/engineering-principles.md",
+              ".repo_context/modules/quality/tests-and-reproduction.md"
+            ]
+          },
+          "result": "repo_docs",
+          "tool": "read_repo_file"
+        },
+        {
+          "args": {
+            "path": ".repo_context/playbooks/upkeep/ai-self-verification.md"
+          },
+          "result": "self_verification",
+          "tool": "read_repo_file"
+        },
+        {
+          "args": {
+            "pr_diff": {
+              "$ref": "pr_diff"
+            },
+            "repo_docs": {
+              "$ref": "repo_docs"
+            },
+            "self_verification": {
+              "$ref": "self_verification"
+            },
+            "task_context": {
+              "$ref": "task_context"
+            }
+          },
+          "result": "cluster_selection",
+          "tool": "compute"
+        },
+        {
+          "args": {
+            "argv": [
+              "git",
+              "status",
+              "--short"
+            ]
+          },
+          "result": "git_status",
+          "tool": "run_command"
+        },
+        {
+          "args": {
+            "argv": [
+              "git",
+              "diff",
+              "--",
+              "/tmp/gh-aw/evidence.json"
+            ]
+          },
+          "result": "git_diff_evidence_before_write",
+          "tool": "run_command"
+        },
+        {
+          "args": {
+            "cluster_selection": {
+              "$ref": "cluster_selection"
+            },
+            "git_diff_evidence_before_write": {
+              "$ref": "git_diff_evidence_before_write"
+            },
+            "git_status": {
+              "$ref": "git_status"
+            },
+            "plan_tools": {
+              "$ref": "plan_tools"
+            },
+            "pr_diff": {
+              "$ref": "pr_diff"
+            },
+            "repo_docs": {
+              "$ref": "repo_docs"
+            },
+            "self_verification": {
+              "$ref": "self_verification"
+            },
+            "task_context": {
+              "$ref": "task_context"
+            }
+          },
+          "result": "evidence_content",
+          "tool": "compute"
+        },
+        {
+          "args": {
+            "content": {
+              "$ref": "evidence_content"
+            },
+            "path": "/tmp/gh-aw/evidence.json"
+          },
+          "result": "evidence_file",
+          "tool": "write_file"
+        },
+        {
+          "args": {
+            "body": "No action needed: triage contained only test-only clusters, which this fix phase excludes; local evidence was written with no code edits.",
+            "channel": "safeoutputs.noop"
+          },
+          "result": "noop_result",
+          "tool": "publish"
+        }
+      ]
+    },
+    "plan_kts": "fun plan() {\n  val rtkPlanToolsError = runCommand(listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/plan-tools.md\"))\n  val planTools = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\n  val prDiff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\n  val repoDocs = readRepoFile(listOf(\n    \".repo_context/README.md\",\n    \".repo_context/index.md\",\n    \".repo_context/maintenance.md\",\n    \".repo_context/generated/repo_index.md\",\n    \".repo_context/modules/overview/engineering-principles.md\",\n    \".repo_context/modules/quality/tests-and-reproduction.md\"\n  ))\n  val selfVerification = readRepoFile(\".repo_context/playbooks/upkeep/ai-self-verification.md\")\n  val clusterSelection = computeCodeFixableClusters(taskContext, prDiff, repoDocs, selfVerification)\n  val gitStatus = runCommand(listOf(\"git\", \"status\", \"--short\"))\n  val gitDiffEvidenceBeforeWrite = runCommand(listOf(\"git\", \"diff\", \"--\", \"/tmp/gh-aw/evidence.json\"))\n  val evidenceContent = computeEvidence(planTools, taskContext, prDiff, repoDocs, selfVerification, clusterSelection, gitStatus, gitDiffEvidenceBeforeWrite)\n  writeFile(\"/tmp/gh-aw/evidence.json\", evidenceContent)\n  publish(\"safeoutputs.noop\", \"No action needed: triage contained only test-only clusters, which this fix phase excludes; local evidence was written with no code edits.\")\n}",
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 19,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "plan_tools",
+        "pr_diff",
+        "repo_docs",
+        "self_verification",
+        "task_context"
+      ],
+      "sinks": []
+    }
+  },
+  "fixes": [],
+  "mode": "edit",
+  "pinned_issue": 248,
+  "skipped": [],
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a01683-dff0-7261-b327-80c7dec679eb",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1787084154.5605657,
+      "counts": {
+        "allow": 15
+      },
+      "engines": {
+        "cedar": 15
+      },
+      "last_seen": 1787084288.5875218,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 15,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
