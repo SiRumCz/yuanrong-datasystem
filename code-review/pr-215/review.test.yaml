@@ -1,7 +1,0 @@
-protocol: code-review
-instance: pr-215
-state: review
-sub_state: review
-iteration: 1
-human_task: {}
-history: []
