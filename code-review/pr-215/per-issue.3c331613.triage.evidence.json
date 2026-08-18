@@ -1,0 +1,250 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "New ping_worker behavior has no regression coverage",
+      "dimension": [
+        "test"
+      ],
+      "severity": "medium",
+      "paths": [
+        "cli/net_check.py"
+      ],
+      "member_findings": [
+        {
+          "dimension": "test",
+          "path": "cli/net_check.py",
+          "line": 18,
+          "severity": "medium",
+          "category": "test",
+          "title": "New ping_worker behavior has no regression coverage",
+          "impact": "The new helper adds input validation for host/count and maps the system ping return code to a boolean, but the PR adds no unit test that would fail if validation is removed, invalid arguments are accepted, or ping failures are reported as success.",
+          "fix": "Add a focused test for ping_worker that mocks subprocess.run and covers a successful ping, a non-zero return code, empty or dash-prefixed host rejection, and non-positive count rejection."
+        }
+      ],
+      "rank": 1
+    }
+  ],
+  "summary": {
+    "present": [
+      "test"
+    ],
+    "missing": [
+      "correctness",
+      "performance",
+      "security",
+      "maintainability"
+    ],
+    "clusters": 1,
+    "total_findings": 1,
+    "by_severity": {
+      "medium": 1
+    },
+    "by_dimension": {
+      "test": 1
+    }
+  },
+  "pinned_issue": 237,
+  "agent_security": {
+    "plan_kts": "val registry = read_repo_file(\"/tmp/gh-aw/agent/plan-tools.md\")\nval issues = read_repo_file(\"/tmp/gh-aw/agent/issues.json\")\nval task = read_repo_file(\"/tmp/gh-aw/task-context.json\")\nval pr = read_repo_file(\"/tmp/gh-aw/agent/pr.json\")\nval diff = read_repo_file(\"/tmp/gh-aw/agent/pr.diff\")\nval evidence = compute(registry, issues, task, pr, diff)\nwrite_file(\"/tmp/gh-aw/evidence.json\", evidence)\npublish(\"safeoutputs.noop\", \"No action needed: triage evidence was written for pinned ai-review issue 237 on PR #215.\")",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "registry"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/issues.json"
+          },
+          "result": "issues"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.json"
+          },
+          "result": "pr"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "diff"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "registry": {
+              "$ref": "registry"
+            },
+            "issues": {
+              "$ref": "issues"
+            },
+            "task": {
+              "$ref": "task"
+            },
+            "pr": {
+              "$ref": "pr"
+            },
+            "diff": {
+              "$ref": "diff"
+            }
+          },
+          "result": "evidence"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence"
+            }
+          },
+          "result": "evidence_file"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": "No action needed: triage evidence was written for pinned ai-review issue 237 on PR #215."
+          },
+          "result": "noop"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "registry",
+          "registry"
+        ],
+        [
+          "registry",
+          "evidence"
+        ],
+        [
+          "registry",
+          "evidence_file"
+        ],
+        [
+          "issues",
+          "issues"
+        ],
+        [
+          "issues",
+          "evidence"
+        ],
+        [
+          "issues",
+          "evidence_file"
+        ],
+        [
+          "task",
+          "task"
+        ],
+        [
+          "task",
+          "evidence"
+        ],
+        [
+          "task",
+          "evidence_file"
+        ],
+        [
+          "pr",
+          "pr"
+        ],
+        [
+          "pr",
+          "evidence"
+        ],
+        [
+          "pr",
+          "evidence_file"
+        ],
+        [
+          "diff",
+          "diff"
+        ],
+        [
+          "diff",
+          "evidence"
+        ],
+        [
+          "diff",
+          "evidence_file"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 15,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "diff",
+        "issues",
+        "pr",
+        "registry",
+        "task"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a0167b-0696-7f01-9b5f-c301383c9230",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1787083572.367769,
+      "counts": {
+        "allow": 8
+      },
+      "engines": {
+        "cedar": 8
+      },
+      "last_seen": 1787083645.9385302,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 8,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
