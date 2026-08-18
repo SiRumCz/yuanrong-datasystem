@@ -1,0 +1,194 @@
+{
+  "legs": [
+    {
+      "leg": "spec-solves-issue",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence evidence was not available in the task context, so no spec-solves-issue verdict or scope was provided."
+    },
+    {
+      "leg": "plan-implements-spec",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence evidence was not available in the task context, so no plan-implements-spec verdict or scope was provided."
+    },
+    {
+      "leg": "code-implements-plan",
+      "verdict": "n/a",
+      "scope": {},
+      "summary": "Adherence evidence was not available in the task context, so no code-implements-plan verdict or scope was provided."
+    },
+    {
+      "leg": "mm-compliance",
+      "verdict": "compliant",
+      "scope": {},
+      "summary": "The mm-compliance judge reported compliant. It included zero graded divergences."
+    },
+    {
+      "leg": "docs-updated-appropriately",
+      "verdict": "adequate",
+      "scope": {
+        "code_changed": true
+      },
+      "summary": "The consistency cluster reported documentation updates as adequate for a code-changing scope. It included zero graded findings for this leg."
+    },
+    {
+      "leg": "tests-updated-appropriately",
+      "verdict": "inadequate",
+      "scope": {
+        "code_changed": true
+      },
+      "summary": "The consistency cluster reported tests as inadequate for a code-changing scope. It carried one blocking graded finding about missing tests for newly introduced ping_worker behavior, including validation, return-code handling, and timeout handling."
+    },
+    {
+      "leg": "security",
+      "verdict": "PASS",
+      "scope": {},
+      "summary": "The security judge reported PASS. It included no graded security findings or locked violations."
+    }
+  ],
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ],
+  "agent_security": {
+    "plan_kts": "fun plan() {\n  val rtkPlanToolsAttempt = runCommand(argv = listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/plan-tools.md\"))\n  val planTools = readRepoFile(path = \"/tmp/gh-aw/agent/plan-tools.md\")\n  val taskContext = readRepoFile(path = \"/tmp/gh-aw/task-context.json\")\n  val evidenceContent = computeEvidence(planTools = planTools, taskContext = taskContext)\n  val evidenceWritten = writeFile(path = \"/tmp/gh-aw/evidence.json\", content = evidenceContent)\n  val completion = publish(channel = \"safeoutputs.noop\", body = \"No action needed: consolidated preflight evidence written to /tmp/gh-aw/evidence.json; no GitHub issue/comment requested.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/plan-tools.md"
+            ]
+          },
+          "result": "rtk_plan_tools_attempt"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "plan_tools"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "planTools": {
+              "$ref": "plan_tools"
+            },
+            "taskContext": {
+              "$ref": "task_context"
+            }
+          },
+          "result": "evidence_content"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence_content"
+            }
+          },
+          "result": "evidence_written"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": "No action needed: consolidated preflight evidence written to /tmp/gh-aw/evidence.json; no GitHub issue/comment requested."
+          },
+          "result": "noop_published"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "plan_tools",
+          "plan_tools"
+        ],
+        [
+          "plan_tools",
+          "evidence_content"
+        ],
+        [
+          "plan_tools",
+          "evidence_written"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "evidence_content"
+        ],
+        [
+          "task_context",
+          "evidence_written"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 6,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "plan_tools",
+        "task_context"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a01664-bbfe-7330-9c95-da81f12c89d7",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1787082106.3500297,
+      "counts": {
+        "allow": 5
+      },
+      "engines": {
+        "cedar": 5
+      },
+      "last_seen": 1787082164.5020876,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 5,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  }
+}
