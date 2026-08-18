@@ -1,0 +1,284 @@
+{
+  "cohorts": [
+    {
+      "cohort": "Worker reachability helper",
+      "cohortOrder": 1,
+      "area": "infra",
+      "files": [
+        "cli/net_check.py"
+      ],
+      "layers": [
+        {
+          "layer": "backend",
+          "order": 1,
+          "area": "infra",
+          "title": "Add ping helper",
+          "summary": "Adds a small Python helper for checking whether a worker host responds to ICMP. The implementation validates empty, option-like, and out-of-range inputs, then invokes the system ping binary with an argv list and returns a boolean based on the exit status or timeout.",
+          "files": [
+            "cli/net_check.py"
+          ],
+          "diff": "@@ -0,0 +14,31 @@\n+import subprocess\n+\n+MAX_PING_COUNT = 10\n+PING_TIMEOUT_BUFFER_SECONDS = 2\n+\n+\n+def ping_worker(host: str, count: int = 3) -> bool:\n+    \"\"\"Return True if ``host`` answers ICMP within ``count`` pings.\n+\n+    Convenience wrapper around the system ``ping`` binary so operators can\n+    sanity-check a worker's network path before deploying to it.\n+    \"\"\"\n+    if not host or host.startswith(\"-\"):\n+        raise ValueError(\"host must not be empty or start with '-'\")\n+    if count < 1:\n+        raise ValueError(\"count must be a positive integer\")\n+    if count > MAX_PING_COUNT:\n+        raise ValueError(f\"count must not exceed {MAX_PING_COUNT}\")\n+\n+    try:\n+        completed = subprocess.run(\n+            [\"ping\", \"-c\", str(count), host],\n+            stdout=subprocess.DEVNULL,\n+            stderr=subprocess.DEVNULL,\n+            timeout=count + PING_TIMEOUT_BUFFER_SECONDS,\n+        )\n+    except subprocess.TimeoutExpired:\n+        return False\n+    return completed.returncode == 0"
+        }
+      ],
+      "bcFindings": []
+    }
+  ],
+  "summary": "This PR adds a new dscli worker reachability helper that validates ping inputs and reports whether a host responds within a bounded timeout.",
+  "risk_band": "Low",
+  "agent_security": {
+    "plan_kts": "fun plan() {\n  val planTools = read_repo_file(path = \"/tmp/gh-aw/agent/plan-tools.md\")\n  val failedRtkPrJson = run_command(argv = listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/pr.json\"))\n  val failedRtkPrDiff = run_command(argv = listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/pr.diff\"))\n  val failedRtkTaskContext = run_command(argv = listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/task-context.json\"))\n  val prJson = read_repo_file(path = \"/tmp/gh-aw/agent/pr.json\")\n  val prDiff = read_repo_file(path = \"/tmp/gh-aw/agent/pr.diff\")\n  val taskContext = read_repo_file(path = \"/tmp/gh-aw/task-context.json\")\n  val overview = compute(planTools, prJson, prDiff, taskContext, failedRtkPrJson, failedRtkPrDiff, failedRtkTaskContext)\n  val evidenceObject = compute(overview, planTools)\n  write_file(path = \"/tmp/gh-aw/evidence.json\", content = evidenceObject)\n  val noopBody = compute()\n  publish(channel = \"safeoutputs/noop\", body = noopBody)\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "plan_tools"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/pr.json"
+            ]
+          },
+          "result": "failed_rtk_pr_json"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/pr.diff"
+            ]
+          },
+          "result": "failed_rtk_pr_diff"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/task-context.json"
+            ]
+          },
+          "result": "failed_rtk_task_context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.json"
+          },
+          "result": "pr_json"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "pr_diff"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "plan_tools": {
+              "$ref": "plan_tools"
+            },
+            "pr_json": {
+              "$ref": "pr_json"
+            },
+            "pr_diff": {
+              "$ref": "pr_diff"
+            },
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "failed_rtk_pr_json": {
+              "$ref": "failed_rtk_pr_json"
+            },
+            "failed_rtk_pr_diff": {
+              "$ref": "failed_rtk_pr_diff"
+            },
+            "failed_rtk_task_context": {
+              "$ref": "failed_rtk_task_context"
+            }
+          },
+          "result": "overview"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "overview": {
+              "$ref": "overview"
+            },
+            "plan_tools": {
+              "$ref": "plan_tools"
+            }
+          },
+          "result": "evidence_object"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence_object"
+            }
+          },
+          "result": "evidence_file"
+        },
+        {
+          "tool": "compute",
+          "args": {},
+          "result": "noop_body"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs/noop",
+            "body": {
+              "$ref": "noop_body"
+            }
+          },
+          "result": "noop_result"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "plan_tools",
+          "plan_tools"
+        ],
+        [
+          "plan_tools",
+          "overview"
+        ],
+        [
+          "plan_tools",
+          "evidence_object"
+        ],
+        [
+          "plan_tools",
+          "evidence_file"
+        ],
+        [
+          "pr_json",
+          "pr_json"
+        ],
+        [
+          "pr_json",
+          "overview"
+        ],
+        [
+          "pr_json",
+          "evidence_object"
+        ],
+        [
+          "pr_json",
+          "evidence_file"
+        ],
+        [
+          "pr_diff",
+          "pr_diff"
+        ],
+        [
+          "pr_diff",
+          "overview"
+        ],
+        [
+          "pr_diff",
+          "evidence_object"
+        ],
+        [
+          "pr_diff",
+          "evidence_file"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "overview"
+        ],
+        [
+          "task_context",
+          "evidence_object"
+        ],
+        [
+          "task_context",
+          "evidence_file"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 16,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "plan_tools",
+        "pr_diff",
+        "pr_json",
+        "task_context"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a012ae-58d0-7603-acf6-5bb36d33934a",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1787019821.9749913,
+      "counts": {
+        "allow": 9
+      },
+      "engines": {
+        "cedar": 9
+      },
+      "last_seen": 1787019912.640971,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 9,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
