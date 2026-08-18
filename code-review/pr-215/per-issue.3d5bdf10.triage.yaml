@@ -1,7 +1,22 @@
 protocol: code-review
 instance: pr-215
 state: per-issue
-iteration: 1
+iteration: 2
 human_task: {}
 head_sha: a0d7b25203381635bdbb6055ae2bc8c4c8a57284
-history: []
+history:
+- iteration: 1
+  agent_run_id: '32157273169'
+  checks:
+    dispatched-run: fail
+    evidence-present: fail
+    triage-schema-valid: fail
+    plan-ast-guardians: pass
+    plan-cert-verify: pass
+    live-guard-clean: fail
+  feedback: 'dispatched run failed; evidence shape: missing required key `clusters`;
+    missing required key `summary`; triage schema invalid: `clusters` must be an array;
+    `summary` must be an object; summary.present must be a dimension array; summary.missing
+    must be a dimension array; summary.present and summary.missing must partition
+    all dimensions; summary.clusters must equal len(clusters); unenforced: no liveness
+    record -- the hook was never installed, so this run proves nothing about the guard'
