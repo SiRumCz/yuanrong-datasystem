@@ -1,0 +1,198 @@
+{
+  "fixes": [],
+  "skipped": [],
+  "mode": "edit",
+  "pinned_issue": 240,
+  "agent_security": {
+    "plan_kts": "val planTools = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\nval taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\nval prDiff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\nval selectedClusters = compute(taskContext, prDiff)\nval evidence = compute(planTools, taskContext, selectedClusters)\nwriteFile(\"/tmp/gh-aw/evidence.json\", evidence)\npublish(\"safeoutputs.noop\", \"No action needed: triage cluster c1 is test-only and excluded from this edit phase; evidence was written with no code fixes.\")",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "plan_tools"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "pr_diff"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "pr_diff": {
+              "$ref": "pr_diff"
+            }
+          },
+          "result": "selected_clusters"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "plan_tools": {
+              "$ref": "plan_tools"
+            },
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "selected_clusters": {
+              "$ref": "selected_clusters"
+            }
+          },
+          "result": "evidence"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence"
+            }
+          },
+          "result": "evidence_written"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": "No action needed: triage cluster c1 is test-only and excluded from this edit phase; evidence was written with no code fixes."
+          },
+          "result": "noop_published"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "plan_tools",
+          "plan_tools"
+        ],
+        [
+          "plan_tools",
+          "evidence"
+        ],
+        [
+          "plan_tools",
+          "evidence_written"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "selected_clusters"
+        ],
+        [
+          "task_context",
+          "evidence"
+        ],
+        [
+          "task_context",
+          "evidence_written"
+        ],
+        [
+          "pr_diff",
+          "pr_diff"
+        ],
+        [
+          "pr_diff",
+          "selected_clusters"
+        ],
+        [
+          "pr_diff",
+          "evidence"
+        ],
+        [
+          "pr_diff",
+          "evidence_written"
+        ],
+        [
+          "selected_clusters",
+          "selected_clusters"
+        ],
+        [
+          "selected_clusters",
+          "evidence"
+        ],
+        [
+          "selected_clusters",
+          "evidence_written"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "fail",
+      "status": "ok",
+      "certificate_valid": false,
+      "paths_verified": 14,
+      "rejected_reasons": [
+        "ungrounded (selected_clusters->selected_clusters): 'selected_clusters' is not a source",
+        "ungrounded (selected_clusters->evidence_written): 'selected_clusters' is not a source",
+        "ungrounded (selected_clusters->evidence): 'selected_clusters' is not a source"
+      ],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "plan_tools",
+        "pr_diff",
+        "task_context"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a01684-386e-7291-be82-22c8dc21e8d9",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1787084171.004013,
+      "counts": {
+        "allow": 6
+      },
+      "engines": {
+        "cedar": 6
+      },
+      "last_seen": 1787084237.6876633,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 6,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
