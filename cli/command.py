@@ -150,6 +150,7 @@ def main():
         "stop",
         "up",
         "down",
+        "logs",
         "runscript",
         "generate_helm_chart",
         "generate_cpp_template",
