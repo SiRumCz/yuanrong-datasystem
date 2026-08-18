@@ -1,0 +1,183 @@
+{
+  "leg": "tests-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": "tests/python",
+      "severity": "blocking",
+      "rationale": "The gather finding describes missing coverage for newly introduced ping_worker behavior, including validation, return-code handling, and timeout handling. Those are behavioral and failure-path obligations for infrastructure tooling, so the missing tests are a real merge-blocking adherence gap rather than an advisory note."
+    }
+  ],
+  "examined": [
+    "tests/python"
+  ],
+  "agent_security": {
+    "plan_kts": "fun plan() { val rtkAttempt = runCommand(listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/plan-tools.md\")); val registry = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\"); val task = readRepoFile(\"/tmp/gh-aw/task-context.json\"); val analysis = compute(task); val evidence = compute(registry, task, analysis); writeFile(\"/tmp/gh-aw/evidence.json\", evidence); val noopBody = compute(\"No action needed: tests-updated-appropriately evidence written; this judge leg requires noop rather than a GitHub issue/comment.\"); publish(\"safeoutputs.noop\", noopBody) }",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/plan-tools.md"
+            ]
+          },
+          "result": "rtk_attempt"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "registry"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "input": {
+              "$ref": "task"
+            }
+          },
+          "result": "analysis"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "input": [
+              {
+                "$ref": "registry"
+              },
+              {
+                "$ref": "task"
+              },
+              {
+                "$ref": "analysis"
+              }
+            ]
+          },
+          "result": "evidence_content"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence_content"
+            }
+          },
+          "result": "evidence_json"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "input": "static noop body"
+          },
+          "result": "noop_body"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": {
+              "$ref": "noop_body"
+            }
+          },
+          "result": "safeoutputs_noop"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "registry",
+          "registry"
+        ],
+        [
+          "registry",
+          "evidence_content"
+        ],
+        [
+          "registry",
+          "evidence_json"
+        ],
+        [
+          "task",
+          "task"
+        ],
+        [
+          "task",
+          "analysis"
+        ],
+        [
+          "task",
+          "evidence_content"
+        ],
+        [
+          "task",
+          "evidence_json"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 7,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "registry",
+        "task"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a01659-2cc7-7df1-b2b6-39426324c012",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1787081349.6916704,
+      "counts": {
+        "allow": 4
+      },
+      "engines": {
+        "cedar": 4
+      },
+      "last_seen": 1787081401.4205115,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 4,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  }
+}
