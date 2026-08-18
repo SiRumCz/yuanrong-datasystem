@@ -1,0 +1,145 @@
+{
+  "leg": "docs-updated-appropriately",
+  "scope": {
+    "code_changed": true
+  },
+  "gather_verdict": "inadequate",
+  "graded_findings": [
+    {
+      "ref": "docs/source_zh_cn/deployment/dscli.md",
+      "severity": "blocking",
+      "rationale": "The finding describes a new operator-facing dscli reachability helper without corresponding command documentation. That is a real docs adherence gap because deployment tooling behavior must be discoverable and operationally usable."
+    }
+  ],
+  "examined": [
+    "docs/source_zh_cn/deployment/dscli.md"
+  ],
+  "agent_security": {
+    "plan_kts": "fun plan() {\n  val registry = read_repo_file(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val taskContext = read_repo_file(\"/tmp/gh-aw/task-context.json\")\n  val evidenceContent = compute(registry, taskContext)\n  write_file(\"/tmp/gh-aw/evidence.json\", evidenceContent)\n  publish(\"safeoutputs noop\", \"No GitHub action needed: docs-updated-appropriately grading evidence was written to /tmp/gh-aw/evidence.json.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "registry"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "taskContext"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "registry": {
+              "$ref": "registry"
+            },
+            "taskContext": {
+              "$ref": "taskContext"
+            }
+          },
+          "result": "evidenceContent"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidenceContent"
+            }
+          },
+          "result": "evidenceWrite"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs noop",
+            "body": "No GitHub action needed: docs-updated-appropriately grading evidence was written to /tmp/gh-aw/evidence.json."
+          },
+          "result": "safeNoop"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "registry",
+          "registry"
+        ],
+        [
+          "registry",
+          "evidenceContent"
+        ],
+        [
+          "registry",
+          "evidenceWrite"
+        ],
+        [
+          "taskContext",
+          "taskContext"
+        ],
+        [
+          "taskContext",
+          "evidenceContent"
+        ],
+        [
+          "taskContext",
+          "evidenceWrite"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 6,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "registry",
+        "taskContext"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a01574-9e19-76b2-9b7e-8a9f3e83196c",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1787066374.4351966,
+      "counts": {
+        "allow": 5
+      },
+      "engines": {
+        "cedar": 5
+      },
+      "last_seen": 1787066446.860303,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 5,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  }
+}
