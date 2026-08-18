@@ -1,0 +1,379 @@
+{
+  "dimension": "maintainability",
+  "verdict": "APPROVE",
+  "findings": [],
+  "agent_security": {
+    "plan_kts": "fun plan() {\n  val rtkAttempt = run_command(listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/plan-tools.md\"))\n  val planTools = read_repo_file(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val repoReadme = read_repo_file(\".repo_context/README.md\")\n  val repoIndex = read_repo_file(\".repo_context/index.md\")\n  val repoMaintenance = read_repo_file(\".repo_context/maintenance.md\")\n  val generatedIndex = read_repo_file(\".repo_context/generated/repo_index.md\")\n  val principles = read_repo_file(\".repo_context/modules/overview/engineering-principles.md\")\n  val quality = read_repo_file(\".repo_context/modules/quality/tests-and-reproduction.md\")\n  val dimension = read_repo_file(\"/tmp/gh-aw/agent/dimension.txt\")\n  val rubric = read_repo_file(\"/tmp/gh-aw/agent/rubric.md\")\n  val pr = read_repo_file(\"/tmp/gh-aw/agent/pr.json\")\n  val diff = read_repo_file(\"/tmp/gh-aw/agent/pr.diff\")\n  val taskContext = read_repo_file(\"/tmp/gh-aw/task-context.json\")\n  val evidence = compute(planTools, repoReadme, repoIndex, repoMaintenance, generatedIndex, principles, quality, dimension, rubric, pr, diff, taskContext)\n  write_file(\"/tmp/gh-aw/evidence.json\", evidence)\n  publish(\"safeoutputs/noop\", \"No GitHub action needed beyond evidence artifact for this review leg.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/plan-tools.md"
+            ]
+          },
+          "result": "rtkAttempt"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "planTools"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/README.md"
+          },
+          "result": "repoReadme"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/index.md"
+          },
+          "result": "repoIndex"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/maintenance.md"
+          },
+          "result": "repoMaintenance"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/generated/repo_index.md"
+          },
+          "result": "generatedIndex"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/overview/engineering-principles.md"
+          },
+          "result": "principles"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/quality/tests-and-reproduction.md"
+          },
+          "result": "quality"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/dimension.txt"
+          },
+          "result": "dimension"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/rubric.md"
+          },
+          "result": "rubric"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.json"
+          },
+          "result": "pr"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "diff"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "taskContext"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "planTools": {
+              "$ref": "planTools"
+            },
+            "repoReadme": {
+              "$ref": "repoReadme"
+            },
+            "repoIndex": {
+              "$ref": "repoIndex"
+            },
+            "repoMaintenance": {
+              "$ref": "repoMaintenance"
+            },
+            "generatedIndex": {
+              "$ref": "generatedIndex"
+            },
+            "principles": {
+              "$ref": "principles"
+            },
+            "quality": {
+              "$ref": "quality"
+            },
+            "dimension": {
+              "$ref": "dimension"
+            },
+            "rubric": {
+              "$ref": "rubric"
+            },
+            "pr": {
+              "$ref": "pr"
+            },
+            "diff": {
+              "$ref": "diff"
+            },
+            "taskContext": {
+              "$ref": "taskContext"
+            }
+          },
+          "result": "evidence"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence"
+            }
+          },
+          "result": "evidenceFile"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs/noop",
+            "body": "No GitHub action needed beyond evidence artifact for this review leg."
+          },
+          "result": "noopReceipt"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "planTools",
+          "planTools"
+        ],
+        [
+          "planTools",
+          "evidence"
+        ],
+        [
+          "planTools",
+          "evidenceFile"
+        ],
+        [
+          "repoReadme",
+          "repoReadme"
+        ],
+        [
+          "repoReadme",
+          "evidence"
+        ],
+        [
+          "repoReadme",
+          "evidenceFile"
+        ],
+        [
+          "repoIndex",
+          "repoIndex"
+        ],
+        [
+          "repoIndex",
+          "evidence"
+        ],
+        [
+          "repoIndex",
+          "evidenceFile"
+        ],
+        [
+          "repoMaintenance",
+          "repoMaintenance"
+        ],
+        [
+          "repoMaintenance",
+          "evidence"
+        ],
+        [
+          "repoMaintenance",
+          "evidenceFile"
+        ],
+        [
+          "generatedIndex",
+          "generatedIndex"
+        ],
+        [
+          "generatedIndex",
+          "evidence"
+        ],
+        [
+          "generatedIndex",
+          "evidenceFile"
+        ],
+        [
+          "principles",
+          "principles"
+        ],
+        [
+          "principles",
+          "evidence"
+        ],
+        [
+          "principles",
+          "evidenceFile"
+        ],
+        [
+          "quality",
+          "quality"
+        ],
+        [
+          "quality",
+          "evidence"
+        ],
+        [
+          "quality",
+          "evidenceFile"
+        ],
+        [
+          "dimension",
+          "dimension"
+        ],
+        [
+          "dimension",
+          "evidence"
+        ],
+        [
+          "dimension",
+          "evidenceFile"
+        ],
+        [
+          "rubric",
+          "rubric"
+        ],
+        [
+          "rubric",
+          "evidence"
+        ],
+        [
+          "rubric",
+          "evidenceFile"
+        ],
+        [
+          "pr",
+          "pr"
+        ],
+        [
+          "pr",
+          "evidence"
+        ],
+        [
+          "pr",
+          "evidenceFile"
+        ],
+        [
+          "diff",
+          "diff"
+        ],
+        [
+          "diff",
+          "evidence"
+        ],
+        [
+          "diff",
+          "evidenceFile"
+        ],
+        [
+          "taskContext",
+          "taskContext"
+        ],
+        [
+          "taskContext",
+          "evidence"
+        ],
+        [
+          "taskContext",
+          "evidenceFile"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 36,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "diff",
+        "dimension",
+        "generatedIndex",
+        "planTools",
+        "pr",
+        "principles",
+        "quality",
+        "repoIndex",
+        "repoMaintenance",
+        "repoReadme",
+        "rubric",
+        "taskContext"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a01672-9d65-7203-8124-d8368d8ce3df",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1787083017.3580408,
+      "counts": {
+        "allow": 16
+      },
+      "engines": {
+        "cedar": 16
+      },
+      "last_seen": 1787083125.6059306,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 16,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
