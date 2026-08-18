@@ -1,0 +1,292 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "Add regression coverage for ping_worker behavior",
+      "dimension": [
+        "test"
+      ],
+      "severity": "high",
+      "paths": [
+        "cli/net_check.py"
+      ],
+      "member_findings": [
+        {
+          "dimension": "test",
+          "path": "cli/net_check.py",
+          "line": 18,
+          "severity": "high",
+          "category": "test",
+          "title": "Add regression coverage for ping_worker behavior",
+          "impact": "The PR adds a new helper with input-validation branches and subprocess return-code handling, but the diff contains no tests. Regressions in rejecting empty or option-like hosts, rejecting non-positive counts, constructing the ping argv, or mapping success and failure return codes would not be caught.",
+          "fix": "Add focused Python unit tests, for example under tests/python/test_net_check.py, that mock subprocess.run and cover invalid host values, invalid count values, success and failure return codes, and the exact ping argv passed for a valid host/count."
+        }
+      ],
+      "rank": 1
+    }
+  ],
+  "summary": {
+    "present": [
+      "test"
+    ],
+    "missing": [
+      "correctness",
+      "performance",
+      "security",
+      "maintainability"
+    ],
+    "clusters": 1,
+    "total_findings": 1,
+    "by_severity": {
+      "high": 1
+    },
+    "by_dimension": {
+      "test": 1
+    }
+  },
+  "pinned_issue": 243,
+  "agent_security": {
+    "plan_kts": "fun plan() {\n  val rtkPlanToolsAttempt = runCommand(listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/plan-tools.md\"))\n  val planTools = runCommand(listOf(\"cat\", \"/tmp/gh-aw/agent/plan-tools.md\"))\n  val taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\n  val issues = readRepoFile(\"/tmp/gh-aw/agent/issues.json\")\n  val prJson = readRepoFile(\"/tmp/gh-aw/agent/pr.json\")\n  val prDiff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\n  val evidenceContent = compute(taskContext, issues, prJson, prDiff, planTools, rtkPlanToolsAttempt)\n  writeFile(\"/tmp/gh-aw/evidence.json\", evidenceContent)\n  val noopBody = compute()\n  publish(\"safeoutputs noop\", noopBody)\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/plan-tools.md"
+            ]
+          },
+          "result": "rtk_plan_tools_attempt"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "cat",
+              "/tmp/gh-aw/agent/plan-tools.md"
+            ]
+          },
+          "result": "plan_tools"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/issues.json"
+          },
+          "result": "issues"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.json"
+          },
+          "result": "pr_json"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "pr_diff"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "issues": {
+              "$ref": "issues"
+            },
+            "pr_json": {
+              "$ref": "pr_json"
+            },
+            "pr_diff": {
+              "$ref": "pr_diff"
+            },
+            "plan_tools": {
+              "$ref": "plan_tools"
+            },
+            "rtk_plan_tools_attempt": {
+              "$ref": "rtk_plan_tools_attempt"
+            }
+          },
+          "result": "evidence_content"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence_content"
+            }
+          },
+          "result": "evidence_file"
+        },
+        {
+          "tool": "compute",
+          "args": {},
+          "result": "noop_body"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs noop",
+            "body": {
+              "$ref": "noop_body"
+            }
+          },
+          "result": "noop_publish"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "rtk_plan_tools_attempt",
+          "rtk_plan_tools_attempt"
+        ],
+        [
+          "rtk_plan_tools_attempt",
+          "evidence_content"
+        ],
+        [
+          "rtk_plan_tools_attempt",
+          "evidence_file"
+        ],
+        [
+          "plan_tools",
+          "plan_tools"
+        ],
+        [
+          "plan_tools",
+          "evidence_content"
+        ],
+        [
+          "plan_tools",
+          "evidence_file"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "evidence_content"
+        ],
+        [
+          "task_context",
+          "evidence_file"
+        ],
+        [
+          "issues",
+          "issues"
+        ],
+        [
+          "issues",
+          "evidence_content"
+        ],
+        [
+          "issues",
+          "evidence_file"
+        ],
+        [
+          "pr_json",
+          "pr_json"
+        ],
+        [
+          "pr_json",
+          "evidence_content"
+        ],
+        [
+          "pr_json",
+          "evidence_file"
+        ],
+        [
+          "pr_diff",
+          "pr_diff"
+        ],
+        [
+          "pr_diff",
+          "evidence_content"
+        ],
+        [
+          "pr_diff",
+          "evidence_file"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "fail",
+      "status": "ok",
+      "certificate_valid": false,
+      "paths_verified": 18,
+      "rejected_reasons": [
+        "ungrounded (rtk_plan_tools_attempt->rtk_plan_tools_attempt): 'rtk_plan_tools_attempt' is not a source",
+        "ungrounded (plan_tools->evidence_content): 'plan_tools' is not a source",
+        "ungrounded (plan_tools->evidence_file): 'plan_tools' is not a source",
+        "ungrounded (plan_tools->plan_tools): 'plan_tools' is not a source",
+        "ungrounded (rtk_plan_tools_attempt->evidence_content): 'rtk_plan_tools_attempt' is not a source",
+        "ungrounded (rtk_plan_tools_attempt->evidence_file): 'rtk_plan_tools_attempt' is not a source"
+      ],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "issues",
+        "pr_diff",
+        "pr_json",
+        "task_context"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a01596-e568-70d3-b0b0-4bb806278d5b",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1787068618.9889681,
+      "counts": {
+        "allow": 8
+      },
+      "engines": {
+        "cedar": 8
+      },
+      "last_seen": 1787068707.0956993,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 8,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
