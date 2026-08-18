@@ -1,0 +1,116 @@
+{
+  "leg": "mm-compliance",
+  "scope": {},
+  "gather_verdict": "compliant",
+  "graded_findings": [],
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ],
+  "agent_security": {
+    "plan_kts": "fun plan() {\n  val taskContext = readRepoFile(path = \"/tmp/gh-aw/task-context.json\")\n  val graded = computeGrades(taskContext = taskContext)\n  val evidence = writeFile(path = \"/tmp/gh-aw/evidence.json\", content = graded)\n  val completion = publish(channel = \"safeoutputs.noop\", body = \"No action needed: mm-compliance gather verdict was compliant with no divergences to grade; evidence was written to /tmp/gh-aw/evidence.json.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "taskContext"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "taskContext": {
+              "$ref": "taskContext"
+            }
+          },
+          "result": "graded"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "graded"
+            }
+          },
+          "result": "evidence"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": "No action needed: mm-compliance gather verdict was compliant with no divergences to grade; evidence was written to /tmp/gh-aw/evidence.json."
+          },
+          "result": "completion"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "taskContext",
+          "taskContext"
+        ],
+        [
+          "taskContext",
+          "graded"
+        ],
+        [
+          "taskContext",
+          "evidence"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 3,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "taskContext"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a01658-5378-73d3-8cea-7a67941a13a1",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1787081293.7542725,
+      "counts": {
+        "allow": 4
+      },
+      "engines": {
+        "cedar": 4
+      },
+      "last_seen": 1787081330.603044,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 4,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  }
+}
