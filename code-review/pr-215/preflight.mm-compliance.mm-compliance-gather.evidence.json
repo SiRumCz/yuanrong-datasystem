@@ -1,0 +1,252 @@
+{
+  "verdict": "compliant",
+  "divergences": [],
+  "examined": [
+    "/tmp/gh-aw/agent/pr.json",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-001-master-worker-split.adoc",
+    "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-002-pluggable-cluster-metadata.adoc",
+    "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-003-consistent-hash-ring-placement.adoc",
+    "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-004-performance-first-optional-reliability.adoc",
+    "_mm/socratic/docs/arc42/arc42-yuanrong-datasystem.adoc",
+    "_mm/socratic/docs/specs/prd-yuanrong-datasystem.adoc",
+    "_mm/socratic/docs/specs/use-cases-yuanrong-datasystem.adoc",
+    "_mm/socratic/OPEN_QUESTIONS-yuanrong-datasystem.adoc",
+    "_mm/socratic/QUESTION_TREE-yuanrong-datasystem.adoc",
+    "_mm/legion-map/CODEBASE.md",
+    "_mm/vibed-codeset/.claude/docs/get_context.py cli/net_check.py",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/modules/quality/tests-and-reproduction.md",
+    "cli/net_check.py (from pr.diff)"
+  ],
+  "summary": "The PR adds only cli/net_check.py, an operator reachability helper that calls ping with an argv list, bounds count, rejects empty/option-like hosts, and returns a boolean on timeout or exit status. It does not modify the master/worker split, metadata backend selection, hash-ring placement, WriteMode persistence model, SDK/worker/shared-memory contracts, or cache hot paths described by the Socratic mental model.",
+  "agent_security": {
+    "plan_kts": "fun plan() {\n  val pr = readFile(path=\"/tmp/gh-aw/agent/pr.json\")\n  val task = readFile(path=\"/tmp/gh-aw/task-context.json\")\n  val diff = readDiff(path=\"/tmp/gh-aw/agent/pr.diff\")\n  val mm = readFile(path=\"_mm/socratic/**/*.adoc\")\n  val codebase = readFile(path=\"_mm/legion-map/CODEBASE.md\")\n  val codeset = runCommand(cmd=\"cd _mm/vibed-codeset && python3 .claude/docs/get_context.py cli/net_check.py\")\n  val verdict = analyze(pr=pr, task=task, diff=diff, mm=mm, codebase=codebase, codeset=codeset)\n  val evidence = writeFile(path=\"/tmp/gh-aw/evidence.json\", content=verdict)\n  noop(message=\"No GitHub action needed: mental-model compliance evidence was written for the preflight gate.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "readFile",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.json"
+          },
+          "result": "pr"
+        },
+        {
+          "tool": "readFile",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task"
+        },
+        {
+          "tool": "readDiff",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "diff"
+        },
+        {
+          "tool": "readFile",
+          "args": {
+            "path": "_mm/socratic/**/*.adoc"
+          },
+          "result": "mm"
+        },
+        {
+          "tool": "readFile",
+          "args": {
+            "path": "_mm/legion-map/CODEBASE.md"
+          },
+          "result": "codebase"
+        },
+        {
+          "tool": "runCommand",
+          "args": {
+            "cmd": "cd _mm/vibed-codeset && python3 .claude/docs/get_context.py cli/net_check.py"
+          },
+          "result": "codeset"
+        },
+        {
+          "tool": "analyze",
+          "args": {
+            "pr": {
+              "$ref": "pr"
+            },
+            "task": {
+              "$ref": "task"
+            },
+            "diff": {
+              "$ref": "diff"
+            },
+            "mm": {
+              "$ref": "mm"
+            },
+            "codebase": {
+              "$ref": "codebase"
+            },
+            "codeset": {
+              "$ref": "codeset"
+            }
+          },
+          "result": "verdict"
+        },
+        {
+          "tool": "writeFile",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "verdict"
+            }
+          },
+          "result": "evidence"
+        },
+        {
+          "tool": "noop",
+          "args": {
+            "message": "No GitHub action needed: mental-model compliance evidence was written for the preflight gate."
+          },
+          "result": "noop_result"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "pr",
+          "pr"
+        ],
+        [
+          "pr",
+          "verdict"
+        ],
+        [
+          "pr",
+          "evidence"
+        ],
+        [
+          "task",
+          "task"
+        ],
+        [
+          "task",
+          "verdict"
+        ],
+        [
+          "task",
+          "evidence"
+        ],
+        [
+          "diff",
+          "diff"
+        ],
+        [
+          "diff",
+          "verdict"
+        ],
+        [
+          "diff",
+          "evidence"
+        ],
+        [
+          "mm",
+          "mm"
+        ],
+        [
+          "mm",
+          "verdict"
+        ],
+        [
+          "mm",
+          "evidence"
+        ],
+        [
+          "codebase",
+          "codebase"
+        ],
+        [
+          "codebase",
+          "verdict"
+        ],
+        [
+          "codebase",
+          "evidence"
+        ],
+        [
+          "codeset",
+          "codeset"
+        ],
+        [
+          "codeset",
+          "verdict"
+        ],
+        [
+          "codeset",
+          "evidence"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "fail",
+      "status": "ok",
+      "certificate_valid": false,
+      "paths_verified": 18,
+      "rejected_reasons": [
+        "ungrounded (codeset->codeset): 'codeset' is not a source",
+        "ungrounded (codeset->verdict): 'codeset' is not a source",
+        "ungrounded (codeset->evidence): 'codeset' is not a source"
+      ],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "codebase",
+        "diff",
+        "mm",
+        "pr",
+        "task"
+      ],
+      "sinks": [
+        "verdict"
+      ]
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a01292-5cf2-75a2-a144-14266c4d0cd6",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1787017992.7440023,
+      "counts": {
+        "allow": 42
+      },
+      "engines": {
+        "cedar": 42
+      },
+      "last_seen": 1787018160.2210343,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 42,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  }
+}
