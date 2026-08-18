@@ -1,0 +1,510 @@
+{
+  "scope": {
+    "code_changed": true
+  },
+  "items": [
+    {
+      "path": "tests/python/test_ds_client.py",
+      "status": "missing",
+      "reason": "The PR adds cli.net_check.ping_worker behavior but changes no test file to cover host/count validation, subprocess return codes, or timeout handling."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/plan-tools.md",
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    ".repo_context/modules/quality/tests-and-reproduction.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    "cli/net_check.py",
+    "tests/python/test_ds_client.py",
+    "tests/",
+    "cli/",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md"
+  ],
+  "agent_security": {
+    "plan_kts": "fun plan() {\n  val rtkRegistryAttempt = runCommand(listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/plan-tools.md\"))\n  val registry = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val scope = readRepoFile(\"/tmp/gh-aw/agent/scope.json\")\n  val changedFiles = readRepoFile(\"/tmp/gh-aw/agent/changed-files.txt\")\n  val diff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\n  val taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\n  val testGuidance = readRepoFile(\".repo_context/modules/quality/tests-and-reproduction.md\")\n  val engineeringPrinciples = readRepoFile(\".repo_context/modules/overview/engineering-principles.md\")\n  val sourceLookup = runCommand(listOf(\"sed\", \"-n\", \"1,160p\", \"cli/net_check.py\"))\n  val testList = runCommand(listOf(\"rg\", \"--files\", \"|\", \"rg\", \"(^tests/|(^|/)test_|_test\\\\.py$|\\\\.test\\\\.py$|__tests__)\"))\n  val behaviorSearch = runCommand(listOf(\"rg\", \"-n\", \"net_check|ping_worker|subprocess\\\\.run|ping\", \"cli\", \"tests\", \"-g\", \"*.py\"))\n  val cliFiles = runCommand(listOf(\"find\", \"cli\", \"-maxdepth\", \"3\", \"-type\", \"f\"))\n  val existingPythonTest = readRepoFile(\"tests/python/test_ds_client.py\")\n  val selfVerification = readRepoFile(\".repo_context/playbooks/upkeep/ai-self-verification.md\")\n  val gitStatus = runCommand(listOf(\"git\", \"status\", \"--short\"))\n  val verdict = compute(scope, changedFiles, diff, taskContext, testGuidance, engineeringPrinciples, sourceLookup, testList, behaviorSearch, cliFiles, existingPythonTest, selfVerification, gitStatus)\n  val evidence = compute(verdict)\n  writeFile(\"/tmp/gh-aw/evidence.json\", evidence)\n  val noopBody = compute(evidence)\n  publish(\"safeoutputs noop\", noopBody)\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/plan-tools.md"
+            ]
+          },
+          "result": "rtk_registry_attempt"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "registry"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/scope.json"
+          },
+          "result": "scope"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/changed-files.txt"
+          },
+          "result": "changed_files"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "diff"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/quality/tests-and-reproduction.md"
+          },
+          "result": "test_guidance"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/overview/engineering-principles.md"
+          },
+          "result": "engineering_principles"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "sed",
+              "-n",
+              "1,160p",
+              "cli/net_check.py"
+            ]
+          },
+          "result": "source_lookup"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rg",
+              "--files",
+              "|",
+              "rg",
+              "(^tests/|(^|/)test_|_test\\.py$|\\.test\\.py$|__tests__)"
+            ]
+          },
+          "result": "test_list"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rg",
+              "-n",
+              "net_check|ping_worker|subprocess\\.run|ping",
+              "cli",
+              "tests",
+              "-g",
+              "*.py"
+            ]
+          },
+          "result": "behavior_search"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "find",
+              "cli",
+              "-maxdepth",
+              "3",
+              "-type",
+              "f"
+            ]
+          },
+          "result": "cli_files"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "tests/python/test_ds_client.py"
+          },
+          "result": "existing_python_test"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/playbooks/upkeep/ai-self-verification.md"
+          },
+          "result": "self_verification"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "git",
+              "status",
+              "--short"
+            ]
+          },
+          "result": "git_status"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "scope": {
+              "$ref": "scope"
+            },
+            "changed_files": {
+              "$ref": "changed_files"
+            },
+            "diff": {
+              "$ref": "diff"
+            },
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "test_guidance": {
+              "$ref": "test_guidance"
+            },
+            "engineering_principles": {
+              "$ref": "engineering_principles"
+            },
+            "source_lookup": {
+              "$ref": "source_lookup"
+            },
+            "test_list": {
+              "$ref": "test_list"
+            },
+            "behavior_search": {
+              "$ref": "behavior_search"
+            },
+            "cli_files": {
+              "$ref": "cli_files"
+            },
+            "existing_python_test": {
+              "$ref": "existing_python_test"
+            },
+            "self_verification": {
+              "$ref": "self_verification"
+            },
+            "git_status": {
+              "$ref": "git_status"
+            }
+          },
+          "result": "verdict"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "verdict": {
+              "$ref": "verdict"
+            }
+          },
+          "result": "evidence_obj"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence_obj"
+            }
+          },
+          "result": "evidence_file"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "evidence": {
+              "$ref": "evidence_obj"
+            }
+          },
+          "result": "noop_body"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs noop",
+            "body": {
+              "$ref": "noop_body"
+            }
+          },
+          "result": "noop_publish"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "scope",
+          "scope"
+        ],
+        [
+          "scope",
+          "verdict"
+        ],
+        [
+          "scope",
+          "evidence_obj"
+        ],
+        [
+          "scope",
+          "evidence_file"
+        ],
+        [
+          "scope",
+          "noop_body"
+        ],
+        [
+          "scope",
+          "noop_publish"
+        ],
+        [
+          "changed_files",
+          "changed_files"
+        ],
+        [
+          "changed_files",
+          "verdict"
+        ],
+        [
+          "changed_files",
+          "evidence_obj"
+        ],
+        [
+          "changed_files",
+          "evidence_file"
+        ],
+        [
+          "changed_files",
+          "noop_body"
+        ],
+        [
+          "changed_files",
+          "noop_publish"
+        ],
+        [
+          "diff",
+          "diff"
+        ],
+        [
+          "diff",
+          "verdict"
+        ],
+        [
+          "diff",
+          "evidence_obj"
+        ],
+        [
+          "diff",
+          "evidence_file"
+        ],
+        [
+          "diff",
+          "noop_body"
+        ],
+        [
+          "diff",
+          "noop_publish"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "verdict"
+        ],
+        [
+          "task_context",
+          "evidence_obj"
+        ],
+        [
+          "task_context",
+          "evidence_file"
+        ],
+        [
+          "task_context",
+          "noop_body"
+        ],
+        [
+          "task_context",
+          "noop_publish"
+        ],
+        [
+          "test_guidance",
+          "test_guidance"
+        ],
+        [
+          "test_guidance",
+          "verdict"
+        ],
+        [
+          "test_guidance",
+          "evidence_obj"
+        ],
+        [
+          "test_guidance",
+          "evidence_file"
+        ],
+        [
+          "test_guidance",
+          "noop_body"
+        ],
+        [
+          "test_guidance",
+          "noop_publish"
+        ],
+        [
+          "engineering_principles",
+          "engineering_principles"
+        ],
+        [
+          "engineering_principles",
+          "verdict"
+        ],
+        [
+          "engineering_principles",
+          "evidence_obj"
+        ],
+        [
+          "engineering_principles",
+          "evidence_file"
+        ],
+        [
+          "engineering_principles",
+          "noop_body"
+        ],
+        [
+          "engineering_principles",
+          "noop_publish"
+        ],
+        [
+          "existing_python_test",
+          "existing_python_test"
+        ],
+        [
+          "existing_python_test",
+          "verdict"
+        ],
+        [
+          "existing_python_test",
+          "evidence_obj"
+        ],
+        [
+          "existing_python_test",
+          "evidence_file"
+        ],
+        [
+          "existing_python_test",
+          "noop_body"
+        ],
+        [
+          "existing_python_test",
+          "noop_publish"
+        ],
+        [
+          "self_verification",
+          "self_verification"
+        ],
+        [
+          "self_verification",
+          "verdict"
+        ],
+        [
+          "self_verification",
+          "evidence_obj"
+        ],
+        [
+          "self_verification",
+          "evidence_file"
+        ],
+        [
+          "self_verification",
+          "noop_body"
+        ],
+        [
+          "self_verification",
+          "noop_publish"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "fail",
+      "status": "ok",
+      "certificate_valid": false,
+      "paths_verified": 48,
+      "rejected_reasons": [
+        "missing base (registry->registry)"
+      ],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "changed_files",
+        "diff",
+        "engineering_principles",
+        "existing_python_test",
+        "registry",
+        "scope",
+        "self_verification",
+        "task_context",
+        "test_guidance"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a0156c-c0be-7743-93c9-d32b82a9f3ee",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1787065854.3896334,
+      "counts": {
+        "allow": 17
+      },
+      "engines": {
+        "cedar": 17
+      },
+      "last_seen": 1787066012.454066,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 17,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  }
+}
