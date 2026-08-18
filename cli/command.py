@@ -148,6 +148,7 @@ def main():
     modules = [
         "start",
         "stop",
+        "top",
         "up",
         "down",
         "runscript",
