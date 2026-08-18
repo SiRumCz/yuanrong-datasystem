@@ -1,0 +1,611 @@
+{
+  "dimension": "performance",
+  "verdict": "APPROVE",
+  "findings": [],
+  "agent_security": {
+    "plan_kts": "fun main() {\n  val rtkPlanToolsError = runCommand(listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/plan-tools.md\"))\n  val planTools = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val dimension = readRepoFile(\"/tmp/gh-aw/agent/dimension.txt\")\n  val rubric = readRepoFile(\"/tmp/gh-aw/agent/rubric.md\")\n  val pr = readRepoFile(\"/tmp/gh-aw/agent/pr.json\")\n  val taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\n  val diff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\n  val repoReadme = readRepoFile(\".repo_context/README.md\")\n  val repoIndex = readRepoFile(\".repo_context/index.md\")\n  val maintenance = readRepoFile(\".repo_context/maintenance.md\")\n  val generatedIndex = readRepoFile(\".repo_context/generated/repo_index.md\")\n  val engineeringPrinciples = readRepoFile(\".repo_context/modules/overview/engineering-principles.md\")\n  val testsRepro = readRepoFile(\".repo_context/modules/quality/tests-and-reproduction.md\")\n  val reviewChecklist = readRepoFile(\".repo_context/playbooks/reviews/pr-review-checklist.md\")\n  val performancePlaybook = readRepoFile(\".repo_context/playbooks/features/performance-change.md\")\n  val selfVerification = readRepoFile(\".repo_context/playbooks/upkeep/ai-self-verification.md\")\n  val changedSourceAttempt = readRepoFile(\"cli/net_check.py\")\n  val gitStatus = runCommand(listOf(\"git\", \"status\", \"--short\"))\n  val planSecurity = compute(rtkPlanToolsError, planTools)\n  val review = compute(dimension, rubric, pr, taskContext, diff, repoReadme, repoIndex, maintenance, generatedIndex, engineeringPrinciples, testsRepro, reviewChecklist, performancePlaybook, selfVerification, changedSourceAttempt, gitStatus)\n  val evidenceJson = compute(planSecurity, review)\n  writeFile(\"/tmp/gh-aw/evidence.json\", evidenceJson)\n  publish(\"safeoutputs/noop\", \"No action needed: performance review evidence was written with APPROVE and no actionable performance findings.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/plan-tools.md"
+            ]
+          },
+          "result": "rtk_plan_tools_error"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "plan_tools"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/dimension.txt"
+          },
+          "result": "dimension"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/rubric.md"
+          },
+          "result": "rubric"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.json"
+          },
+          "result": "pr"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "diff"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/README.md"
+          },
+          "result": "repo_readme"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/index.md"
+          },
+          "result": "repo_index"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/maintenance.md"
+          },
+          "result": "maintenance"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/generated/repo_index.md"
+          },
+          "result": "generated_index"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/overview/engineering-principles.md"
+          },
+          "result": "engineering_principles"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/quality/tests-and-reproduction.md"
+          },
+          "result": "tests_repro"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/playbooks/reviews/pr-review-checklist.md"
+          },
+          "result": "review_checklist"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/playbooks/features/performance-change.md"
+          },
+          "result": "performance_playbook"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/playbooks/upkeep/ai-self-verification.md"
+          },
+          "result": "self_verification"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "cli/net_check.py"
+          },
+          "result": "changed_source_attempt"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "git",
+              "status",
+              "--short"
+            ]
+          },
+          "result": "git_status"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "rtk_error": {
+              "$ref": "rtk_plan_tools_error"
+            },
+            "registry": {
+              "$ref": "plan_tools"
+            }
+          },
+          "result": "plan_security"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "dimension": {
+              "$ref": "dimension"
+            },
+            "rubric": {
+              "$ref": "rubric"
+            },
+            "pr": {
+              "$ref": "pr"
+            },
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "diff": {
+              "$ref": "diff"
+            },
+            "repo_readme": {
+              "$ref": "repo_readme"
+            },
+            "repo_index": {
+              "$ref": "repo_index"
+            },
+            "maintenance": {
+              "$ref": "maintenance"
+            },
+            "generated_index": {
+              "$ref": "generated_index"
+            },
+            "engineering_principles": {
+              "$ref": "engineering_principles"
+            },
+            "tests_repro": {
+              "$ref": "tests_repro"
+            },
+            "review_checklist": {
+              "$ref": "review_checklist"
+            },
+            "performance_playbook": {
+              "$ref": "performance_playbook"
+            },
+            "self_verification": {
+              "$ref": "self_verification"
+            },
+            "changed_source_attempt": {
+              "$ref": "changed_source_attempt"
+            },
+            "git_status": {
+              "$ref": "git_status"
+            }
+          },
+          "result": "review"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "plan_security": {
+              "$ref": "plan_security"
+            },
+            "review": {
+              "$ref": "review"
+            }
+          },
+          "result": "evidence_json"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence_json"
+            }
+          },
+          "result": "evidence_file"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs/noop",
+            "body": "No action needed: performance review evidence was written with APPROVE and no actionable performance findings."
+          },
+          "result": "safeoutputs_noop"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "rtk_plan_tools_error",
+          "rtk_plan_tools_error"
+        ],
+        [
+          "rtk_plan_tools_error",
+          "plan_security"
+        ],
+        [
+          "rtk_plan_tools_error",
+          "evidence_json"
+        ],
+        [
+          "rtk_plan_tools_error",
+          "evidence_file"
+        ],
+        [
+          "plan_tools",
+          "plan_tools"
+        ],
+        [
+          "plan_tools",
+          "plan_security"
+        ],
+        [
+          "plan_tools",
+          "evidence_json"
+        ],
+        [
+          "plan_tools",
+          "evidence_file"
+        ],
+        [
+          "dimension",
+          "dimension"
+        ],
+        [
+          "dimension",
+          "review"
+        ],
+        [
+          "dimension",
+          "evidence_json"
+        ],
+        [
+          "dimension",
+          "evidence_file"
+        ],
+        [
+          "rubric",
+          "rubric"
+        ],
+        [
+          "rubric",
+          "review"
+        ],
+        [
+          "rubric",
+          "evidence_json"
+        ],
+        [
+          "rubric",
+          "evidence_file"
+        ],
+        [
+          "pr",
+          "pr"
+        ],
+        [
+          "pr",
+          "review"
+        ],
+        [
+          "pr",
+          "evidence_json"
+        ],
+        [
+          "pr",
+          "evidence_file"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "review"
+        ],
+        [
+          "task_context",
+          "evidence_json"
+        ],
+        [
+          "task_context",
+          "evidence_file"
+        ],
+        [
+          "diff",
+          "diff"
+        ],
+        [
+          "diff",
+          "review"
+        ],
+        [
+          "diff",
+          "evidence_json"
+        ],
+        [
+          "diff",
+          "evidence_file"
+        ],
+        [
+          "repo_readme",
+          "repo_readme"
+        ],
+        [
+          "repo_readme",
+          "review"
+        ],
+        [
+          "repo_readme",
+          "evidence_json"
+        ],
+        [
+          "repo_readme",
+          "evidence_file"
+        ],
+        [
+          "repo_index",
+          "repo_index"
+        ],
+        [
+          "repo_index",
+          "review"
+        ],
+        [
+          "repo_index",
+          "evidence_json"
+        ],
+        [
+          "repo_index",
+          "evidence_file"
+        ],
+        [
+          "maintenance",
+          "maintenance"
+        ],
+        [
+          "maintenance",
+          "review"
+        ],
+        [
+          "maintenance",
+          "evidence_json"
+        ],
+        [
+          "maintenance",
+          "evidence_file"
+        ],
+        [
+          "generated_index",
+          "generated_index"
+        ],
+        [
+          "generated_index",
+          "review"
+        ],
+        [
+          "generated_index",
+          "evidence_json"
+        ],
+        [
+          "generated_index",
+          "evidence_file"
+        ],
+        [
+          "engineering_principles",
+          "engineering_principles"
+        ],
+        [
+          "engineering_principles",
+          "review"
+        ],
+        [
+          "engineering_principles",
+          "evidence_json"
+        ],
+        [
+          "engineering_principles",
+          "evidence_file"
+        ],
+        [
+          "tests_repro",
+          "tests_repro"
+        ],
+        [
+          "tests_repro",
+          "review"
+        ],
+        [
+          "tests_repro",
+          "evidence_json"
+        ],
+        [
+          "tests_repro",
+          "evidence_file"
+        ],
+        [
+          "review_checklist",
+          "review_checklist"
+        ],
+        [
+          "review_checklist",
+          "review"
+        ],
+        [
+          "review_checklist",
+          "evidence_json"
+        ],
+        [
+          "review_checklist",
+          "evidence_file"
+        ],
+        [
+          "performance_playbook",
+          "performance_playbook"
+        ],
+        [
+          "performance_playbook",
+          "review"
+        ],
+        [
+          "performance_playbook",
+          "evidence_json"
+        ],
+        [
+          "performance_playbook",
+          "evidence_file"
+        ],
+        [
+          "self_verification",
+          "self_verification"
+        ],
+        [
+          "self_verification",
+          "review"
+        ],
+        [
+          "self_verification",
+          "evidence_json"
+        ],
+        [
+          "self_verification",
+          "evidence_file"
+        ],
+        [
+          "changed_source_attempt",
+          "changed_source_attempt"
+        ],
+        [
+          "changed_source_attempt",
+          "review"
+        ],
+        [
+          "changed_source_attempt",
+          "evidence_json"
+        ],
+        [
+          "changed_source_attempt",
+          "evidence_file"
+        ],
+        [
+          "git_status",
+          "git_status"
+        ],
+        [
+          "git_status",
+          "review"
+        ],
+        [
+          "git_status",
+          "evidence_json"
+        ],
+        [
+          "git_status",
+          "evidence_file"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "fail",
+      "status": "ok",
+      "certificate_valid": false,
+      "paths_verified": 72,
+      "rejected_reasons": [
+        "ungrounded (rtk_plan_tools_error->plan_security): 'rtk_plan_tools_error' is not a source",
+        "ungrounded (git_status->review): 'git_status' is not a source",
+        "ungrounded (git_status->git_status): 'git_status' is not a source",
+        "ungrounded (rtk_plan_tools_error->evidence_json): 'rtk_plan_tools_error' is not a source",
+        "ungrounded (git_status->evidence_json): 'git_status' is not a source",
+        "ungrounded (rtk_plan_tools_error->rtk_plan_tools_error): 'rtk_plan_tools_error' is not a source",
+        "ungrounded (rtk_plan_tools_error->evidence_file): 'rtk_plan_tools_error' is not a source",
+        "ungrounded (git_status->evidence_file): 'git_status' is not a source"
+      ],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "changed_source_attempt",
+        "diff",
+        "dimension",
+        "engineering_principles",
+        "generated_index",
+        "maintenance",
+        "performance_playbook",
+        "plan_tools",
+        "pr",
+        "repo_index",
+        "repo_readme",
+        "review_checklist",
+        "rubric",
+        "self_verification",
+        "task_context",
+        "tests_repro"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a01672-c037-7b43-83c7-e10f5a8440c2",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1787083031.0002198,
+      "counts": {
+        "allow": 20
+      },
+      "engines": {
+        "cedar": 20
+      },
+      "last_seen": 1787083172.853728,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 20,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
