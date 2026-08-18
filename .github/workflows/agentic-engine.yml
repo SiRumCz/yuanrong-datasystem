@@ -407,16 +407,6 @@ jobs:
       - id: wait
         env:
           GH_TOKEN: ${{ secrets.POC_DISPATCH_TOKEN }}
-          # The dispatch loop's fallback. `run_gh_rotating` covers the engine's
-          # `gh api` writers, but this step drives `gh workflow run` / `gh run
-          # list` / `gh run watch`, which it cannot wrap — so until this, the
-          # busiest polling path in the engine was the ONE call path with no
-          # second token. Measured: on 2026-08-14 the honesty legs died here on
-          # `HTTP 403: API rate limit exceeded` while POC_DISPATCH_TOKEN_2 sat
-          # untouched at 5000/5000, and took `post-fix` and `mrp` with them —
-          # the agent never started, so checks and advance then failed on a
-          # missing evidence artifact.
-          GH_TOKEN_2: ${{ secrets.POC_DISPATCH_TOKEN_2 }}
           PR: ${{ needs.plan.outputs.pr }}
           ITERATION: ${{ needs.plan.outputs.iteration }}
           FEEDBACK: ${{ needs.plan.outputs.feedback }}
@@ -431,25 +421,6 @@ jobs:
           CHECKOUT_REF: ${{ needs.plan.outputs.checkout_ref }}
           SHA: ${{ needs.plan.outputs.head_sha }}
         run: |
-          # `gh` with the pool's second token as a rate-limit fallback. The
-          # engine's `gh api` writers rotate via lib.run_gh_rotating; these are
-          # `gh run`/`gh workflow` subcommands, which that helper does not wrap.
-          #
-          # Deliberately narrow, matching run_gh_rotating's own rule: it retries
-          # ONLY on a rate-limit, never on a permission 403 — retrying a
-          # permission failure on a second token would mask a real
-          # misconfiguration as a transient blip. With no second token set, or
-          # on any other error, behaviour is exactly as before.
-          ghp() {
-            out=$("$@" 2>&1); rc=$?
-            if [ $rc -ne 0 ] && [ -n "${GH_TOKEN_2:-}" ] \
-               && printf '%s' "$out" | grep -qiE "rate limit|secondary rate|abuse detection|429"; then
-              echo "[engine] dispatch: rate-limited on token 1; retrying on token 2" >&2
-              out=$(GH_TOKEN="$GH_TOKEN_2" "$@" 2>&1); rc=$?
-            fi
-            printf '%s' "$out"
-            return $rc
-          }
           # Correlation id: unique per dispatch (run id + attempt + leg path).
           # The leg token is derived from the dot-path (dots → dashes for readability).
           LEGTOK=$(printf '%s' "$NODE_PATH" | tr '.' '-')
@@ -491,7 +462,7 @@ jobs:
               --arg cid "$CID" --arg pr "$PR" --arg ref "$REF" --arg sha "$SHA" \
               --argjson inputs "$INPUTS" --arg iteration "$ITERATION" \
               '{cid: $cid, pr: $pr, ref: $ref, sha: $sha, inputs: $inputs, iteration: $iteration}')
-            ghp gh workflow run "$WF" --repo "$REPO" -f protocol_context="$PCTX"
+            gh workflow run "$WF" --repo "$REPO" -f protocol_context="$PCTX"
           else
             WF="$NAME.lock.yml"
             CTX=$(jq -nc \
@@ -499,19 +470,19 @@ jobs:
               --argjson sabotage "$SABOTAGE" --arg cid "$CID" \
               --argjson inputs "$INPUTS" --arg ref "$REF" --arg sha "$SHA" \
               '{pr: $pr, iteration: $iteration, feedback: $feedback, sabotage: $sabotage, cid: $cid, inputs: $inputs, ref: $ref, sha: $sha}')
-            ghp gh workflow run "$WF" --repo "$REPO" -f aw_context="$CTX"
+            gh workflow run "$WF" --repo "$REPO" -f aw_context="$CTX"
           fi
           RID=""
           for i in $(seq 1 24); do
             sleep 5
-            RUNS=$(ghp gh run list --repo "$REPO" --workflow "$WF" --event workflow_dispatch \
+            RUNS=$(gh run list --repo "$REPO" --workflow "$WF" --event workflow_dispatch \
               --created ">=$T0" --json databaseId,displayTitle)
             RID=$(python3 .github/agent-factory/engine/lib.py match-run-by-cid "$RUNS" "$CID")
             [ -n "$RID" ] && break
           done
           [ -n "$RID" ] || { echo "no agent run matched cid:[$CID] for $WF" >&2; exit 1; }
           printf '%s' "$RID" > /tmp/meta/run_id
-          if ghp gh run watch "$RID" --repo "$REPO" --exit-status; then
+          if gh run watch "$RID" --repo "$REPO" --exit-status; then
             printf '%s' "true" > /tmp/meta/agent_ok
           else
             printf '%s' "false" > /tmp/meta/agent_ok
