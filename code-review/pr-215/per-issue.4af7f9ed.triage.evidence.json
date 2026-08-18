@@ -1,0 +1,217 @@
+{
+  "clusters": [
+    {
+      "cluster_id": "c1",
+      "title": "Add regression coverage for ping_worker behavior",
+      "dimension": [
+        "test"
+      ],
+      "severity": "high",
+      "paths": [
+        "cli/net_check.py"
+      ],
+      "member_findings": [
+        {
+          "dimension": "test",
+          "path": "cli/net_check.py",
+          "line": 18,
+          "severity": "high",
+          "category": "test",
+          "title": "Add regression coverage for ping_worker behavior",
+          "impact": "The PR adds a new helper with input-validation branches and subprocess return-code handling, but the diff contains no tests. Regressions in rejecting empty or option-like hosts, rejecting non-positive counts, constructing the ping argv, or mapping success and failure return codes would not be caught.",
+          "fix": "Add focused Python unit tests, for example under tests/python/test_net_check.py, that mock subprocess.run and cover invalid host values, invalid count values, success and failure return codes, and the exact ping argv passed for a valid host/count."
+        }
+      ],
+      "rank": 1
+    }
+  ],
+  "summary": {
+    "present": [
+      "test"
+    ],
+    "missing": [
+      "correctness",
+      "performance",
+      "security",
+      "maintainability"
+    ],
+    "clusters": 1,
+    "total_findings": 1,
+    "by_severity": {
+      "high": 1
+    },
+    "by_dimension": {
+      "test": 1
+    }
+  },
+  "pinned_issue": 243,
+  "agent_security": {
+    "plan_kts": "val registry = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\nval securityPlan = compute(\"build a registry-grounded plan from registry\", registry)\nval taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\nval issues = readRepoFile(\"/tmp/gh-aw/agent/issues.json\")\nval evidence = compute(\"select pinned PR-scoped issue and build one-cluster evidence\", taskContext, issues, securityPlan)\nwriteFile(\"/tmp/gh-aw/evidence.json\", evidence)\npublish(\"safeoutputs.noop\", \"No action needed: triage evidence written and no GitHub issue/comment was required.\")",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "registry"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "registry": {
+              "$ref": "registry"
+            }
+          },
+          "result": "security_plan"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/issues.json"
+          },
+          "result": "issues"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "issues": {
+              "$ref": "issues"
+            },
+            "security_plan": {
+              "$ref": "security_plan"
+            }
+          },
+          "result": "evidence_content"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence_content"
+            }
+          },
+          "result": "evidence_written"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": "No action needed: triage evidence written and no GitHub issue/comment was required."
+          },
+          "result": "noop_declared"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "registry",
+          "registry"
+        ],
+        [
+          "registry",
+          "security_plan"
+        ],
+        [
+          "registry",
+          "evidence_content"
+        ],
+        [
+          "registry",
+          "evidence_written"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "evidence_content"
+        ],
+        [
+          "task_context",
+          "evidence_written"
+        ],
+        [
+          "issues",
+          "issues"
+        ],
+        [
+          "issues",
+          "evidence_content"
+        ],
+        [
+          "issues",
+          "evidence_written"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 10,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "issues",
+        "registry",
+        "task_context"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a0167a-dfb9-75b3-ad26-f5e29856f9b6",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1787083578.8124282,
+      "counts": {
+        "allow": 5
+      },
+      "engines": {
+        "cedar": 5
+      },
+      "last_seen": 1787083645.7287834,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 5,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
