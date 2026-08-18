@@ -1,0 +1,671 @@
+{
+  "agent_security": {
+    "plan_kts": "fun plan() {\n  val rtkPlanAttempt = runCommand(listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/plan-tools.md\"))\n  val planTools = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\n  val scope = readRepoFile(\"/tmp/gh-aw/agent/scope.json\")\n  val changedFiles = readRepoFile(\"/tmp/gh-aw/agent/changed-files.txt\")\n  val taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\n  val repoReadme = readRepoFile(\".repo_context/README.md\")\n  val repoIndex = readRepoFile(\".repo_context/index.md\")\n  val maintenance = readRepoFile(\".repo_context/maintenance.md\")\n  val generatedIndex = readRepoFile(\".repo_context/generated/repo_index.md\")\n  val principles = readRepoFile(\".repo_context/modules/overview/engineering-principles.md\")\n  val reviewChecklist = readRepoFile(\".repo_context/playbooks/reviews/pr-review-checklist.md\")\n  val selfVerification = readRepoFile(\".repo_context/playbooks/upkeep/ai-self-verification.md\")\n  val diff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\n  val checkoutSourceAttempt = readRepoFile(\"cli/net_check.py\")\n  val docPaths = runCommand(listOf(\"find\", \".\", \"-path\", \"./.git\", \"-prune\", \"-o\", \"-type\", \"f\", \"(\", \"-name\", \"*.md\", \"-o\", \"-name\", \"*.rst\", \")\", \"-print\"))\n  val textSearch = runCommand(listOf(\"rg\", \"-n\", \"net_check|net check|network check|network-check|connectivity|connectivity check|tenant\", \"README.md\", \"docs\", \".repo_context\", \"cli\", \"example\", \"tests\"))\n  val commandPy = readRepoFile(\"cli/command.py\")\n  val narrowedSearch = runCommand(listOf(\"rg\", \"-n\", \"net_check|ping_worker|ping|network|网络|连通|检查|check\", \"cli\", \"docs/source_zh_cn/deployment/dscli.md\", \"docs/README_CN.md\", \"README.md\", \"README_EN.md\"))\n  val dscliDoc = readRepoFile(\"docs/source_zh_cn/deployment/dscli.md\")\n  val cliInit = readRepoFile(\"cli/__init__.py\")\n  val overviewSearch = runCommand(listOf(\"rg\", \"-n\", \"cli|dscli|command|net_check|network\", \".repo_context/modules/overview/repository-overview.md\", \".repo_context/modules/quality/tests-and-reproduction.md\", \".repo_context/modules/quality/test-suite-design.md\", \".repo_context/index.md\"))\n  val repositoryOverview = readRepoFile(\".repo_context/modules/overview/repository-overview.md\")\n  val status = runCommand(listOf(\"git\", \"status\", \"--short\"))\n  val assessment = compute(scope, changedFiles, taskContext, repoReadme, repoIndex, maintenance, generatedIndex, principles, reviewChecklist, selfVerification, diff, checkoutSourceAttempt, docPaths, textSearch, commandPy, narrowedSearch, dscliDoc, cliInit, overviewSearch, repositoryOverview, status)\n  writeFile(\"/tmp/gh-aw/evidence.json\", assessment)\n  publish(\"safeoutputs/noop\", \"No GitHub action needed: evidence.json records the docs-updated review result for PR 215.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/plan-tools.md"
+            ]
+          },
+          "result": "rtk_plan_attempt"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "plan_tools"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/scope.json"
+          },
+          "result": "scope"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/changed-files.txt"
+          },
+          "result": "changed_files"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/README.md"
+          },
+          "result": "repo_context_readme"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/index.md"
+          },
+          "result": "repo_context_index"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/maintenance.md"
+          },
+          "result": "repo_context_maintenance"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/generated/repo_index.md"
+          },
+          "result": "generated_repo_index"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/overview/engineering-principles.md"
+          },
+          "result": "engineering_principles"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/playbooks/reviews/pr-review-checklist.md"
+          },
+          "result": "review_checklist"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/playbooks/upkeep/ai-self-verification.md"
+          },
+          "result": "self_verification"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "diff"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "cli/net_check.py"
+          },
+          "result": "checkout_source_attempt"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "find",
+              ".",
+              "-path",
+              "./.git",
+              "-prune",
+              "-o",
+              "-type",
+              "f",
+              "(",
+              "-name",
+              "*.md",
+              "-o",
+              "-name",
+              "*.rst",
+              ")",
+              "-print"
+            ]
+          },
+          "result": "doc_paths"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rg",
+              "-n",
+              "net_check|net check|network check|network-check|connectivity|connectivity check|tenant",
+              "README.md",
+              "docs",
+              ".repo_context",
+              "cli",
+              "example",
+              "tests"
+            ]
+          },
+          "result": "text_search"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "cli/command.py"
+          },
+          "result": "command_py"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rg",
+              "-n",
+              "net_check|ping_worker|ping|network|网络|连通|检查|check",
+              "cli",
+              "docs/source_zh_cn/deployment/dscli.md",
+              "docs/README_CN.md",
+              "README.md",
+              "README_EN.md"
+            ]
+          },
+          "result": "narrowed_search"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "docs/source_zh_cn/deployment/dscli.md"
+          },
+          "result": "dscli_doc"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "cli/__init__.py"
+          },
+          "result": "cli_init"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rg",
+              "-n",
+              "cli|dscli|command|net_check|network",
+              ".repo_context/modules/overview/repository-overview.md",
+              ".repo_context/modules/quality/tests-and-reproduction.md",
+              ".repo_context/modules/quality/test-suite-design.md",
+              ".repo_context/index.md"
+            ]
+          },
+          "result": "overview_search"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": ".repo_context/modules/overview/repository-overview.md"
+          },
+          "result": "repository_overview"
+        },
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "git",
+              "status",
+              "--short"
+            ]
+          },
+          "result": "git_status"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "scope": {
+              "$ref": "scope"
+            },
+            "changed_files": {
+              "$ref": "changed_files"
+            },
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "repo_context_readme": {
+              "$ref": "repo_context_readme"
+            },
+            "repo_context_index": {
+              "$ref": "repo_context_index"
+            },
+            "repo_context_maintenance": {
+              "$ref": "repo_context_maintenance"
+            },
+            "generated_repo_index": {
+              "$ref": "generated_repo_index"
+            },
+            "engineering_principles": {
+              "$ref": "engineering_principles"
+            },
+            "review_checklist": {
+              "$ref": "review_checklist"
+            },
+            "self_verification": {
+              "$ref": "self_verification"
+            },
+            "diff": {
+              "$ref": "diff"
+            },
+            "checkout_source_attempt": {
+              "$ref": "checkout_source_attempt"
+            },
+            "doc_paths": {
+              "$ref": "doc_paths"
+            },
+            "text_search": {
+              "$ref": "text_search"
+            },
+            "command_py": {
+              "$ref": "command_py"
+            },
+            "narrowed_search": {
+              "$ref": "narrowed_search"
+            },
+            "dscli_doc": {
+              "$ref": "dscli_doc"
+            },
+            "cli_init": {
+              "$ref": "cli_init"
+            },
+            "overview_search": {
+              "$ref": "overview_search"
+            },
+            "repository_overview": {
+              "$ref": "repository_overview"
+            },
+            "git_status": {
+              "$ref": "git_status"
+            }
+          },
+          "result": "assessment"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "assessment"
+            }
+          },
+          "result": "evidence_file"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs/noop",
+            "body": "No GitHub action needed: evidence.json records the docs-updated review result for PR 215."
+          },
+          "result": "safeoutput_noop"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "scope",
+          "scope"
+        ],
+        [
+          "scope",
+          "assessment"
+        ],
+        [
+          "scope",
+          "evidence_file"
+        ],
+        [
+          "changed_files",
+          "changed_files"
+        ],
+        [
+          "changed_files",
+          "assessment"
+        ],
+        [
+          "changed_files",
+          "evidence_file"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "assessment"
+        ],
+        [
+          "task_context",
+          "evidence_file"
+        ],
+        [
+          "repo_context_readme",
+          "repo_context_readme"
+        ],
+        [
+          "repo_context_readme",
+          "assessment"
+        ],
+        [
+          "repo_context_readme",
+          "evidence_file"
+        ],
+        [
+          "repo_context_index",
+          "repo_context_index"
+        ],
+        [
+          "repo_context_index",
+          "assessment"
+        ],
+        [
+          "repo_context_index",
+          "evidence_file"
+        ],
+        [
+          "repo_context_maintenance",
+          "repo_context_maintenance"
+        ],
+        [
+          "repo_context_maintenance",
+          "assessment"
+        ],
+        [
+          "repo_context_maintenance",
+          "evidence_file"
+        ],
+        [
+          "generated_repo_index",
+          "generated_repo_index"
+        ],
+        [
+          "generated_repo_index",
+          "assessment"
+        ],
+        [
+          "generated_repo_index",
+          "evidence_file"
+        ],
+        [
+          "engineering_principles",
+          "engineering_principles"
+        ],
+        [
+          "engineering_principles",
+          "assessment"
+        ],
+        [
+          "engineering_principles",
+          "evidence_file"
+        ],
+        [
+          "review_checklist",
+          "review_checklist"
+        ],
+        [
+          "review_checklist",
+          "assessment"
+        ],
+        [
+          "review_checklist",
+          "evidence_file"
+        ],
+        [
+          "self_verification",
+          "self_verification"
+        ],
+        [
+          "self_verification",
+          "assessment"
+        ],
+        [
+          "self_verification",
+          "evidence_file"
+        ],
+        [
+          "diff",
+          "diff"
+        ],
+        [
+          "diff",
+          "assessment"
+        ],
+        [
+          "diff",
+          "evidence_file"
+        ],
+        [
+          "checkout_source_attempt",
+          "checkout_source_attempt"
+        ],
+        [
+          "checkout_source_attempt",
+          "assessment"
+        ],
+        [
+          "checkout_source_attempt",
+          "evidence_file"
+        ],
+        [
+          "doc_paths",
+          "doc_paths"
+        ],
+        [
+          "doc_paths",
+          "assessment"
+        ],
+        [
+          "doc_paths",
+          "evidence_file"
+        ],
+        [
+          "text_search",
+          "text_search"
+        ],
+        [
+          "text_search",
+          "assessment"
+        ],
+        [
+          "text_search",
+          "evidence_file"
+        ],
+        [
+          "command_py",
+          "command_py"
+        ],
+        [
+          "command_py",
+          "assessment"
+        ],
+        [
+          "command_py",
+          "evidence_file"
+        ],
+        [
+          "narrowed_search",
+          "narrowed_search"
+        ],
+        [
+          "narrowed_search",
+          "assessment"
+        ],
+        [
+          "narrowed_search",
+          "evidence_file"
+        ],
+        [
+          "dscli_doc",
+          "dscli_doc"
+        ],
+        [
+          "dscli_doc",
+          "assessment"
+        ],
+        [
+          "dscli_doc",
+          "evidence_file"
+        ],
+        [
+          "cli_init",
+          "cli_init"
+        ],
+        [
+          "cli_init",
+          "assessment"
+        ],
+        [
+          "cli_init",
+          "evidence_file"
+        ],
+        [
+          "overview_search",
+          "overview_search"
+        ],
+        [
+          "overview_search",
+          "assessment"
+        ],
+        [
+          "overview_search",
+          "evidence_file"
+        ],
+        [
+          "repository_overview",
+          "repository_overview"
+        ],
+        [
+          "repository_overview",
+          "assessment"
+        ],
+        [
+          "repository_overview",
+          "evidence_file"
+        ],
+        [
+          "git_status",
+          "git_status"
+        ],
+        [
+          "git_status",
+          "assessment"
+        ],
+        [
+          "git_status",
+          "evidence_file"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "fail",
+      "status": "ok",
+      "certificate_valid": false,
+      "paths_verified": 63,
+      "rejected_reasons": [
+        "ungrounded (text_search->assessment): 'text_search' is not a source",
+        "ungrounded (text_search->text_search): 'text_search' is not a source",
+        "ungrounded (git_status->evidence_file): 'git_status' is not a source",
+        "ungrounded (doc_paths->evidence_file): 'doc_paths' is not a source",
+        "ungrounded (narrowed_search->narrowed_search): 'narrowed_search' is not a source",
+        "ungrounded (git_status->assessment): 'git_status' is not a source",
+        "ungrounded (doc_paths->doc_paths): 'doc_paths' is not a source",
+        "ungrounded (doc_paths->assessment): 'doc_paths' is not a source"
+      ],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "changed_files",
+        "checkout_source_attempt",
+        "cli_init",
+        "command_py",
+        "diff",
+        "dscli_doc",
+        "engineering_principles",
+        "generated_repo_index",
+        "plan_tools",
+        "repo_context_index",
+        "repo_context_maintenance",
+        "repo_context_readme",
+        "repository_overview",
+        "review_checklist",
+        "scope",
+        "self_verification",
+        "task_context"
+      ],
+      "sinks": []
+    }
+  },
+  "scope": {
+    "code_changed": true
+  },
+  "items": [
+    {
+      "path": ".repo_context/generated/repo_index.md",
+      "status": "missing",
+      "reason": "PR adds cli/net_check.py, but the generated repository index's cli tree was not regenerated to include the new file."
+    }
+  ],
+  "verdict": "inadequate",
+  "examined": [
+    "/tmp/gh-aw/agent/scope.json",
+    "/tmp/gh-aw/agent/changed-files.txt",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    ".repo_context/playbooks/upkeep/ai-self-verification.md",
+    ".repo_context/modules/overview/repository-overview.md",
+    ".repo_context/modules/quality/tests-and-reproduction.md",
+    ".repo_context/modules/quality/test-suite-design.md",
+    "cli/command.py",
+    "cli/__init__.py",
+    "docs/source_zh_cn/deployment/dscli.md",
+    "README.md",
+    "README_EN.md",
+    "docs/README_CN.md"
+  ],
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a01292-4c37-7922-bd5f-e37f0cc183ef",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1787017982.159316,
+      "counts": {
+        "allow": 25
+      },
+      "engines": {
+        "cedar": 25
+      },
+      "last_seen": 1787018151.4197605,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 25,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  }
+}
