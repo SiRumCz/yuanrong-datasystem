@@ -1,0 +1,264 @@
+{
+  "cohorts": [
+    {
+      "cohort": "CLI worker reachability helper",
+      "cohortOrder": 1,
+      "area": "backend",
+      "files": [
+        "cli/net_check.py"
+      ],
+      "layers": [
+        {
+          "layer": "backend",
+          "order": 1,
+          "area": "backend",
+          "title": "Add ping helper",
+          "summary": "Adds a small Python helper for dscli-style worker reachability checks. The helper validates the host and count inputs, invokes the system ping binary with argv-form subprocess execution, maps timeouts to False, and returns success based on the process exit code.",
+          "files": [
+            "cli/net_check.py"
+          ],
+          "diff": "+import subprocess\n+\n+MAX_PING_COUNT = 10\n+PING_TIMEOUT_BUFFER_SECONDS = 2\n+\n+\n+def ping_worker(host: str, count: int = 3) -> bool:\n+    \"\"\"Return True if ``host`` answers ICMP within ``count`` pings.\n+\n+    Convenience wrapper around the system ``ping`` binary so operators can\n+    sanity-check a worker's network path before deploying to it.\n+    \"\"\"\n+    if not host or host.startswith(\"-\"):\n+        raise ValueError(\"host must not be empty or start with '-'\")\n+    if count < 1:\n+        raise ValueError(\"count must be a positive integer\")\n+    if count > MAX_PING_COUNT:\n+        raise ValueError(f\"count must not exceed {MAX_PING_COUNT}\")\n+\n+    try:\n+        completed = subprocess.run(\n+            [\"ping\", \"-c\", str(count), host],\n+            stdout=subprocess.DEVNULL,\n+            stderr=subprocess.DEVNULL,\n+            timeout=count + PING_TIMEOUT_BUFFER_SECONDS,\n+        )\n+    except subprocess.TimeoutExpired:\n+        return False\n+    return completed.returncode == 0"
+        }
+      ],
+      "bcFindings": []
+    }
+  ],
+  "summary": "This PR adds a Python CLI helper that checks worker reachability by running bounded ICMP pings.",
+  "risk_band": "Low",
+  "agent_security": {
+    "plan_kts": "val rtkPlanAttempt = runCommand(listOf(\"rtk\", \"cat\", \"/tmp/gh-aw/agent/plan-tools.md\"))\nval planTools = readRepoFile(\"/tmp/gh-aw/agent/plan-tools.md\")\nval pr = readRepoFile(\"/tmp/gh-aw/agent/pr.json\")\nval diff = readRepoFile(\"/tmp/gh-aw/agent/pr.diff\")\nval taskContext = readRepoFile(\"/tmp/gh-aw/task-context.json\")\nval evidence = compute(pr, diff, taskContext, planTools, rtkPlanAttempt)\nwriteFile(\"/tmp/gh-aw/evidence.json\", evidence)\nval noopBody = compute(evidence)\npublish(\"safeoutputs.noop\", noopBody)",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "run_command",
+          "args": {
+            "argv": [
+              "rtk",
+              "cat",
+              "/tmp/gh-aw/agent/plan-tools.md"
+            ]
+          },
+          "result": "rtk_plan_attempt"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/plan-tools.md"
+          },
+          "result": "plan_tools"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.json"
+          },
+          "result": "pr"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "diff"
+        },
+        {
+          "tool": "read_repo_file",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "task_context"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "pr": {
+              "$ref": "pr"
+            },
+            "diff": {
+              "$ref": "diff"
+            },
+            "task_context": {
+              "$ref": "task_context"
+            },
+            "plan_tools": {
+              "$ref": "plan_tools"
+            },
+            "rtk_plan_attempt": {
+              "$ref": "rtk_plan_attempt"
+            }
+          },
+          "result": "evidence"
+        },
+        {
+          "tool": "write_file",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "evidence"
+            }
+          },
+          "result": "evidence_file"
+        },
+        {
+          "tool": "compute",
+          "args": {
+            "evidence": {
+              "$ref": "evidence"
+            }
+          },
+          "result": "noop_body"
+        },
+        {
+          "tool": "publish",
+          "args": {
+            "channel": "safeoutputs.noop",
+            "body": {
+              "$ref": "noop_body"
+            }
+          },
+          "result": "noop_publish"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "plan_tools",
+          "plan_tools"
+        ],
+        [
+          "plan_tools",
+          "evidence"
+        ],
+        [
+          "plan_tools",
+          "evidence_file"
+        ],
+        [
+          "plan_tools",
+          "noop_body"
+        ],
+        [
+          "plan_tools",
+          "noop_publish"
+        ],
+        [
+          "pr",
+          "pr"
+        ],
+        [
+          "pr",
+          "evidence"
+        ],
+        [
+          "pr",
+          "evidence_file"
+        ],
+        [
+          "pr",
+          "noop_body"
+        ],
+        [
+          "pr",
+          "noop_publish"
+        ],
+        [
+          "diff",
+          "diff"
+        ],
+        [
+          "diff",
+          "evidence"
+        ],
+        [
+          "diff",
+          "evidence_file"
+        ],
+        [
+          "diff",
+          "noop_body"
+        ],
+        [
+          "diff",
+          "noop_publish"
+        ],
+        [
+          "task_context",
+          "task_context"
+        ],
+        [
+          "task_context",
+          "evidence"
+        ],
+        [
+          "task_context",
+          "evidence_file"
+        ],
+        [
+          "task_context",
+          "noop_body"
+        ],
+        [
+          "task_context",
+          "noop_publish"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "pass",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 20,
+      "rejected_reasons": [],
+      "leak": false,
+      "leaks": [],
+      "sources": [
+        "diff",
+        "plan_tools",
+        "pr",
+        "task_context"
+      ],
+      "sinks": []
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a0166c-def4-7e02-9f2f-5ab57bd4555e",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1787082651.3339903,
+      "counts": {
+        "allow": 7
+      },
+      "engines": {
+        "cedar": 7
+      },
+      "last_seen": 1787082726.4324858,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 7,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  },
+  "examined": [
+    "liveness",
+    "decisions.jsonl",
+    "incidents.jsonl"
+  ]
+}
