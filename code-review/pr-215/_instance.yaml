@@ -1,12 +1,12 @@
 protocol: code-review
 instance: pr-215
 head_sha: a0d7b25203381635bdbb6055ae2bc8c4c8a57284
-phase: preflight-verdict
+phase: overview
 joined: true
-phase_label: "\u26D4 blocked"
+phase_label: guided overview + risk
 status_comment_id: 5322438980
-halted:
-  phase: preflight-verdict
-  path: preflight-verdict
-  reason: blocked
-  sha: a0d7b25203381635bdbb6055ae2bc8c4c8a57284
+overrides:
+- phase: preflight-verdict
+  actor: SiRumCz
+  reason: PR 215 carries no spec/plan by design, so the preflight block is expected.
+    Proceeding to honesty, post-fix and mrp.
