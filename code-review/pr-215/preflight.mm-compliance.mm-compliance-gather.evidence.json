@@ -1,0 +1,297 @@
+{
+  "verdict": "compliant",
+  "divergences": [],
+  "examined": [
+    "/tmp/gh-aw/agent/pr.json",
+    "/tmp/gh-aw/agent/pr.diff",
+    "/tmp/gh-aw/task-context.json",
+    "cli/net_check.py (new file from PR diff)",
+    ".repo_context/README.md",
+    ".repo_context/index.md",
+    ".repo_context/maintenance.md",
+    ".repo_context/generated/repo_index.md",
+    ".repo_context/modules/overview/engineering-principles.md",
+    ".repo_context/playbooks/reviews/pr-review-checklist.md",
+    "_mm/legion-map/CODEBASE.md",
+    "_mm/vibed-codeset/.claude/docs/get_context.py cli/net_check.py",
+    "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-001-master-worker-split.adoc",
+    "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-002-pluggable-cluster-metadata.adoc",
+    "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-003-consistent-hash-ring-placement.adoc",
+    "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-004-performance-first-optional-reliability.adoc",
+    "_mm/socratic/docs/arc42/arc42-yuanrong-datasystem.adoc",
+    "_mm/socratic/docs/specs/prd-yuanrong-datasystem.adoc",
+    "_mm/socratic/docs/specs/use-cases-yuanrong-datasystem.adoc",
+    "_mm/socratic/OPEN_QUESTIONS-yuanrong-datasystem.adoc",
+    "_mm/socratic/QUESTION_TREE-yuanrong-datasystem.adoc"
+  ],
+  "agent_security": {
+    "plan_kts": "fun plan(prJsonPath: String, diffPath: String, taskContextPath: String) {\n  val pr = readFile(path = \"/tmp/gh-aw/agent/pr.json\")\n  val diff = readDiff(path = \"/tmp/gh-aw/agent/pr.diff\")\n  val taskContext = readFile(path = \"/tmp/gh-aw/task-context.json\")\n  val repoContext = readFiles(paths = listOf(\".repo_context/README.md\", \".repo_context/index.md\", \".repo_context/maintenance.md\", \".repo_context/generated/repo_index.md\", \".repo_context/modules/overview/engineering-principles.md\", \".repo_context/playbooks/reviews/pr-review-checklist.md\"))\n  val mmDocs = readFiles(paths = listOf(\"_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-001-master-worker-split.adoc\", \"_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-002-pluggable-cluster-metadata.adoc\", \"_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-003-consistent-hash-ring-placement.adoc\", \"_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-004-performance-first-optional-reliability.adoc\", \"_mm/socratic/docs/arc42/arc42-yuanrong-datasystem.adoc\", \"_mm/socratic/docs/specs/prd-yuanrong-datasystem.adoc\", \"_mm/socratic/docs/specs/use-cases-yuanrong-datasystem.adoc\", \"_mm/socratic/OPEN_QUESTIONS-yuanrong-datasystem.adoc\", \"_mm/socratic/QUESTION_TREE-yuanrong-datasystem.adoc\"))\n  val codebaseMap = readFile(path = \"_mm/legion-map/CODEBASE.md\")\n  val codesetContext = readCodeset(path = \"cli/net_check.py\")\n  val analysis = analyze(pr = pr, diff = diff, taskContext = taskContext, repoContext = repoContext, mmDocs = mmDocs, codebaseMap = codebaseMap, codesetContext = codesetContext)\n  val evidence = writeFile(path = \"/tmp/gh-aw/evidence.json\", content = analysis)\n  val completion = safeOutput(tool = \"noop\", message = \"No GitHub comment needed: mental-model preflight evidence was written to /tmp/gh-aw/evidence.json.\")\n}",
+    "plan_ast": {
+      "steps": [
+        {
+          "tool": "readFile",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.json"
+          },
+          "result": "pr"
+        },
+        {
+          "tool": "readDiff",
+          "args": {
+            "path": "/tmp/gh-aw/agent/pr.diff"
+          },
+          "result": "diff"
+        },
+        {
+          "tool": "readFile",
+          "args": {
+            "path": "/tmp/gh-aw/task-context.json"
+          },
+          "result": "taskContext"
+        },
+        {
+          "tool": "readFiles",
+          "args": {
+            "paths": [
+              ".repo_context/README.md",
+              ".repo_context/index.md",
+              ".repo_context/maintenance.md",
+              ".repo_context/generated/repo_index.md",
+              ".repo_context/modules/overview/engineering-principles.md",
+              ".repo_context/playbooks/reviews/pr-review-checklist.md"
+            ]
+          },
+          "result": "repoContext"
+        },
+        {
+          "tool": "readFiles",
+          "args": {
+            "paths": [
+              "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-001-master-worker-split.adoc",
+              "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-002-pluggable-cluster-metadata.adoc",
+              "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-003-consistent-hash-ring-placement.adoc",
+              "_mm/socratic/docs/specs/adrs/yuanrong-datasystem-adr-004-performance-first-optional-reliability.adoc",
+              "_mm/socratic/docs/arc42/arc42-yuanrong-datasystem.adoc",
+              "_mm/socratic/docs/specs/prd-yuanrong-datasystem.adoc",
+              "_mm/socratic/docs/specs/use-cases-yuanrong-datasystem.adoc",
+              "_mm/socratic/OPEN_QUESTIONS-yuanrong-datasystem.adoc",
+              "_mm/socratic/QUESTION_TREE-yuanrong-datasystem.adoc"
+            ]
+          },
+          "result": "mmDocs"
+        },
+        {
+          "tool": "readFile",
+          "args": {
+            "path": "_mm/legion-map/CODEBASE.md"
+          },
+          "result": "codebaseMap"
+        },
+        {
+          "tool": "readCodeset",
+          "args": {
+            "path": "cli/net_check.py"
+          },
+          "result": "codesetContext"
+        },
+        {
+          "tool": "analyze",
+          "args": {
+            "pr": {
+              "$ref": "pr"
+            },
+            "diff": {
+              "$ref": "diff"
+            },
+            "taskContext": {
+              "$ref": "taskContext"
+            },
+            "repoContext": {
+              "$ref": "repoContext"
+            },
+            "mmDocs": {
+              "$ref": "mmDocs"
+            },
+            "codebaseMap": {
+              "$ref": "codebaseMap"
+            },
+            "codesetContext": {
+              "$ref": "codesetContext"
+            }
+          },
+          "result": "analysis"
+        },
+        {
+          "tool": "writeFile",
+          "args": {
+            "path": "/tmp/gh-aw/evidence.json",
+            "content": {
+              "$ref": "analysis"
+            }
+          },
+          "result": "evidence"
+        },
+        {
+          "tool": "safeOutput",
+          "args": {
+            "tool": "noop",
+            "message": "No GitHub comment needed: mental-model preflight evidence was written to /tmp/gh-aw/evidence.json."
+          },
+          "result": "completion"
+        }
+      ]
+    },
+    "cert": {
+      "paths": [
+        [
+          "pr",
+          "pr"
+        ],
+        [
+          "pr",
+          "analysis"
+        ],
+        [
+          "pr",
+          "evidence"
+        ],
+        [
+          "diff",
+          "diff"
+        ],
+        [
+          "diff",
+          "analysis"
+        ],
+        [
+          "diff",
+          "evidence"
+        ],
+        [
+          "taskContext",
+          "taskContext"
+        ],
+        [
+          "taskContext",
+          "analysis"
+        ],
+        [
+          "taskContext",
+          "evidence"
+        ],
+        [
+          "repoContext",
+          "repoContext"
+        ],
+        [
+          "repoContext",
+          "analysis"
+        ],
+        [
+          "repoContext",
+          "evidence"
+        ],
+        [
+          "mmDocs",
+          "mmDocs"
+        ],
+        [
+          "mmDocs",
+          "analysis"
+        ],
+        [
+          "mmDocs",
+          "evidence"
+        ],
+        [
+          "codebaseMap",
+          "codebaseMap"
+        ],
+        [
+          "codebaseMap",
+          "analysis"
+        ],
+        [
+          "codebaseMap",
+          "evidence"
+        ],
+        [
+          "codesetContext",
+          "codesetContext"
+        ],
+        [
+          "codesetContext",
+          "analysis"
+        ],
+        [
+          "codesetContext",
+          "evidence"
+        ]
+      ]
+    },
+    "guardians": {
+      "verdict": "pass",
+      "status": "ok",
+      "ok": true,
+      "violations": [],
+      "warnings": []
+    },
+    "cert_verify": {
+      "verdict": "fail",
+      "status": "ok",
+      "certificate_valid": true,
+      "paths_verified": 21,
+      "rejected_reasons": [],
+      "leak": true,
+      "leaks": [
+        "repoContext -> sink(analysis) @ /tmp/gh-aw/evidence.json",
+        "diff -> sink(analysis) @ /tmp/gh-aw/evidence.json",
+        "codebaseMap -> sink(analysis) @ /tmp/gh-aw/evidence.json",
+        "mmDocs -> sink(analysis) @ /tmp/gh-aw/evidence.json",
+        "pr -> sink(analysis) @ /tmp/gh-aw/evidence.json",
+        "codesetContext -> sink(analysis) @ /tmp/gh-aw/evidence.json",
+        "taskContext -> sink(analysis) @ /tmp/gh-aw/evidence.json"
+      ],
+      "sources": [
+        "codebaseMap",
+        "codesetContext",
+        "diff",
+        "mmDocs",
+        "pr",
+        "repoContext",
+        "taskContext"
+      ],
+      "sinks": [
+        "analysis"
+      ]
+    }
+  },
+  "step": "review",
+  "live_guard": {
+    "liveness": {
+      "schema": "cedar-live-guard/liveness/1",
+      "session_id": "01a01650-d425-7682-9113-fdfa708fac8a",
+      "hook": "live-guard/1.0.0-b1",
+      "hook_path": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/live-guard/hook.py",
+      "policy_dir": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem/.github/agent-factory/protocols/code-review/scripts/security/policy/cedar/live",
+      "failure_mode": "open",
+      "first_seen": 1787080810.8694658,
+      "counts": {
+        "allow": 33
+      },
+      "engines": {
+        "cedar": 33
+      },
+      "last_seen": 1787080948.6163237,
+      "cwd": "/home/runner/work/yuanrong-datasystem/yuanrong-datasystem",
+      "permission_mode": "bypassPermissions"
+    },
+    "decisions_count": 33,
+    "incidents": [],
+    "examined": [
+      "liveness",
+      "decisions.jsonl",
+      "incidents.jsonl"
+    ]
+  }
+}
