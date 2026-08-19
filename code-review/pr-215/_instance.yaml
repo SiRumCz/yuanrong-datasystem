@@ -3,7 +3,7 @@ instance: pr-215
 head_sha: a0d7b25203381635bdbb6055ae2bc8c4c8a57284
 phase: emit-mrp
 joined: true
-phase_label: emit the merge-readiness verdict artifact
+phase_label: "\u2705 done"
 status_comment_id: 5332910861
 overrides:
 - phase: preflight-verdict
