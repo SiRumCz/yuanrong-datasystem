@@ -1,6 +1,6 @@
 protocol: code-review
 instance: pr-215
-state: post-fix
+state: failed
 sub_state: mm-updater
 iteration: 1
 human_task: {}
