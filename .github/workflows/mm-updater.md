@@ -3,19 +3,9 @@ name: "MM Updater (protocol leg: mm-updater)"
 run-name: "MM Updater · cid:[${{ fromJSON(github.event.inputs.aw_context || '{}').cid }}]"
 'on':
   workflow_dispatch:
-imports:
-  # The codex live-guard apparatus: replaces the provisioning engine.command
-  # removes (node / codex CLI / AWF), writes the wrapper that registers the
-  # PreToolUse hook, and folds the guard's records into evidence.
-  - shared/live-guard-codex.md
 engine:
   id: codex
-  # gh-aw's default 0.135.0 dispatches NO hooks, silently.
-  version: "0.147.0"
   model: gpt-5.5
-  command: /tmp/gh-aw/cedar-live-guard/codex-with-guard
-  # On a fresh runner every hook is untrusted and skipped without warning.
-  args: ["--dangerously-bypass-hook-trust"]
   # Codex (OpenAI) via the private OpenAI-compatible gateway (matches preflight +
   # the other custody agents). gh-aw injects OPENAI_API_KEY (repo secret).
   env:
@@ -76,6 +66,8 @@ post-steps:
       SEC=.github/agent-factory/protocols/code-review/scripts/security
       python3.11 "$SEC/verify-plan-ast.py" /tmp/gh-aw/evidence.json "$SEC/policy/guardians/default.policy.yaml" || true
       python3.11 "$SEC/verify-plan-cert.py" /tmp/gh-aw/evidence.json || true
+      ( cd "$SEC" && npm install --no-audit --no-fund --silent ) || true
+      python3.11 "$SEC/verify-plan-cedar.py" /tmp/gh-aw/evidence.json "$SEC/policy/cedar/default" || true
   - name: Upload evidence artifact
     if: always()
     uses: actions/upload-artifact@v4

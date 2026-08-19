@@ -1447,8 +1447,8 @@
                   "on_fail": "advisory"
                 },
                 {
-                  "run": "live-guard-clean",
-                  "on_fail": "iterate"
+                  "run": "plan-ast-cedar",
+                  "on_fail": "advisory"
                 }
               ],
               "next": "mm-route"
